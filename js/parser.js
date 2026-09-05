@@ -1734,13 +1734,31 @@ const HORSE_TAG_CONFIG_DB_KEY = 'horse_tag_options_v47';
 // V48: Aktive Züchter begrenzen NUR persönliche Auswertungen
 // (Durchschnitt, Turnierplaner, Aussortierhilfe). Datenbank, Verpaarungslog
 // und Zuchtplaner arbeiten weiterhin mit ALLEN gespeicherten Züchtern.
-const ACTIVE_BREEDERS_STORAGE_KEY = 'mdr-active-breeders-v48';
-const ACTIVE_BREEDERS_DB_KEY = 'active_breeders_v48';
+const ACTIVE_BREEDERS_STORAGE_KEY = 'mdr-active-breeders-v48'; // Legacy-Fallback
+const ACTIVE_BREEDERS_DB_KEY = 'active_breeders_v48'; // Legacy-Fallback
+
+function activeBreedersStorageKey() {
+  if (typeof mdrPersonalSettingKey === 'function') return `mdr-${mdrPersonalSettingKey('active-breeders-v54')}`;
+  return ACTIVE_BREEDERS_STORAGE_KEY;
+}
+
+function activeBreedersDbKey() {
+  if (typeof mdrPersonalSettingKey === 'function') return mdrPersonalSettingKey('active_breeders_v54');
+  return ACTIVE_BREEDERS_DB_KEY;
+}
 
 function getActiveBreeders() {
   try {
-    const raw = localStorage.getItem(ACTIVE_BREEDERS_STORAGE_KEY);
-    if (raw == null) return null; // noch nicht konfiguriert = alle aktiv
+    const raw = localStorage.getItem(activeBreedersStorageKey());
+    if (raw == null) {
+      // Online-Version: sinnvolle persönliche Voreinstellung pro Login.
+      // Anevay = Anevay + Wilder Wolf, Saeculume = Saeculume.
+      if (typeof mdrPersonalOwnerNames === 'function') {
+        const defaults=mdrPersonalOwnerNames().map(x=>String(x).trim()).filter(Boolean);
+        if (defaults.length) return defaults;
+      }
+      return null; // Legacy: noch nicht konfiguriert = alle aktiv
+    }
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.map(x => String(x).trim()).filter(Boolean) : null;
   } catch {

@@ -156,6 +156,28 @@ function mdrDisplayNameFromSession() {
   return mail.split('@')[0] || 'MDR';
 }
 
+// Persönliche Besitzer-Zuordnung für nutzerspezifische Hinweise.
+// Der gemeinsame Pferdebestand selbst bleibt für beide Konten vollständig sichtbar.
+function mdrPersonalOwnerNames(session=LOCAL_SESSION) {
+  const mail=String(session?.user?.email || '').trim().toLowerCase();
+  if (mail === 'anevay@mdr.invalid') return ['Anevay', 'Wilder Wolf'];
+  if (mail === 'saeculume@mdr.invalid') return ['Saeculume'];
+  const fallback=mail.split('@')[0];
+  return fallback ? [fallback] : [];
+}
+
+function mdrHorseBelongsToSession(horse, session=LOCAL_SESSION) {
+  const owner=String(horse?.owner || '').trim().toLocaleLowerCase('de');
+  if (!owner) return false;
+  return mdrPersonalOwnerNames(session).some(name => String(name).trim().toLocaleLowerCase('de') === owner);
+}
+
+function mdrPersonalSettingKey(base, session=LOCAL_SESSION) {
+  const mail=String(session?.user?.email || '').trim().toLowerCase();
+  const slug=(mail.split('@')[0] || 'unknown').replace(/[^a-z0-9_-]+/g,'-');
+  return `${base}:${slug}`;
+}
+
 function wireLogout() {
   if (mdrAccountUiWired) return;
   const doWire=()=>{
@@ -465,9 +487,17 @@ async function syncConfiguredHorseTagsFromDatabase() {
       localStorage.setItem('mdr-horse-tag-options-v47', JSON.stringify(row.options));
     }
 
-    const breeders = await localGet(LOCAL_STORES.userSettings, 'active_breeders_v48');
+    const breederDbKey = typeof activeBreedersDbKey === 'function'
+      ? activeBreedersDbKey()
+      : (typeof mdrPersonalSettingKey === 'function' ? mdrPersonalSettingKey('active_breeders_v54') : 'active_breeders_v48');
+    const breeders = await localGet(LOCAL_STORES.userSettings, breederDbKey);
+    const breederStorageKey = typeof activeBreedersStorageKey === 'function'
+      ? activeBreedersStorageKey()
+      : (typeof mdrPersonalSettingKey === 'function' ? `mdr-${mdrPersonalSettingKey('active-breeders-v54')}` : 'mdr-active-breeders-v48');
     if (Array.isArray(breeders?.owners)) {
-      localStorage.setItem('mdr-active-breeders-v48', JSON.stringify(breeders.owners));
+      localStorage.setItem(breederStorageKey, JSON.stringify(breeders.owners));
+    } else if (typeof mdrPersonalOwnerNames === 'function') {
+      localStorage.setItem(breederStorageKey, JSON.stringify(mdrPersonalOwnerNames()));
     }
   } catch (error) {
     console.warn('Einstellungen konnten beim Start nicht vollständig synchronisiert werden:', error);

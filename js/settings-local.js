@@ -388,12 +388,14 @@ async function renderActiveBreedersManager() {
 
 async function saveActiveBreeders() {
   const owners=[...document.querySelectorAll('#settings-active-breeders input[type="checkbox"]:checked')].map(cb=>cb.value);
+  const dbKey=typeof activeBreedersDbKey === 'function' ? activeBreedersDbKey() : ACTIVE_BREEDERS_DB_KEY;
+  const storageKey=typeof activeBreedersStorageKey === 'function' ? activeBreedersStorageKey() : ACTIVE_BREEDERS_STORAGE_KEY;
   await localPut(LOCAL_STORES.userSettings,{
-    key:ACTIVE_BREEDERS_DB_KEY,
+    key:dbKey,
     owners,
     updated_at:new Date().toISOString(),
   });
-  localStorage.setItem(ACTIVE_BREEDERS_STORAGE_KEY,JSON.stringify(owners));
+  localStorage.setItem(storageKey,JSON.stringify(owners));
   const status=document.getElementById('active-breeders-status');
   if (status) status.textContent=`Gespeichert: ${owners.length} aktive Züchter. Dashboard, Turnierplaner und Aussortierhilfe verwenden ab jetzt nur deren Pferde.`;
 }

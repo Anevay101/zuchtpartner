@@ -116,9 +116,10 @@ async function loadUserSettings(session) {
 // aus dem Spiel nicht die ganze Seite markiert wurde. Andere Nutzer*innen
 // sehen diesen Hinweis nur für ihre eigenen Pferde, nicht für die anderer.
 async function showMissingDataNotice(session) {
-  const identity = currentIdentity || session.user.email.split('@')[0];
   const all = await localGetAll(LOCAL_STORES.horses);
-  const data = all.filter((h) => (h.owner || '').toLowerCase() === identity.toLowerCase());
+  const data = typeof mdrHorseBelongsToSession === 'function'
+    ? all.filter((h) => mdrHorseBelongsToSession(h, session))
+    : all.filter((h) => (h.owner || '').toLowerCase() === String(currentIdentity || session.user.email.split('@')[0]).toLowerCase());
 
   const incomplete = data
     .map((h) => ({ id: h.id, name: h.name, missing: missingDataLabels(h) }))
@@ -167,8 +168,14 @@ async function checkAgeNotices(session) {
     }
   }
 
-  // Die Erinnerungsbox oben bleibt weiterhin auf die eigenen Pferde begrenzt.
-  const data = all.filter((h) => (h.owner || '').toLowerCase() === identity.toLowerCase());
+  // Persönliche Erinnerungsboxen: Anevay sieht Anevay + Wilder Wolf,
+  // Saeculume ausschließlich Saeculume. Der gemeinsame Tabellenbestand bleibt unberührt.
+  const data = typeof mdrHorseBelongsToSession === 'function'
+    ? all.filter((h) => mdrHorseBelongsToSession(h, session))
+    : all.filter((h) => (h.owner || '').toLowerCase() === identity.toLowerCase());
+
+  const noticeState = await loadPersonalNoticeState(session);
+  const dismissedAge3 = new Set(Array.isArray(noticeState?.age3) ? noticeState.age3.map(String) : []);
 
   const withAge = data
     .map((h) => ({ ...h, age: gameAgeYearsMonths(h.birthdate) }))
@@ -183,6 +190,7 @@ async function checkAgeNotices(session) {
   );
 
   const turningThree = withAge.filter((h) => {
+    if (dismissedAge3.has(String(h.id))) return false;
     if (h.age.years !== 3) return false;
     const turnedThreeAt = new Date(h.birthdate).getTime() + 3 * REAL_DAYS_PER_GAME_YEAR * 86400000;
     const createdAt = h.created_at ? new Date(h.created_at).getTime() : 0;
@@ -195,6 +203,7 @@ async function checkAgeNotices(session) {
     turningThree,
     `${turningThree.length} Pferd${turningThree.length === 1 ? '' : 'e'} ${turningThree.length === 1 ? 'ist' : 'sind'} 3 Jahre alt geworden`,
     '<p>Im Spiel ändert sich das Pferdebild meist mit 3 Jahren - bitte prüfen und ggf. aktualisieren:</p>',
+    { dismissType:'age3', session },
   );
 
   const over25 = withAge.filter((h) => h.age.years >= 25);
@@ -206,17 +215,61 @@ async function checkAgeNotices(session) {
   );
 }
 
-function renderAgeNotice(selector, horses, summaryText, introHtml) {
+async function loadPersonalNoticeState(session) {
+  if (typeof mdrPersonalSettingKey !== 'function') return { age3:[] };
+  const key=mdrPersonalSettingKey('personal_notice_state',session);
+  return await localGet(LOCAL_STORES.userSettings,key) || { key, age3:[] };
+}
+
+async function dismissPersonalNotice(session, type, horseId) {
+  if (typeof mdrPersonalSettingKey !== 'function') return;
+  const key=mdrPersonalSettingKey('personal_notice_state',session);
+  const current=await localGet(LOCAL_STORES.userSettings,key) || { key };
+  const values=new Set(Array.isArray(current[type]) ? current[type].map(String) : []);
+  values.add(String(horseId));
+  await localPut(LOCAL_STORES.userSettings,{
+    ...current,
+    key,
+    [type]:[...values],
+    updated_at:new Date().toISOString(),
+  });
+}
+
+function renderAgeNotice(selector, horses, summaryText, introHtml, options={}) {
   const notice = document.querySelector(selector);
   if (!horses.length) {
     notice.hidden = true;
     return;
   }
+  const dismissable=Boolean(options.dismissType && options.session);
   const list = horses
-    .map((h) => `<li><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> ${escapeHtml(h.name)}</li>`)
+    .map((h) => `<li data-horse-id="${escapeHtml(String(h.id))}"><span class="age-notice-horse"><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> <span>${escapeHtml(h.name)}</span></span>${dismissable ? `<button type="button" class="btn secondary age-notice-done" data-dismiss-horse="${escapeHtml(String(h.id))}">Erledigt</button>` : ''}</li>`)
     .join('');
   notice.innerHTML = `<summary><strong>Hinweis:</strong> ${summaryText}</summary>${introHtml}<ul>${list}</ul>`;
   notice.hidden = false;
+
+  if (dismissable) {
+    notice.querySelectorAll('[data-dismiss-horse]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const horseId=btn.dataset.dismissHorse;
+        btn.disabled=true;
+        try {
+          await dismissPersonalNotice(options.session,options.dismissType,horseId);
+          btn.closest('li')?.remove();
+          const remaining=notice.querySelectorAll('li').length;
+          if (!remaining) notice.hidden=true;
+          else {
+            const summary=notice.querySelector('summary');
+            if (summary && options.dismissType === 'age3') summary.innerHTML=`<strong>Hinweis:</strong> ${remaining} Pferd${remaining === 1 ? '' : 'e'} ${remaining === 1 ? 'ist' : 'sind'} 3 Jahre alt geworden`;
+          }
+        } catch (error) {
+          console.error('Hinweis konnte nicht als erledigt gespeichert werden:',error);
+          btn.disabled=false;
+          alert('Der Erledigt-Status konnte nicht gespeichert werden. Bitte erneut versuchen.');
+        }
+      });
+    });
+  }
 }
 
 // Vorgeschlagene Schlagwörter (Staging-Tabelle "tag_suggestions", siehe
@@ -233,7 +286,9 @@ async function loadTagSuggestions() {
   const horses = await localGetAll(LOCAL_STORES.horses);
   const horseMap = new Map(horses.map((h) => [String(h.id), h]));
   const data = suggestions.map((s) => ({ ...s, horses: horseMap.get(String(s.horse_id)) || null }));
-  const own = data.filter((s) => (s.horses?.owner || '').toLowerCase() === currentIdentity.toLowerCase());
+  const own = typeof mdrHorseBelongsToSession === 'function'
+    ? data.filter((s) => mdrHorseBelongsToSession(s.horses, currentSession))
+    : data.filter((s) => (s.horses?.owner || '').toLowerCase() === currentIdentity.toLowerCase());
   if (!own.length) {
     notice.hidden = true;
     return;

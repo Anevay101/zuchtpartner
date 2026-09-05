@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <title>Pferde – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5400" />
+  <link rel="stylesheet" href="css/style.css?v=5402" />
 </head>
 <body class="list-page">
   <header class="topbar">
@@ -105,7 +105,7 @@
             <label>Bestes Fohlen</label>
             <button type="button" id="f-best-foal-toggle" class="secondary best-foal-filter-toggle" data-state="off">★ Bestes Fohlen: Aus</button>
             <span class="tiny muted">Klick: Aus → nur anzeigen → ausschließen</span>
-            <span class="tiny muted bp-filter-legend"><span class="bp-parent-dot bp-parent-better"></span> besser · <span class="bp-parent-dot bp-parent-equal"></span> gleich · <span class="bp-parent-dot bp-parent-worse"></span> schlechter · <span class="bp-parent-dot bp-parent-missing"></span> Vergleich fehlt</span>
+            <span class="tiny muted bp-filter-legend"><span class="bp-parent-dot bp-parent-better"></span> besser · <span class="bp-parent-dot bp-parent-equal"></span> gleich · <span class="bp-parent-dot bp-parent-worse"></span> schlechter</span>
           </div>
           <div class="field">
             <label>Schlagwörter</label>
@@ -264,22 +264,23 @@
           <option value="desc">absteigend</option>
         </select>
       </div>
-      <div id="bulk-actions" class="selected-horses-popup" hidden>
-        <div class="selected-horses-popup-head">
-          <strong>✓ Ausgewählte Pferde</strong>
-          <span id="selected-count" class="selected-horses-count"></span>
-        </div>
-        <div class="selected-horses-primary-actions">
-          <button type="button" id="bulk-export-btn" class="secondary">📦 Exportieren</button>
-          <button type="button" id="bulk-delete-btn" class="danger">🗑️ Löschen</button>
-        </div>
-        <div class="selected-horses-secondary-actions">
-          <span class="small muted">Weitere Aktionen:</span>
-          <button type="button" id="bulk-tag-btn" class="secondary small">🏷️ Schlagwort zuweisen</button>
-          <button type="button" id="bulk-tag-remove-btn" class="secondary small">🏷️ Schlagwort entfernen</button>
-          <button type="button" id="bulk-learning-add-btn" class="secondary small">🧠 Lerndatei zuweisen</button>
-          <button type="button" id="bulk-learning-remove-btn" class="secondary small">🧠 Lerndatei lösen</button>
-        </div>
+    </div>
+
+    <div id="bulk-actions" class="selected-horses-popup" hidden>
+      <div class="selected-horses-popup-head">
+        <strong>✓ Ausgewählte Pferde</strong>
+        <span id="selected-count" class="selected-horses-count"></span>
+      </div>
+      <div class="selected-horses-primary-actions">
+        <button type="button" id="bulk-export-btn" class="secondary">📦 Exportieren</button>
+        <button type="button" id="bulk-delete-btn" class="danger">🗑️ Löschen</button>
+      </div>
+      <div class="selected-horses-secondary-actions">
+        <span class="small muted">Weitere Aktionen:</span>
+        <button type="button" id="bulk-tag-btn" class="secondary small">🏷️ Schlagwort zuweisen</button>
+        <button type="button" id="bulk-tag-remove-btn" class="secondary small">🏷️ Schlagwort entfernen</button>
+        <button type="button" id="bulk-learning-add-btn" class="secondary small">🧠 Lerndatei zuweisen</button>
+        <button type="button" id="bulk-learning-remove-btn" class="secondary small">🧠 Lerndatei lösen</button>
       </div>
     </div>
 
@@ -368,13 +369,13 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5400"></script>
-<script src="js/database-local.js?v=5400"></script>
-  <script src="js/local-app.js?v=5400"></script>
-  <script src="js/learning-file.js?v=5400"></script>
-  <script src="js/parser.js?v=5400"></script>
-  <script src="js/data-quality.js?v=5400"></script>
-  <script src="js/breeding-progress.js?v=5400"></script>
-  <script src="js/list.js?v=5400"></script>
+<script src="js/supabase-config.js?v=5402"></script>
+<script src="js/database-local.js?v=5402"></script>
+  <script src="js/local-app.js?v=5402"></script>
+  <script src="js/learning-file.js?v=5402"></script>
+  <script src="js/parser.js?v=5402"></script>
+  <script src="js/data-quality.js?v=5402"></script>
+  <script src="js/breeding-progress.js?v=5402"></script>
+  <script src="js/list.js?v=5402"></script>
 </body>
 </html>
