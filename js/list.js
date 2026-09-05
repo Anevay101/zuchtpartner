@@ -121,17 +121,26 @@ async function showMissingDataNotice(session) {
     ? all.filter((h) => mdrHorseBelongsToSession(h, session))
     : all.filter((h) => (h.owner || '').toLowerCase() === String(currentIdentity || session.user.email.split('@')[0]).toLowerCase());
 
+  const noticeState = await loadPersonalNoticeState(session);
+  const dismissed = new Set(Array.isArray(noticeState?.missingData) ? noticeState.missingData.map(String) : []);
   const incomplete = data
     .map((h) => ({ id: h.id, name: h.name, missing: missingDataLabels(h) }))
-    .filter((h) => h.missing.length);
-  if (!incomplete.length) return;
+    .filter((h) => h.missing.length && !dismissed.has(String(h.id)));
 
-  const list = incomplete
-    .map((h) => `<li><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> ${escapeHtml(h.name)} - ${escapeHtml(h.missing.join(', '))}</li>`)
-    .join('');
   const notice = document.querySelector('#missing-data-notice');
+  if (!incomplete.length) {
+    notice.hidden = true;
+    return;
+  }
+  notice.classList.add('personal-dismissible-notice');
+  const list = incomplete
+    .map((h) => `<li data-horse-id="${escapeHtml(String(h.id))}"><span class="age-notice-horse"><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> <span>${escapeHtml(h.name)} - ${escapeHtml(h.missing.join(', '))}</span></span><button type="button" class="btn secondary age-notice-done" data-dismiss-horse="${escapeHtml(String(h.id))}">Erledigt</button></li>`)
+    .join('');
   notice.innerHTML = `<summary><strong>Hinweis:</strong> Es fehlen noch Daten bei ${incomplete.length} Pferd${incomplete.length === 1 ? '' : 'en'}</summary><p>Es fehlen noch folgende Daten:</p><ul>${list}</ul>`;
   notice.hidden = false;
+  wirePersonalNoticeDismissButtons(notice, session, 'missingData', (remaining) =>
+    `Es fehlen noch Daten bei ${remaining} Pferd${remaining === 1 ? '' : 'en'}`
+  );
 }
 
 // Drei Alters-Hinweise (Geburtsdatum -> Spieljahre/-monate, siehe
@@ -175,18 +184,21 @@ async function checkAgeNotices(session) {
     : all.filter((h) => (h.owner || '').toLowerCase() === identity.toLowerCase());
 
   const noticeState = await loadPersonalNoticeState(session);
+  const dismissedFoalStall = new Set(Array.isArray(noticeState?.foalStall) ? noticeState.foalStall.map(String) : []);
   const dismissedAge3 = new Set(Array.isArray(noticeState?.age3) ? noticeState.age3.map(String) : []);
+  const dismissedAge25 = new Set(Array.isArray(noticeState?.age25) ? noticeState.age25.map(String) : []);
 
   const withAge = data
     .map((h) => ({ ...h, age: gameAgeYearsMonths(h.birthdate) }))
     .filter((h) => h.age != null);
 
-  const needsStall = withAge.filter((h) => h.age.years === 0 && h.age.months === 6);
+  const needsStall = withAge.filter((h) => h.age.years === 0 && h.age.months === 6 && !dismissedFoalStall.has(String(h.id)));
   renderAgeNotice(
     '#foal-stall-notice',
     needsStall,
     `${needsStall.length} Fohlen ${needsStall.length === 1 ? 'ist' : 'sind'} 6 Monate alt`,
     '<p>Fohlen brauchen ab 6 Monaten einen eigenen Stall:</p>',
+    { dismissType:'foalStall', session },
   );
 
   const turningThree = withAge.filter((h) => {
@@ -206,32 +218,140 @@ async function checkAgeNotices(session) {
     { dismissType:'age3', session },
   );
 
-  const over25 = withAge.filter((h) => h.age.years >= 25);
+  const over25 = withAge.filter((h) => h.age.years >= 25 && !dismissedAge25.has(String(h.id)));
   renderAgeNotice(
     '#age25-notice',
     over25,
     `${over25.length} Pferd${over25.length === 1 ? '' : 'e'} ab 25 Jahren - automatisch mit „GBH" markiert`,
     '<p>Pferde ab 25 Spieljahren werden automatisch mit dem Schlagwort „GBH" (Gnadenbrot) markiert:</p>',
+    { dismissType:'age25', session },
   );
 }
 
+function personalNoticeMirrorKey(session) {
+  const slug = typeof mdrPersonalSettingKey === 'function'
+    ? mdrPersonalSettingKey('personal_notice_state', session)
+    : `personal_notice_state:${String(session?.user?.email || 'unknown').split('@')[0].toLowerCase()}`;
+  return `mdr-${slug}-mirror-v5404`;
+}
+
+function normalizePersonalNoticeState(raw, key) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  return {
+    ...source,
+    key: source.key || key,
+    missingData: Array.isArray(source.missingData) ? source.missingData.map(String) : [],
+    foalStall: Array.isArray(source.foalStall) ? source.foalStall.map(String) : [],
+    age3: Array.isArray(source.age3) ? source.age3.map(String) : [],
+    age25: Array.isArray(source.age25) ? source.age25.map(String) : [],
+  };
+}
+
+function mergePersonalNoticeStates(a, b, key) {
+  const left = normalizePersonalNoticeState(a, key);
+  const right = normalizePersonalNoticeState(b, key);
+  const merged = { ...left, ...right, key };
+  for (const field of ['missingData','foalStall','age3','age25']) {
+    merged[field] = [...new Set([...(left[field] || []), ...(right[field] || [])].map(String))];
+  }
+  return merged;
+}
+
+function readPersonalNoticeMirror(session, key) {
+  try {
+    return normalizePersonalNoticeState(JSON.parse(localStorage.getItem(personalNoticeMirrorKey(session)) || 'null'), key);
+  } catch {
+    return normalizePersonalNoticeState(null, key);
+  }
+}
+
+function writePersonalNoticeMirror(session, state) {
+  try { localStorage.setItem(personalNoticeMirrorKey(session), JSON.stringify(state)); } catch {}
+}
+
 async function loadPersonalNoticeState(session) {
-  if (typeof mdrPersonalSettingKey !== 'function') return { age3:[] };
-  const key=mdrPersonalSettingKey('personal_notice_state',session);
-  return await localGet(LOCAL_STORES.userSettings,key) || { key, age3:[] };
+  const key = typeof mdrPersonalSettingKey === 'function'
+    ? mdrPersonalSettingKey('personal_notice_state',session)
+    : `personal_notice_state:${String(session?.user?.email || 'unknown').split('@')[0].toLowerCase()}`;
+  const mirror = readPersonalNoticeMirror(session, key);
+  let remote = null;
+  try { remote = await localGet(LOCAL_STORES.userSettings,key); } catch (error) {
+    console.warn('Persönlicher Hinweisstatus konnte nicht aus Supabase gelesen werden:', error);
+  }
+  const merged = mergePersonalNoticeStates(remote, mirror, key);
+  writePersonalNoticeMirror(session, merged);
+
+  // Falls der lokale Spiegel mehr erledigte Hinweise kennt (z.B. nach einem
+  // kurzzeitigen Verbindungsproblem), wird der Cloud-Stand automatisch geheilt.
+  const remoteNorm = normalizePersonalNoticeState(remote, key);
+  const fields = ['missingData','foalStall','age3','age25'];
+  const needsHeal = fields.some(field => merged[field].some(id => !remoteNorm[field].includes(id)));
+  if (needsHeal) {
+    try {
+      await localPut(LOCAL_STORES.userSettings, { ...merged, updated_at:new Date().toISOString() });
+    } catch (error) {
+      console.warn('Persönlicher Hinweisstatus konnte nicht zurück nach Supabase synchronisiert werden:', error);
+    }
+  }
+  return merged;
 }
 
 async function dismissPersonalNotice(session, type, horseId) {
-  if (typeof mdrPersonalSettingKey !== 'function') return;
-  const key=mdrPersonalSettingKey('personal_notice_state',session);
-  const current=await localGet(LOCAL_STORES.userSettings,key) || { key };
-  const values=new Set(Array.isArray(current[type]) ? current[type].map(String) : []);
+  const key = typeof mdrPersonalSettingKey === 'function'
+    ? mdrPersonalSettingKey('personal_notice_state',session)
+    : `personal_notice_state:${String(session?.user?.email || 'unknown').split('@')[0].toLowerCase()}`;
+  const current = await loadPersonalNoticeState(session);
+  const values = new Set(Array.isArray(current[type]) ? current[type].map(String) : []);
   values.add(String(horseId));
-  await localPut(LOCAL_STORES.userSettings,{
+  const next = normalizePersonalNoticeState({
     ...current,
     key,
-    [type]:[...values],
-    updated_at:new Date().toISOString(),
+    [type]: [...values],
+    updated_at: new Date().toISOString(),
+  }, key);
+
+  // Erst Cloud schreiben und anschließend verifizieren. Der Button verschwindet
+  // erst, wenn der persistierte Zustand wirklich wieder gelesen werden kann.
+  await localPut(LOCAL_STORES.userSettings,next);
+  const verify = normalizePersonalNoticeState(await localGet(LOCAL_STORES.userSettings,key), key);
+  if (!verify[type].includes(String(horseId))) {
+    throw new Error('Supabase hat den Erledigt-Status nicht bestätigt.');
+  }
+  writePersonalNoticeMirror(session, mergePersonalNoticeStates(verify, next, key));
+}
+
+function personalNoticeSummary(type, remaining) {
+  if (type === 'missingData') return `Es fehlen noch Daten bei ${remaining} Pferd${remaining === 1 ? '' : 'en'}`;
+  if (type === 'foalStall') return `${remaining} Fohlen ${remaining === 1 ? 'ist' : 'sind'} 6 Monate alt`;
+  if (type === 'age3') return `${remaining} Pferd${remaining === 1 ? '' : 'e'} ${remaining === 1 ? 'ist' : 'sind'} 3 Jahre alt geworden`;
+  if (type === 'age25') return `${remaining} Pferd${remaining === 1 ? '' : 'e'} ab 25 Jahren - automatisch mit „GBH" markiert`;
+  return `${remaining} Hinweis${remaining === 1 ? '' : 'e'}`;
+}
+
+function wirePersonalNoticeDismissButtons(notice, session, dismissType, summaryBuilder=null) {
+  notice.querySelectorAll('[data-dismiss-horse]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const horseId = btn.dataset.dismissHorse;
+      btn.disabled = true;
+      btn.textContent = 'Speichert…';
+      try {
+        await dismissPersonalNotice(session,dismissType,horseId);
+        btn.closest('li')?.remove();
+        const remaining = notice.querySelectorAll('li').length;
+        if (!remaining) {
+          notice.hidden = true;
+        } else {
+          const summary = notice.querySelector('summary');
+          const text = summaryBuilder ? summaryBuilder(remaining) : personalNoticeSummary(dismissType, remaining);
+          if (summary) summary.innerHTML = `<strong>Hinweis:</strong> ${text}`;
+        }
+      } catch (error) {
+        console.error('Hinweis konnte nicht als erledigt gespeichert werden:',error);
+        btn.disabled = false;
+        btn.textContent = 'Erledigt';
+        alert('Der Erledigt-Status konnte nicht dauerhaft gespeichert werden. Bitte erneut versuchen.');
+      }
+    });
   });
 }
 
@@ -241,35 +361,15 @@ function renderAgeNotice(selector, horses, summaryText, introHtml, options={}) {
     notice.hidden = true;
     return;
   }
-  const dismissable=Boolean(options.dismissType && options.session);
+  const dismissable = Boolean(options.dismissType && options.session);
+  if (dismissable) notice.classList.add('personal-dismissible-notice');
   const list = horses
     .map((h) => `<li data-horse-id="${escapeHtml(String(h.id))}"><span class="age-notice-horse"><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> <span>${escapeHtml(h.name)}</span></span>${dismissable ? `<button type="button" class="btn secondary age-notice-done" data-dismiss-horse="${escapeHtml(String(h.id))}">Erledigt</button>` : ''}</li>`)
     .join('');
   notice.innerHTML = `<summary><strong>Hinweis:</strong> ${summaryText}</summary>${introHtml}<ul>${list}</ul>`;
   notice.hidden = false;
 
-  if (dismissable) {
-    notice.querySelectorAll('[data-dismiss-horse]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const horseId=btn.dataset.dismissHorse;
-        btn.disabled=true;
-        try {
-          await dismissPersonalNotice(options.session,options.dismissType,horseId);
-          btn.closest('li')?.remove();
-          const remaining=notice.querySelectorAll('li').length;
-          if (!remaining) notice.hidden=true;
-          else {
-            const summary=notice.querySelector('summary');
-            if (summary && options.dismissType === 'age3') summary.innerHTML=`<strong>Hinweis:</strong> ${remaining} Pferd${remaining === 1 ? '' : 'e'} ${remaining === 1 ? 'ist' : 'sind'} 3 Jahre alt geworden`;
-          }
-        } catch (error) {
-          console.error('Hinweis konnte nicht als erledigt gespeichert werden:',error);
-          btn.disabled=false;
-          alert('Der Erledigt-Status konnte nicht gespeichert werden. Bitte erneut versuchen.');
-        }
-      });
-    });
-  }
+  if (dismissable) wirePersonalNoticeDismissButtons(notice, options.session, options.dismissType, options.summaryBuilder || null);
 }
 
 // Vorgeschlagene Schlagwörter (Staging-Tabelle "tag_suggestions", siehe
@@ -1582,7 +1682,9 @@ async function onBulkLearningFile(value) {
     const stored = await getLocalHorseById(row.id);
     if (!stored) continue;
     let desired = Boolean(value);
-    if (!desired && typeof mdrHasGbhTag === 'function' && mdrHasGbhTag(stored)) {
+    const forcedGbhLearning = (typeof mdrHasGbhTag === 'function' && mdrHasGbhTag(stored))
+      || (typeof mdrOwnerHasGbhMarker === 'function' && mdrOwnerHasGbhMarker(stored));
+    if (!desired && forcedGbhLearning) {
       desired = true;
       gbhLocked++;
     }
@@ -1595,7 +1697,7 @@ async function onBulkLearningFile(value) {
     changed++;
   }
   if (gbhLocked) {
-    alert(`${gbhLocked} GBH-Pferd${gbhLocked===1?'':'e'} ${gbhLocked===1?'bleibt':'bleiben'} automatisch Lerndatei.`);
+    alert(`${gbhLocked} GBH-Pferd${gbhLocked===1?'':'e'} ${gbhLocked===1?'bleibt':'bleiben'} automatisch Lerndatei (GBH-Schlagwort oder Besitzer mit „(GBH)“).`);
   }
   await loadHorses();
 }

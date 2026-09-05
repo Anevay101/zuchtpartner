@@ -1,7 +1,7 @@
 // V53.6 – Lerndatei: Pferde bleiben in der Datenbank und in Lernmodellen,
 // werden aber aus operativen Zucht-/Turnier-/Dashboard-Listen ausgeblendet.
 const MDR_LEARNING_FILE_SEED_KEY = 'learning_file_seed_v536';
-// V53.6.5: keine besitzerbasierte Erstzuordnung mehr. Bestehende Lerndatei-Markierungen bleiben erhalten; GBH ist weiterhin automatisch Lerndatei.
+// V54.0.5: reguläre Besitzer bleiben regulär; nur eine ausdrückliche Besitzerkennung „(GBH)“ erzwingt zusätzlich zur GBH-Markierung die Lerndatei.
 
 function mdrLearningNorm(value) {
   return String(value ?? '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('de');
@@ -22,8 +22,14 @@ function mdrHasGbhTag(horse) {
   return mdrHorseTagLabelsForLearning(horse).some(label => mdrLearningNorm(label) === 'gbh');
 }
 
+function mdrOwnerHasGbhMarker(horse) {
+  if (!horse || typeof horse !== 'object') return false;
+  const candidates = [horse.owner, horse.learning_original_owner];
+  return candidates.some(value => /\(\s*gbh\s*\)/i.test(String(value || '')));
+}
+
 function mdrIsLearningHorse(horse) {
-  return horse?.learning_file === true || mdrHasGbhTag(horse);
+  return horse?.learning_file === true || mdrHasGbhTag(horse) || mdrOwnerHasGbhMarker(horse);
 }
 
 function mdrLearningSeedCandidate(horse) {
@@ -63,7 +69,7 @@ async function mdrEnsureLearningFileRules() {
   let changed = 0;
 
   for (const horse of horses) {
-    const desired = horse?.learning_file === true || mdrHasGbhTag(horse);
+    const desired = horse?.learning_file === true || mdrHasGbhTag(horse) || mdrOwnerHasGbhMarker(horse);
     const updated = { ...horse, learning_file: desired };
     mdrApplyLearningOwner(updated, desired, horse);
 
@@ -81,7 +87,7 @@ async function mdrEnsureLearningFileRules() {
     await localPut(LOCAL_STORES.userSettings, {
       key: MDR_LEARNING_FILE_SEED_KEY,
       completed_at: new Date().toISOString(),
-      rule: 'V53.6.5: vorhandene Lerndatei-Markierung beibehalten; GBH immer Lerndatei; keine automatische Besitzer-/Geschlechts-Zuordnung mehr; Besitzer von Lerndatei-Pferden = Lerndatei',
+      rule: 'V54.0.5: vorhandene Lerndatei-Markierung beibehalten; GBH-Schlagwort oder Besitzerkennung (GBH) immer Lerndatei; Besitzer von Lerndatei-Pferden = Lerndatei',
     });
   }
   return { changed, seeded: false };
@@ -89,7 +95,10 @@ async function mdrEnsureLearningFileRules() {
 
 function mdrLearningFileForSave(payload, previous = null) {
   if (!payload || typeof payload !== 'object') return payload;
-  if (mdrHasGbhTag(payload)) payload.learning_file = true;
+  const forcedLearning = mdrHasGbhTag(payload)
+    || mdrOwnerHasGbhMarker(payload)
+    || mdrOwnerHasGbhMarker(previous);
+  if (forcedLearning) payload.learning_file = true;
   else payload.learning_file = payload.learning_file === true;
   mdrApplyLearningOwner(payload, payload.learning_file === true, previous);
   return payload;

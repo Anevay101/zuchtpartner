@@ -4601,4 +4601,112 @@ body.hide-best-foal-overview #horse-table .bp-best-aggregate-cell { display: non
   padding: .28rem .65rem;
   font-size: .82rem;
 }
-\n\n/* V54.0.2 – Layoutkorrekturen */\n/* Auswahlaktionen stehen als volle Zeile bündig unter Filter/Ergebniszeile. */\nbody.list-page .selected-horses-popup {\n  position: static;\n  width: 100%;\n  max-width: none;\n  margin: 0 0 .7rem;\n  padding: .75rem .9rem;\n  box-shadow: 0 2px 10px rgba(35,58,45,.10);\n  flex: 0 0 auto;\n}\nbody.list-page .selected-horses-popup-head {\n  margin-bottom: .5rem;\n}\nbody.list-page .selected-horses-primary-actions {\n  margin-bottom: .45rem;\n}\n\n/* Zuchtplaner: gleicher Grundhintergrund wie die Pferdedatenbank,\n   Karten und Felder bewusst heller für klaren Kontrast. */\nbody.planner-high-contrast {\n  background: var(--bg-gradient) !important;\n  background-attachment: fixed !important;\n}\nbody.planner-high-contrast .topbar {\n  background: #ffffff !important;\n  border-bottom-color: #8bbd78 !important;\n}\nbody.planner-high-contrast .card,\nbody.planner-high-contrast fieldset,\nbody.planner-high-contrast .filter-bar,\nbody.planner-high-contrast .farbwunsch-box,\nbody.planner-high-contrast .planner-result,\nbody.planner-high-contrast .planner-summary,\nbody.planner-high-contrast .result-card,\nbody.planner-high-contrast .color-guide-result,\nbody.planner-high-contrast .color-guide-subsection,\nbody.planner-high-contrast .turnierzucht-result,\nbody.planner-high-contrast .notice,\nbody.planner-high-contrast details.card {\n  background: rgba(250,252,248,.96) !important;\n  border-color: #87aa7a !important;\n  color: #213021 !important;\n  box-shadow: 0 2px 9px rgba(37,68,34,.10) !important;\n}\nbody.planner-high-contrast input,\nbody.planner-high-contrast select,\nbody.planner-high-contrast textarea,\nbody.planner-high-contrast .checkdrop-toggle {\n  background: #ffffff !important;\n  color: #1b291b !important;\n  border: 2px solid #6f9563 !important;\n}\nbody.planner-high-contrast input:focus,\nbody.planner-high-contrast select:focus,\nbody.planner-high-contrast textarea:focus,\nbody.planner-high-contrast .checkdrop-toggle:focus {\n  background: #ffffff !important;\n  border-color: #3f6f38 !important;\n  outline: 3px solid rgba(79,125,66,.22) !important;\n}\nbody.planner-high-contrast .zp-selected-parent-summary,\nbody.planner-high-contrast .filter-checkbox-label {\n  background: #eef6e9 !important;\n  border-color: #99b98d !important;\n}\n
+
+
+/* V54.0.3 – Layoutkorrektur Auswahlbereich */
+body.list-page #bulk-actions.selected-horses-popup {
+  position: static !important;
+  inset: auto !important;
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0;
+  margin: 0 0 .75rem 0 !important;
+  padding: .72rem .9rem;
+  box-sizing: border-box;
+  align-self: stretch !important;
+  border-width: 1px;
+  box-shadow: 0 2px 10px rgba(35,58,45,.10);
+}
+body.list-page #bulk-actions[hidden] { display: none !important; }
+body.list-page .selected-horses-popup-head {
+  display: flex;
+  align-items: baseline;
+  gap: .65rem;
+  margin: 0 0 .5rem;
+}
+body.list-page .selected-horses-primary-actions,
+body.list-page .selected-horses-secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem;
+}
+body.list-page .selected-horses-primary-actions { margin-bottom: .45rem; }
+
+/* Zuchtplaner: gleicher Grundhintergrund wie die Pferdedatenbank,
+   Karten und Felder bewusst heller für klaren Kontrast. */
+body.planner-high-contrast {
+  background: var(--bg-gradient) !important;
+  background-attachment: fixed !important;
+}
+body.planner-high-contrast .topbar {
+  background: #ffffff !important;
+  border-bottom-color: #8bbd78 !important;
+}
+body.planner-high-contrast .card,
+body.planner-high-contrast fieldset,
+body.planner-high-contrast .filter-bar,
+body.planner-high-contrast .farbwunsch-box,
+body.planner-high-contrast .planner-result,
+body.planner-high-contrast .planner-summary,
+body.planner-high-contrast .result-card,
+body.planner-high-contrast .color-guide-result,
+body.planner-high-contrast .color-guide-subsection,
+body.planner-high-contrast .turnierzucht-result,
+body.planner-high-contrast .notice,
+body.planner-high-contrast details.card {
+  background: rgba(250,252,248,.96) !important;
+  border-color: #87aa7a !important;
+  color: #213021 !important;
+  box-shadow: 0 2px 9px rgba(37,68,34,.10) !important;
+}
+body.planner-high-contrast input,
+body.planner-high-contrast select,
+body.planner-high-contrast textarea,
+body.planner-high-contrast .checkdrop-toggle {
+  background: #ffffff !important;
+  color: #1b291b !important;
+  border: 2px solid #6f9563 !important;
+}
+body.planner-high-contrast input:focus,
+body.planner-high-contrast select:focus,
+body.planner-high-contrast textarea:focus,
+body.planner-high-contrast .checkdrop-toggle:focus {
+  background: #ffffff !important;
+  border-color: #3f6f38 !important;
+  outline: 3px solid rgba(79,125,66,.22) !important;
+}
+body.planner-high-contrast .zp-selected-parent-summary,
+body.planner-high-contrast .filter-checkbox-label {
+  background: #eef6e9 !important;
+  border-color: #99b98d !important;
+}
+
+
+/* V54.0.4 – persönliche Hinweise dauerhaft erledigen */
+.personal-dismissible-notice ul {
+  display: grid;
+  gap: .35rem;
+}
+.personal-dismissible-notice li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .8rem;
+  width: min(100%, 52rem);
+}
+.personal-dismissible-notice .age-notice-done {
+  justify-self: end;
+  min-width: 5.25rem;
+}
+@media (max-width: 700px) {
+  .personal-dismissible-notice li {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .personal-dismissible-notice .age-notice-done {
+    justify-self: start;
+    margin-left: 2.45rem;
+  }
+}
