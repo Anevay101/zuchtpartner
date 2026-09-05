@@ -1683,6 +1683,7 @@ async function onBulkLearningFile(value) {
     if (!stored) continue;
     let desired = Boolean(value);
     const forcedGbhLearning = (typeof mdrHasGbhTag === 'function' && mdrHasGbhTag(stored))
+      || (typeof mdrOwnerHasLearningMarker === 'function' && mdrOwnerHasLearningMarker(stored))
       || (typeof mdrOwnerHasGbhMarker === 'function' && mdrOwnerHasGbhMarker(stored));
     if (!desired && forcedGbhLearning) {
       desired = true;
@@ -1697,7 +1698,7 @@ async function onBulkLearningFile(value) {
     changed++;
   }
   if (gbhLocked) {
-    alert(`${gbhLocked} GBH-Pferd${gbhLocked===1?'':'e'} ${gbhLocked===1?'bleibt':'bleiben'} automatisch Lerndatei (GBH-Schlagwort oder Besitzer mit „(GBH)“).`);
+    alert(`${gbhLocked} Pferd${gbhLocked===1?'':'e'} ${gbhLocked===1?'bleibt':'bleiben'} automatisch Lerndatei (GBH-Schlagwort oder Besitzer mit „(GBH)“/„(Friedhof)“).`);
   }
   await loadHorses();
 }

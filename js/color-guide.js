@@ -5,8 +5,8 @@
 // 2) Sichtbare Fellfarben dürfen einen MINDEST-Zustand beweisen
 //    (z.B. Dun -> D_ = mindestens ein D), werden aber nicht als Gentest
 //    ausgegeben.
-// 3) Unbekannte Zygosität erzeugt eine Spanne statt einer erfundenen
-//    festen Prozentzahl.
+// 3) Eine einzelne Prozentzahl wird nur gezeigt, wenn sie aus den bekannten
+//    bzw. ableitbaren Zuständen eindeutig berechenbar ist. Sonst: nicht vorhersehbar.
 // 4) Unbekannte Gene blockieren nicht mehr die übrigen bekannten
 //    Farbvorhersagen.
 // 5) Cream/Pearl werden als gemeinsamer Locus behandelt.
@@ -51,8 +51,10 @@ function cgPct(v) {
 }
 
 function cgRangeText(min, max) {
-  if (min == null || max == null) return 'nicht berechenbar';
-  return Math.abs(max - min) < 1e-9 ? cgPct(min) : `${cgPct(min)}–${cgPct(max)}`;
+  if (min == null || max == null) return 'unbekannt';
+  return Math.abs(Number(max) - Number(min)) < 1e-9
+    ? cgPct(min)
+    : 'nicht vorhersehbar';
 }
 
 function cgRaw(v) {
@@ -501,10 +503,20 @@ function cgKitKnowledge(horse) {
   }
   const a = visible[0];
   return {
-    states:[[a,'00'],[a,a], ...CG_KIT_ALLELES.filter(x => x !== a && x !== '00').map(x => [a,x])],
+    // Nur die tatsächlich sichtbare cKit-Variante berücksichtigen.
+    // Andere cKit-Allele werden nicht allein deshalb angenommen, weil sie
+    // am selben Genort liegen. Die zweite Kopie bleibt 00 oder dieselbe
+    // sichtbare Variante, solange nichts Weiteres belegt ist.
+    states:[[a,'00'],[a,a]],
     tested:false,
-    source:`${a} mindestens 1× aus Fellfarbe abgeleitet`,
+    source:`${a} aus Fellfarbe abgeleitet`,
   };
+}
+
+function cgKitEvidenceAlleles(horse) {
+  const knowledge = cgKitKnowledge(horse);
+  if (!knowledge?.states?.length) return [];
+  return [...new Set(knowledge.states.flat().filter(a => a && a !== '00' && CG_KIT_ALLELES.includes(a)))];
 }
 
 function cgKitAlleleRange(mare,stallion,allele) {
@@ -774,8 +786,8 @@ function cgAppaloosa(mare,stallion,allHorses = null) {
   const p1Maps=[];
   for(const a of P1.states) for(const b of P2.states) p1Maps.push(cgCrossPair(a,b));
   const p1Defs=[
-    {label:'PATN1 vorhanden (P1_)',pred:p=>p.includes('P1')},
-    {label:'kein PATN1 (p1p1)',pred:p=>!p.includes('P1')},
+    {label:'P1_',pred:p=>p.includes('P1')},
+    {label:'p1p1',pred:p=>!p.includes('P1')},
   ];
   const patternRows=p1Defs.map(x=>{
     const vals=p1Maps.map(map=>{
@@ -1145,10 +1157,33 @@ function cgEmpiricalColorHtml(mare,stallion,allHorses = null) {
 
 // -------- Darstellung / weitere Gene ---------------------------------
 function cgRows(rows) {
-  if (!rows?.length) return '<p class="small muted">Nicht vollständig berechenbar.</p>';
-  return `<div class="color-prob-grid">${rows.map(r =>
-    `<div class="color-prob-row"><span>${cgEsc(r.label)}</span><strong>${cgRangeText(r.min ?? r.p, r.max ?? r.p)}</strong></div>`
-  ).join('')}</div>`;
+  if (!rows?.length) return '<p class="small muted">Nicht vorhersehbar.</p>';
+
+  const normalized = rows.map(r => ({
+    ...r,
+    _min:Number(r.min ?? r.p ?? 0),
+    _max:Number(r.max ?? r.p ?? 0),
+  }));
+  const uncertain = normalized.filter(r => Math.abs(r._max-r._min) >= 1e-9);
+
+  // Bei einer unsicheren Verteilung nicht mehrere theoretische Min-Max-
+  // Möglichkeiten auflisten. Nur sicher berechenbare positive Anteile
+  // zeigen und den unbekannten Rest kompakt kennzeichnen.
+  if (uncertain.length) {
+    const exactPositive = normalized.filter(r =>
+      Math.abs(r._max-r._min) < 1e-9 && r._min > 1e-9
+    );
+    const parts = exactPositive.map(r =>
+      `<div class="color-prob-row"><span>${cgEsc(r.label)}</span><strong>${cgPct(r._min)}</strong></div>`
+    );
+    parts.push('<div class="color-prob-row"><span>Verteilung</span><strong>nicht vorhersehbar</strong></div>');
+    return `<div class="color-prob-grid">${parts.join('')}</div>`;
+  }
+
+  return `<div class="color-prob-grid">${normalized
+    .filter(r => r._max > 1e-9)
+    .map(r => `<div class="color-prob-row"><span>${cgEsc(r.label)}</span><strong>${cgPct(r._min)}</strong></div>`)
+    .join('')}</div>`;
 }
 
 function cgEvidenceText(mare,stallion,locus) {
@@ -1255,18 +1290,23 @@ function cgModifierRows(mare,stallion) {
     rows.push(row);
   }
 
-  // cKit nur dann anzeigen, wenn mindestens ein Elternteil getestet oder
-  // sichtbar ableitbar ist.
+  // cKit: Nur Varianten anzeigen, die bei mindestens einem Elternteil
+  // getestet oder aus der Fellfarbe ableitbar sind. Andere cKit-Varianten
+  // werden nicht als theoretische Möglichkeiten eingeblendet.
   const kitM=cgKitKnowledge(mare), kitS=cgKitKnowledge(stallion);
-  if (kitM || kitS) {
-    for(const [label,allele] of [['Tobiano','TO'],['Sabino','SB'],['Roan','Rn'],['Dominant White','WI']]) {
-      const range=cgKitAlleleRange(mare,stallion,allele);
-      if (range) rows.push({
-        label:`cKit: ${label}`,
-        ...range,
-        source:[kitM?`${mare?.name||'Stute'}: ${kitM.source}`:null,kitS?`${stallion?.name||'Hengst'}: ${kitS.source}`:null].filter(Boolean).join(' · ')
-      });
-    }
+  const kitEvidence = new Set([
+    ...cgKitEvidenceAlleles(mare),
+    ...cgKitEvidenceAlleles(stallion),
+  ]);
+  const kitLabels = {TO:'Tobiano',SB:'Sabino',Rn:'Roan',WI:'Dominant White'};
+  for (const allele of ['TO','SB','Rn','WI']) {
+    if (!kitEvidence.has(allele)) continue;
+    const range=cgKitAlleleRange(mare,stallion,allele);
+    if (range) rows.push({
+      label:kitLabels[allele],
+      ...range,
+      source:[kitM?`${mare?.name||'Stute'}: ${kitM.source}`:null,kitS?`${stallion?.name||'Hengst'}: ${kitS.source}`:null].filter(Boolean).join(' · ')
+    });
   }
 
   // Weitere MDR-Farbgene nur, wenn bei mindestens einem Elternteil ein
@@ -1289,7 +1329,7 @@ function cgModifierRows(mare,stallion) {
 function cgModifierHtml(rows) {
   // V52: 0%-Möglichkeiten nicht mehr als unnötige Zeile anzeigen.
   const visibleRows = (rows || []).filter(r => Number(r.max ?? r.p ?? 0) > 1e-9);
-  if (!visibleRows.length) return '<p class="small muted">Keine weiteren Farbgene mit einer berechenbaren Chance über 0 %.</p>';
+  if (!visibleRows.length) return '<p class="small muted">Keine weiteren Farbgene sicher vorhersehbar.</p>';
   return `<div class="color-prob-grid">${visibleRows.map(r=>`
     <div class="color-prob-row color-prob-row-with-source">
       <span>${cgEsc(r.label)}<small>${cgEsc(r.source||'')}</small></span>
@@ -1435,9 +1475,9 @@ function colorGuideHtml(mare,stallion,allHorses = null) {
   let appHtml='';
   if(app.rows) {
     appHtml=`
-      <h5>1. LP-Genotyp des Fohlens</h5>${cgRows(app.lpRows)}
-      <h5>2. PATN1-Vererbung</h5>${cgRows(app.patternRows)}
-      <h5>3. Sichtbares Muster – aus echten MDR-Pferden gelernt</h5>${cgRows(app.rows)}
+      <h5>1. LP</h5>${cgRows(app.lpRows)}
+      <h5>2. PATN1</h5>${cgRows(app.patternRows)}
+      <h5>3. Muster</h5>${cgRows(app.rows)}
       <p class="tiny muted">
         LP und PATN1 werden genetisch vererbt. Das sichtbare Muster wird anschließend aus Pferden
         mit <strong>getestetem LP + getestetem PATN1 + eingetragenem sichtbaren Muster</strong> geschätzt.
@@ -1445,7 +1485,7 @@ function colorGuideHtml(mare,stallion,allHorses = null) {
       </p>
       ${app.empiricalBasis?.length ? `
         <details class="appaloosa-empirical-basis">
-          <summary>📊 Aktuelle Appaloosa-Datenbasis</summary>
+          <summary>Aktuelle Appaloosa-Datenbasis</summary>
           <div class="small">
             ${app.empiricalBasis.map(row=>`
               <div><strong>${cgEsc(row.key.replace('|',' + '))}</strong> · n=${row.n}:
@@ -1458,12 +1498,12 @@ function colorGuideHtml(mare,stallion,allHorses = null) {
         Hengst LP: ${cgEsc(app.sources?.stallionLp||'unbekannt')} · PATN1: ${cgEsc(app.sources?.stallionPat||'unbekannt')}
       </p>`;
   } else {
-    appHtml=`<p class="small muted">Appaloosa nicht belastbar berechenbar: ${cgEsc(app.reason||'keine ausreichenden LP-Daten')}</p>`;
+    appHtml=`<p class="small muted">Appaloosa: nicht vorhersehbar. ${cgEsc(app.reason||'')}</p>`;
   }
 
   return `
   <details class="color-guide-result">
-    <summary><strong>🎨 Farbguide für dieses Fohlen</strong></summary>
+    <summary><strong>Farbguide für dieses Fohlen</strong></summary>
     <div class="color-guide-body">
       ${warnings.length ? `<div class="notice notice-warning">${warnings.map(cgEsc).join('<br>')}</div>` : ''}
 
@@ -1471,31 +1511,31 @@ function colorGuideHtml(mare,stallion,allHorses = null) {
         <h4>Grundfarben</h4>
         ${base
           ? cgRows(base)
-          : '<p class="small muted">Extension/Agouti sind noch nicht ausreichend getestet oder aus der sichtbaren Grundfarbe ableitbar. Andere bekannte Farbgene werden trotzdem weiter unten berechnet.</p>'}
+          : '<p class="small muted">Grundfarbe: nicht vorhersehbar (Extension/Agouti unbekannt).</p>'}
       </section>
 
       <section class="color-guide-subsection">
         <h4>Grundfarbe + Cream / Pearl / Dun / Champagne</h4>
         ${core
           ? cgRows(core)
-          : '<p class="small muted">Eine vollständige Endfarben-Liste ist wegen mindestens eines unbekannten Grund-/Aufhellungslocus nicht seriös. Die bekannten Einzelchancen werden deshalb unabhängig davon im nächsten Abschnitt weiter berechnet.</p>'}
+          : '<p class="small muted">Endfarbe: nicht vorhersehbar (mindestens ein Genort unbekannt).</p>'}
       </section>
 
       <section class="color-guide-subsection">
         <h4>Weitere Farbgene – nur getestet oder aus Fellfarbe ableitbar</h4>
         ${cgModifierHtml(mods)}
         ${(cgKitKnowledge(mare)||cgKitKnowledge(stallion))
-          ? '<p class="tiny muted"><strong>cKit:</strong> Tobiano, Sabino, Dominant White und Roan liegen am selben Genort. Ein Pferd kann dort insgesamt nur zwei Allele tragen; sie werden deshalb nicht als vier unabhängige Gene gerechnet.</p>'
+          ? '<p class="tiny muted"><strong>cKit:</strong> Es werden nur getestete oder aus der Fellfarbe ableitbare Varianten angezeigt.</p>'
           : ''}
       </section>
 
       <section class="color-guide-subsection">
-        <h4>📊 Bisherige Farbvererbung in der MDR-Datenbank</h4>
+        <h4>Bisherige Farbvererbung</h4>
         ${cgEmpiricalColorHtml(mare,stallion,allHorses)}
       </section>
 
       <section class="color-guide-subsection">
-        <h4>🐆 Appaloosa-Muster</h4>
+        <h4>Appaloosa-Muster</h4>
         ${[mare,stallion].some(h => cgPatternHint(h))
           ? `<p class="small"><strong>Sichtbare Elternmuster:</strong> ${[mare,stallion].filter(h=>cgPatternHint(h)).map(h=>`${cgEsc(h.name||'Pferd')}: ${cgEsc(cgPatternHint(h))} (abgeleitet)`).join(' · ')}</p>`
           : ''}
@@ -1504,8 +1544,8 @@ function colorGuideHtml(mare,stallion,allHorses = null) {
 
       ${cgKnowledgeSummaryHtml(mare,stallion)}
       <p class="tiny muted">
-        „Aus Fellfarbe abgeleitet“ bedeutet Phänotyp/Mindestzustand, nicht Gentest.
-        Bei unbekannter Zygosität zeigt der Farbguide eine konservative Spanne.
+        „Aus Fellfarbe abgeleitet“ bedeutet Phänotyp, nicht Gentest.
+        Prozentwerte erscheinen nur bei eindeutiger Berechnung; sonst „nicht vorhersehbar“.
       </p>
     </div>
   </details>`;

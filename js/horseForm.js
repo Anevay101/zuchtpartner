@@ -544,10 +544,13 @@ function updateAppaloosaPatternVisibility() {
     /\bappaloosa\b/i.test(breed) ||
     hasLp;
 
-  field.hidden = !relevant;
+  // V54.0.7: Nur die automatische Musterabfrage bleibt sichtbar.
+  // Das Select existiert weiterhin als technisches Speicherfeld, wird aber
+  // nicht zusätzlich im Formular angezeigt.
+  field.dataset.relevant = relevant ? 'true' : 'false';
+  field.hidden = true;
 
-  // Automatische Erkennung ist nur ein Vorschlag. Eine manuell gewählte
-  // Ausprägung wird niemals still überschrieben.
+  // Eindeutig aus der Fellfarbe erkennbare Muster werden automatisch gesetzt.
   if (relevant && !select.value && detected) select.value = detected;
 }
 
@@ -555,7 +558,7 @@ function maybePromptAppaloosaPattern() {
   if (document.querySelector('.view-mode')) return;
   const field = document.getElementById('appaloosa-pattern-field');
   const select = document.getElementById('appaloosa_pattern');
-  if (!field || !select || field.hidden || select.value) return;
+  if (!field || !select || field.dataset.relevant !== 'true' || select.value) return;
   if (document.getElementById('appaloosa-pattern-modal')) return;
 
   const modal = document.createElement('div');
@@ -563,7 +566,7 @@ function maybePromptAppaloosaPattern() {
   modal.className = 'modal';
   modal.innerHTML = `
     <div class="modal-card appaloosa-pattern-modal-card">
-      <h2>🐆 Sichtbares Appaloosa-Muster</h2>
+      <h2>Sichtbares Appaloosa-Muster</h2>
       <p>
         Dieses Pferd wurde als Appaloosa erkannt. Welches Muster ist am Pferd sichtbar?
         Die Auswahl wird als <strong>Phänotyp</strong> gespeichert – nicht als Gentest.
@@ -592,6 +595,7 @@ function maybePromptAppaloosaPattern() {
     if (event.target.closest('[data-app-pattern-close]')) modal.remove();
   });
 }
+
 
 // Extrahiert die reine numerische Spiel-ID aus einem kompletten Link wie
 // "https://www.morning-dust-ranch.de/index2.php?site=pferd&id=622070" ->
