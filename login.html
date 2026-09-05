@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Anmelden – MDR Pferdedatenbank</title>
+  <link rel="stylesheet" href="css/style.css?v=5400" />
+</head>
+<body class="mdr-login-page">
+  <main class="mdr-login-shell">
+    <section class="mdr-login-card" aria-labelledby="mdr-login-title">
+      <div class="mdr-login-brand">MDR Pferdedatenbank</div>
+      <h1 id="mdr-login-title">Anmelden</h1>
+      <p class="muted">Zugriff auf den gemeinsamen Datenbestand.</p>
+      <div id="mdr-login-message" class="notice small" hidden></div>
+      <form id="mdr-login-form" autocomplete="on">
+        <label for="mdr-login-username">Benutzername</label>
+        <input id="mdr-login-username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus />
+        <label for="mdr-login-password">Passwort</label>
+        <input id="mdr-login-password" name="password" type="password" autocomplete="current-password" required />
+        <button id="mdr-login-submit" type="submit">Anmelden</button>
+        <p id="mdr-login-error" class="error" role="alert"></p>
+      </form>
+      <p class="small muted mdr-login-foot">Es gibt keine öffentliche Registrierung. Zugänge werden ausschließlich für freigeschaltete MDR-Nutzer angelegt.</p>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js?v=5400"></script>
+  <script src="js/login.js?v=5400"></script>
+</body>
+</html>

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <title>Einstellungen – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=53671g" />
+  <link rel="stylesheet" href="css/style.css?v=5400" />
 </head>
 <body>
 <header class="topbar">
@@ -26,7 +26,7 @@
 
   <section class="card settings-section">
     <h2>🛡️ Datensicherung &amp; Import</h2>
-    <div class="notice small online-storage-notice"><strong>Online-Version:</strong> GitHub Pages stellt nur die Anwendung bereit. Pferde, Verpaarungen und Einstellungen bleiben lokal im jeweiligen Browser und werden nicht in das GitHub-Repository hochgeladen. Für Gerätewechsel oder Weitergabe bitte JSON-Backups verwenden.</div>
+    <div class="notice small online-storage-notice"><strong>Gemeinsame Online-Version:</strong> GitHub Pages stellt die Anwendung bereit. Pferde, Verpaarungen und gemeinsame Einstellungen werden zentral und zugriffsgeschützt in Supabase gespeichert. IndexedDB dient nur als lokaler Lesecache. JSON-Backups bleiben als zusätzliche Sicherung erhalten.</div>
     <div id="settings-backup-overview" class="settings-overview-grid"></div>
     <div class="actions settings-actions">
       <button id="settings-backup-download" type="button">💾 Backup herunterladen</button>
@@ -39,7 +39,7 @@
     </div>
     <input id="settings-import-file" type="file" accept=".json,application/json" hidden />
     <p class="small muted">
-      In der Online-Version gibt es keinen Server-Sicherheits-Spiegel im MDR-Ordner. Ein gewählter externer Backup-Ordner ist eine zusätzliche lokale Sicherung im Browser.<br>
+      In der Online-Version gibt es keinen Server-Sicherheits-Spiegel im MDR-Ordner. Der zentrale Arbeitsbestand liegt in Supabase; ein gewählter externer Backup-Ordner ist eine zusätzliche lokale Sicherung.<br>
       <strong>Bereinigte Lerndatei:</strong> enthält nur für Lernmodelle relevante Pferde-/Fohlendaten; persönliche Verwaltungsdaten werden entfernt und der Besitzer aller enthaltenen Lernpferde wird auf <strong>Lerndatei</strong> gesetzt.
     </p>
   </section>
@@ -117,10 +117,12 @@
   <p id="settings-error" class="error"></p>
 </main>
 
-<script src="js/database-local.js?v=53671g"></script>
-<script src="js/local-app.js?v=53671g"></script>
-<script src="js/learning-file.js?v=53671g"></script>
-<script src="js/parser.js?v=53671g"></script>
-<script src="js/settings-local.js?v=53671g"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js?v=5400"></script>
+<script src="js/database-local.js?v=5400"></script>
+<script src="js/local-app.js?v=5400"></script>
+<script src="js/learning-file.js?v=5400"></script>
+<script src="js/parser.js?v=5400"></script>
+<script src="js/settings-local.js?v=5400"></script>
 </body>
 </html>

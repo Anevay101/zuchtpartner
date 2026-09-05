@@ -1,0 +1,4559 @@
+/* Farben und Schriften angelehnt an die Startseite von morning-dust-ranch.de:
+   Wiesengrün als Hauptfarbe, Himmelblau-Verlauf im Hintergrund, "Courgette"
+   für Überschriften, "Source Sans Pro" als Fließtext. */
+@import url('https://fonts.googleapis.com/css2?family=Courgette&family=Source+Sans+3:wght@400;600;700&display=swap');
+
+:root {
+  --bg: #cfe9fb;
+  --bg-gradient: linear-gradient(to bottom right, #6bbae4, #b5def5, #cfe9fb);
+  --surface: #ffffff;
+  --border: #d8d8d8;
+  --text: #4a4a4a;
+  --muted: #7a7a7a;
+  --accent: #6b9d00;
+  --accent-dark: #649200;
+  --danger: #c84149;
+  --success: #6b9d00;
+  --success-tolerance: #1f8f7a;
+  --warning: #b5860a;
+  --info: #2f7fd1;
+  /* Zusätzliche Farbe nur für Schlagwort-Badges (siehe HORSE_TAG_OPTIONS
+     in js/parser.js) - Verkauf/Reserviert/Bleibt decken sich bereits mit
+     danger/warning/success, GBH braucht eine weitere, klar
+     unterscheidbare Farbe. */
+  --tag-purple: #8a5fb0;
+  --radius: 8px;
+  --font-heading: "Courgette", cursive;
+  --font-body: "Source Sans 3", "Source Sans Pro", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Deckende (nicht-transparente) Entsprechung von "th { background:
+     rgba(107,157,0,0.08) }" über --surface - wird für die fixierte
+     Tabellenkopfzeile gebraucht, damit beim Scrollen keine Zeilen
+     durchscheinen. */
+  --th-bg-solid: #f3f7eb;
+  /* Skalierungsfaktor der gesamten Seite (siehe "html { zoom: ... }"
+     weiter unten) - als Variable, damit vh-basierte Höhen (die vom
+     CSS-Zoom NICHT automatisch mitskaliert werden, da sie sich immer auf
+     die tatsächliche, ungezoomte Bildschirmhöhe beziehen) dennoch korrekt
+     die volle sichtbare Höhe ausfüllen: "calc(100vh / var(--zoom))" ergibt
+     nach dem Herunterskalieren durch den Zoom wieder genau 100vh auf dem
+     Bildschirm, statt nur 100vh * zoom (=80%) und ungenutztem Rand. */
+  --zoom: 0.8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16232b;
+    --bg-gradient: linear-gradient(to bottom right, #16323f, #1c2e38, #16232b);
+    --surface: #22303a;
+    --border: #35454f;
+    --text: #e7f0e0;
+    --muted: #9db0a8;
+    --accent: #89b957;
+    --accent-dark: #a3ca79;
+    --danger: #e0827f;
+    --success: #89b957;
+    --success-tolerance: #4fc9b0;
+    --warning: #d9a441;
+    --info: #6fa8dc;
+    --tag-purple: #b98fd9;
+    --th-bg-solid: #2a3b3c;
+  }
+}
+
+* { box-sizing: border-box; }
+
+/* Verkleinert die gesamte Seite (alle Einheiten, auch px) auf 80% - wirkt
+   wie der Browser-Zoom, im Gegensatz zu "html { font-size: 80% }" (das nur
+   rem-basierte Größen träfe) oder "transform: scale()" (das Layoutgröße
+   und Scrollbars nicht mitskaliert). */
+html { zoom: var(--zoom); }
+
+/* Ohne diese Regel gewinnt z.B. ".btn { display: inline-block }" gegen das
+   Browser-Standardverhalten von [hidden], da beide dieselbe Spezifitaet
+   haben und Autoren-CSS dabei die User-Agent-Regel schlaegt - Elemente mit
+   hidden-Attribut blieben dadurch trotzdem sichtbar. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+a { color: var(--accent); font-weight: 600; }
+a:hover { color: var(--accent-dark); }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar h1 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--accent);
+  margin: 0;
+}
+
+.topbar nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+main.container {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+/* "Nach oben"-Pfeil in der Übersicht (siehe wireScrollTop in list.js) -
+   erscheint erst, wenn tatsächlich gescrollt wurde (Tabelle selbst bei
+   Desktop-Breite, sonst die ganze Seite bei Tablet/Handy, siehe
+   "nur die Tabelle scrollt"-Layout weiter unten). */
+.scroll-top-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 50;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  line-height: 1;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Pferdebild-Anzeige (siehe updateImagePreview in horseForm.js) - im
+   Formular (horse.html) klein als Vorschau neben der Bild-URL, auf der
+   Ansichtsseite (view.html, ".view-mode") groß und prominent oben. */
+.image-preview {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--radius);
+  object-fit: cover;
+}
+#horse-form .image-preview {
+  margin-top: 0.5rem;
+  max-height: 140px;
+}
+.view-mode .image-preview {
+  max-height: 320px;
+  margin-bottom: 0.8rem;
+}
+
+/* Mini-Vorschaubild in der Übersichtstabelle (siehe rowHtml in list.js) -
+   "contain" statt "cover", damit das ganze Pferd sichtbar bleibt statt an
+   den Seiten beschnitten zu werden (Pferdebilder sind meist breiter als
+   hoch, das 40x40-Quadrat würde bei "cover" sonst Kopf/Hinterteil
+   abschneiden). */
+.table-thumb {
+  display: block;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: var(--radius);
+}
+
+button, .btn {
+  font: inherit;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+
+button:hover, .btn:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+
+button.secondary, .btn.secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+button.secondary:hover, .btn.secondary:hover { background: var(--border); }
+
+button.danger { background: var(--danger); border-color: var(--danger); }
+button.danger:hover { filter: brightness(0.9); }
+
+/* Kompakter Icon-Button (z.B. Bearbeiten-Stift in der Uebersicht) - die
+   normale Button-Polsterung (0.9rem seitlich) ist fuer eine schmale
+   Tabellenspalte zu breit und laesst den Button in die Nachbarspalte
+   hineinragen (ueberlappt dann deren Text). */
+/* min-width + zentriert, damit unterschiedlich breite Symbole (z.B. ✏️
+   vs. ✗) trotzdem gleich große Buttons ergeben. */
+.icon-btn { padding: 0.2rem 0.3rem; line-height: 1; min-width: 2.1rem; text-align: center; }
+
+input, select, textarea {
+  font: inherit;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+}
+input::placeholder, textarea::placeholder { opacity: 0.5; }
+
+/* --- Reine Ansichtsseite (view.html) - dieselben Felder wie beim
+   Bearbeiten, aber readonly/disabled und optisch wie reiner Text statt
+   Formularfelder. --- */
+.view-mode input[readonly],
+.view-mode textarea[readonly],
+.view-mode select:disabled {
+  border-color: transparent;
+  background: transparent;
+  padding-left: 0;
+  color: var(--text);
+  opacity: 1;
+  -webkit-text-fill-color: var(--text);
+  cursor: default;
+}
+.view-mode select:disabled { appearance: none; -webkit-appearance: none; -moz-appearance: none; }
+.view-mode textarea[readonly] { resize: none; }
+.view-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0.6rem 0 0.2rem;
+}
+
+.error { color: var(--danger); min-height: 1.2em; }
+.muted { color: var(--muted); }
+.small { font-size: 0.85rem; }
+
+/* --- Auth page --- */
+.auth-page { display: flex; align-items: center; justify-content: center; min-height: calc(100vh / var(--zoom)); }
+.auth-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  width: 100%;
+  max-width: 360px;
+}
+.auth-box h1 { margin-top: 0; font-family: var(--font-heading); font-weight: 400; font-size: 1.8rem; color: var(--accent); }
+.auth-box form { display: flex; flex-direction: column; }
+.auth-box button { margin-top: 1rem; }
+
+/* --- Erfolgs-Banner (Pferd angelegt/aktualisiert) --- */
+.flash-banner {
+  background: rgba(107, 157, 0, 0.12);
+  border: 1px solid var(--success);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+/* --- Hinweis: fehlende Daten bei eigenen Pferden --- */
+.missing-data-notice {
+  background: rgba(181, 134, 10, 0.12);
+  border: 1px solid var(--warning);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+}
+.missing-data-notice strong { color: var(--warning); }
+.missing-data-notice p { margin: 0 0 0.4rem; }
+.missing-data-notice p:first-child { margin-top: 0; }
+.missing-data-notice ul { margin: 0; padding-left: 1.3rem; }
+.missing-data-notice li { margin: 0.15rem 0; }
+.missing-data-notice > summary { cursor: pointer; list-style: revert; }
+.missing-data-notice[open] > summary { margin-bottom: 0.5rem; }
+.missing-data-notice .icon-btn { margin-right: 0.3rem; vertical-align: -2px; }
+
+/* --- Filter bar --- */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.filter-group {
+  flex: 1 1 220px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(107, 157, 0, 0.05);
+  padding: 0.5rem 0.7rem 0.7rem;
+}
+.filter-group-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent-dark);
+  margin-bottom: 0.3rem;
+}
+.filter-group-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0 0.6rem;
+}
+.filter-bar .field label { margin-top: 0; }
+.filter-bar .actions {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: flex-end;
+}
+
+.compare-field { display: flex; gap: 0.3rem; }
+.compare-field select { flex: 1.3; }
+.compare-field input { flex: 1; min-width: 0; }
+
+/* --- Ø-Vergleich (Übersicht) --- */
+.compare-avg-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+.compare-avg-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0;
+  cursor: pointer;
+}
+.compare-avg-toggle input[type="checkbox"] { width: auto; margin-top: 0.25rem; }
+.compare-avg-toggle-text { display: flex; flex-direction: column; gap: 0.15rem; }
+.compare-avg-block #compare-avg-panel { margin-top: 0.75rem; margin-bottom: 0; }
+.compare-tolerance-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  align-self: center;
+}
+.compare-tolerance-toggle input[type="checkbox"] { width: auto; margin: 0; }
+.compare-avg-values { flex-basis: 100%; }
+
+.checkdrop { position: relative; }
+.checkdrop-toggle {
+  width: 100%;
+  text-align: left;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.checkdrop-toggle:hover { background: var(--border); }
+.checkdrop-panel {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  margin-top: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem;
+  min-width: 200px;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.checkdrop-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.3rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 4px;
+}
+.checkdrop-item:hover { background: rgba(107, 157, 0, 0.12); }
+.checkdrop-item input { width: auto; }
+.checkdrop-empty { padding: 0.3rem; font-size: 0.85rem; color: var(--muted); }
+
+/* --- Nav-Dropdowns in der Kopfzeile (MDR-Planer/MDR-DB/Konto, siehe
+   js/nav.js) - selbes Grundmuster wie .checkdrop oben, aber als
+   Menü-Liste aus Links/Buttons statt Checkboxen. */
+.nav-dropdown { position: relative; }
+.nav-dropdown-menu {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  margin-top: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem;
+  min-width: 200px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+.nav-dropdown-menu a,
+.nav-dropdown-menu button {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border-radius: 4px;
+  text-decoration: none;
+  color: var(--text);
+  background: none;
+  border: none;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.nav-dropdown-menu a:hover,
+.nav-dropdown-menu button:hover { background: rgba(107, 157, 0, 0.12); }
+.nav-dropdown-menu hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0; }
+
+.list-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+#bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+/* Ersetzt in der mobilen Kartenansicht die Checkbox im (dort
+   ausgeblendeten) Tabellenkopf - siehe "table -> Karten" weiter unten. */
+.mobile-select-all {
+  display: none;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+.mobile-select-all input { width: auto; }
+
+/* Löschen (einzeln wie mehrfach) ist in der Übersicht dem Admin
+   vorbehalten (siehe list.js/init) - die Kästchen selbst bleiben aber für
+   alle sichtbar, da sie auch zum Auswählen der zu exportierenden Pferde
+   dienen (siehe exportCsv). Nur der einzelne ✗-Button und der
+   Sammel-Löschen-Button bleiben für alle anderen Konten ausgeblendet. */
+body.hide-delete [data-delete],
+body.hide-delete #bulk-delete-btn {
+  display: none !important;
+}
+
+/* Ersetzt in der mobilen Kartenansicht das Sortieren per Klick auf die
+   (dort ausgeblendete) Tabellenkopfzeile. */
+.mobile-sort { display: none; align-items: center; gap: 0.4rem; }
+.mobile-sort label { margin: 0; }
+.mobile-sort select { width: auto; padding: 0.3rem 0.5rem; font-size: 0.85rem; }
+
+/* --- Table --- */
+/* table-layout: fixed + Prozentbreiten (siehe <colgroup> in index.html):
+   bei 19 Spalten reicht die Breite unterhalb von ca. 1400px (siehe
+   #horse-table min-width weiter unten) nicht mehr, ohne dass Inhalte in
+   mehreren Spalten gleichzeitig umbrechen - je nachdem, welche Felder
+   bei einem Pferd zufällig länger sind, macht das einzelne Zeilen
+   unterschiedlich hoch und die Trennlinien wirken "verrutscht". Ab
+   dieser Mindestbreite lieber horizontal scrollen (overflow-x) als
+   quetschen - Kopf/Auswahl-Spalten bleiben dabei stabil lesbar. */
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+/* vertical-align:top statt der Standardvorgabe "middle" - Zeilen sind
+   unterschiedlich hoch (z.B. Name mit mehreren Schlagwort-Badges
+   umgebrochen), bei "middle" würden kurze Zellen (Kästchen, Mini-Bild)
+   dann mittig in der hohen Zeile schweben statt oben bündig mit dem
+   Zeilenanfang, wodurch die untere Trennlinie im Vergleich zu ihrem
+   Inhalt verrutscht wirkt. */
+th, td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; white-space: normal; overflow-wrap: break-word; font-size: 0.88rem; vertical-align: top; }
+/* Zellen duerfen normal umbrechen - alle Zellen EINER Zeile teilen sich im
+   Tabellen-Layout ohnehin dieselbe Hoehe, die Trennlinie "springt" also
+   nie innerhalb einer Zeile, auch wenn Zeilen UNTEREINANDER unterschiedlich
+   hoch sind (je nachdem, wie viel eine Zelle umbricht). */
+@media (min-width: 901px) {
+  /* Erzwingt genug Breite, damit Name/Farbe/Rasse/Besitzer & Co. im
+     Normalfall einzeilig bleiben (siehe Kommentar bei .table-wrap oben) -
+     ist der Bildschirm schmaler, übernimmt .table-wrap's overflow-x das
+     horizontale Scrollen, statt dass Spalteninhalte gequetscht werden. */
+  #horse-table { min-width: 1400px; }
+}
+/* overflow-wrap:break-word (oben) wuerde bei sehr schmalen Spalten
+   (z.B. "Bild", "Geschlecht") einzelne Woerter mitten im Wort umbrechen
+   ("Bil"/"d") statt nur an Wortgrenzen - fuer Kopfzeilen unerwuenscht,
+   die duerfen bei Bedarf lieber auf 2 Zeilen umbrechen (white-space:
+   normal reicht dafuer bei mehrteiligen Namen wie "Zuletzt bearbeitet"). */
+th { background: var(--th-bg-solid); cursor: pointer; user-select: none; overflow-wrap: normal; word-break: normal; }
+tr:hover td { background: rgba(107, 157, 0, 0.05); }
+/* Bewusst KEIN "display: flex" auf <td> selbst - das entzieht die
+   Zelle dem normalen Tabellenzeilen-Layout (border-collapse berechnet
+   Zeilenhoehe/Randlinie dann pro Zelle statt pro Zeile, was zu einer
+   schiefen/versetzten unteren Trennlinie fuehrt). Die Buttons bleiben
+   inline-block (Standard) und bekommen stattdessen einen rechten
+   Abstand fuers Layout. */
+td.actions-cell .btn, td.actions-cell button { margin-right: 0.4rem; }
+td.actions-cell .btn:last-child, td.actions-cell button:last-child { margin-right: 0; }
+
+/* Ø-Vergleich (Checkbox "Ø-Vergleich anzeigen", siehe list.js/cmpClass) -
+   grün = besser, rot = schlechter als die gewählte Vergleichsbasis (bei
+   GP/Ext% ist ein höherer Wert besser, bei Ext/Int ein niedrigerer). */
+td.cmp-good { background: rgba(107, 157, 0, 0.16); }
+td.cmp-good, td.cmp-good a { color: var(--success); font-weight: 600; }
+/* Schlechter als der Durchschnitt, aber innerhalb der persönlichen
+   Toleranz (siehe Toleranz-Einstellungen/-Häkchen) - eigener Grünton statt
+   ungefärbt, damit "durch Toleranz noch akzeptabel" sichtbar bleibt, ohne
+   mit "wirklich besser" (cmp-good) verwechselt zu werden. */
+td.cmp-tolerance { background: rgba(31, 143, 122, 0.14); }
+td.cmp-tolerance, td.cmp-tolerance a { color: var(--success-tolerance); font-weight: 600; }
+td.cmp-bad { background: rgba(200, 65, 73, 0.14); }
+td.cmp-bad, td.cmp-bad a { color: var(--danger); font-weight: 600; }
+
+td.keep-foal-cell { white-space: nowrap; }
+.keep-foal-btn {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.95rem;
+  line-height: 1;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  margin-right: 0.3rem;
+}
+.keep-foal-btn:hover { background: var(--border); }
+.keep-foal-yes:hover { border-color: var(--success); background: rgba(107, 157, 0, 0.1); }
+.keep-foal-no:hover { border-color: var(--danger); background: rgba(200, 65, 73, 0.1); }
+.keep-foal-yes.active { background: var(--success); border-color: var(--success); color: #fff; }
+.keep-foal-no.active { background: var(--danger); border-color: var(--danger); color: #fff; }
+.pill {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  border: 1px solid var(--border);
+}
+.pill.yes { color: var(--success); border-color: var(--success); }
+.pill.no { color: var(--danger); border-color: var(--danger); }
+
+/* --- Schlagwort-Badges (siehe HORSE_TAG_OPTIONS in js/parser.js) --- */
+.horse-tag-badge {
+  display: inline-block;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  color: #fff;
+  white-space: nowrap;
+}
+/* Name-Zelle der Übersicht (siehe rowHtml in list.js) - Name-Link und
+   Schlagwort-Badges nebeneinander/umbrechend statt gequetscht. */
+.name-cell-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
+
+/* Schlagwort-Zuweisung im Pferd-Formular (horse.html) - je Zeile eine
+   Checkbox mit Farbpunkt und optionalem Zusatztext-Feld. */
+.tag-checkbox-list { display: flex; flex-direction: column; gap: 0.4rem; margin: 0.6rem 0; }
+.tag-checkbox-row { display: flex; align-items: center; gap: 0.5rem; font-weight: normal; }
+.tag-checkbox-row input[type="checkbox"] { width: auto; }
+.tag-dot { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 50%; flex-shrink: 0; }
+.tag-checkbox-row .tag-note-input { flex: 1; min-width: 120px; max-width: 260px; }
+
+/* --- Form --- */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0 1rem;
+}
+
+/* Checkbox-Liste (z.B. Rassen-Auswahl in einstellungen.html) - anders als
+   .form-grid keine Label/Input-Paare in Spalten, sondern frei umbrechende
+   Einzel-Checkboxen. */
+.checkbox-list { display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem; margin: 0.6rem 0; }
+.checkbox-list label { display: flex; align-items: center; gap: 0.4rem; font-weight: normal; margin-top: 0; }
+.checkbox-list input[type="checkbox"] { width: auto; }
+
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 1rem 0;
+  padding: 0.8rem 1rem 1rem;
+  background: var(--surface);
+}
+legend {
+  padding: 0.1rem 0.5rem;
+  font-weight: 600;
+  color: var(--accent-dark);
+  background: var(--surface);
+  border-radius: 4px;
+}
+
+/* --- Reiter (Stammdaten/Genetik/Turnierwerte/Stammbaum, horse.html/view.html) --- */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--border);
+}
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  margin-bottom: -2px;
+  padding: 0.6rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.tab-btn:hover { background: rgba(107, 157, 0, 0.08); border-color: transparent; color: var(--text); }
+.tab-btn.active { color: var(--accent-dark); border-bottom-color: var(--accent-dark); }
+
+.paste-box textarea { min-height: 160px; font-family: ui-monospace, Consolas, monospace; font-size: 0.8rem; }
+.paste-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.5rem; align-items: center; }
+
+/* Einklappbare Variante des Paste-Kastens (horse.html beim Bearbeiten
+   bestehender Pferde, siehe horseForm.js init) - <details>/<summary>
+   statt <fieldset>/<legend>, optisch gleich gehalten. */
+details.paste-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 1rem 0;
+  padding: 0.8rem 1rem 1rem;
+  background: var(--surface);
+}
+details.paste-box > summary {
+  font-weight: 600;
+  color: var(--accent-dark);
+  cursor: pointer;
+  margin-bottom: 0.6rem;
+}
+details.paste-box:not([open]) > summary { margin-bottom: 0; }
+
+.detail-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.detail-table th, .detail-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left; overflow-wrap: break-word; }
+.detail-table th { color: var(--muted); font-weight: 600; width: 40%; }
+
+/* Klick-Button je nicht getestetem Farbgenetik-Locus, um manuell "1x
+   vorhanden" / "2x vorhanden" / "nicht vorhanden" / "unbekannt"
+   durchzuklicken (siehe geneOverrideBadge/nextOverrideState). Farbe
+   zeigt den aktuellen Zustand auch ohne den Tooltip zu lesen. */
+.gene-override {
+  display: inline-block;
+  min-width: 1.8rem;
+  padding: 0.1rem 0.35rem;
+  margin-left: 0.4rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  text-align: center;
+  cursor: pointer;
+}
+.gene-override-unknown:hover { background: var(--border); }
+.gene-override-het { border-color: var(--accent); color: var(--accent-dark); background: rgba(107, 157, 0, 0.12); }
+.gene-override-hom { border-color: var(--accent-dark); color: #fff; background: var(--accent-dark); font-weight: 600; }
+.gene-override-absent { border-color: var(--danger); color: var(--danger); background: rgba(200, 65, 73, 0.12); }
+/* Auf der reinen Ansichtsseite (view.html) nur Anzeige, kein Klick. */
+.view-mode .gene-override { cursor: default; pointer-events: none; }
+
+/* Text und Klick-Button(s) je Zeile getrennt (siehe colorGeneticsHtml) -
+   die Buttons stehen dadurch immer am rechten Rand der Zelle und sind so
+   über alle Zeilen hinweg miteinander ausgerichtet, unabhängig davon, wie
+   lang der Hinweistext links davon je Zeile ist. */
+.detail-table td.gene-cell { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.gene-value-text { flex: 1; min-width: 0; }
+.gene-badges { display: flex; align-items: center; flex-shrink: 0; white-space: nowrap; }
+
+.group-heading { font-weight: 600; margin: 0.6rem 0 0.2rem; color: var(--accent-dark); }
+
+/* --- Anleitung (anleitung.html) - rendert ANLEITUNG.md client-seitig
+   per marked.js, damit der Text nur an einer Stelle (der Markdown-Datei)
+   gepflegt werden muss, aber trotzdem im Look der restlichen Seite
+   erscheint statt in GitHub Pages' Standard-Jekyll-Darstellung. --- */
+.markdown-content {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.75rem;
+  line-height: 1.6;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.markdown-content h1 { font-family: var(--font-heading); color: var(--accent-dark); font-size: 2rem; margin: 0 0 1rem; }
+.markdown-content h2 { color: var(--accent-dark); border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; margin: 1.8rem 0 0.8rem; }
+.markdown-content h3 { color: var(--accent-dark); margin: 1.3rem 0 0.5rem; }
+.markdown-content p { margin: 0.6rem 0; }
+.markdown-content ul, .markdown-content ol { margin: 0.6rem 0; padding-left: 1.5rem; }
+.markdown-content li { margin: 0.2rem 0; }
+.markdown-content a { color: var(--accent-dark); }
+.markdown-content code { background: var(--bg); border-radius: 4px; padding: 0.1rem 0.35rem; font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; }
+.markdown-content hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+.markdown-content table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; font-size: 0.9rem; }
+.markdown-content th, .markdown-content td { padding: 0.4rem 0.6rem; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+.markdown-content th { background: var(--th-bg-solid); color: var(--text); cursor: default; }
+.markdown-content strong { color: var(--text); }
+
+.form-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1.2rem 0; }
+.form-actions .push-right { margin-left: auto; }
+
+/* Massenerfassung-Karte ("Speichern & nächstes Pferd", siehe
+   renderBulkSessionCard in horseForm.js) - zeigt die in dieser Sitzung
+   bereits erfassten Pferde als laufende Liste, analog zur entsprechenden
+   Anzeige im Discord-Bot. */
+.bulk-session-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 1rem 1.2rem;
+  margin: 1.2rem 0;
+  text-align: center;
+}
+.bulk-session-count { font-family: var(--font-heading); font-size: 2.4rem; color: var(--accent-dark); line-height: 1.1; }
+.bulk-session-label { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.8rem; }
+.bulk-session-items { list-style: none; margin: 0 0 1rem; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 0.3rem; }
+.bulk-session-item { display: flex; align-items: center; gap: 0.5rem; }
+.bulk-session-icon { flex: 0 0 auto; }
+.bulk-session-item a { flex: 1 1 auto; overflow-wrap: break-word; }
+.bulk-session-badge {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  color: var(--info);
+  border: 1px solid var(--info);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+}
+
+.badge-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.4rem 0; }
+
+/* --- Lösch-Bestätigungs-Popup --- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+.modal-box {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(80vh / var(--zoom));
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+.modal-box h2 {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-heading);
+  font-weight: 400;
+  font-size: 1.4rem;
+  color: var(--accent);
+}
+.modal-box ul { margin: 0.5rem 0; padding-left: 1.2rem; }
+.modal-box li { margin: 0.2rem 0; }
+.modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; margin-top: 1.2rem; }
+
+/* Gilt für Tablet UND Handy (siehe max-width unten) - die Tabelle mit
+   ihren 16 Spalten wird auch auf Tablet-Breite (z.B. 768px, Hochformat)
+   ohne diesen Umbau unleserlich gestaucht, deshalb ein deutlich
+   breiterer Umbruch als der reine Handy-Breakpoint weiter unten. Erst ab
+   echter Desktop-/Tablet-Querformat-Breite bleibt die normale
+   Tabellenansicht. */
+@media (max-width: 900px) {
+  /* Dropdown-Panels (Checkbox-Filter, Nav-Menüs "MDR-Planer"/"MDR-DB"/
+     Konto) dürfen auch auf Tablet-Breite nicht über den rechten Rand
+     hinausragen. */
+  .checkdrop-panel { max-width: calc(100vw - 3rem); }
+  .nav-dropdown-menu { max-width: calc(100vw - 3rem); }
+
+  .mobile-select-all { display: inline-flex; }
+  .mobile-sort { display: inline-flex; }
+
+  /* --- Übersicht: Tabelle -> Liste ---
+     16 Spalten passen auf Tablet/Handy auch mit Umbruch nicht lesbar
+     nebeneinander (siehe table-layout:fixed weiter oben, das ist nur
+     für echte Desktop-Breite gedacht). Stattdessen wird jede Zeile zu
+     einem Listeneintrag "Label: Wert" je Feld - das Label kommt aus dem
+     data-label-Attribut (siehe rowHtml in list.js), da <thead> hier
+     ausgeblendet wird (Sortieren stattdessen über .mobile-sort oben).
+     Alle Einträge bilden zusammen eine durchgehende Liste (ein Rahmen um
+     #horse-table statt einzelner Karten je Zeile), Auswahl-Kästchen und
+     Name stehen dabei ohne eigenes Label in einer Zeile. */
+  .table-wrap { overflow-x: visible; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  #horse-table, #horse-table tbody { display: block; width: 100%; }
+  #horse-table thead { display: none; }
+  #horse-table tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.6rem;
+    padding: 0.65rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+  }
+  #horse-table tr:last-child { border-bottom: none; }
+  #horse-table tr:hover td { background: transparent; }
+  #horse-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.15rem 0;
+    flex: 1 0 100%;
+    font-size: 0.95rem;
+    text-align: right;
+  }
+  #horse-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    text-align: left;
+    flex-shrink: 0;
+  }
+  /* Auswahl-Kästchen, Mini-Bild und Name zusammen auf einer gemeinsamen
+     ersten Zeile, alle ohne eigenes Label. align-self:flex-end statt des
+     von der Zeile geerbten "center" (siehe #horse-table tr weiter oben) -
+     die drei Felder sind unterschiedlich hoch (Bild 40px, Kästchen/Name
+     deutlich weniger), bei "center" säßen ihre unteren Trennlinien dadurch
+     auf verschiedenen Höhen und der Strich wirkte verrutscht/gestuft statt
+     durchgehend gerade. "flex-end" richtet alle drei Unterkanten (und
+     damit die border-bottom-Linien) exakt aneinander aus. */
+  #horse-table td[data-label="Auswählen"] {
+    order: -1;
+    flex: 0 0 auto;
+    align-self: flex-end;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  #horse-table td[data-label="Auswählen"]::before { content: none; }
+  #horse-table td[data-label="Bild"] {
+    order: -1;
+    flex: 0 0 auto;
+    align-self: flex-end;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  #horse-table td[data-label="Bild"]::before { content: none; }
+  #horse-table td[data-label="Name"] {
+    order: -1;
+    /* flex-basis 0% statt "auto": bei "auto" entscheidet der Browser
+       schon anhand der ungeschrumpften Inhaltsbreite (langer Name +
+       Schlagwort-Badges), ob das Feld überhaupt auf die erste Zeile
+       neben Kästchen/Bild passt - reicht der Platz nicht, rutscht das
+       ganze Feld in eine eigene Zeile statt seinen Inhalt intern
+       umzubrechen, und die gemeinsame Trennlinie reißt auseinander. Mit
+       Basis 0% + min-width:0 bekommt es zunächst (fast) keinen Platz
+       zugewiesen und wächst danach nur so weit wie tatsächlich übrig
+       ist, wodurch Name/Badges innerhalb der Zeile umbrechen statt das
+       Feld selbst wegzuschieben. */
+    flex: 1 1 0%;
+    min-width: 0;
+    align-self: flex-end;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 1.05rem;
+    font-weight: 600;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  #horse-table td[data-label="Name"]::before { content: none; }
+  #horse-table td[data-label="Aktionen"] { display: block; text-align: left; padding-top: 0.5rem; }
+  #horse-table td[data-label="Aktionen"]::before { content: none; }
+  #horse-table td[data-label="Aktionen"] button { width: 100%; }
+  #horse-table td.small { font-size: 0.85rem; }
+}
+
+@media (max-width: 640px) {
+  main.container { padding: 0.75rem; }
+  .topbar { flex-direction: column; gap: 0.5rem; align-items: flex-start; padding: 0.75rem 1rem; }
+  .topbar h1 { font-size: 1.3rem; }
+  .checkdrop-item { padding: 0.4rem 0.3rem; font-size: 0.95rem; }
+
+  /* --- Formular (horse.html) --- */
+  .form-actions { flex-direction: column; }
+  .form-actions .push-right { margin-left: 0; }
+  .form-actions button, .form-actions .btn { width: 100%; text-align: center; }
+  fieldset { padding: 0.7rem 0.8rem 0.9rem; }
+  details.paste-box { padding: 0.7rem 0.8rem 0.9rem; }
+}
+
+/* --- Übersicht: nur die Tabelle scrollt, Kopf/Filter bleiben fest ---
+   Nur ab einer gewissen Breite (passend zum Tabelle->Liste-Umbau oben),
+   damit auf sehr kleinen Bildschirmen (wo der Filterbereich selbst schon
+   mehr als die Viewport-Höhe einnehmen kann) weiterhin die ganze Seite
+   normal scrollt statt Inhalte abzuschneiden. */
+@media (min-width: 901px) {
+  body.list-page {
+    /* siehe --zoom-Kommentar oben im :root - ohne die Korrektur würde
+       diese Box durch den Seiten-Zoom nur 80% der tatsächlichen
+       Bildschirmhöhe ausfüllen, wodurch der Tabellenbereich unnötig
+       gestaucht würde. */
+    height: calc(100vh / var(--zoom));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  body.list-page .topbar { flex: 0 0 auto; }
+  body.list-page main.container {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  body.list-page .flash-banner,
+  body.list-page .missing-data-notice,
+  body.list-page .filter-bar,
+  body.list-page .compare-avg-block,
+  body.list-page .list-header {
+    flex: 0 0 auto;
+  }
+  body.list-page .table-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* Flex-Items sind standardmäßig nie schmaler als ihr eigener Inhalt
+       (min-width:auto) - ohne min-width:0 würde die jetzt breitere
+       Tabelle (siehe #horse-table min-width weiter oben) .table-wrap
+       aus der Seite hinausdrücken statt intern zu scrollen. Derselbe
+       Effekt wie bei min-height:0 hier, nur für die horizontale Achse. */
+    min-width: 0;
+    overflow-y: auto;
+  }
+  body.list-page thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+}
+
+
+/* --- Lokaler Verpaarungsrechner (V4) --- */
+.pairing-calculator-page { display: grid; gap: 1rem; }
+.pairing-picker-card h2, .pairing-calculator-page .card h2 { margin-top: 0; }
+.pairing-picker-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
+  gap: 0.8rem;
+  align-items: end;
+}
+.pairing-parent-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.pairing-role {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+.pairing-parent-image {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin: 0.6rem 0;
+}
+.pairing-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.8rem;
+}
+.pairing-facts dt { font-weight: 700; }
+.pairing-facts dd { margin: 0; }
+.pairing-calc-table th,
+.pairing-calc-table td { vertical-align: top; }
+.pairing-summary-list { margin-bottom: 0; }
+.risk-good td:last-child { font-weight: 600; }
+.risk-bad td:last-child { font-weight: 700; }
+.risk-unknown { opacity: 0.82; }
+
+@media (max-width: 800px) {
+  .pairing-picker-grid,
+  .pairing-parent-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* --- Lokale Gesamtplaner (V5) --- */
+.planner-result,
+.planner-summary {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border, #8884);
+  border-radius: 10px;
+}
+.planner-good { border-left: 5px solid currentColor; }
+.planner-warning { border-left: 5px solid #b8860b; }
+.planner-candidate {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: start;
+  margin-top: 0.8rem;
+}
+.planner-rank {
+  font-size: 1.5rem;
+  font-weight: 800;
+  opacity: 0.6;
+  text-align: center;
+}
+.planner-candidate h3 { margin: 0 0 0.15rem; }
+.planner-candidate-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.planner-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.45rem 0;
+}
+.planner-metrics span,
+.planner-badge {
+  display: inline-block;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--border, #8885);
+  border-radius: 999px;
+  font-size: 0.88rem;
+}
+.tournament-row summary {
+  cursor: pointer;
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.notice-warning {
+  border-left: 5px solid #b8860b;
+}
+@media (max-width: 760px) {
+  .planner-candidate {
+    grid-template-columns: 2.4rem minmax(0, 1fr);
+  }
+  .planner-candidate-actions {
+    grid-column: 2;
+  }
+}
+
+
+/* --- V6 Zuchtplaner / Verpaarungsratgeber --- */
+.zucht-parent-select-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1rem;
+}
+.zucht-parent-select-grid > div {
+  border:1px solid var(--border,#8885);
+  border-radius:10px;
+  padding:0.9rem;
+}
+.farbwunsch-box {
+  margin-top:1rem;
+  padding:0.8rem;
+  border:1px solid var(--border,#8885);
+  border-radius:10px;
+}
+.farbwunsch-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0.35rem 0.8rem;
+  margin-top:0.6rem;
+}
+.result-card {
+  margin-top:0.8rem;
+  padding:1rem;
+  border:1px solid var(--border,#8885);
+  border-radius:10px;
+}
+.result-card h2 { margin-top:0; }
+.tiny { font-size:0.82em; }
+@media (max-width:800px) {
+  .zucht-parent-select-grid,
+  .farbwunsch-grid { grid-template-columns:1fr; }
+}
+
+
+/* --- V7: höherer Kontrast im Zuchtplaner / Verpaarungsratgeber --- */
+.planner-high-contrast input,
+.planner-high-contrast select,
+.planner-high-contrast textarea,
+.planner-high-contrast .checkdrop-toggle {
+  background: #ffffff;
+  color: #171717;
+  border: 2px solid #59636d;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.03);
+}
+.planner-high-contrast input::placeholder,
+.planner-high-contrast textarea::placeholder {
+  color: #666666;
+  opacity: 1;
+}
+.planner-high-contrast input:focus,
+.planner-high-contrast select:focus,
+.planner-high-contrast textarea:focus {
+  outline: 3px solid rgba(47,127,209,0.35);
+  outline-offset: 1px;
+  border-color: #2f7fd1;
+}
+.planner-high-contrast .zucht-parent-select-grid > div,
+.planner-high-contrast .farbwunsch-box,
+.planner-high-contrast .result-card {
+  border-width: 2px;
+}
+.farbwunsch-box summary {
+  cursor: pointer;
+  padding: 0.15rem 0;
+  user-select: none;
+}
+.farbwunsch-box[open] summary {
+  margin-bottom: 0.7rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .planner-high-contrast input,
+  .planner-high-contrast select,
+  .planner-high-contrast textarea,
+  .planner-high-contrast .checkdrop-toggle {
+    background: #101820;
+    color: #f4f7f8;
+    border-color: #a9bdc9;
+  }
+  .planner-high-contrast input::placeholder,
+  .planner-high-contrast textarea::placeholder {
+    color: #c3cdd2;
+  }
+}
+
+
+/* --- V8: helle Ergebnisfelder im Verpaarungsratgeber --- */
+.planner-high-contrast .result-card {
+  background: #f8fbfd;
+  color: #20262b;
+  border: 2px solid #a9bcc8;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.planner-high-contrast .result-card h2,
+.planner-high-contrast .result-card h3,
+.planner-high-contrast .result-card strong {
+  color: #20262b;
+}
+
+.planner-high-contrast .result-card .muted,
+.planner-high-contrast .result-card .small,
+.planner-high-contrast .result-card .tiny {
+  color: #58646d;
+}
+
+.planner-high-contrast .result-card .btn.secondary {
+  background: #ffffff;
+  color: #20262b;
+  border-color: #7e929f;
+}
+
+.planner-high-contrast .result-card .notice,
+.planner-high-contrast .result-card .notice-warning,
+.planner-high-contrast .result-card .notice-caution {
+  background: #fff8df;
+  color: #3c3522;
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Ergebnisfelder bleiben bewusst hell, damit Stute/Hengst-Karten
+     unabhängig vom Systemmodus gut lesbar sind. */
+  .planner-high-contrast .result-card {
+    background: #f5f8fa;
+    color: #20262b;
+    border-color: #b8c8d1;
+  }
+  .planner-high-contrast .result-card h2,
+  .planner-high-contrast .result-card h3,
+  .planner-high-contrast .result-card strong {
+    color: #20262b;
+  }
+  .planner-high-contrast .result-card .muted,
+  .planner-high-contrast .result-card .small,
+  .planner-high-contrast .result-card .tiny {
+    color: #58646d;
+  }
+}
+
+
+/* --- V10 Turnierzucht --- */
+.turnierzucht-box summary,
+.turnierzucht-result summary { cursor: pointer; }
+
+.turnierzucht-result {
+  margin: 0.8rem 0;
+  padding: 0.65rem 0.8rem;
+  border: 2px solid #9aabb5;
+  border-radius: 9px;
+  background: #eef5f8;
+  color: #20262b;
+}
+.turnierzucht-result summary { font-weight: 600; }
+.turnierzucht-result-body { margin-top: 0.75rem; }
+.turnierzucht-result .detail-table {
+  background: #ffffff;
+  color: #20262b;
+}
+.turnierzucht-result .detail-table th,
+.turnierzucht-result .detail-table td { color: #20262b; }
+
+@media (prefers-color-scheme: dark) {
+  .turnierzucht-result { background: #eef5f8; color: #20262b; }
+}
+
+
+/* --- V11 Turnierplaner Ranking --- */
+.tournament-ranking-table td,
+.tournament-ranking-table th {
+  vertical-align: middle;
+}
+
+.tournament-ranking-table td:nth-child(4),
+.tournament-ranking-table th:nth-child(4) {
+  font-size: 1.05rem;
+}
+
+.tournament-main-badge {
+  font-weight: 700;
+}
+
+.tournament-secondary-badge {
+  font-weight: 700;
+  border-width: 2px;
+}
+
+.tournament-ranking-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: end;
+  margin-bottom: 0.6rem;
+}
+
+
+/* --- V14 Tabellenfilter + Scrollbar --- */
+.table-inline-filters {
+  margin-top: 1rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border, #8885);
+  border-radius: 10px;
+}
+
+.lk-filter-box {
+  margin-top: 0.75rem;
+}
+
+.lk-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(70px, 1fr));
+  gap: 0.35rem 0.65rem;
+  margin: 0.45rem 0 0.7rem;
+}
+
+.lk-checkbox-grid label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+/* Ca. 20 Datenzeilen sichtbar; danach scrollt nur die Gesamtliste. */
+#tp-ranking-scroll.tournament-scroll-20 {
+  max-height: 980px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--border, #8885);
+}
+
+#tp-ranking-scroll.tournament-scroll-20 .tournament-ranking-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface, #fff);
+}
+
+@media (max-width: 760px) {
+  .lk-checkbox-grid {
+    grid-template-columns: repeat(2, minmax(80px, 1fr));
+  }
+
+  #tp-ranking-scroll.tournament-scroll-20 {
+    max-height: 820px;
+  }
+}
+
+
+/* --- V15: Turnierplaner-Felder weiß hinterlegen --- */
+#tp-discipline,
+#tp-points-min,
+#tp-interior-max,
+#tp-lk,
+#tp-owner,
+#tp-horse,
+#tp-horse-points-min,
+#tp-horse-lk,
+#tp-horse-table-discipline,
+#tp-horse-table-points,
+#tp-horse-table-interior,
+#tp-table-horse,
+#tp-table-discipline,
+#tp-table-points,
+#tp-table-interior,
+#tp-fitness,
+#tp-experience,
+#tp-affection,
+#tp-satisfaction,
+#tp-shoeing,
+#tp-care,
+.lk-checkbox-grid input[type="checkbox"] {
+  background: #ffffff;
+  color: #20262b;
+  border: 2px solid #758896;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02);
+}
+
+#tp-discipline::placeholder,
+#tp-points-min::placeholder,
+#tp-interior-max::placeholder,
+#tp-horse-points-min::placeholder,
+#tp-horse-table-discipline::placeholder,
+#tp-horse-table-points::placeholder,
+#tp-horse-table-interior::placeholder,
+#tp-table-horse::placeholder,
+#tp-table-discipline::placeholder,
+#tp-table-points::placeholder,
+#tp-table-interior::placeholder,
+#tp-fitness::placeholder,
+#tp-experience::placeholder,
+#tp-affection::placeholder,
+#tp-satisfaction::placeholder {
+  color: #7a838a;
+  opacity: 1;
+}
+
+#tp-discipline:focus,
+#tp-points-min:focus,
+#tp-interior-max:focus,
+#tp-lk:focus,
+#tp-owner:focus,
+#tp-horse:focus,
+#tp-horse-points-min:focus,
+#tp-horse-lk:focus,
+#tp-horse-table-discipline:focus,
+#tp-horse-table-points:focus,
+#tp-horse-table-interior:focus,
+#tp-table-horse:focus,
+#tp-table-discipline:focus,
+#tp-table-points:focus,
+#tp-table-interior:focus,
+#tp-fitness:focus,
+#tp-experience:focus,
+#tp-affection:focus,
+#tp-satisfaction:focus,
+#tp-shoeing:focus,
+#tp-care:focus {
+  border-color: #2f7fd1;
+  outline: 3px solid rgba(47,127,209,0.22);
+  outline-offset: 1px;
+}
+
+.table-inline-filters,
+.lk-filter-box {
+  background: rgba(255,255,255,0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  #tp-discipline,
+  #tp-points-min,
+  #tp-interior-max,
+  #tp-lk,
+  #tp-owner,
+  #tp-horse,
+  #tp-horse-points-min,
+  #tp-horse-lk,
+  #tp-horse-table-discipline,
+  #tp-horse-table-points,
+  #tp-horse-table-interior,
+  #tp-table-horse,
+  #tp-table-discipline,
+  #tp-table-points,
+  #tp-table-interior,
+  #tp-fitness,
+  #tp-experience,
+  #tp-affection,
+  #tp-satisfaction,
+  #tp-shoeing,
+  #tp-care,
+  .lk-checkbox-grid input[type="checkbox"] {
+    background: #ffffff;
+    color: #20262b;
+    border-color: #758896;
+  }
+}
+
+
+/* --- V16: frei einstellbare Nebendisziplin-Grenze --- */
+#tp-secondary-threshold {
+  background: #ffffff;
+  color: #20262b;
+  border: 2px solid #758896;
+}
+
+#tp-secondary-threshold:focus {
+  border-color: #2f7fd1;
+  outline: 3px solid rgba(47,127,209,0.22);
+  outline-offset: 1px;
+}
+
+@media (prefers-color-scheme: dark) {
+  #tp-secondary-threshold {
+    background: #ffffff;
+    color: #20262b;
+    border-color: #758896;
+  }
+}
+
+
+/* --- V17: Spielversion DE / EN --- */
+.game-version-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.08rem 0.34rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  font-weight: 700;
+  border: 1px solid currentColor;
+  background: #ffffff;
+  color: #34434d;
+}
+
+.game-version-en {
+  font-weight: 800;
+}
+
+#game_version,
+#f-game-version {
+  background: #ffffff;
+  color: #20262b;
+}
+
+
+/* --- V18 Rassefilter Turnierplaner --- */
+#tp-breed,
+#tp-table-breed,
+#tp-horse-breed {
+  background: #ffffff;
+  color: #20262b;
+  border: 2px solid #758896;
+}
+#tp-breed:focus,
+#tp-table-breed:focus,
+#tp-horse-breed:focus {
+  border-color: #2f7fd1;
+  outline: 3px solid rgba(47,127,209,0.22);
+  outline-offset: 1px;
+}
+
+
+/* --- V19 Komfortpaket --- */
+.data-quality-badge {
+  display: inline-block;
+  margin-left: .35rem;
+  font-size: .72rem;
+  white-space: nowrap;
+}
+.data-quality-panel {
+  padding: .8rem;
+  border: 2px solid #aab8c1;
+  border-radius: 10px;
+  background: #f8fbfd;
+  color: #20262b;
+}
+.data-quality-panel h3 { margin-top: 0; }
+.data-quality-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: .45rem;
+}
+.data-quality-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .45rem .55rem;
+  border-radius: 7px;
+  background: #fff;
+  border: 1px solid #c7d1d8;
+}
+.data-quality-item.missing { border-style: dashed; }
+#horse-tournament-profile .planner-summary {
+  background: #f8fbfd;
+  color: #20262b;
+  border: 2px solid #a9bcc8;
+  border-radius: 10px;
+  padding: .8rem;
+}
+.compare-good { font-weight: 700; }
+.compare-bad { font-weight: 700; }
+#breeding_goal, #compare-horse {
+  background: #fff;
+  color: #20262b;
+  border: 2px solid #758896;
+}
+@media (max-width: 720px) {
+  .data-quality-grid { grid-template-columns: 1fr; }
+}
+
+
+/* --- V20 Aussortierhilfe: helle Felder + eigene Zielwerte --- */
+#ah-owner,
+#ah-breed,
+#ah-gender,
+#ah-mode,
+#ah-target-gp,
+#ah-target-ext,
+#ah-target-extpct,
+#ah-target-int {
+  background: #ffffff;
+  color: #20262b;
+  border: 2px solid #758896;
+}
+
+#ah-owner:focus,
+#ah-breed:focus,
+#ah-gender:focus,
+#ah-mode:focus,
+#ah-target-gp:focus,
+#ah-target-ext:focus,
+#ah-target-extpct:focus,
+#ah-target-int:focus {
+  border-color: #2f7fd1;
+  outline: 3px solid rgba(47,127,209,0.22);
+  outline-offset: 1px;
+}
+
+#ah-target-gp::placeholder,
+#ah-target-ext::placeholder,
+#ah-target-extpct::placeholder,
+#ah-target-int::placeholder {
+  color: #7a838a;
+  opacity: 1;
+}
+
+.ah-targets {
+  margin-top: 1rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(255,255,255,0.55);
+  border-radius: 10px;
+}
+
+.ah-targets legend {
+  font-weight: 700;
+  padding: 0 0.35rem;
+}
+
+.aussort-explanation {
+  line-height: 1.55;
+}
+
+@media (prefers-color-scheme: dark) {
+  #ah-owner,
+  #ah-breed,
+  #ah-gender,
+  #ah-mode,
+  #ah-target-gp,
+  #ah-target-ext,
+  #ah-target-extpct,
+  #ah-target-int {
+    background: #ffffff;
+    color: #20262b;
+    border-color: #758896;
+  }
+}
+
+
+/* --- V21 Schwerpunkt-Erklärung --- */
+.ah-mode-info {
+  margin-top: 0.8rem;
+  line-height: 1.5;
+  background: #f8fbfd;
+  color: #20262b;
+  border: 2px solid #a9bcc8;
+}
+
+
+/* --- V22 Aussortierhilfe: Scrollbar ab mehr als 5 Pferden --- */
+#ah-results-scroll.ah-scroll-5 {
+  max-height: 760px;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+  border-bottom: 1px solid rgba(0,0,0,0.12);
+}
+
+@media (max-width: 760px) {
+  #ah-results-scroll.ah-scroll-5 {
+    max-height: 620px;
+  }
+}
+
+
+/* --- V24 Farbguide / Appaloosa --- */
+.color-special-criterion{margin-top:.9rem;padding-top:.8rem;border-top:1px solid rgba(80,95,105,.3)}
+#appaloosa-wish{background:#fff;color:#20262b;border:2px solid #758896;max-width:440px}
+.color-guide-result{margin:.9rem 0;padding:.7rem .85rem;border:2px solid #a9bcc8;border-radius:10px;background:#f8fbfd;color:#20262b}
+.color-guide-result>summary{cursor:pointer}
+.color-guide-body{margin-top:.8rem}
+.color-guide-subsection{margin:.8rem 0;padding:.7rem;background:#fff;border:1px solid #ccd5db;border-radius:8px;color:#20262b}
+.color-guide-subsection h4{margin:0 0 .55rem;color:#20262b}
+.color-prob-grid{display:grid;gap:.28rem}
+.color-prob-row{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:1rem;padding:.28rem .4rem;border-bottom:1px solid #e0e6ea}
+.color-prob-row:last-child{border-bottom:0}
+@media (prefers-color-scheme:dark){#appaloosa-wish,.color-guide-result,.color-guide-subsection{background:#fff;color:#20262b}}
+
+
+/* --- V28 genaue Verwandtschaftsdiagnose --- */
+.relationship-diagnostic {
+  margin: .8rem 0;
+  padding: .75rem .9rem;
+  background: #ffffff;
+  color: #20262b;
+  border: 2px solid #d59a35;
+  border-radius: 9px;
+}
+.relationship-diagnostic > summary { cursor: pointer; }
+.relationship-diagnostic-row {
+  margin-top: .6rem;
+  padding: .55rem;
+  border: 1px solid #d8e0e5;
+  border-radius: 7px;
+}
+.relationship-diagnostic-row ul {
+  margin: .35rem 0 0 1.3rem;
+}
+
+
+/* --- V30: ruhige Blautöne, weiße Felder und hoher Kontrast --- */
+:root {
+  --bg: #e4f0f6;
+  --bg-gradient: linear-gradient(135deg, #c9dfeb 0%, #e4f0f6 42%, #f3f8fb 100%);
+  --surface: #ffffff;
+  --border: #a9c1cf;
+  --text: #25343d;
+  --muted: #627985;
+  --accent: #5f8fa6;
+  --accent-dark: #3f6f86;
+  --danger: #b85656;
+  --success: #4f887c;
+  --success-tolerance: #5d8c91;
+  --warning: #a7793f;
+  --info: #4f8199;
+  --tag-purple: #7b6f9f;
+  --th-bg-solid: #edf5f8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Auch im System-Dark-Mode bleibt die App bewusst hell und ruhig. */
+    --bg: #dbe9f0;
+    --bg-gradient: linear-gradient(135deg, #bfd6e2 0%, #dceaf1 45%, #eef5f8 100%);
+    --surface: #ffffff;
+    --border: #9eb8c7;
+    --text: #25343d;
+    --muted: #627985;
+    --accent: #5f8fa6;
+    --accent-dark: #3f6f86;
+    --danger: #b85656;
+    --success: #4f887c;
+    --success-tolerance: #5d8c91;
+    --warning: #a7793f;
+    --info: #4f8199;
+    --tag-purple: #7b6f9f;
+    --th-bg-solid: #edf5f8;
+  }
+}
+
+body {
+  background: var(--bg-gradient);
+  color: var(--text);
+}
+
+a { color: var(--accent-dark); }
+a:hover { color: #2e586c; }
+
+.topbar {
+  background: #ffffff;
+  border-bottom: 2px solid #b7cbd6;
+  box-shadow: 0 2px 10px rgba(48, 82, 99, 0.08);
+}
+.topbar h1,
+.auth-box h1,
+.modal-box h2,
+.markdown-content h1 {
+  color: var(--accent-dark);
+}
+
+button, .btn {
+  background: #5f8fa6;
+  border-color: #507f95;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(38, 68, 82, 0.10);
+}
+button:hover, .btn:hover {
+  background: #477b93;
+  border-color: #3f6f86;
+}
+button.secondary, .btn.secondary {
+  background: #ffffff;
+  color: #30434d;
+  border-color: #9fb8c6;
+}
+button.secondary:hover, .btn.secondary:hover {
+  background: #edf5f8;
+  border-color: #7fa2b4;
+}
+button.danger {
+  background: #b85656;
+  border-color: #a64b4b;
+}
+
+/* Alle Eingabe- und Auswahlfelder bleiben unabhängig vom Systemmodus weiß. */
+input,
+select,
+textarea,
+.checkdrop-toggle,
+#appaloosa-wish,
+#game_version,
+#f-game-version,
+#breeding_goal,
+#compare-horse,
+#tp-discipline,
+#tp-points-min,
+#tp-interior-max,
+#tp-lk,
+#tp-owner,
+#tp-horse,
+#tp-horse-points-min,
+#tp-horse-lk,
+#tp-horse-table-discipline,
+#tp-horse-table-points,
+#tp-horse-table-interior,
+#tp-table-horse,
+#tp-table-discipline,
+#tp-table-points,
+#tp-table-interior,
+#tp-fitness,
+#tp-experience,
+#tp-affection,
+#tp-satisfaction,
+#tp-shoeing,
+#tp-care,
+#tp-secondary-threshold,
+#tp-breed,
+#tp-table-breed,
+#tp-horse-breed,
+#ah-owner,
+#ah-breed,
+#ah-gender,
+#ah-mode,
+#ah-target-gp,
+#ah-target-ext,
+#ah-target-extpct,
+#ah-target-int {
+  background: #ffffff !important;
+  color: #1f2a30 !important;
+  border: 2px solid #8daaba !important;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.015);
+}
+
+input::placeholder,
+textarea::placeholder,
+#tp-discipline::placeholder,
+#tp-points-min::placeholder,
+#tp-interior-max::placeholder,
+#tp-horse-points-min::placeholder,
+#tp-horse-table-discipline::placeholder,
+#tp-horse-table-points::placeholder,
+#tp-horse-table-interior::placeholder,
+#tp-table-horse::placeholder,
+#tp-table-discipline::placeholder,
+#tp-table-points::placeholder,
+#tp-table-interior::placeholder,
+#tp-fitness::placeholder,
+#tp-experience::placeholder,
+#tp-affection::placeholder,
+#tp-satisfaction::placeholder,
+#ah-target-gp::placeholder,
+#ah-target-ext::placeholder,
+#ah-target-extpct::placeholder,
+#ah-target-int::placeholder {
+  color: #718793 !important;
+  opacity: 1;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.checkdrop-toggle:focus,
+#tp-secondary-threshold:focus,
+#tp-breed:focus,
+#tp-table-breed:focus,
+#tp-horse-breed:focus,
+#ah-owner:focus,
+#ah-breed:focus,
+#ah-gender:focus,
+#ah-mode:focus,
+#ah-target-gp:focus,
+#ah-target-ext:focus,
+#ah-target-extpct:focus,
+#ah-target-int:focus {
+  border-color: #4f8199 !important;
+  outline: 3px solid rgba(79, 129, 153, 0.22) !important;
+  outline-offset: 1px;
+}
+
+label { color: #5f7480; }
+legend,
+.group-heading,
+.filter-group-title,
+.markdown-content h2,
+.markdown-content h3,
+.tab-btn.active,
+details.paste-box > summary {
+  color: var(--accent-dark);
+}
+
+.filter-bar,
+.compare-avg-block,
+fieldset,
+details.paste-box,
+.auth-box,
+.bulk-session-card,
+.modal-box,
+.markdown-content,
+.table-wrap,
+.zucht-parent-select-grid > div,
+.farbwunsch-box,
+.planner-result,
+.planner-summary,
+.result-card,
+.color-guide-result,
+.color-guide-subsection,
+.turnierzucht-result,
+.data-quality-panel,
+.data-quality-item,
+#horse-tournament-profile .planner-summary,
+.relationship-diagnostic,
+.relationship-diagnostic-row,
+.ah-mode-info {
+  background: #ffffff;
+  color: #25343d;
+  border-color: #b3c8d3;
+  box-shadow: 0 4px 14px rgba(49, 84, 101, 0.06);
+}
+
+.filter-group,
+.table-inline-filters,
+.lk-filter-box,
+.ah-targets {
+  background: #f4f9fb;
+  border-color: #bfd1da;
+}
+
+th {
+  background: #edf5f8;
+  color: #30434d;
+}
+tr:hover td {
+  background: rgba(95, 143, 166, 0.08);
+}
+
+.checkdrop-panel,
+.nav-dropdown-menu {
+  background: #ffffff;
+  border-color: #a9c1cf;
+}
+.checkdrop-item:hover,
+.nav-dropdown-menu a:hover,
+.nav-dropdown-menu button:hover,
+.tab-btn:hover {
+  background: #edf5f8;
+}
+
+.flash-banner {
+  background: #edf7f3;
+  border-color: #79a99d;
+}
+.missing-data-notice,
+.planner-high-contrast .result-card .notice,
+.planner-high-contrast .result-card .notice-warning,
+.planner-high-contrast .result-card .notice-caution {
+  background: #fff9ed;
+  color: #4a4030;
+}
+
+/* Planer-Karten bleiben besonders hell und kontrastreich. */
+.planner-high-contrast .result-card,
+.turnierzucht-result,
+.color-guide-result,
+#horse-tournament-profile .planner-summary,
+.data-quality-panel,
+.ah-mode-info,
+.relationship-diagnostic {
+  background: #fbfdfe !important;
+  color: #202c33 !important;
+  border-color: #9fbac8 !important;
+}
+.planner-high-contrast .result-card h2,
+.planner-high-contrast .result-card h3,
+.planner-high-contrast .result-card strong,
+.color-guide-result h4,
+.relationship-diagnostic strong {
+  color: #202c33;
+}
+.planner-high-contrast .result-card .muted,
+.planner-high-contrast .result-card .small,
+.planner-high-contrast .result-card .tiny {
+  color: #566d79;
+}
+
+.pill.yes { color: #3f786e; border-color: #5f968a; }
+.pill.no { color: #a84444; border-color: #b85656; }
+
+.game-version-badge {
+  background: #ffffff;
+  color: #3c5c6b;
+  border-color: #89a9b8;
+}
+
+/* Ruhige Scrollleisten in den großen Ergebnislisten. */
+#tp-ranking-scroll.tournament-scroll-20,
+#ah-results-scroll.ah-scroll-5 {
+  scrollbar-color: #7fa5b7 #edf5f8;
+}
+
+/* --- V31: kräftigeres Grün-Design, Referenz #8bbd78 --- */
+:root {
+  --bg: #dcebd6;
+  --bg-gradient: linear-gradient(135deg, #79a969 0%, #9fc991 38%, #dcebd6 100%);
+  --surface: #ffffff;
+  --border: #91b784;
+  --text: #263326;
+  --muted: #5f705d;
+  --accent: #8bbd78;
+  --accent-dark: #4f7d42;
+  --danger: #b94b4b;
+  --success: #4f7d42;
+  --success-tolerance: #5e8f62;
+  --warning: #a57621;
+  --info: #427b78;
+  --tag-purple: #85669b;
+  --th-bg-solid: #dcebd6;
+}
+
+/* Auch bei System-Dark-Mode bleibt die Datenbank bewusst hell und kontrastreich. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #dcebd6;
+    --bg-gradient: linear-gradient(135deg, #6f9d61 0%, #95be87 38%, #d6e8d0 100%);
+    --surface: #ffffff;
+    --border: #89ad7d;
+    --text: #263326;
+    --muted: #5f705d;
+    --accent: #8bbd78;
+    --accent-dark: #456d3a;
+    --danger: #b94b4b;
+    --success: #4f7d42;
+    --success-tolerance: #5e8f62;
+    --warning: #9a6d1e;
+    --info: #427b78;
+    --tag-purple: #85669b;
+    --th-bg-solid: #dcebd6;
+  }
+}
+
+body {
+  background: var(--bg-gradient);
+  color: var(--text);
+}
+
+a { color: #456d3a; }
+a:hover { color: #2f582b; }
+
+.topbar {
+  background: #ffffff;
+  border-bottom: 3px solid #8bbd78;
+  box-shadow: 0 3px 12px rgba(47, 88, 43, 0.12);
+}
+.topbar h1,
+.auth-box h1,
+.modal-box h2,
+.markdown-content h1 {
+  color: #456d3a;
+}
+
+button, .btn {
+  background: linear-gradient(180deg, #6f9f60 0%, #537f47 100%);
+  border-color: #456d3a;
+  color: #ffffff;
+  box-shadow: 0 2px 5px rgba(47, 88, 43, 0.16);
+}
+button:hover, .btn:hover {
+  background: linear-gradient(180deg, #608e52 0%, #416a38 100%);
+  border-color: #365f30;
+}
+button.secondary, .btn.secondary {
+  background: #ffffff;
+  color: #30482d;
+  border-color: #79a969;
+  box-shadow: none;
+}
+button.secondary:hover, .btn.secondary:hover {
+  background: #e7f2e2;
+}
+button.danger {
+  background: #b94b4b;
+  border-color: #9f3939;
+}
+
+/* Sämtliche Eingabe- und Auswahlfelder bleiben weiß mit dunkler Schrift. */
+input,
+select,
+textarea,
+.checkdrop-toggle,
+#appaloosa-wish,
+#breeding_goal,
+#compare-horse,
+#tp-discipline,
+#tp-points-min,
+#tp-interior-max,
+#tp-lk,
+#tp-owner,
+#tp-horse,
+#tp-horse-points-min,
+#tp-horse-lk,
+#tp-horse-table-discipline,
+#tp-horse-table-points,
+#tp-horse-table-interior,
+#tp-table-horse,
+#tp-table-discipline,
+#tp-table-points,
+#tp-table-interior,
+#tp-fitness,
+#tp-experience,
+#tp-affection,
+#tp-satisfaction,
+#tp-shoeing,
+#tp-care,
+#tp-secondary-threshold,
+#tp-breed,
+#tp-table-breed,
+#tp-horse-breed,
+#ah-owner,
+#ah-breed,
+#ah-gender,
+#ah-mode,
+#ah-target-gp,
+#ah-target-ext,
+#ah-target-extpct,
+#ah-target-int,
+#game_version,
+#f-game-version {
+  background: #ffffff !important;
+  color: #1f2a20 !important;
+  border: 2px solid #6f9364 !important;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #697766 !important;
+  opacity: 1 !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.checkdrop-toggle:focus,
+#appaloosa-wish:focus,
+#breeding_goal:focus,
+#compare-horse:focus {
+  border-color: #456d3a !important;
+  outline: 3px solid rgba(139, 189, 120, 0.38) !important;
+  outline-offset: 1px;
+}
+
+/* Hauptflächen */
+.filter-bar,
+.compare-avg-block,
+.table-wrap,
+fieldset,
+details.paste-box,
+.auth-box,
+.markdown-content,
+.bulk-session-card,
+.modal-box,
+.result-card,
+.planner-result,
+.planner-summary,
+.zucht-parent-select-grid > div,
+.farbwunsch-box,
+.table-inline-filters,
+.lk-filter-box,
+.ah-targets {
+  background: #ffffff;
+  border-color: #91b784;
+  box-shadow: 0 5px 16px rgba(47, 88, 43, 0.09);
+}
+
+.filter-group {
+  background: #eef6eb;
+  border-color: #a8c99d;
+}
+.filter-group-title,
+.group-heading,
+legend,
+.markdown-content h2,
+.markdown-content h3,
+.tab-btn.active {
+  color: #456d3a;
+}
+
+th {
+  background: #dcebd6;
+  color: #294026;
+}
+tr:hover td {
+  background: rgba(139, 189, 120, 0.14);
+}
+
+.checkdrop-panel,
+.nav-dropdown-menu {
+  background: #ffffff;
+  border-color: #91b784;
+}
+.checkdrop-item:hover,
+.nav-dropdown-menu a:hover,
+.nav-dropdown-menu button:hover,
+.tab-btn:hover {
+  background: rgba(139, 189, 120, 0.18);
+}
+
+.tabs {
+  border-bottom-color: #a8c99d;
+}
+.tab-btn.active {
+  border-bottom-color: #456d3a;
+}
+
+/* Helle Ergebnis- und Diagnosekarten mit kräftigerem grünem Rahmen. */
+.planner-high-contrast .result-card,
+.turnierzucht-result,
+.color-guide-result,
+.data-quality-panel,
+#horse-tournament-profile .planner-summary,
+.ah-mode-info,
+.relationship-diagnostic {
+  background: #fbfef9 !important;
+  color: #263326 !important;
+  border: 2px solid #8bbd78 !important;
+}
+
+.planner-high-contrast .result-card h2,
+.planner-high-contrast .result-card h3,
+.planner-high-contrast .result-card strong,
+.turnierzucht-result strong,
+.color-guide-result strong,
+.data-quality-panel strong,
+.ah-mode-info strong,
+.relationship-diagnostic strong {
+  color: #263326;
+}
+
+.relationship-diagnostic-row,
+.color-guide-subsection,
+.data-quality-item,
+.turnierzucht-result .detail-table {
+  background: #ffffff;
+  border-color: #bfd8b6;
+  color: #263326;
+}
+
+.flash-banner {
+  background: #e6f2e1;
+  border: 1px solid #70a061;
+}
+.missing-data-notice {
+  background: #fff7e6;
+}
+
+.pill.yes {
+  color: #456d3a;
+  border-color: #5b8a4e;
+  background: #f0f7ed;
+}
+.pill.no {
+  color: #a13e3e;
+  border-color: #b94b4b;
+  background: #fff4f4;
+}
+
+.keep-foal-yes:hover,
+.keep-foal-yes.active {
+  border-color: #4f7d42;
+}
+.keep-foal-yes.active {
+  background: #4f7d42;
+  color: #ffffff;
+}
+
+/* Grün auch in den Vergleichsmarkierungen etwas präsenter. */
+td.cmp-good {
+  background: rgba(79, 125, 66, 0.16);
+}
+td.cmp-good,
+td.cmp-good a {
+  color: #3f6d35;
+}
+td.cmp-tolerance {
+  background: rgba(94, 143, 98, 0.14);
+}
+
+/* Scrollleisten, wo Browser-Unterstützung vorhanden ist. */
+#tp-ranking-scroll.tournament-scroll-20,
+#ah-results-scroll.ah-scroll-5 {
+  scrollbar-color: #6f9f60 #edf5ea;
+}
+
+
+/* --- V32 Datensicherheit / sicherer Start --- */
+.mdr-start-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.2rem;
+  background: rgba(22, 35, 28, 0.94);
+}
+.mdr-start-blocker-card {
+  width: min(720px, 100%);
+  padding: 1.4rem 1.6rem;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #1d2a20;
+  border: 3px solid #5d9452;
+  box-shadow: 0 12px 40px rgba(0,0,0,.35);
+}
+.mdr-start-blocker-card h1 { margin-top: 0; color: #376d35; }
+.mdr-start-blocker-card code {
+  background: #edf6e9;
+  color: #1d2a20;
+  padding: .08rem .3rem;
+  border-radius: 4px;
+}
+
+.mdr-data-safety-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  margin-bottom: 1rem;
+  padding: .7rem .9rem;
+  border: 2px solid #8bbd78;
+  border-radius: 10px;
+  background: #f7fcf5;
+  color: #263528;
+}
+.mdr-data-safety-panel > div {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+}
+.mdr-data-safety-panel[data-storage-persisted="1"] {
+  border-left: 6px solid #5d9452;
+}
+.mdr-data-safety-panel[data-storage-persisted="0"] {
+  border-left: 6px solid #bd8a45;
+}
+@media (max-width: 700px) {
+  .mdr-data-safety-panel { align-items: stretch; flex-direction: column; }
+  .mdr-data-safety-panel .btn { width: 100%; text-align: center; }
+}
+
+
+/* --- V33 Import: ergänzen / zusammenführen oder ersetzen --- */
+.mdr-import-modal-box {
+  max-width: 900px;
+  max-height: calc(90vh / var(--zoom));
+  overflow-y: auto;
+  background: #ffffff;
+  color: #223126;
+  border: 3px solid #8bbd78;
+}
+.mdr-import-summary {
+  padding: .7rem .85rem;
+  border: 1px solid #b9d5ae;
+  border-radius: 9px;
+  background: #f7fcf5;
+}
+.mdr-import-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(170px, 1fr));
+  gap: .35rem .8rem;
+  margin-top: .65rem;
+}
+.mdr-import-mode-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .8rem;
+  margin: 1rem 0;
+}
+.mdr-import-mode-card {
+  display: flex;
+  align-items: flex-start;
+  gap: .65rem;
+  margin: 0;
+  padding: .8rem;
+  border: 2px solid #8bbd78;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #223126;
+  cursor: pointer;
+}
+.mdr-import-mode-card input[type="radio"] {
+  width: auto !important;
+  margin-top: .25rem;
+  flex: 0 0 auto;
+}
+.mdr-import-mode-card span { display: flex; flex-direction: column; gap: .25rem; }
+.mdr-import-mode-card small { color: #59685d; line-height: 1.4; }
+.mdr-import-replace-card { border-color: #c78b7e; }
+.mdr-import-possible-box {
+  margin: .8rem 0;
+  padding: .7rem .8rem;
+  border: 2px solid #9fbd94;
+  border-radius: 10px;
+  background: #fbfef9;
+}
+.mdr-import-possible-box > summary { cursor: pointer; }
+.mdr-import-possible-scroll {
+  max-height: 330px;
+  overflow-y: auto;
+  margin-top: .55rem;
+  padding-right: .25rem;
+}
+.mdr-import-possible-row {
+  display: flex;
+  align-items: flex-start;
+  gap: .65rem;
+  margin: 0 0 .45rem;
+  padding: .55rem .65rem;
+  border: 1px solid #c9dbc3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #223126;
+  cursor: pointer;
+}
+.mdr-import-possible-row input[type="checkbox"] {
+  width: auto !important;
+  margin-top: .2rem;
+  flex: 0 0 auto;
+}
+.mdr-import-other-stores-note { margin-top: .8rem; background: #f7fcf5; color: #29392d; }
+@media (max-width: 760px) {
+  .mdr-import-summary-grid,
+  .mdr-import-mode-options { grid-template-columns: 1fr; }
+}
+
+
+/* --- V34 Backup-Ordner verwalten --- */
+.mdr-data-safety-text {
+  flex: 1 1 auto;
+  min-width: 220px;
+}
+.mdr-data-safety-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .45rem;
+  flex-wrap: wrap;
+}
+#mdr-data-safety-forget-btn {
+  background: #ffffff;
+  color: #8a3833;
+  border-color: #c78680;
+}
+#mdr-data-safety-forget-btn:hover {
+  background: #fff0ee;
+  border-color: #ad5e57;
+}
+@media (max-width: 700px) {
+  .mdr-data-safety-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mdr-data-safety-actions .btn {
+    width: 100%;
+  }
+}
+
+
+/* --- V36 Verpaarungslog: Fohlen-Prognose ↔ tatsächliches Ergebnis --- */
+.pairing-accuracy-summary {
+  margin: 1rem 0;
+}
+.pairing-prediction-row > td {
+  padding-top: .2rem;
+  padding-bottom: .8rem;
+  background: rgba(255,255,255,.35);
+}
+.pairing-prediction-details {
+  border: 1px solid rgba(90, 105, 95, .28);
+  border-radius: .65rem;
+  background: #ffffff;
+  overflow: hidden;
+}
+.pairing-prediction-details > summary {
+  cursor: pointer;
+  padding: .65rem .8rem;
+  font-weight: 650;
+  background: #f5f8f5;
+  color: #24352d;
+}
+.pairing-prediction-details[open] > summary {
+  border-bottom: 1px solid rgba(90, 105, 95, .22);
+}
+.pairing-prediction-body {
+  padding: .75rem .8rem .85rem;
+  overflow-x: auto;
+}
+.prediction-compare-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  background: #fff;
+}
+.prediction-compare-table th,
+.prediction-compare-table td {
+  padding: .45rem .55rem;
+  border-bottom: 1px solid #e2e8e3;
+  text-align: left;
+  white-space: nowrap;
+}
+.prediction-compare-table thead th {
+  background: #f7f9f7;
+}
+.prediction-n {
+  display: block;
+  font-size: .72em;
+  color: #6a756f;
+  margin-top: .1rem;
+}
+.prediction-ok {
+  color: #25623c;
+  font-weight: 650;
+}
+.prediction-out {
+  color: #97501f;
+  font-weight: 650;
+}
+.pairing-foal-recorded {
+  display: inline-block;
+  padding: .22rem .42rem;
+  margin-right: .35rem;
+  border-radius: 999px;
+  background: #edf7ef;
+  border: 1px solid #b8d8bf;
+  color: #285f38;
+  font-size: .78rem;
+  white-space: nowrap;
+}
+
+
+/* --- V37 Verpaarungslog: bestehende Fohlen, Historie, 10er-Scrollbar --- */
+.pairing-log-section {
+  margin-top: 1.2rem;
+}
+.pairing-log-section > h2 {
+  margin-bottom: .45rem;
+}
+.pairing-past-section {
+  margin-top: 2.25rem;
+  padding-top: 1.1rem;
+  border-top: 2px solid rgba(80, 103, 92, .20);
+}
+.pairing-table-scroll.is-scrollable {
+  overflow-y: scroll;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.pairing-table-scroll.is-scrollable table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #f5f8f5;
+  box-shadow: 0 1px 0 rgba(90, 105, 95, .22);
+}
+#p-existing-foal,
+#p-date {
+  background: #fff;
+}
+
+
+/* --- V38: vorhandenes Fohlen direkt aus dem Verpaarungs-Popup verknüpfen --- */
+.existing-foal-link-box {
+  border: 2px solid rgba(57, 112, 80, .35);
+  background: #f4faf5;
+}
+.existing-foal-link-box legend {
+  font-weight: 700;
+}
+.existing-foal-link-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: .7rem;
+  align-items: end;
+}
+.existing-foal-link-field {
+  min-width: 0;
+}
+.existing-foal-link-field input {
+  width: 100%;
+  background: #fff;
+}
+#foal-existing-link-btn {
+  white-space: nowrap;
+}
+.foal-or-divider {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: .9rem 0;
+  color: #66736c;
+  font-size: .85rem;
+}
+.foal-or-divider::before,
+.foal-or-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: rgba(90, 105, 95, .25);
+}
+@media (max-width: 700px) {
+  .existing-foal-link-row {
+    grid-template-columns: 1fr;
+  }
+  #foal-existing-link-btn {
+    width: 100%;
+  }
+}
+
+
+/* --- V39: Pferdelinks im Verpaarungslog --- */
+.pairing-horse-link {
+  color: #234f35;
+  font-weight: 650;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+.pairing-horse-link:hover {
+  text-decoration-thickness: 2px;
+}
+.pairing-prediction-details > summary .pairing-horse-link {
+  color: inherit;
+}
+.pairing-prediction-family {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem 1.25rem;
+  margin: 0 0 .75rem;
+  padding: .55rem .65rem;
+  border-radius: .5rem;
+  background: #f7faf7;
+  border: 1px solid rgba(90, 105, 95, .18);
+}
+
+
+/* --- V41 Backup-Schutz --- */
+#mdr-data-safety-status.error {
+  font-weight: 700;
+  color: #8f2f20;
+}
+#mdr-data-safety-force-btn:not([hidden]) {
+  border: 1px solid #a45b32;
+}
+
+
+/* --- V42: ausgewählte Pferde als sichtbare Aktionskarte --- */
+.selected-horses-popup {
+  position: sticky;
+  top: .75rem;
+  z-index: 30;
+  width: min(760px, 100%);
+  margin: .65rem 0;
+  padding: .8rem .9rem;
+  border: 2px solid rgba(54, 103, 74, .34);
+  border-radius: .8rem;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(35, 58, 45, .16);
+}
+.selected-horses-popup-head {
+  display: flex;
+  align-items: baseline;
+  gap: .65rem;
+  margin-bottom: .65rem;
+}
+.selected-horses-popup-head strong {
+  font-size: 1.02rem;
+}
+.selected-horses-count {
+  font-size: .9rem;
+  color: #5f6b64;
+}
+.selected-horses-primary-actions,
+.selected-horses-secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem;
+}
+.selected-horses-primary-actions {
+  margin-bottom: .55rem;
+}
+.horse-select-checkbox {
+  width: 1.15rem;
+  height: 1.15rem;
+  cursor: pointer;
+  accent-color: #356b4a;
+}
+.mdr-import-mode-disabled {
+  opacity: .52;
+  cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+  .selected-horses-popup {
+    top: .35rem;
+  }
+  .selected-horses-primary-actions > button {
+    flex: 1 1 45%;
+  }
+  .selected-horses-secondary-actions {
+    align-items: stretch;
+  }
+}
+
+
+/* --- V44 Verpaarungslog --- */
+.keep-foal-btn:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+}
+.keep-foal-wait {
+  display: block;
+  margin-top: .2rem;
+  white-space: nowrap;
+}
+.past-pairing-table {
+  min-width: 1380px;
+}
+.past-prediction-compact {
+  display: grid;
+  gap: .15rem;
+  white-space: nowrap;
+  font-size: .82rem;
+}
+.prediction-partial {
+  font-weight: 700;
+}
+#past-pairings-section {
+  margin-top: 1.4rem;
+}
+#past-pairings-section > h2 {
+  margin-bottom: .2rem;
+}
+.mdr-restore-good-btn:not([hidden]) {
+  font-weight: 700;
+  border: 1px solid #47745a;
+}
+
+
+/* --- V45 Datenqualitätsfilter --- */
+#f-data-quality {
+  font-weight: 600;
+}
+
+
+/* --- V46 Verpaarungslog: auf-/zuklappbar + Zuchtempfehlung --- */
+.pairing-log-collapsible {
+  border: 0;
+  padding: 0;
+}
+.pairing-section-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  cursor: pointer;
+  list-style: none;
+  padding: .8rem 1rem;
+  margin: 0 0 .55rem;
+  border: 1px solid rgba(77, 98, 83, .2);
+  border-radius: .75rem;
+  background: rgba(255,255,255,.86);
+}
+.pairing-section-summary::-webkit-details-marker { display: none; }
+.pairing-section-summary::before {
+  content: '▾';
+  margin-right: .5rem;
+}
+details:not([open]) > .pairing-section-summary::before { content: '▸'; }
+.pairing-section-note { padding: 0 .25rem; }
+.past-pairing-table { min-width: 1540px; }
+.foal-recommendation {
+  display: inline-block;
+  font-weight: 700;
+  border-radius: .45rem;
+  padding: .25rem .4rem;
+  white-space: nowrap;
+}
+.foal-recommendation-cull { background: rgba(180,55,45,.10); }
+.foal-recommendation-check { background: rgba(190,145,35,.12); }
+.foal-recommendation-keep { background: rgba(45,125,70,.10); }
+.foal-recommendation-partial,
+.foal-recommendation-missing { background: rgba(100,100,100,.08); }
+
+
+/* --- V46 Zuchtplaner: kompakte Kartenstruktur nach Referenzlayout --- */
+body.planner-high-contrast {
+  background: linear-gradient(135deg, #dce9cf 0%, #eef5e8 45%, #f6f9f2 100%);
+  background-attachment: fixed;
+}
+.zuchtplaner-v46 {
+  max-width: 1180px;
+}
+.zp-intro {
+  margin-bottom: .8rem;
+}
+.zp-parent-card,
+.zp-tool-card,
+.zp-foreign-stallion {
+  background: #fff;
+}
+.zp-parent-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.zp-parent-panel {
+  min-width: 0;
+}
+.zp-parent-title {
+  display: inline-block;
+  font-weight: 800;
+  margin-bottom: .6rem;
+  padding: .2rem .65rem .45rem;
+  border-bottom: 2px solid #669900;
+}
+.zp-compact-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: .75rem;
+  align-items: end;
+}
+.zp-parent-panel .zp-compact-fields {
+  grid-template-columns: repeat(2, minmax(0,1fr));
+}
+.zp-horse-select-wide {
+  grid-column: span 1;
+}
+.zp-compact-fields > div {
+  min-width: 0;
+}
+.zp-compact-fields label {
+  font-size: .82rem;
+}
+.zp-foreign-stallion {
+  margin-top: .7rem;
+}
+.zp-foreign-stallion > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.zp-main-tabs {
+  margin: 1rem 0 .75rem;
+}
+.zp-advisor-heading {
+  margin: .2rem 0 .7rem;
+}
+.zp-direction-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) 1fr;
+  gap: 1rem;
+  align-items: end;
+}
+.zp-direction-row p {
+  margin: 0 0 .35rem;
+}
+.zp-prediction-note {
+  border-width: 1px;
+  margin: .8rem 0;
+}
+.zp-advisor-controls {
+  grid-template-columns: repeat(4, minmax(0,1fr));
+}
+.zp-color-wishes {
+  margin-top: .85rem;
+}
+.zp-color-wishes > summary,
+.turnierzucht-box > summary {
+  cursor: pointer;
+}
+.zp-result-hint {
+  margin: .7rem 0;
+}
+.color-prob-row-with-source span {
+  display: flex;
+  flex-direction: column;
+  gap: .12rem;
+}
+.color-prob-row-with-source small {
+  opacity: .72;
+  font-weight: 400;
+  max-width: 540px;
+}
+.color-source-details {
+  margin-top: .8rem;
+}
+.color-source-details > summary {
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .zp-parent-grid {
+    grid-template-columns: 1fr;
+  }
+  .zp-advisor-controls {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+}
+@media (max-width: 620px) {
+  .zp-parent-panel .zp-compact-fields,
+  .zp-advisor-controls,
+  .zp-direction-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* --- V46 Appaloosa-Phänotyp-Auswahl --- */
+.appaloosa-pattern-modal-card {
+  max-width: 620px;
+}
+.appaloosa-pattern-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: .5rem;
+  margin: .8rem 0;
+}
+@media (max-width: 560px) {
+  .appaloosa-pattern-choice-grid { grid-template-columns: 1fr; }
+}
+
+
+/* --- V47 Zuchtplaner: wieder Datenbankgrün --- */
+.zuchtplaner-v46 .zp-parent-title {
+  color: var(--accent-dark);
+  border-bottom-color: var(--accent);
+}
+.zuchtplaner-v46 .zp-main-tabs {
+  border-bottom-color: rgba(107,157,0,.28);
+}
+.zuchtplaner-v46 .card,
+.zuchtplaner-v46 fieldset,
+.zuchtplaner-v46 .result-card {
+  box-shadow: 0 1px 0 rgba(74, 104, 45, .04);
+}
+
+
+/* --- V47 Einstellungen --- */
+.settings-page { max-width: 1160px; }
+.settings-section { margin-bottom: 1rem; }
+.settings-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(5,minmax(0,1fr));
+  gap: .65rem;
+  margin: .7rem 0;
+}
+.settings-stat {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .65rem .75rem;
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+}
+.settings-stat span { font-size: .82rem; color: var(--muted); }
+.settings-stat strong { color: var(--accent-dark); }
+.settings-actions { gap: .45rem; }
+.settings-table th { cursor: default; }
+.settings-tag-list {
+  display: grid;
+  gap: .5rem;
+  margin: .7rem 0;
+}
+.settings-tag-row {
+  display: grid;
+  grid-template-columns: minmax(180px,1fr) 70px minmax(140px,auto) minmax(120px,auto);
+  align-items: center;
+  gap: .6rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .55rem;
+}
+.settings-tag-color { min-height: 38px; padding: .15rem; }
+.settings-tag-add { margin-top: 1rem; }
+@media (max-width: 850px) {
+  .settings-overview-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .settings-tag-row { grid-template-columns: 1fr 70px; }
+}
+
+
+/* --- V47 Aussortierhilfe --- */
+.ah-result-card {
+  background: #ffffff !important;
+  color: #303830 !important;
+  border: 1px solid #d9e3d2;
+}
+.ah-result-card h3,
+.ah-result-card strong { color: #263426; }
+.ah-horse-meta,
+.ah-result-reasons {
+  background: #ffffff;
+  border: 1px solid #e3e8df;
+  border-radius: .55rem;
+  padding: .45rem .6rem;
+  margin: .45rem 0;
+}
+.ah-white-metrics span {
+  background: #ffffff !important;
+  border: 1px solid #dfe6da;
+  border-radius: .45rem;
+  padding: .35rem .5rem;
+}
+.ah-result-reasons {
+  display: grid;
+  gap: .25rem;
+}
+.ah-summary-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+.ah-summary-head h2 { margin-top: 0; }
+.ah-verdict-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+}
+.ah-verdict-filters button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+@media (max-width: 760px) {
+  .ah-summary-head { flex-direction: column; }
+}
+
+
+/* --- V47 Turnierplaner kompakter --- */
+.tp-compact-card {
+  padding: .75rem 1rem;
+  margin-bottom: .75rem;
+}
+.tp-checklist-card h2 {
+  margin-top: 0;
+  margin-bottom: .5rem;
+}
+.tp-threshold-details > summary,
+.tp-collapsible-card > summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--accent-dark);
+  padding: .15rem 0;
+}
+.tp-collapsible-card {
+  padding: .75rem 1rem;
+  margin-bottom: .8rem;
+}
+.tp-collapsible-card > summary {
+  font-size: 1.18rem;
+}
+.tp-details-body {
+  padding-top: .7rem;
+}
+.tp-details-body > .muted.small:first-child {
+  margin-top: 0;
+}
+.tp-ranking-subhead {
+  margin-top: .8rem;
+  padding-top: .6rem;
+  border-top: 1px solid var(--border);
+}
+.tp-ranking-subhead h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+.turnierplaner-page .form-grid,
+.tp-details-body .form-grid,
+.tp-checklist-card .form-grid {
+  gap: .55rem;
+}
+.tp-details-body .table-inline-filters {
+  margin-top: .6rem;
+  padding: .55rem;
+}
+
+
+/* V47: Zuchtplaner vollständig zurück ins MDR-Datenbankgrün,
+   unabhängig von den älteren globalen Blau-Overrides. */
+body.planner-high-contrast {
+  --accent: #6b9d00;
+  --accent-dark: #567f00;
+  --border: #c8d6bd;
+  --th-bg-solid: #f1f6ec;
+  --success: #6b9d00;
+}
+body.planner-high-contrast .topbar {
+  border-bottom-color: #c7d8b8;
+}
+body.planner-high-contrast .topbar h1,
+body.planner-high-contrast a {
+  color: #567f00;
+}
+body.planner-high-contrast button:not(.secondary):not(.danger),
+body.planner-high-contrast .btn:not(.secondary):not(.danger) {
+  background: #6b9d00;
+  border-color: #5d8900;
+}
+body.planner-high-contrast button:not(.secondary):not(.danger):hover,
+body.planner-high-contrast .btn:not(.secondary):not(.danger):hover {
+  background: #567f00;
+  border-color: #4d7200;
+}
+body.planner-high-contrast button.secondary,
+body.planner-high-contrast .btn.secondary {
+  background: #ffffff;
+  color: #3f5f1d;
+  border-color: #a9bf95;
+}
+body.planner-high-contrast button.secondary:hover,
+body.planner-high-contrast .btn.secondary:hover {
+  background: #f0f6eb;
+  border-color: #829f67;
+}
+
+
+/* --- V48 Aktive Züchter & Farbgenetik --- */
+.active-breeders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(190px,1fr));
+  gap: .45rem;
+  margin-top: .75rem;
+}
+.active-breeder-option {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  background: #fff;
+  border: 1px solid #d9e3d2;
+  border-radius: .55rem;
+  padding: .5rem .65rem;
+}
+.active-breeder-option:has(input:checked) {
+  border-color: #8eaa72;
+  background: #f1f7ec;
+}
+.zuchtplaner-v46 .result-card {
+  background: #fff;
+}
+
+
+/* ============================================================
+   V49 – Zuchtplaner: konsequentes MDR-Grün + höherer Kontrast
+   ============================================================ */
+body.planner-high-contrast {
+  --accent: #5f8f2f !important;
+  --accent-dark: #355f24 !important;
+  --border: #93ad82 !important;
+  --text: #203020 !important;
+  --muted: #4d6248 !important;
+  --th-bg-solid: #e8f1e2 !important;
+  background: linear-gradient(135deg, #9ec58d 0%, #c5dfb9 42%, #eef5ea 100%) !important;
+  color: #203020 !important;
+}
+body.planner-high-contrast .topbar {
+  background: #ffffff !important;
+  border-bottom: 2px solid #7fa36e !important;
+  box-shadow: 0 2px 10px rgba(49, 85, 41, .10) !important;
+}
+body.planner-high-contrast .topbar h1,
+body.planner-high-contrast a,
+body.planner-high-contrast legend,
+body.planner-high-contrast .group-heading,
+body.planner-high-contrast .filter-group-title,
+body.planner-high-contrast .tab-btn.active {
+  color: #355f24 !important;
+}
+body.planner-high-contrast label {
+  color: #334b30 !important;
+  font-weight: 650;
+}
+body.planner-high-contrast .muted,
+body.planner-high-contrast .small,
+body.planner-high-contrast .tiny {
+  color: #4d6248 !important;
+}
+body.planner-high-contrast input,
+body.planner-high-contrast select,
+body.planner-high-contrast textarea,
+body.planner-high-contrast .checkdrop-toggle {
+  background: #ffffff !important;
+  color: #172517 !important;
+  border: 2px solid #789968 !important;
+  box-shadow: none !important;
+}
+body.planner-high-contrast input:focus,
+body.planner-high-contrast select:focus,
+body.planner-high-contrast textarea:focus,
+body.planner-high-contrast .checkdrop-toggle:focus {
+  border-color: #4f7d38 !important;
+  outline: 3px solid rgba(95, 143, 47, .24) !important;
+}
+body.planner-high-contrast input::placeholder,
+body.planner-high-contrast textarea::placeholder {
+  color: #687b63 !important;
+}
+body.planner-high-contrast .card,
+body.planner-high-contrast fieldset,
+body.planner-high-contrast .filter-bar,
+body.planner-high-contrast .farbwunsch-box,
+body.planner-high-contrast .planner-result,
+body.planner-high-contrast .planner-summary,
+body.planner-high-contrast .result-card,
+body.planner-high-contrast .color-guide-result,
+body.planner-high-contrast .color-guide-subsection,
+body.planner-high-contrast .turnierzucht-result,
+body.planner-high-contrast .notice {
+  background: #ffffff !important;
+  color: #203020 !important;
+  border-color: #9cb48f !important;
+  box-shadow: 0 2px 8px rgba(52, 82, 45, .08) !important;
+}
+body.planner-high-contrast .result-card h2,
+body.planner-high-contrast .result-card h3,
+body.planner-high-contrast .result-card strong,
+body.planner-high-contrast .planner-summary h3,
+body.planner-high-contrast .color-guide-result h4 {
+  color: #203020 !important;
+}
+body.planner-high-contrast button:not(.danger),
+body.planner-high-contrast .btn:not(.danger) {
+  border-width: 2px;
+}
+body.planner-high-contrast button:not(.secondary):not(.danger),
+body.planner-high-contrast .btn:not(.secondary):not(.danger) {
+  background: #5f8f2f !important;
+  color: #ffffff !important;
+  border-color: #4e7826 !important;
+}
+body.planner-high-contrast button:not(.secondary):not(.danger):hover,
+body.planner-high-contrast .btn:not(.secondary):not(.danger):hover {
+  background: #467023 !important;
+  border-color: #365a1b !important;
+}
+body.planner-high-contrast button.secondary,
+body.planner-high-contrast .btn.secondary {
+  background: #ffffff !important;
+  color: #294d20 !important;
+  border-color: #789968 !important;
+}
+body.planner-high-contrast button.secondary:hover,
+body.planner-high-contrast .btn.secondary:hover {
+  background: #edf5e8 !important;
+  color: #203f18 !important;
+  border-color: #5f833f !important;
+}
+body.planner-high-contrast .subtab-btn.active,
+body.planner-high-contrast .tab-btn.active {
+  background: #eef6e9 !important;
+  color: #355f24 !important;
+  border-color: #5f8f2f !important;
+}
+body.planner-high-contrast .zp-parent-title {
+  color: #355f24 !important;
+  border-bottom-color: #5f8f2f !important;
+}
+body.planner-high-contrast .zp-prediction-note {
+  background: #f7faf4 !important;
+  color: #32482d !important;
+  border: 1px solid #8eaa7e !important;
+}
+
+/* V49 – Zuchtempfehlungs-Ampel im Verpaarungslog */
+.pairing-breeding-traffic-light {
+  margin: .8rem 0 1rem;
+  background: #ffffff;
+  border-color: #91b784;
+}
+.pairing-traffic-light-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: .55rem;
+  margin-top: .6rem;
+}
+.pairing-traffic-light-grid > span {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: .45rem;
+  row-gap: .12rem;
+  align-items: center;
+  background: #f8fbf6;
+  border: 1px solid #d8e3d2;
+  border-radius: .6rem;
+  padding: .5rem .6rem;
+}
+.pairing-traffic-light-grid small {
+  grid-column: 2;
+  color: var(--muted);
+}
+.traffic-dot {
+  width: .85rem;
+  height: .85rem;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
+}
+.traffic-green { background: #4d9a55; }
+.traffic-orange { background: #dd8b2c; }
+.traffic-red { background: #c84c4c; }
+
+.foal-traffic-pill {
+  display: inline-block;
+  border-radius: 999px;
+  padding: .3rem .55rem;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.traffic-green-pill {
+  background: #e2f3e4;
+  color: #276832;
+  border-color: #90c797;
+}
+.traffic-orange-pill {
+  background: #fff0dc;
+  color: #8a4e0e;
+  border-color: #e3ad6b;
+}
+.traffic-red-pill {
+  background: #f8e1e1;
+  color: #922f2f;
+  border-color: #d98d8d;
+}
+.traffic-neutral-pill {
+  background: #f0f2ef;
+  color: #626b60;
+  border-color: #cbd0c8;
+}
+@media (max-width: 850px) {
+  .pairing-traffic-light-grid { grid-template-columns: 1fr; }
+}
+
+
+/* ============================================================
+   V50 – weichere, einheitlich abgerundete MDR-Oberfläche
+   ============================================================ */
+.card,
+fieldset,
+.notice,
+.filter-bar,
+.result-card,
+.planner-candidate,
+.planner-summary,
+.color-guide-result,
+.color-guide-subsection,
+.turnierzucht-result,
+.mdr-data-safety-panel,
+.settings-stat,
+.settings-tag-row,
+.modal-box,
+.modal-card,
+.table-wrap,
+.pairing-section-summary,
+.pairing-breeding-traffic-light,
+.checkdrop-panel,
+details.card {
+  border-radius: 14px !important;
+}
+
+input,
+select,
+textarea,
+button,
+.btn,
+.checkdrop-toggle,
+.horse-tag-badge,
+.foal-traffic-pill {
+  border-radius: 9px !important;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+.pairing-breeding-traffic-light {
+  padding: .85rem 1rem;
+  border-width: 1px;
+  box-shadow: 0 2px 7px rgba(53, 88, 46, .06);
+}
+.pairing-traffic-light-grid > span {
+  border-radius: 11px;
+}
+.traffic-future-pill {
+  background: #eef4ea;
+  color: #556750;
+  border-color: #bdcbb7;
+}
+
+/* ============================================================
+   V50 – Zuchtplaner: dunkler grüner Hintergrund, hellgrüne Felder
+   ============================================================ */
+body.planner-high-contrast {
+  --accent: #5c8b3f !important;
+  --accent-dark: #294f24 !important;
+  --border: #76946a !important;
+  --text: #172817 !important;
+  --muted: #40583d !important;
+
+  background:
+    linear-gradient(135deg, #5e8756 0%, #769d69 48%, #8fb07d 100%) !important;
+  background-attachment: fixed !important;
+  color: #172817 !important;
+}
+
+body.planner-high-contrast .topbar {
+  background: #e8f3e2 !important;
+  border-bottom: 2px solid #557b49 !important;
+  box-shadow: 0 2px 12px rgba(25, 53, 25, .18) !important;
+}
+
+body.planner-high-contrast .card,
+body.planner-high-contrast fieldset,
+body.planner-high-contrast .filter-bar,
+body.planner-high-contrast .farbwunsch-box,
+body.planner-high-contrast .planner-result,
+body.planner-high-contrast .planner-summary,
+body.planner-high-contrast .result-card,
+body.planner-high-contrast .color-guide-result,
+body.planner-high-contrast .color-guide-subsection,
+body.planner-high-contrast .turnierzucht-result,
+body.planner-high-contrast .notice,
+body.planner-high-contrast details.card {
+  background: #e6f1df !important;
+  color: #172817 !important;
+  border: 1px solid #6f9163 !important;
+  box-shadow: 0 3px 10px rgba(25, 53, 25, .13) !important;
+}
+
+body.planner-high-contrast input,
+body.planner-high-contrast select,
+body.planner-high-contrast textarea,
+body.planner-high-contrast .checkdrop-toggle {
+  background: #f0f7eb !important;
+  color: #142314 !important;
+  border: 2px solid #67895b !important;
+}
+
+body.planner-high-contrast input:focus,
+body.planner-high-contrast select:focus,
+body.planner-high-contrast textarea:focus,
+body.planner-high-contrast .checkdrop-toggle:focus {
+  background: #f7fbf4 !important;
+  border-color: #315c29 !important;
+  outline: 3px solid rgba(49, 92, 41, .26) !important;
+}
+
+body.planner-high-contrast .subtab-btn,
+body.planner-high-contrast .tab-btn,
+body.planner-high-contrast button.secondary,
+body.planner-high-contrast .btn.secondary {
+  background: #edf6e8 !important;
+  color: #294f24 !important;
+  border-color: #628557 !important;
+}
+
+body.planner-high-contrast .subtab-btn.active,
+body.planner-high-contrast .tab-btn.active,
+body.planner-high-contrast button.secondary:hover,
+body.planner-high-contrast .btn.secondary:hover {
+  background: #d7e9cf !important;
+  color: #1f421c !important;
+  border-color: #456d3a !important;
+}
+
+body.planner-high-contrast button:not(.secondary):not(.danger),
+body.planner-high-contrast .btn:not(.secondary):not(.danger) {
+  background: #4f7d38 !important;
+  color: #ffffff !important;
+  border-color: #3f672d !important;
+}
+
+body.planner-high-contrast button:not(.secondary):not(.danger):hover,
+body.planner-high-contrast .btn:not(.secondary):not(.danger):hover {
+  background: #3e692d !important;
+  border-color: #315523 !important;
+}
+
+body.planner-high-contrast .zp-prediction-note {
+  background: #dcebd5 !important;
+  color: #243c21 !important;
+  border-color: #6b8d60 !important;
+}
+
+body.planner-high-contrast .zp-parent-title,
+body.planner-high-contrast legend,
+body.planner-high-contrast h2,
+body.planner-high-contrast h3,
+body.planner-high-contrast h4,
+body.planner-high-contrast strong {
+  color: #1d3d1b !important;
+}
+
+
+/* ============================================================
+   V51 – Decktaxe, empirische Appaloosa-Basis, DB-Prognosebereich
+   ============================================================ */
+.stud-fee-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: .22rem .5rem;
+  font-weight: 750;
+  border: 1px solid #9caf90;
+}
+.stud-fee-free {
+  background: #e8f3e2;
+  color: #315c2b;
+}
+.stud-fee-paid {
+  background: #fff0d9;
+  color: #744813;
+  border-color: #d8a662;
+}
+.zp-foreign-fee {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) minmax(140px, 220px) 1fr;
+  gap: .55rem;
+  align-items: end;
+  margin: .65rem 0;
+}
+.appaloosa-empirical-basis {
+  margin: .6rem 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: .45rem .6rem;
+  background: rgba(255,255,255,.38);
+}
+.appaloosa-empirical-basis > summary {
+  cursor: pointer;
+  font-weight: 750;
+}
+.appaloosa-empirical-basis > div {
+  display: grid;
+  gap: .25rem;
+  margin-top: .45rem;
+}
+.planner-empirical-estimate {
+  border-radius: 12px;
+  background: rgba(255,255,255,.38);
+  border: 1px solid rgba(87,120,73,.28);
+  padding: .45rem .6rem;
+  margin: .45rem 0;
+}
+.prediction-compare-table {
+  min-width: 1250px;
+}
+.past-pairing-table {
+  min-width: 1750px;
+}
+@media (max-width: 760px) {
+  .zp-foreign-fee {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ============================================================
+   V52 – empirische Farbvererbung
+   ============================================================ */
+.empirical-color-list {
+  display: grid;
+  gap: .7rem;
+  margin-top: .65rem;
+}
+.empirical-color-block {
+  background: rgba(255,255,255,.34);
+  border: 1px solid rgba(84,116,72,.30);
+  border-radius: 13px;
+  padding: .55rem .65rem;
+}
+.empirical-color-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  margin-bottom: .2rem;
+}
+.empirical-color-grid {
+  margin-top: .45rem;
+}
+.empirical-color-grid .color-prob-row small {
+  display: block;
+  margin-top: .08rem;
+  color: var(--muted);
+}
+body.planner-high-contrast .empirical-color-block {
+  background: #dcebd5;
+  border-color: #789b6a;
+}
+
+/* ============================================================
+   V53 – Pferdeansicht, Turnier/Cup/Zuchtschau, Dashboard
+   ============================================================ */
+.horse-view-v53 {
+  max-width: 1180px;
+}
+.horse-view-v53 .view-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: .75rem;
+}
+.horse-hero-card {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 620px) 52px;
+  justify-content: center;
+  align-items: center;
+  gap: .8rem;
+  padding: .8rem 1rem;
+  margin: 0 auto .8rem;
+  background: #e4f0dd;
+  border: 1px solid #77956d;
+  border-radius: 16px;
+  box-shadow: 0 3px 10px rgba(39,70,34,.10);
+}
+.horse-hero-center {
+  text-align: center;
+  min-width: 0;
+}
+.horse-hero-image {
+  display: block;
+  max-width: min(100%, 540px) !important;
+  max-height: 430px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto .55rem !important;
+  border-radius: 15px;
+  border: 1px solid #8ba47f;
+  background: #f0f7ec;
+}
+.horse-image-placeholder {
+  display: grid;
+  place-items: center;
+  width: min(100%, 480px);
+  min-height: 170px;
+  margin: 0 auto .55rem;
+  border: 1px dashed #8ca880;
+  border-radius: 15px;
+  background: #eef6ea;
+  font-size: 4rem;
+}
+.horse-nav-arrow {
+  width: 48px;
+  height: 48px;
+  padding: 0 !important;
+  font-size: 1.55rem;
+  border-radius: 50% !important;
+  background: #edf6e9 !important;
+  color: #31572a !important;
+  border: 1px solid #78956d !important;
+}
+.horse-nav-arrow:hover { background: #d4e7cd !important; }
+.horse-summary-chips,
+.horse-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .35rem;
+  margin-top: .35rem;
+}
+.horse-summary-chips > span {
+  display: inline-flex;
+  align-items: center;
+  padding: .24rem .5rem;
+  border-radius: 999px;
+  background: #f3f8ef;
+  border: 1px solid #a5b99b;
+  color: #263d22;
+  font-size: .88rem;
+  font-weight: 680;
+}
+.horse-important-missing {
+  background: #eef5e9;
+  color: #3f563b;
+  border: 1px solid #a8bda0;
+  border-radius: 12px;
+  padding: .5rem .7rem;
+  margin: .5rem 0 .75rem;
+  font-size: .9rem;
+}
+.horse-view-tabs {
+  justify-content: center;
+  margin: .6rem 0 .8rem;
+}
+.horse-view-tabs .tab-btn,
+.tp-main-tabs .tab-btn {
+  background: #e6f1df;
+  color: #284524;
+  border-color: #77966a;
+}
+.horse-view-tabs .tab-btn.active,
+.tp-main-tabs .tab-btn.active {
+  background: #cadfbe;
+  color: #183817;
+  border-color: #4e793e;
+}
+.horse-view-v53 fieldset,
+.horse-view-v53 .card,
+.horse-view-v53 .horse-turnier-section,
+.horse-view-v53 .detail-card {
+  background: #e9f3e4 !important;
+  border-color: #8ea985 !important;
+}
+.horse-view-v53 input,
+.horse-view-v53 select,
+.horse-view-v53 textarea {
+  background: #f4f9f1 !important;
+  color: #1e2f1d !important;
+  border-color: #9db393 !important;
+}
+.horse-turnier-section { margin: .55rem 0; }
+.horse-turnier-section > summary { cursor: pointer; }
+.horse-all-disciplines { margin-top: .55rem; }
+.cup-quick-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin: .35rem 0 .55rem;
+}
+.cup-quick-summary > span,
+.breeding-show-mini {
+  background: #f3f8ef;
+  border: 1px solid #adc0a5;
+  border-radius: 10px;
+  padding: .35rem .5rem;
+}
+.breeding-show-mini { margin-bottom: .55rem; }
+.cup-status-grid { display: grid; gap: .35rem; }
+.cup-status-row {
+  display: grid;
+  grid-template-columns: minmax(150px,1.2fr) minmax(180px,1fr) minmax(180px,1fr);
+  gap: .45rem;
+  align-items: center;
+  background: #f2f8ee;
+  border: 1px solid #adbea6;
+  border-radius: 10px;
+  padding: .4rem .55rem;
+}
+.cup-status-row.cup-star-reached { background: #eef4d7; border-color: #abb15d; }
+
+.tournament-meta-fields { margin: .5rem 0 .7rem; }
+.cup-group {
+  margin: .45rem 0;
+  background: #e8f2e3;
+  border: 1px solid #91aa87;
+  border-radius: 12px;
+  padding: .4rem .55rem;
+}
+.cup-group > summary { cursor: pointer; font-weight: 750; }
+.tournament-achievement-head,
+.tournament-achievement-row {
+  display: grid;
+  grid-template-columns: minmax(155px,1.6fr) 64px 64px 64px 78px 90px minmax(145px,1.1fr);
+  gap: .35rem;
+  align-items: center;
+}
+.tournament-achievement-head { padding: .35rem .25rem; font-weight: 700; }
+.tournament-achievement-row {
+  padding: .32rem .25rem;
+  border-top: 1px solid rgba(96,125,83,.22);
+}
+.tournament-achievement-row input[type="number"] { width: 64px; padding: .3rem; }
+.tournament-achievement-row select { min-width: 82px; padding: .3rem; }
+.cup-star-checkbox { display:flex; align-items:center; justify-content:center; gap:.2rem; }
+.cup-rule-note { margin-top: .65rem; }
+
+.tp-main-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-bottom: .8rem;
+}
+.tp-main-panel > .notice { margin-bottom: .7rem; }
+.turnierplaner-page .card,
+.turnierplaner-page .notice,
+.turnierplaner-page .table-inline-filters,
+.dashboard-breeding-card {
+  background: #e8f2e3;
+  border-color: #8ca681;
+}
+.turnierplaner-page input,
+.turnierplaner-page select {
+  background: #f4f9f1;
+  color: #1e2f1d;
+  border-color: #91aa87;
+}
+.lk-filter-box {
+  margin-top: .45rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem .7rem;
+}
+.lk-checkbox-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem .4rem;
+}
+.lk-checkbox-grid label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: .28rem;
+  white-space: nowrap;
+  background: #f1f7ed;
+  border: 1px solid #a8bba0;
+  border-radius: 9px;
+  padding: .22rem .4rem;
+  font-size: .86rem;
+}
+.lk-checkbox-grid input[type="checkbox"] { margin: 0; width: auto; }
+.tp-cup-table-wrap, .tp-zs-table-wrap { max-height: 68vh; }
+.tp-cup-table { min-width: 1150px; }
+.tp-zs-table { min-width: 1050px; }
+
+.breeding-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(235px,1fr));
+  gap: .6rem;
+  margin-top: .6rem;
+}
+.breeding-dashboard-group {
+  background: #eef6ea;
+  border: 1px solid #a0b598;
+  border-radius: 12px;
+  padding: .55rem .65rem;
+}
+.breeding-dashboard-group h3 {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin:.05rem 0 .4rem;
+}
+.talent-counts { display:flex; flex-wrap:wrap; gap:.3rem; }
+.talent-counts > span {
+  background:#f8fbf6;
+  border:1px solid #b7c7b1;
+  border-radius:999px;
+  padding:.22rem .42rem;
+  font-size:.84rem;
+}
+.talent-counts > span.talent-low { background:#fff3df; border-color:#d8b57e; }
+
+.candidate-why,
+.talent-wish-line {
+  margin: .3rem 0;
+  font-size: .86rem;
+  color: #31472d;
+}
+.candidate-why {
+  background: rgba(255,255,255,.32);
+  border-radius: 9px;
+  padding: .3rem .45rem;
+}
+.remembered-pairings-card > summary { cursor:pointer; }
+
+.ah-primary-reason {
+  margin: .35rem 0;
+  padding: .35rem .5rem;
+  border-radius: 9px;
+  background: #eef5e9;
+  border: 1px solid #b1c2aa;
+}
+
+@media (max-width: 820px) {
+  .horse-hero-card { grid-template-columns: 42px minmax(0,1fr) 42px; padding:.65rem .55rem; gap:.35rem; }
+  .horse-nav-arrow { width:40px; height:40px; font-size:1.2rem; }
+  .cup-status-row { grid-template-columns: 1fr; }
+  .tournament-achievement-head { display:none; }
+  .tournament-achievement-row {
+    grid-template-columns: minmax(130px,1.5fr) repeat(3,55px) 62px 75px;
+  }
+  .tournament-achievement-row small { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+  .horse-hero-card { grid-template-columns: 36px minmax(0,1fr) 36px; }
+  .horse-nav-arrow { width:34px; height:34px; }
+  .tournament-achievement-row {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap:.3rem;
+  }
+  .tournament-achievement-row > strong { grid-column: 1 / -1; }
+  .tournament-achievement-row input[type="number"] { width:100%; }
+  .cup-star-checkbox, .tournament-achievement-row select { width:100%; }
+}
+
+/* V53.1 – Turnierdaten direkt lesbar auf der Pferdeseite */
+.breeding-show-entry-card { margin: .55rem 0 .75rem; }
+.breeding-show-entry-card .group-heading { margin-top: 0; }
+.discipline-lk-table thead th { background: #dcebd5; color: #243b21; }
+.discipline-lk-table td:last-child { white-space: nowrap; width: 72px; }
+
+/* V53.3 – ZS-Modellprüfung & Cup-Bestätigung */
+.tp-zs-model-status {
+  margin: .15rem 0 .65rem;
+  padding: .55rem .65rem;
+  background: #e5f1df;
+  border: 1px solid #9ab391;
+  border-radius: 11px;
+  color: #253c22;
+}
+.tp-zs-model-details {
+  margin-bottom: .7rem;
+  background: #f0f7ec;
+  border: 1px solid #a7bda0;
+  border-radius: 11px;
+  padding: .45rem .6rem;
+}
+.tp-zs-model-details > summary { cursor:pointer; font-weight:600; }
+.tp-zs-model-explanation p { margin:.45rem 0; }
+.tp-zs-current-formula {
+  background:#f9fcf7;
+  border:1px solid #bccdb6;
+  border-radius:9px;
+  padding:.5rem .6rem;
+}
+.warning-text { color:#8a571f; font-weight:600; }
+[data-confirm-cup] { white-space:nowrap; }
+
+
+/* V53.5 – Cup-Kalender */
+.tp-cup-calendar-card { overflow: hidden; }
+.cup-calendar-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: .8rem;
+  padding: .2rem 0 .65rem;
+  border-bottom: 1px solid rgba(83,118,70,.28);
+}
+.cup-calendar-hero h2 { margin: .12rem 0 .2rem; }
+.cup-calendar-kicker { font-size:.8rem; font-weight:800; letter-spacing:.02em; color:#41623a; }
+.cup-calendar-hero-counts { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.35rem; }
+.cup-calendar-hero-counts > span {
+  border-radius:999px;
+  padding:.35rem .55rem;
+  font-weight:750;
+  white-space:nowrap;
+  border:1px solid #9db592;
+}
+.cup-count-ready { background:#dcefd3; color:#214c20; }
+.cup-count-probable { background:#fff0c9; color:#654d12; border-color:#d6b96d !important; }
+.cup-calendar-rule { margin:.6rem 0; }
+.cup-calendar-list { display:grid; gap:.5rem; }
+.cup-calendar-day {
+  display:grid;
+  grid-template-columns:minmax(105px,.7fr) minmax(150px,1fr) minmax(420px,3fr);
+  gap:.55rem;
+  align-items:start;
+  background:#f2f8ee;
+  border:1px solid #a9bea0;
+  border-radius:13px;
+  padding:.55rem .65rem;
+}
+.cup-calendar-day.cup-calendar-soon { background:#e7f3df; border-color:#86a878; }
+.cup-calendar-day.cup-calendar-urgent { background:#d5e9c9; border-color:#5f8d50; box-shadow:0 0 0 1px rgba(71,112,56,.08) inset; }
+.cup-calendar-day.cup-calendar-next { border-width:2px; }
+.cup-calendar-date, .cup-calendar-discipline { display:flex; flex-direction:column; gap:.1rem; }
+.cup-calendar-date > span, .cup-calendar-discipline > span { font-size:.79rem; color:#587052; }
+.cup-calendar-lks { display:grid; grid-template-columns:repeat(3,minmax(125px,1fr)); gap:.4rem; }
+.cup-lk-slot {
+  background:#f8fbf6;
+  border:1px solid #b6c8af;
+  border-radius:10px;
+  padding:.4rem .45rem;
+  min-width:0;
+}
+.cup-lk-slot > strong { display:block; margin-bottom:.3rem; font-size:.88rem; }
+.cup-availability { border-radius:8px; padding:.25rem .35rem; margin-top:.22rem; font-size:.8rem; }
+.cup-availability summary { cursor:pointer; font-weight:750; }
+.cup-availability-ready { background:#dff0d8; border:1px solid #91b586; color:#234d22; }
+.cup-availability-probable { background:#fff1cc; border:1px solid #d5b96d; color:#624c16; }
+.cup-availability-none { background:#f0f2ef; border:1px solid #c7cec3; color:#697266; }
+.cup-candidate-list { display:flex; flex-direction:column; gap:.2rem; margin-top:.3rem; }
+.cup-candidate-link {
+  display:flex;
+  flex-direction:column;
+  gap:.05rem;
+  padding:.24rem .3rem;
+  border-radius:7px;
+  background:rgba(255,255,255,.48);
+  text-decoration:none;
+}
+.cup-candidate-link span { font-size:.72rem; opacity:.76; }
+.cup-calendar-unknown { grid-column:3; font-size:.78rem; color:#6a5121; background:#fff4d9; border:1px solid #d9bf7b; border-radius:9px; padding:.3rem .4rem; }
+.cup-calendar-unknown > summary { cursor:pointer; }
+.tp-cup-table tbody tr.cup-row-soon > td { background:#edf6e8; }
+.tp-cup-table tbody tr.cup-row-urgent > td { background:#dcefd3; }
+.cup-upcoming-badge { display:inline-block; margin-top:.15rem; padding:.12rem .3rem; border-radius:999px; background:#cfe4c5; color:#294e25; }
+
+@media (max-width: 980px) {
+  .cup-calendar-day { grid-template-columns:1fr 1.2fr; }
+  .cup-calendar-lks { grid-column:1 / -1; }
+  .cup-calendar-unknown { grid-column:1 / -1; }
+}
+@media (max-width: 650px) {
+  .cup-calendar-hero { flex-direction:column; }
+  .cup-calendar-hero-counts { justify-content:flex-start; }
+  .cup-calendar-day { grid-template-columns:1fr; }
+  .cup-calendar-lks { grid-column:1; grid-template-columns:1fr; }
+  .cup-calendar-unknown { grid-column:1; }
+}
+
+/* ============================================================
+   V53.6 – Lerndatei, kompakte Filter und Fohlenampel
+   ============================================================ */
+.database-filter-details {
+  flex: 0 0 auto;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: visible;
+}
+.database-filter-details > summary {
+  cursor: pointer;
+  list-style: revert;
+  padding: .72rem 1rem;
+  font-weight: 800;
+  color: var(--accent-dark);
+  user-select: none;
+}
+.database-filter-details[open] > summary {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: .75rem;
+}
+.database-filter-details > .filter-bar,
+.database-filter-details > .compare-avg-block {
+  margin-left: .75rem;
+  margin-right: .75rem;
+}
+.database-filter-details > .compare-avg-block { margin-bottom: .75rem; }
+.learning-file-badge {
+  display: inline-block;
+  border: 1px solid #9aab8f;
+  background: #eef3e9;
+  color: #42583b;
+  border-radius: 999px;
+  padding: .08rem .38rem;
+  font-size: .69rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* Ampel und manuelle ✓/✗-Entscheidung behalten getrennte feste Bereiche. */
+td.keep-foal-cell {
+  width: 8.5rem;
+  min-width: 8.5rem;
+  max-width: 8.5rem;
+  white-space: nowrap;
+}
+td.foal-recommendation-cell {
+  width: 10.5rem;
+  min-width: 10.5rem;
+  max-width: 10.5rem;
+  white-space: nowrap;
+}
+.foal-recommendation-cell .foal-traffic-pill { max-width: 100%; }
+
+.tp-cup-list-card > summary,
+.tp-cup-calendar-card > summary {
+  display: flex;
+  align-items: baseline;
+  gap: .35rem;
+}
+.cup-confirm-inline { margin-top: .28rem; }
+
+@media (max-width: 760px) {
+  .database-filter-details > .filter-bar,
+  .database-filter-details > .compare-avg-block {
+    margin-left: .45rem;
+    margin-right: .45rem;
+  }
+}
+
+
+/* --- V53.6.2 Feinschliff Zuchtplaner + Dashboard --- */
+.zuchtplaner-v46 {
+  max-width: 1260px;
+}
+.zuchtplaner-v46 .card,
+.zuchtplaner-v46 fieldset {
+  margin-bottom: .8rem;
+}
+.zp-parent-card {
+  padding: .95rem 1rem 1rem;
+}
+.zp-parent-panel .zp-compact-fields {
+  gap: .55rem .75rem;
+}
+.zp-foreign-stallion {
+  margin-top: 0;
+}
+.zp-main-tabs {
+  display: inline-flex;
+  padding: .25rem;
+  border: 1px solid rgba(107,157,0,.22);
+  border-radius: .95rem;
+  background: rgba(255,255,255,.78);
+  gap: .25rem;
+}
+.zp-main-tabs .subtab-btn {
+  border-radius: .75rem;
+  padding: .7rem 1rem;
+  font-weight: 700;
+}
+.zp-advisor-heading {
+  margin: .15rem 0 .6rem;
+}
+.zp-advisor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(300px, .95fr);
+  gap: .9rem;
+  align-items: start;
+}
+.zp-core-options .zp-advisor-controls {
+  grid-template-columns: repeat(3, minmax(0,1fr));
+}
+.zp-option-stack {
+  display: grid;
+  gap: .8rem;
+}
+.zp-mini-card h3 {
+  margin: 0 0 .6rem;
+  font-size: 1rem;
+}
+.zp-option-stack-fields {
+  display: grid;
+  gap: .65rem;
+}
+.zp-turnier-fields {
+  grid-template-columns: 1fr;
+  gap: .65rem;
+}
+.zp-color-wishes,
+#turnierzucht-details {
+  margin-top: 0;
+}
+.zp-color-wishes > summary,
+#turnierzucht-details > summary {
+  list-style: none;
+}
+.zp-color-wishes > summary::-webkit-details-marker,
+#turnierzucht-details > summary::-webkit-details-marker {
+  display: none;
+}
+.zp-color-wishes > summary strong,
+#turnierzucht-details > summary strong {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+}
+.zp-result-hint {
+  margin: .35rem 0 .7rem;
+}
+.dashboard-breeding-card {
+  margin-top: .8rem;
+}
+@media (max-width: 1100px) {
+  .zp-advisor-layout {
+    grid-template-columns: 1fr;
+  }
+  .zp-core-options .zp-advisor-controls {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+}
+@media (max-width: 680px) {
+  .zp-core-options .zp-advisor-controls,
+  .zp-turnier-fields {
+    grid-template-columns: 1fr;
+  }
+  .zp-main-tabs {
+    display: flex;
+    width: 100%;
+  }
+  .zp-main-tabs .subtab-btn {
+    flex: 1 1 auto;
+  }
+}
+
+
+/* --- V53.6.3 Feinschliff --- */
+.filter-checkbox-field {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 3.6rem;
+}
+.filter-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: .48rem;
+  min-height: 2.55rem;
+  padding: .48rem .7rem;
+  border: 1px solid rgba(79,115,68,.32);
+  border-radius: .65rem;
+  background: rgba(255,255,255,.64);
+  cursor: pointer;
+  font-weight: 700;
+}
+.filter-checkbox-label input {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+}
+
+.zp-selected-parent-summary {
+  margin-top: .55rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem .65rem;
+  padding: .48rem .65rem;
+  border-radius: .7rem;
+  background: rgba(107,157,0,.07);
+  border: 1px solid rgba(107,157,0,.16);
+  font-size: .78rem;
+}
+.zp-selected-parent-summary[hidden] { display: none; }
+.zp-selected-parent-name {
+  font-weight: 800;
+  color: var(--accent-dark);
+  margin-right: .15rem;
+}
+
+#turnierzucht-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
+}
+.zp-summary-status {
+  display: inline-flex;
+  align-items: center;
+  max-width: 65%;
+  padding: .18rem .48rem;
+  border-radius: 999px;
+  font-size: .74rem;
+  font-weight: 700;
+  color: #5d6b5a;
+  background: rgba(80,95,75,.08);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.zp-summary-status.active {
+  color: #315b2d;
+  background: rgba(107,157,0,.13);
+}
+
+.zuchtplaner-v46 .result-card {
+  padding: .78rem .9rem;
+  margin: .6rem 0;
+}
+.zuchtplaner-v46 .result-card > p {
+  margin: .42rem 0;
+}
+.zp-candidate-card {
+  border-left: 4px solid rgba(107,157,0,.44);
+}
+.zp-candidate-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .7rem 1rem;
+  flex-wrap: wrap;
+  padding-bottom: .45rem;
+  border-bottom: 1px solid rgba(75,105,65,.13);
+}
+.zp-candidate-head h2 {
+  margin: 0;
+  font-size: 1.22rem;
+  line-height: 1.2;
+}
+.zp-rank { color: var(--accent-dark); }
+.zp-stat-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .32rem;
+}
+.zp-stat-strip span {
+  padding: .23rem .45rem;
+  border-radius: .48rem;
+  background: rgba(107,157,0,.075);
+  white-space: nowrap;
+  font-size: .78rem;
+}
+.zp-candidate-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem .75rem;
+  line-height: 1.35;
+}
+.zp-candidate-meta > span {
+  min-width: 0;
+}
+.zp-candidate-meta .stud-fee-badge {
+  font-size: inherit;
+}
+.zp-foal-case-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: .55rem;
+  margin: .5rem 0;
+}
+.zp-foal-case {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem .55rem;
+  align-items: center;
+  margin: 0 !important;
+  padding: .45rem .55rem;
+  border-radius: .58rem;
+  background: rgba(255,255,255,.58);
+  border: 1px solid rgba(78,105,69,.13);
+}
+.zp-foal-case > strong {
+  width: 100%;
+  font-size: .77rem;
+}
+.zp-foal-case > span {
+  white-space: nowrap;
+}
+.zp-candidate-card .candidate-why,
+.zp-candidate-card .turnierzucht-result,
+.zp-candidate-card .color-source-details {
+  margin-top: .45rem;
+}
+.zp-candidate-card .actions {
+  margin-top: .55rem;
+  gap: .35rem;
+}
+.zp-candidate-card .actions .btn,
+.zp-candidate-card .actions button {
+  padding-top: .42rem;
+  padding-bottom: .42rem;
+}
+
+.dashboard-panel {
+  margin: .75rem 0;
+  background: rgba(255,255,255,.90);
+  border-color: rgba(86,126,72,.22);
+  box-shadow: 0 4px 14px rgba(66,91,57,.055);
+}
+fieldset.dashboard-panel > legend,
+.dashboard-breeding-card > summary {
+  font-weight: 800;
+  color: var(--accent-dark);
+}
+.dashboard-breeding-card > summary {
+  padding-bottom: .3rem;
+}
+.dashboard-breeding-card > p {
+  margin-top: .35rem;
+}
+
+@media (max-width: 760px) {
+  .zp-foal-case-grid { grid-template-columns: 1fr; }
+  .zp-summary-status { max-width: 52%; }
+}
+
+
+/* --- V53.6.4 Lerndatei + Verpaarungsarchiv --- */
+.pairing-archive-control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .55rem .8rem;
+  margin: .55rem 0 0;
+  padding: .55rem .65rem;
+  border: 1px dashed rgba(107,157,0,.30);
+  border-radius: .7rem;
+  background: rgba(245,249,240,.75);
+}
+.pairing-archive-control[hidden] { display: none !important; }
+
+/* --- V53.6.6 Zuchtfortschritt und Nachzucht --- */
+.bp-parent-dot {
+  display: inline-block;
+  width: .58rem;
+  height: .58rem;
+  border-radius: 50%;
+  margin-left: .28rem;
+  vertical-align: .02rem;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
+}
+.bp-parent-better { background: #4f9b57; }
+.bp-parent-equal { background: #d4ad39; }
+.bp-parent-worse { background: #c65c52; }
+.bp-parent-missing { background: #79aecd; }
+.bp-best-star {
+  display: inline-block;
+  margin-left: .22rem;
+  color: #b78600;
+  font-weight: 900;
+  line-height: 1;
+}
+.bp-best-star-aggregate { font-size: 1.05rem; margin-left: 0; }
+.bp-best-aggregate-cell { text-align: center; }
+.best-foal-filter-toggle { width: 100%; text-align: left; }
+.best-foal-filter-toggle.active {
+  border-color: #9d7b13;
+  box-shadow: inset 0 0 0 1px rgba(157,123,19,.18);
+}
+
+.bp-section { margin-bottom: 1rem; }
+.bp-section h2 { margin: 0; font-size: 1.16rem; }
+.bp-section h3 { margin: .95rem 0 .55rem; font-size: 1rem; }
+.bp-section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: .75rem;
+}
+.bp-section-head p { margin: .22rem 0 0; }
+.bp-assessment {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: .3rem .62rem;
+  font-size: .82rem;
+  font-weight: 750;
+  border: 1px solid transparent;
+}
+.bp-assessment-good { background: rgba(79,155,87,.13); border-color: rgba(79,155,87,.35); }
+.bp-assessment-check { background: rgba(206,153,48,.14); border-color: rgba(206,153,48,.35); }
+.bp-assessment-bad { background: rgba(198,92,82,.13); border-color: rgba(198,92,82,.34); }
+.bp-assessment-open { background: rgba(105,145,168,.13); border-color: rgba(105,145,168,.32); }
+.bp-progress-table th:first-child { white-space: nowrap; }
+.bp-progress-table td, .bp-progress-table th { vertical-align: middle; }
+.bp-sibling-summary {
+  margin-top: .7rem;
+  padding: .65rem .75rem;
+  border-radius: .65rem;
+  background: rgba(103,139,68,.06);
+  border: 1px solid rgba(103,139,68,.13);
+}
+.bp-offspring-count { white-space: nowrap; font-size: .9rem; }
+.bp-offspring-stats {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: .6rem;
+  margin: .7rem 0;
+}
+.bp-offspring-stats > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .6rem .7rem;
+  border: 1px solid rgba(80,110,65,.16);
+  border-radius: .65rem;
+  background: rgba(255,255,255,.55);
+}
+.bp-offspring-stats span { font-size: .82rem; }
+.bp-offspring-stats strong { font-size: 1.1rem; }
+.bp-average-progress {
+  padding: .7rem .8rem;
+  border-radius: .65rem;
+  background: rgba(103,139,68,.06);
+  border: 1px solid rgba(103,139,68,.13);
+}
+.bp-average-progress > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem .85rem;
+  margin-top: .35rem;
+}
+.bp-best-offspring-grid {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: .6rem;
+}
+.bp-best-offspring {
+  display: flex;
+  flex-direction: column;
+  gap: .18rem;
+  min-width: 0;
+  padding: .65rem .7rem;
+  border-radius: .65rem;
+  border: 1px solid rgba(80,110,65,.16);
+  background: rgba(255,255,255,.55);
+}
+.bp-best-offspring > span { font-size: .78rem; font-weight: 750; color: var(--accent-dark); }
+.bp-best-offspring > strong { overflow-wrap: anywhere; }
+.bp-best-offspring small { color: var(--muted, #69736a); line-height: 1.25; }
+.bp-offspring-details { margin-top: .8rem; }
+.bp-offspring-details > summary { cursor: pointer; font-weight: 700; }
+.bp-offspring-details .table-wrap { margin-top: .55rem; }
+
+.settings-toggle-row {
+  display: flex;
+  gap: .65rem;
+  align-items: flex-start;
+  cursor: pointer;
+}
+.settings-toggle-row input { margin-top: .22rem; }
+.settings-toggle-row span { display: flex; flex-direction: column; gap: .18rem; }
+.settings-toggle-row small { color: #657067; line-height: 1.35; }
+
+@media (max-width: 900px) {
+  .bp-best-offspring-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 620px) {
+  .bp-section-head { flex-direction: column; }
+  .bp-offspring-stats { grid-template-columns: 1fr; }
+  .bp-best-offspring-grid { grid-template-columns: 1fr; }
+  .bp-offspring-count { white-space: normal; }
+}
+body.hide-best-foal-overview #horse-table .bp-best-col,
+body.hide-best-foal-overview #horse-table .bp-best-aggregate-cell { display: none; }
+.bp-filter-legend { display: block; margin-top: .18rem; line-height: 1.45; }
+.bp-filter-legend .bp-parent-dot { margin-left: .08rem; margin-right: .08rem; }
+
+
+/* --- V53.6.7 Filter, Dashboard und Pferdeseite --- */
+.checkdrop-tristate-item{width:100%;display:grid;grid-template-columns:1.6rem minmax(0,1fr);align-items:center;gap:.35rem;padding:.38rem .5rem;border:0;border-radius:.45rem;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer}.checkdrop-tristate-item:hover{background:rgba(107,157,0,.10)}
+.checkdrop-tristate-item .checkdrop-state-sign{display:inline-flex;width:1.35rem;height:1.35rem;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:.35rem;font-weight:800;line-height:1}.checkdrop-tristate-item.include{background:rgba(76,132,65,.11)}.checkdrop-tristate-item.include .checkdrop-state-sign{border-color:#648a58;background:rgba(76,132,65,.18);color:#315a2b}.checkdrop-tristate-item.exclude{background:rgba(175,76,68,.10)}.checkdrop-tristate-item.exclude .checkdrop-state-sign{border-color:#a7645d;background:rgba(175,76,68,.16);color:#7b302b}
+.horse-tags-cell{min-width:112px}.horse-tags-cell .horse-tag-badge{margin:.08rem .12rem .08rem 0}
+.view-navigation-settings{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin:-.15rem 0 .75rem;padding:.5rem .7rem;border:1px solid var(--border);border-radius:.75rem;background:rgba(255,255,255,.55)}.view-navigation-settings label{margin:0 .15rem 0 0;font-size:.86rem;font-weight:700}.view-navigation-settings select{width:auto;min-width:140px}
+.horse-view-v53 .horse-hero-image{border:0!important;background:transparent!important;box-shadow:none!important}.horse-view-v53 #tag-badges .horse-tag-badge{font-size:.82rem;padding:.16rem .65rem}.horse-view-v53 [data-tab-panel="stammbaum"] th,.horse-view-v53 [data-tab-panel="stammbaum"] td{text-transform:none!important;letter-spacing:normal!important}
+.dashboard-saved-tiles-section{margin:.5rem 0 1rem}.dashboard-saved-tiles-section h2{margin:0 0 .55rem;font-size:1rem}.dashboard-saved-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.7rem}.dashboard-saved-tile{min-height:112px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:.25rem;padding:.8rem;border:1px solid var(--border);border-radius:.9rem;background:var(--surface);box-shadow:0 1px 3px rgba(50,70,45,.06)}.dashboard-saved-tile strong{font-size:1.55rem;line-height:1.1;color:var(--accent-dark)}.dashboard-tile-title{font-weight:700}.dashboard-tile-caption{font-size:.76rem;color:var(--muted)}.dashboard-saved-tile-missing{opacity:.72}.dashboard-tile-create-grid{align-items:end}
+@media(max-width:620px){.view-navigation-settings{align-items:stretch}.view-navigation-settings label{flex-basis:100%}.view-navigation-settings select{flex:1 1 140px}}
+
+
+/* V53.6.7.1 Korrekturen */
+.settings-toggle-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .7rem .8rem;
+  align-items: start;
+  padding: .7rem .85rem;
+  border: 1px solid rgba(108,142,87,.28);
+  border-radius: .8rem;
+  background: rgba(255,255,255,.42);
+}
+.settings-toggle-card input[type="checkbox"] {
+  width: auto;
+  margin: .15rem 0 0;
+  padding: 0;
+  justify-self: start;
+}
+.settings-toggle-copy {
+  display: flex;
+  flex-direction: column;
+  gap: .22rem;
+  min-width: 0;
+}
+.settings-toggle-copy strong {
+  color: var(--accent-dark);
+}
+.settings-toggle-copy small {
+  color: #657067;
+  line-height: 1.35;
+}
+@media (max-width: 620px) {
+  .settings-toggle-card {
+    grid-template-columns: auto 1fr;
+    padding: .65rem .75rem;
+  }
+}
+
+/* MDR V54 – Login und gemeinsamer Online-Status */
+.mdr-login-page { min-height:100vh; margin:0; }
+.mdr-login-shell { min-height:100vh; display:grid; place-items:center; padding:1.25rem; }
+.mdr-login-card { width:min(430px,100%); background:var(--surface); border:1px solid var(--border); border-radius:1rem; padding:1.35rem; box-shadow:0 12px 34px rgba(26,48,24,.12); }
+.mdr-login-brand { font-size:.82rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--accent-dark); margin-bottom:.35rem; }
+.mdr-login-card h1 { margin:.1rem 0 .35rem; }
+.mdr-login-card form { display:grid; gap:.45rem; margin-top:1rem; }
+.mdr-login-card form label { margin-top:.3rem; font-weight:700; }
+.mdr-login-card form button { margin-top:.65rem; }
+.mdr-login-card .error { min-height:1.2em; margin:.35rem 0 0; }
+.mdr-login-foot { margin:1rem 0 0; }
+.mdr-account-controls { display:flex; align-items:center; gap:.45rem; margin-left:auto; }
+.mdr-account-name { font-size:.82rem; font-weight:750; white-space:nowrap; }
+.mdr-logout-btn { padding:.35rem .55rem; font-size:.82rem; }
+@media(max-width:760px){.mdr-account-controls{flex-basis:100%;justify-content:flex-end;margin-left:0}.mdr-account-name{font-size:.78rem}}

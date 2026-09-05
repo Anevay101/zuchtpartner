@@ -1,19 +1,73 @@
-MDR Pferdedatenbank – GitHub-Pages-Ausgabe
+MDR Pferdedatenbank V54 – GitHub Pages + Supabase
+=================================================
 
-1. Auf GitHub ein neues öffentliches Repository anlegen, z. B. mdr-pferdedatenbank.
-2. Den INHALT dieses Ordners in das Repository-Stammverzeichnis hochladen.
-   Wichtig: Keine privaten JSON-Backups oder Browserprofile in das Repository laden.
-3. GitHub: Settings > Pages > Build and deployment > Deploy from a branch.
-4. Branch: main, Ordner: /(root), danach speichern.
-5. Nach der Veröffentlichung die angezeigte https://...github.io/.../ Adresse öffnen.
-6. In Einstellungen das eigene vollständige JSON-Backup importieren.
+Diese Ausgabe verwendet GitHub Pages nur für die Programmdateien.
+Der gemeinsame MDR-Datenbestand liegt in Supabase und ist durch Login + RLS geschützt.
 
-Datenmodell:
-- HTML/CSS/JavaScript liegen öffentlich auf GitHub Pages.
-- Pferde, Verpaarungen und Einstellungen liegen lokal in IndexedDB des jeweiligen Browsers.
-- Jede Person/jeder Browser hat deshalb zunächst einen eigenen Datenbestand.
-- Für Gerätewechsel oder Austausch JSON-Backup exportieren/importieren.
-- Ein Chrome-Profil wird nicht benötigt. Opera kann die HTTPS-Seite direkt verwenden.
+Voraussetzungen (bereits im Supabase-Projekt eingerichtet):
+- Benutzer Anevay und Saeculume
+- public.mdr_members mit beiden User-IDs
+- public.mdr_records mit aktiver RLS
+- Funktion public.is_mdr_member()
+- Funktion public.mdr_next_numeric_id()
 
-Updates:
-Neue Programmdateien einfach im selben Repository ersetzen/committen. Die GitHub-Pages-Adresse bleibt gleich; der lokale IndexedDB-Datenbestand bleibt normalerweise erhalten. Vor größeren Updates trotzdem ein JSON-Backup erstellen.
+1. V54 auf GitHub hochladen
+---------------------------
+Im bestehenden öffentlichen Repository "zuchtpartner" die Programmdateien durch den Inhalt
+DIESER ZIP ersetzen bzw. die neuen/geänderten Dateien hochladen.
+
+Wichtig:
+- login.html muss im Hauptverzeichnis liegen.
+- js/supabase-config.js muss vorhanden sein.
+- Niemals ein Pferde-JSON/Backup in das öffentliche GitHub-Repository laden.
+
+GitHub Pages bleibt auf:
+Settings -> Pages -> Deploy from a branch -> main -> /(root)
+
+2. Veröffentlichung abwarten
+-----------------------------
+Nach dem Commit einige Minuten warten und die bestehende GitHub-Pages-Adresse neu öffnen.
+Beim direkten Aufruf von index.html wird ohne aktive Sitzung automatisch login.html geöffnet.
+
+3. Anmelden
+-----------
+Auf der MDR-Seite werden nur Benutzername und Passwort verlangt.
+Gültige Benutzernamen:
+- Anevay
+- Saeculume
+
+Die technischen @mdr.invalid-Adressen werden in der Oberfläche nicht benötigt.
+
+4. EINMALIGER Erstimport
+------------------------
+Nach dem ersten Login ist der Supabase-Bestand zunächst leer.
+
+Nur EINMAL, vorzugsweise als Anevay:
+Einstellungen -> JSON-Backup importieren -> vollständiges aktuelles MDR-Backup auswählen
+-> "Alles ersetzen".
+
+Damit wird der bisherige vollständige Bestand nach Supabase übertragen.
+Nicht anschließend dasselbe Backup noch einmal als Saeculume importieren.
+
+5. Kontrolle
+------------
+Nach dem Import:
+- Pferdedatenbank öffnen und Pferdeanzahl prüfen.
+- Abmelden.
+- In einem anderen Browser/privaten Fenster als Saeculume anmelden.
+- Dort muss derselbe Pferdebestand sichtbar sein.
+
+Ab diesem Zeitpunkt arbeiten beide Konten auf demselben zentralen Bestand.
+
+6. Sicherungen
+--------------
+Supabase ist der gemeinsame Arbeitsbestand.
+JSON-Backup-Download bleibt als zusätzliche unabhängige Sicherung erhalten.
+Ein unterstützter Browser kann zusätzlich einen lokalen Backup-Ordner verwenden.
+IndexedDB ist in V54 nur ein lokaler Lesecache; bei erfolgreicher Cloud-Verbindung ist Supabase maßgeblich.
+
+7. Sicherheit
+-------------
+Der in js/supabase-config.js enthaltene Publishable Key ist für Browser-Anwendungen vorgesehen.
+Die eigentliche Zugriffssicherung erfolgt durch Supabase Auth und Row Level Security.
+Niemals Secret Key, service_role-Key oder Database Password in GitHub/JavaScript eintragen.
