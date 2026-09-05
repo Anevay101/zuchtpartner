@@ -1,0 +1,19 @@
+MDR Pferdedatenbank – GitHub-Pages-Ausgabe
+
+1. Auf GitHub ein neues öffentliches Repository anlegen, z. B. mdr-pferdedatenbank.
+2. Den INHALT dieses Ordners in das Repository-Stammverzeichnis hochladen.
+   Wichtig: Keine privaten JSON-Backups oder Browserprofile in das Repository laden.
+3. GitHub: Settings > Pages > Build and deployment > Deploy from a branch.
+4. Branch: main, Ordner: /(root), danach speichern.
+5. Nach der Veröffentlichung die angezeigte https://...github.io/.../ Adresse öffnen.
+6. In Einstellungen das eigene vollständige JSON-Backup importieren.
+
+Datenmodell:
+- HTML/CSS/JavaScript liegen öffentlich auf GitHub Pages.
+- Pferde, Verpaarungen und Einstellungen liegen lokal in IndexedDB des jeweiligen Browsers.
+- Jede Person/jeder Browser hat deshalb zunächst einen eigenen Datenbestand.
+- Für Gerätewechsel oder Austausch JSON-Backup exportieren/importieren.
+- Ein Chrome-Profil wird nicht benötigt. Opera kann die HTTPS-Seite direkt verwenden.
+
+Updates:
+Neue Programmdateien einfach im selben Repository ersetzen/committen. Die GitHub-Pages-Adresse bleibt gleich; der lokale IndexedDB-Datenbestand bleibt normalerweise erhalten. Vor größeren Updates trotzdem ein JSON-Backup erstellen.

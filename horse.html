@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Pferd – MDR Pferdedatenbank – Lokal</title>
+  <link rel="stylesheet" href="css/style.css?v=53671g" />
+</head>
+<body>
+  <header class="topbar">
+    <h1 id="page-title">🐴 Neues Pferd</h1>
+    <nav>
+      <a class="btn secondary" href="index.html">← Zur Übersicht</a>
+      
+          <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
+      <a class="btn secondary" href="turnierplaner.html">🏆 Turnierplaner</a>
+      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="notice data-copy-notice">
+      <strong>📌 Wichtig für vollständige Daten:</strong>
+      Bitte auf der Pferdeseite die <strong>Gentest-/Genetic-Tests-Seite öffnen</strong>, 
+      <strong>alle Disziplinen / all disciplines ausklappen</strong> und auch die <strong>Rasseanteile / breed percentages einblenden</strong>,
+      bevor du die Seite mit Strg+A / Strg+C kopierst. Nur dann können möglichst alle Werte automatisch ausgelesen werden.
+    </div>
+    <details class="paste-box" id="paste-details" open>
+      <summary>Text von der Pferdeseite einfügen</summary>
+      <p class="muted small">
+        Öffne zuerst die Gentest-Seite im Spiel, klappe alle Disziplinen aus
+        und blende die Rasseanteile ein. Markiere anschließend die komplette
+        Pferdeseite (Strg+A) und kopiere sie (Strg+C). Text hier einfügen und
+        auf "Automatisch auslesen" klicken. Die erkannten Werte erscheinen unten im Formular zur Kontrolle –
+        bitte vor dem Speichern kurz prüfen, da die automatische Erkennung nicht
+        perfekt sein kann.
+      </p>
+      <textarea id="raw-text" placeholder="Hier den kopierten Seitentext einfügen…"></textarea>
+      <div class="paste-actions">
+        <button type="button" id="parse-btn">Automatisch auslesen</button>
+        <span id="parse-status" class="muted small"></span>
+        <div id="import-quality-check" style="grid-column:1/-1;"></div>
+      </div>
+    </details>
+
+    <form id="horse-form">
+      <div class="tabs">
+        <button type="button" class="tab-btn active" data-tab="stammdaten">Stammdaten</button>
+        <button type="button" class="tab-btn" data-tab="genetik">Genetik</button>
+        <button type="button" class="tab-btn" data-tab="turnier">Turnierwerte</button>
+        <button type="button" class="tab-btn" data-tab="zucht">Zucht &amp; Nachzucht</button>
+        <button type="button" class="tab-btn" data-tab="stammbaum">Stammbaum</button>
+      </div>
+
+      <div class="tab-panel" data-tab-panel="stammdaten">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <button type="button" id="prev-horse-btn" class="secondary" hidden title="Speichern &amp; vorheriges Pferd (alphabetisch)">←</button>
+          <fieldset style="flex: 1; min-width: 0;">
+            <legend>Stammdaten</legend>
+            <div class="form-grid">
+              <div><label for="name">Name *</label><input id="name" required /></div>
+              <div><label for="external_id">ID</label><input id="external_id" /></div>
+              <div><label for="game_version">Spielversion</label>
+                <select id="game_version">
+                  <option value="DE">DE</option>
+                  <option value="EN">EN</option>
+                </select>
+              </div>
+              <div><label for="gender">Geschlecht</label>
+                <select id="gender">
+                  <option value=""></option>
+                  <option>Stute</option>
+                  <option>Hengst</option>
+                  <option>Wallach</option>
+                  <option>Hengstfohlen</option>
+                  <option>Stutfohlen</option>
+                </select>
+              </div>
+              <div><label for="breed">Rasse</label><input id="breed" /></div>
+              <div><label for="purebred_pct">Reinrassigkeit (%)</label><input id="purebred_pct" type="number" step="0.01" /></div>
+              <div id="breed-composition-field"><label for="breed_composition">Rasseanteile</label><input id="breed_composition" placeholder="z.B. 50% Araber, 50% Vollblut" /></div>
+              <div><label for="coat_color">Fellfarbe</label><input id="coat_color" /></div>
+              <div id="appaloosa-pattern-field" hidden>
+                <label for="appaloosa_pattern">🐆 Sichtbares Appaloosa-Muster</label>
+                <select id="appaloosa_pattern">
+                  <option value="">Bitte auswählen…</option>
+                  <option>Leopard</option>
+                  <option>Few Spot</option>
+                  <option>Spotted Blanket</option>
+                  <option>Snowcap</option>
+                  <option>Varnish Roan</option>
+                  <option>Snowflake</option>
+                  <option>anderes / unklar</option>
+                </select>
+                <div class="small muted">Sichtbarer Phänotyp – kein Gentest. Bei eindeutiger Fellfarbe wird er automatisch vorgeschlagen.</div>
+              </div>
+              <div><label for="birthdate">Geburtsdatum</label><input id="birthdate" type="date" /></div>
+              <div><label for="disease_free">Erbkrankheiten</label>
+                <select id="disease_free">
+                  <option value="">unbekannt</option>
+                  <option value="true">frei von Erbkrankheiten</option>
+                  <option value="false">Erbkrankheit vorhanden</option>
+                </select>
+              </div>
+            </div>
+          </fieldset>
+          <button type="button" id="next-horse-btn" class="secondary" hidden title="Speichern &amp; nächstes Pferd (alphabetisch)">→</button>
+        </div>
+
+        <fieldset>
+          <legend>Verwaltung</legend>
+          <div class="form-grid">
+            <div><label for="owner">Besitzer</label><input id="owner" /></div>
+            <div>
+              <label for="learning_file">🧠 Lerndatei</label>
+              <select id="learning_file">
+                <option value="false">Nein</option>
+                <option value="true">Ja – nur als Lerndatei</option>
+              </select>
+              <div class="tiny muted">Bleibt für Lernmodelle und Eltern→Fohlen-Daten erhalten, wird aber aus Zucht-, Turnier-, Cup-, ZS-Prognose-, Dashboard- und Aussortierlisten ausgeblendet. GBH wird automatisch Lerndatei.</div>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Papiere &amp; Zucht</legend>
+          <div class="form-grid">
+            <div><label for="breeding_allowed">Zuchtzulassung</label>
+              <select id="breeding_allowed">
+                <option value="">unbekannt</option>
+                <option value="true">Ja</option>
+                <option value="false">Nein</option>
+              </select>
+            </div>
+            <div id="stud-fee-field" hidden>
+              <label for="stud_fee">Decktaxe / Decksprungkosten</label>
+              <input id="stud_fee" type="number" min="0" step="1" placeholder="leer = kostenlos" />
+              <div class="tiny muted">Leer bedeutet kostenlos. Nur bei kostenpflichtigem Decksprung einen Betrag eintragen.</div>
+            </div>
+            <div><label for="hlp_slp">HLP/SLP</label><input id="hlp_slp" /></div>
+            <div><label for="ico">ICO (%)</label><input id="ico" type="number" step="0.001" /></div>
+            <div>
+              <label for="breeding_goal">Zuchtziel</label>
+              <input id="breeding_goal" list="breeding-goal-options" placeholder="wird automatisch aus der Begabung gesetzt" />
+              <div class="small muted">Wird beim Import automatisch aus der Begabung/Hauptdisziplin gesetzt, kann aber manuell geändert werden.</div>
+              <datalist id="breeding-goal-options">
+                <option value="Englisch"></option>
+                <option value="Dressur"></option>
+                <option value="Springen"></option>
+                <option value="Rennen"></option>
+                <option value="Western"></option>
+                <option value="Rodeo"></option>
+                <option value="Fahren"></option>
+                <option value="Barock"></option>
+                <option value="Mehrgang"></option>
+                <option value="Farbe"></option>
+                <option value="Ext"></option>
+                <option value="Turnier"></option>
+                <option value="Allround"></option>
+              </datalist>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Sonstiges</legend>
+          <div class="form-grid">
+            <div style="grid-column: 1 / -1;"><label for="notes">Notizen</label><textarea id="notes" rows="3"></textarea></div>
+            <div><label for="image_url">Bild-URL</label><input id="image_url" type="url" />
+              <img id="image-preview" class="image-preview" hidden alt="Bildvorschau" />
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Schlagwörter</legend>
+          <div id="tag-checkboxes" class="tag-checkbox-list"></div>
+        </fieldset>
+      </div>
+
+      <div class="tab-panel" data-tab-panel="genetik" hidden>
+        <div id="detail-genetik"></div>
+      </div>
+
+      <div class="tab-panel" data-tab-panel="turnier" hidden>
+        <div class="notice small cup-edit-hint">
+          <strong>Tipp zum Einlesen:</strong> Begabung und Turnierpotenziale werden automatisch übernommen.
+          Der MDR-Reiter <strong>Erfolge</strong> liefert 1./2./3. Plätze, der Reiter <strong>Turniere</strong> liefert
+          Gesamtstarts sowie die <strong>MDR-Cup Qualifikation</strong> mit Disziplin und LK. Beide Ansichten können
+          nacheinander eingefügt werden; die Daten werden zusammengeführt. Zukünftige Turniernennungen werden ignoriert.
+        </div>
+
+        <div class="card breeding-show-entry-card">
+          <div class="group-heading">🌿 Zuchtschau</div>
+          <div class="form-grid">
+            <div>
+              <label for="breeding_show_points">ZS-Punkte (manuell)</label>
+              <input id="breeding_show_points" type="number" min="0" step="1" placeholder="Gesamtpunktzahl der Zuchtschau" />
+              <div class="tiny muted">Dieser Wert steht nicht dauerhaft auf der MDR-Pferdeseite und wird deshalb bewusst manuell eingetragen. Turnier- und Cup-Zusatzpunkte zieht die Datenbank für den ZS-Grundwert selbst ab.</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="detail-turnier"></div>
+
+        <details class="card cup-editor-card">
+          <summary><strong>🏅 Turniererfolge &amp; MDR-Cup-Status prüfen / korrigieren</strong></summary>
+          <div class="form-grid tournament-meta-fields">
+            <div>
+              <label for="tournament_starts_total">Turnierstarts gesamt</label>
+              <input id="tournament_starts_total" type="number" min="0" step="1" placeholder="z. B. 58" />
+              <div class="tiny muted">Wird aus dem MDR-Reiter „Turniere“ bzw. „Erfolge“ automatisch übernommen, bleibt aber manuell korrigierbar.</div>
+            </div>
+          </div>
+          <p class="small muted">
+            Je Disziplin 1., 2. und 3. Plätze. Für die Zuchtschau zählen: <strong>35 / 25 / 15 Punkte</strong>, zusammen maximal <strong>500 Turnier-Zusatzpunkte</strong>. Ein Cupstern zählt <strong>100 Punkte</strong>.
+          </p>
+          <p class="small muted">
+            Der tatsächliche Cupstern wird aus „MDR-Cup Qualifikation“ übernommen oder hier manuell gesetzt; 15 Siege allein setzen ihn nicht automatisch. Mehrere Cupstern-Disziplinen sind möglich.
+          </p>
+          <div id="cup-results-editor"></div>
+        </details>
+      </div>
+
+      <div class="tab-panel" data-tab-panel="zucht" hidden>
+        <div id="breeding-progress-panel"></div>
+      </div>
+
+      <div class="tab-panel" data-tab-panel="stammbaum" hidden>
+        <div id="detail-stammbaum"></div>
+      </div>
+
+      <p id="form-error" class="error"></p>
+
+      <div class="form-actions">
+        <button type="submit">Speichern</button>
+        <button type="button" id="save-and-new-btn" class="secondary" hidden>Speichern &amp; nächstes Pferd</button>
+        <a class="btn secondary" href="index.html">Abbrechen</a>
+        <button type="button" id="delete-btn" class="danger push-right" hidden>Pferd löschen</button>
+      </div>
+      <div id="bulk-session-list" class="bulk-session-card" hidden></div>
+    </form>
+
+    <div id="save-warning-modal" class="modal-overlay" hidden>
+      <div class="modal-box">
+        <h2>Unvollständige Daten</h2>
+        <p>Beim Speichern fehlt Folgendes:</p>
+        <ul id="save-warning-list"></ul>
+        <p class="small muted">Das kann daran liegen, dass diese Angaben im kopierten Text nicht enthalten waren. Trotzdem speichern?</p>
+        <div class="modal-actions">
+          <button type="button" id="save-warning-cancel" class="secondary">Zurück zur Bearbeitung</button>
+          <button type="button" id="save-warning-confirm">Trotzdem speichern</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="duplicate-check-modal" class="modal-overlay" hidden>
+      <div class="modal-box" style="max-width: 560px;">
+        <h2>Möglicherweise bereits vorhanden</h2>
+        <p id="duplicate-check-reason" class="small muted"></p>
+        <div class="table-wrap">
+          <table class="detail-table">
+            <thead><tr><th></th><th>Neu (jetzt eingegeben)</th><th>Bereits vorhanden</th></tr></thead>
+            <tbody id="duplicate-check-body"></tbody>
+          </table>
+        </div>
+        <p class="small muted">Handelt es sich um dasselbe Pferd?</p>
+        <div class="modal-actions">
+          <button type="button" id="duplicate-check-cancel" class="secondary">Nein, neu anlegen</button>
+          <button type="button" id="duplicate-check-confirm">Ja, Datensatz ergänzen</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/database-local.js?v=53671g"></script>
+  <script src="js/local-app.js?v=53671g"></script>
+  <script src="js/learning-file.js?v=53671g"></script>
+  <script src="js/parser.js?v=53671g"></script>
+  <script src="js/data-quality.js?v=53671g"></script>
+  <script src="js/planer-common.js?v=53671g"></script>
+  <script src="js/zuchtplaner-engine-helpers.js?v=53671g"></script>
+  <script src="js/breeding-original.js?v=53671g"></script>
+  <script src="js/verpaarungsratgeber-engine.js?v=53671g"></script>
+  <script src="js/foal-prediction.js?v=53671g"></script>
+  <script src="js/pregnancy-sync.js?v=53671g"></script>
+  <script src="js/breeding-progress.js?v=53671g"></script>
+  <script src="js/horseForm.js?v=53671g"></script>
+</body>
+</html>

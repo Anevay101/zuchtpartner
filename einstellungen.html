@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Einstellungen – MDR Pferdedatenbank</title>
+  <link rel="stylesheet" href="css/style.css?v=53671g" />
+</head>
+<body>
+<header class="topbar">
+  <h1>⚙️ Einstellungen</h1>
+  <nav>
+    <a class="btn secondary" href="index.html">← Datenbank</a>
+    <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
+    <a class="btn secondary" href="turnierplaner.html">🏆 Turnierplaner</a>
+    <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
+  </nav>
+</header>
+
+<main class="container settings-page">
+  <div class="notice">
+    Hier liegen die Verwaltungsfunktionen gesammelt an einer Stelle. Die Sicherheitsanzeige oben
+    bleibt weiterhin sichtbar, wenn ein Backup gestoppt oder eine Wiederherstellung nötig ist.
+  </div>
+
+  <section class="card settings-section">
+    <h2>🛡️ Datensicherung &amp; Import</h2>
+    <div class="notice small online-storage-notice"><strong>Online-Version:</strong> GitHub Pages stellt nur die Anwendung bereit. Pferde, Verpaarungen und Einstellungen bleiben lokal im jeweiligen Browser und werden nicht in das GitHub-Repository hochgeladen. Für Gerätewechsel oder Weitergabe bitte JSON-Backups verwenden.</div>
+    <div id="settings-backup-overview" class="settings-overview-grid"></div>
+    <div class="actions settings-actions">
+      <button id="settings-backup-download" type="button">💾 Backup herunterladen</button>
+      <button id="settings-backup-write" type="button" class="secondary">🛡️ Sicherung jetzt schreiben</button>
+      <button id="settings-import-btn" type="button" class="secondary">📂 JSON-Backup importieren</button>
+      <button id="settings-learning-export" type="button" class="secondary">🧠 Bereinigte Lerndatei exportieren</button>
+      <button id="settings-folder-btn" type="button" class="secondary">📁 Backup-Ordner wählen / ändern</button>
+      <button id="settings-folder-authorize" type="button" class="secondary">🔓 Ordnerzugriff freigeben</button>
+      <button id="settings-folder-forget" type="button" class="secondary">Ordner vergessen</button>
+    </div>
+    <input id="settings-import-file" type="file" accept=".json,application/json" hidden />
+    <p class="small muted">
+      In der Online-Version gibt es keinen Server-Sicherheits-Spiegel im MDR-Ordner. Ein gewählter externer Backup-Ordner ist eine zusätzliche lokale Sicherung im Browser.<br>
+      <strong>Bereinigte Lerndatei:</strong> enthält nur für Lernmodelle relevante Pferde-/Fohlendaten; persönliche Verwaltungsdaten werden entfernt und der Besitzer aller enthaltenen Lernpferde wird auf <strong>Lerndatei</strong> gesetzt.
+    </p>
+  </section>
+
+
+  <section class="card settings-section">
+    <h2>Anzeige</h2>
+    <label class="settings-toggle-row settings-toggle-card">
+      <input type="checkbox" id="settings-show-best-foal" checked />
+      <span class="settings-toggle-copy"><strong>„Bestes Fohlen“ in der Pferdeübersicht anzeigen</strong><small>Zeigt Vergleichsfarben, Bestwert-Sterne und den Filter „Bestes Fohlen“ in der Pferdedatenbank.</small></span>
+    </label>
+  </section>
+
+  <section class="card settings-section">
+    <h2>🔎 Filtervorlagen verwalten</h2>
+    <p class="small muted">
+      Laden und Speichern bleibt weiterhin direkt in der Pferdedatenbank möglich.
+      Zusätzlich kannst du hier den zuletzt verwendeten Datenbankfilter als neue Vorlage speichern
+      und vorhandene Vorlagen zentral umbenennen oder löschen.
+    </p>
+    <div class="actions">
+      <button id="settings-save-last-filter" type="button">💾 Letzten Datenbankfilter als Vorlage speichern</button>
+      <a class="btn secondary" href="index.html">Zur Datenbank / Vorlage laden</a>
+    </div>
+    <div id="settings-presets"></div>
+  </section>
+
+  <section class="card settings-section">
+    <h2>Dashboard-Kacheln</h2>
+    <p class="small muted">Kacheln verwenden gespeicherte Filtervorlagen und bleiben unabhängig vom aktuell gesetzten Dashboard-Filter.</p>
+    <div class="form-grid dashboard-tile-create-grid">
+      <div><label for="settings-dashboard-tile-preset">Filtervorlage</label><select id="settings-dashboard-tile-preset"><option value="">Bitte wählen…</option></select></div>
+      <div><label for="settings-dashboard-tile-metric">Kennzahl</label><select id="settings-dashboard-tile-metric"><option value="count">Anzahl Pferde</option><option value="gp">Ø GP</option><option value="ext">Ø Ext</option><option value="extpct">Ø Ext%</option><option value="int">Ø Int</option></select></div>
+      <div><label for="settings-dashboard-tile-title">Titel (optional)</label><input id="settings-dashboard-tile-title" placeholder="z. B. Paint-Stuten" /></div>
+    </div>
+    <div class="actions"><button id="settings-dashboard-tile-add" type="button">Kachel hinzufügen</button></div>
+    <div id="settings-dashboard-tiles"></div>
+  </section>
+
+  <section class="card settings-section">
+    <h2>👥 Aktive Züchter</h2>
+    <p class="small muted">
+      Hier legst du fest, wessen Bestand zu deinen persönlichen Auswertungen gehört.
+      Die Auswahl begrenzt <strong>Dashboard, Turnierplaner und Aussortierhilfe</strong>.
+      In Pferdedatenbank, Verpaarungslog und Zuchtplaner bleiben weiterhin <strong>alle Züchter</strong> und Pferde verfügbar.
+    </p>
+    <div class="actions">
+      <button type="button" id="active-breeders-all" class="secondary">Alle markieren</button>
+      <button type="button" id="active-breeders-none" class="secondary">Alle abwählen</button>
+      <button type="button" id="active-breeders-save">Aktive Züchter speichern</button>
+    </div>
+    <div id="settings-active-breeders" class="active-breeders-grid"></div>
+    <p id="active-breeders-status" class="small muted"></p>
+  </section>
+
+  <section class="card settings-section">
+    <h2>🏷️ Schlagwörter konfigurieren</h2>
+    <p class="small muted">
+      Du kannst eigene Schlagwörter ergänzen, Farben ändern und eigene Einträge umbenennen oder löschen.
+      <strong>GBH</strong> und <strong>Cupstern</strong> sind System-Schlagwörter und bleiben namentlich geschützt,
+      weil automatische Funktionen daran hängen.
+    </p>
+    <div id="settings-tags"></div>
+
+    <fieldset class="settings-tag-add">
+      <legend>Neues Schlagwort</legend>
+      <div class="form-grid">
+        <div><label for="new-tag-label">Bezeichnung</label><input id="new-tag-label" placeholder="z. B. Zuchtgemeinschaft" /></div>
+        <div><label for="new-tag-color">Farbe</label><input id="new-tag-color" type="color" value="#6b9d00" /></div>
+      </div>
+      <div class="actions"><button id="settings-add-tag" type="button">Schlagwort hinzufügen</button></div>
+    </fieldset>
+  </section>
+
+  <p id="settings-error" class="error"></p>
+</main>
+
+<script src="js/database-local.js?v=53671g"></script>
+<script src="js/local-app.js?v=53671g"></script>
+<script src="js/learning-file.js?v=53671g"></script>
+<script src="js/parser.js?v=53671g"></script>
+<script src="js/settings-local.js?v=53671g"></script>
+</body>
+</html>
