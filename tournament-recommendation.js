@@ -1,4 +1,4 @@
-/* V54.0.11 – gemeinsame Turnierempfehlung für Turnierplaner und Pferdeseite
+/* V54.0.14 – gemeinsame Turnierempfehlung für Turnierplaner und Pferdeseite
    Hauptdisziplin: mindestens 180 Punkte
    Nebendisziplinen/Alternativen: mindestens 150 Punkte (bzw. höherer Nutzerwert)
    Spezialisten-P25 dient nur noch als Vergleichsinformation und niemals als Ausschlusskriterium. */
@@ -214,8 +214,9 @@ function plannerFormatTournamentOption(row, includeGroup = false) {
     `Int ${row.interior == null ? '–' : Number(row.interior).toFixed(2)}`,
     row.lk || 'LK –',
   ];
-  let base = bits.join(' / ');
-  if (row.proven || row.proof?.proven) base += ' · bewährt';
+  // Copy-Paste bewusst kompakt halten: "bewährt" bleibt eine UI-Information
+  // und wird nicht in die Pferdenotizen kopiert.
+  const base = bits.join(' / ');
   return includeGroup ? `${base} (${row.group})` : base;
 }
 

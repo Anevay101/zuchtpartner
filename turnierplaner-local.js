@@ -555,26 +555,25 @@ function renderHorseTournamentOptions() {
     return;
   }
 
-  // Die oberen Einzelpferd-Filter gelten für das gesamte sichtbare Turnierprofil:
-  // Empfehlung, Hauptgruppenübersicht, geeignete Disziplinen und 28er-Detailtabelle.
+  // V54.0.14: Im Einzelpferd-Rechner wirken ALLE sichtbaren Filter auf
+  // dieselbe Ergebnismenge. Das betrifft Empfehlung, Hauptgruppenübersicht,
+  // geeignete Disziplinen, Kopiertext und die 28er-Detailtabelle gleichermaßen.
+  // So kann z. B. LK10 sowohl oben als auch in den Tabellenfiltern gewählt werden,
+  // ohne dass darunter weiterhin LK8-Werte stehen bleiben.
   const profileRows = allRows.filter(r => {
     if (pointsMin != null && r.points < pointsMin) return false;
     if (lkFilter && r.lk !== lkFilter) return false;
-    return true;
-  });
-  const visibleProfile = tournamentProfileSubset(profile, profileRows);
-
-  // Die eingeklappten "Tabellenfilter" verfeinern nur die 28er-Detailtabelle.
-  const rows = profileRows.filter(r => {
     if (tableDiscipline && !r.discipline.toLowerCase().includes(tableDiscipline)) return false;
     if (tablePoints != null && r.points < tablePoints) return false;
     if (tableInterior != null && (r.interior == null || r.interior > tableInterior)) return false;
     if (tableLks.length && !tableLks.includes(r.lk)) return false;
     return true;
   });
+  const visibleProfile = tournamentProfileSubset(profile, profileRows);
+  const rows = profileRows;
 
   const best = visibleProfile.best;
-  const topFilterActive = pointsMin != null || Boolean(lkFilter);
+  const topFilterActive = pointsMin != null || Boolean(lkFilter) || Boolean(tableDiscipline) || tablePoints != null || tableInterior != null || tableLks.length > 0;
   const bestLabel = topFilterActive ? 'Beste gefilterte Disziplin' : 'Beste Disziplin';
   const mainLabel = visibleProfile.mainGroup || 'unbekannt';
   const alt = visibleProfile.alternatives[0] || null;
@@ -586,7 +585,7 @@ function renderHorseTournamentOptions() {
     <div class="planner-summary tournament-recommendation-card selectable-copy-area">
       <div class="tournament-recommendation-head">
         <div>
-          <h3>${plannerEscape(horse.name || '(ohne Name)')}</h3>
+          <h3><a href="view.html?id=${encodeURIComponent(horse.id)}">${plannerEscape(horse.name || '(ohne Name)')}</a></h3>
           <p class="tournament-recommendation-line"><strong>Empfehlung:</strong> ${plannerEscape(visibleProfile.recommendation)}</p>
         </div>
         <button type="button" class="secondary small" id="tp-copy-recommendation">Für Notizen kopieren</button>
