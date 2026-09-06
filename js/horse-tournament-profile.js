@@ -131,11 +131,12 @@ async function renderHorseTournamentProfile(horse, allHorsesArg = null) {
 
   const best = profile.best;
   const alt = profile.alternatives[0] || null;
-  const alternativeText = alt ? `${plannerEscape(alt.group)} · ${alt.count} geeignete Disziplinen` : 'keine';
+  const alternativeText = alt ? `${plannerEscape(alt.group)} · ${alt.count} geeignete Disziplinen${alt.provisional ? ' · vorläufig' : ''}` : 'keine';
 
   const groupRows = profile.groups.length
     ? profile.groups.map(g => {
-        const status = g.isMain ? 'Hauptdisziplin' : g.count >= 2 ? 'Alternative prüfen' : 'Einzeloption';
+        const statusBase = g.isMain ? 'Hauptdisziplin' : g.count >= 2 ? 'Alternative prüfen' : 'Einzeloption';
+        const status = `${statusBase}${g.provisional ? ' · vorläufig' : ''}`;
         return `<tr><th>${plannerEscape(g.group)}</th><td><strong>${g.count}</strong></td><td>${plannerEscape(status)}</td></tr>`;
       }).join('')
     : '<tr><td colspan="3" class="muted">Keine Hauptgruppe mit geeigneter Disziplin.</td></tr>';
@@ -166,7 +167,7 @@ async function renderHorseTournamentProfile(horse, allHorsesArg = null) {
       </div>
       <p>Beste Disziplin: <strong>${plannerEscape(best.discipline)}</strong> · <strong>${Math.round(best.points)} Punkte</strong> · Int <strong>${best.interior == null ? '–' : best.interior.toFixed(2)}</strong> · <strong>${plannerEscape(best.lk || '–')}</strong></p>
       <p class="small"><strong>Alternative:</strong> ${alternativeText}</p>
-      <p class="tiny muted">Geeignet = mindestens ${Math.round(profile.absoluteMin)} Punkte und mindestens P25 der Pferde, deren Hauptdisziplin zu dieser Disziplingruppe gehört. Referenz erst ab n=${profile.minN}.</p>
+      <p class="tiny muted">Geeignet = mindestens ${Math.round(profile.absoluteMin)} Punkte. Ab n=5 wird zusätzlich P25 der Pferde mit passender Hauptdisziplin verwendet; n=5–14 vorläufig, ab n=15 regulär.</p>
     </div>
 
     <section class="tournament-compact-section selectable-copy-area">
@@ -196,7 +197,7 @@ async function renderHorseTournamentProfile(horse, allHorsesArg = null) {
             <td>${Math.round(r.points)}</td>
             <td>${r.interior == null ? '–' : r.interior.toFixed(2)}</td>
             <td>${plannerEscape(r.lk || '–')}</td>
-            <td>${r.suitable ? '<strong>geeignet</strong>' : plannerEscape(plannerReferenceLabel(r.reference))}</td>
+            <td>${r.suitable ? `<strong>geeignet${r.suitability?.provisional ? ' · vorläufig' : ''}</strong>` : plannerEscape(plannerReferenceLabel(r.reference))}</td>
           </tr>`).join('')}</tbody>
         </table></div>`).join('')}
     </details>`;

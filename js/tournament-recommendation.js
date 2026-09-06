@@ -1,5 +1,6 @@
-/* V54.0.9 – gemeinsame Turnierempfehlung für Turnierplaner und Pferdeseite */
+/* V54.0.10 – gemeinsame Turnierempfehlung für Turnierplaner und Pferdeseite */
 const MDR_TOURNAMENT_REFERENCE_MIN_N = 15;
+const MDR_TOURNAMENT_REFERENCE_PROVISIONAL_MIN_N = 5;
 const MDR_TOURNAMENT_DEFAULT_ABSOLUTE_MIN = 150;
 const MDR_TOURNAMENT_MIN_STORAGE_KEY = 'mdr_tournament_absolute_min_v1';
 
@@ -30,6 +31,13 @@ function plannerTournamentPercentile(values, q) {
   return sorted[lo] + (sorted[hi] - sorted[lo]) * f;
 }
 
+function plannerTournamentReferenceMode(n, minN = MDR_TOURNAMENT_REFERENCE_MIN_N) {
+  const count = Math.max(0, Number(n) || 0);
+  if (count >= minN) return 'normal';
+  if (count >= MDR_TOURNAMENT_REFERENCE_PROVISIONAL_MIN_N) return 'provisional-p25';
+  return 'absolute-only';
+}
+
 function plannerBuildTournamentReferences(horses, scoreFn, minN = MDR_TOURNAMENT_REFERENCE_MIN_N) {
   const refs = {};
   const pool = (horses || []).filter(h => h && typeof plannerHorseMainGroup === 'function' && plannerHorseMainGroup(h));
@@ -37,17 +45,22 @@ function plannerBuildTournamentReferences(horses, scoreFn, minN = MDR_TOURNAMENT
   for (const [discipline, def] of Object.entries(MDR_TOURNAMENT_DISCIPLINES || {})) {
     const values = [];
     for (const horse of pool) {
+      // „Echt“ bedeutet hier: Die eingetragene Hauptdisziplin des Pferdes
+      // gehört zur Gruppe der betrachteten Disziplin.
       if (plannerHorseMainGroup(horse) !== def.group) continue;
       const row = scoreFn(horse, discipline);
       const points = Number(row?.points);
       if (!row || row.complete === false || !Number.isFinite(points)) continue;
       values.push(points);
     }
+    const mode = plannerTournamentReferenceMode(values.length, minN);
     refs[discipline] = {
       discipline,
       group: def.group,
       n: values.length,
-      usable: values.length >= minN,
+      mode,
+      usable: mode !== 'absolute-only', // V54.0.9-Kompatibilität: „usable“ = P25 darf benutzt werden
+      provisional: mode !== 'normal',
       p25: plannerTournamentPercentile(values, .25),
       p50: plannerTournamentPercentile(values, .50),
       p75: plannerTournamentPercentile(values, .75),
@@ -59,16 +72,28 @@ function plannerBuildTournamentReferences(horses, scoreFn, minN = MDR_TOURNAMENT
 function plannerTournamentSuitability(row, reference, absoluteMin = MDR_TOURNAMENT_DEFAULT_ABSOLUTE_MIN) {
   const points = Number(row?.points);
   if (!row || row.complete === false || !Number.isFinite(points)) return { suitable:false, reason:'unvollständig' };
-  if (!reference?.usable || !Number.isFinite(Number(reference.p25))) {
-    return { suitable:false, reason:'Referenz noch zu klein', reference };
-  }
+
   const abs = Number(absoluteMin);
-  const minimum = Math.max(Number.isFinite(abs) ? abs : MDR_TOURNAMENT_DEFAULT_ABSOLUTE_MIN, Number(reference.p25));
+  const absoluteMinimum = Number.isFinite(abs) ? abs : MDR_TOURNAMENT_DEFAULT_ABSOLUTE_MIN;
+  const mode = reference?.mode || plannerTournamentReferenceMode(reference?.n || 0);
+  const useP25 = mode !== 'absolute-only' && Number.isFinite(Number(reference?.p25));
+  const minimum = useP25 ? Math.max(absoluteMinimum, Number(reference.p25)) : absoluteMinimum;
+  const suitable = points >= minimum;
+  const provisional = mode !== 'normal';
+
+  let reason;
+  if (suitable) reason = provisional ? 'geeignet · vorläufig' : 'geeignet';
+  else if (useP25) reason = provisional ? 'unter vorläufiger Referenz' : 'unter Referenz';
+  else reason = 'unter Mindestgrenze';
+
   return {
-    suitable: points >= minimum,
-    reason: points >= minimum ? 'geeignet' : 'unter Referenz',
+    suitable,
+    reason,
     minimum,
     reference,
+    referenceMode: mode,
+    referenceUsed: useP25,
+    provisional,
   };
 }
 
@@ -98,33 +123,31 @@ function plannerAnalyzeTournamentProfile(horse, horses, scoreFn, options = {}) {
       if (!groupRows.length) return null;
       const avgPoints = groupRows.reduce((s,r)=>s+Number(r.points),0)/groupRows.length;
       const avgMargin = groupRows.reduce((s,r)=>s+(Number(r.points)-Number(r.suitability.minimum || 0)),0)/groupRows.length;
+      const provisional = groupRows.some(r => r.suitability?.provisional);
       return {
         group,
         rows: groupRows,
         count: groupRows.length,
         avgPoints,
         avgMargin,
+        provisional,
         isMain: group === mainGroup,
       };
     })
     .filter(Boolean);
 
-  const main = groups.find(g => g.group === mainGroup) || { group:mainGroup, rows:[], count:0, avgPoints:null, avgMargin:null, isMain:true };
+  const main = groups.find(g => g.group === mainGroup) || { group:mainGroup, rows:[], count:0, avgPoints:null, avgMargin:null, provisional:false, isMain:true };
   const alternatives = groups
     .filter(g => g.group !== mainGroup && g.count >= 2)
-    .sort((a,b) => b.count-a.count || b.avgMargin-a.avgMargin || b.avgPoints-a.avgPoints);
+    .sort((a,b) => b.count-a.count || Number(a.provisional)-Number(b.provisional) || b.avgMargin-a.avgMargin || b.avgPoints-a.avgPoints);
   const singleAlternatives = groups
     .filter(g => g.group !== mainGroup && g.count === 1)
-    .sort((a,b) => b.avgMargin-a.avgMargin || b.avgPoints-a.avgPoints);
-
-  const mainRawRows = mainGroup ? rows.filter(r => r.group === mainGroup) : [];
-  const mainReferenceReady = mainRawRows.some(r => r.reference?.usable);
+    .sort((a,b) => Number(a.provisional)-Number(b.provisional) || b.avgMargin-a.avgMargin || b.avgPoints-a.avgPoints);
 
   let recommendation = 'Keine klare Turnierempfehlung';
-  if (mainGroup && main.count >= 2) recommendation = 'Hauptdisziplin sinnvoll';
-  else if (alternatives.length) recommendation = 'Alternative prüfen';
-  else if (mainGroup && main.count === 1) recommendation = 'Hauptdisziplin mit Einzelstärke';
-  else if (mainGroup && mainRawRows.length && !mainReferenceReady) recommendation = 'Referenzbasis noch zu klein';
+  if (mainGroup && main.count >= 2) recommendation = main.provisional ? 'Hauptdisziplin sinnvoll (vorläufig)' : 'Hauptdisziplin sinnvoll';
+  else if (alternatives.length) recommendation = alternatives[0].provisional ? 'Alternative prüfen (vorläufig)' : 'Alternative prüfen';
+  else if (mainGroup && main.count === 1) recommendation = main.provisional ? 'Hauptdisziplin mit Einzelstärke (vorläufig)' : 'Hauptdisziplin mit Einzelstärke';
   else if (!mainGroup && groups.some(g => g.count >= 2)) recommendation = 'Geeignete Turniergruppe gefunden';
 
   return {
@@ -156,7 +179,7 @@ function plannerTournamentCopyText(profile) {
     : 'keine geeignete Disziplin';
   const alt = profile.alternatives?.[0] || null;
   const altText = alt
-    ? `${alt.group} – ${alt.rows.map(r => plannerFormatTournamentOption(r)).join(' | ')}`
+    ? `${alt.group}${alt.provisional ? ' (vorläufig)' : ''} – ${alt.rows.map(r => plannerFormatTournamentOption(r)).join(' | ')}`
     : 'keine';
   return `Turnier: ${mainLabel} ${mainText} Alternative: ${altText}`.replace(/\s+/g,' ').trim();
 }
@@ -198,7 +221,43 @@ async function plannerCopyText(text, button) {
 }
 
 function plannerReferenceLabel(reference) {
-  if (!reference) return 'keine Referenz';
-  if (!reference.usable) return `Referenz n=${reference.n}`;
-  return `P25 ${Math.round(reference.p25)} · n=${reference.n}`;
+  if (!reference) return 'nur Mindestgrenze · n=0 · vorläufig';
+  const mode = reference.mode || plannerTournamentReferenceMode(reference.n || 0);
+  if (mode === 'normal' && Number.isFinite(Number(reference.p25))) {
+    return `P25 ${Math.round(reference.p25)} · n=${reference.n}`;
+  }
+  if (mode === 'provisional-p25' && Number.isFinite(Number(reference.p25))) {
+    return `P25 ${Math.round(reference.p25)} · n=${reference.n} · vorläufig`;
+  }
+  return `nur Mindestgrenze · n=${reference.n || 0} · vorläufig`;
+}
+
+function plannerTournamentReferenceBasisQuality(n) {
+  const count = Math.max(0, Number(n) || 0);
+  if (count >= 30) return 'stabil';
+  if (count >= MDR_TOURNAMENT_REFERENCE_MIN_N) return 'brauchbar';
+  if (count >= MDR_TOURNAMENT_REFERENCE_PROVISIONAL_MIN_N) return 'vorläufig';
+  return 'nur Mindestgrenze';
+}
+
+function plannerTournamentReferenceGroupSummaries(references) {
+  return (MDR_TOURNAMENT_GROUP_ORDER || []).map(group => {
+    const disciplines = (MDR_TOURNAMENT_GROUPS?.[group] || []).map(name => references?.[name]).filter(Boolean);
+    const ns = disciplines.map(r => Math.max(0, Number(r.n) || 0));
+    const minN = ns.length ? Math.min(...ns) : 0;
+    const maxN = ns.length ? Math.max(...ns) : 0;
+    return {
+      group,
+      minN,
+      maxN,
+      nLabel: minN === maxN ? `n=${minN}` : `n=${minN}–${maxN}`,
+      quality: plannerTournamentReferenceBasisQuality(minN),
+    };
+  });
+}
+
+function plannerTournamentReferenceBasisText(references) {
+  return plannerTournamentReferenceGroupSummaries(references)
+    .map(x => `${x.group} ${x.nLabel} · ${x.quality}`)
+    .join(' · ');
 }

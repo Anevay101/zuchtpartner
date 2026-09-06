@@ -4800,3 +4800,10 @@ body.planner-high-contrast .filter-checkbox-label {
   .tournament-recommendation-head button,
   .tournament-section-head button { width: 100%; }
 }
+
+/* V54.0.10 – Turnierreferenzbasis bewusst sehr kompakt */
+.tournament-reference-basis {
+  font-size: 0.74em;
+  line-height: 1.25;
+  margin: 0.18rem 0 0;
+}
