@@ -154,7 +154,7 @@ async function initView() {
   document.title = (name || 'Pferd') + ' – MDR Pferdedatenbank lokal';
 
   renderHorseViewHeader(extraData);
-  renderHorseTournamentProfile(extraData);
+  renderHorseTournamentProfile(extraData, viewHorseList);
   if (typeof bpRenderBreedingPanel === 'function') await bpRenderBreedingPanel(extraData, 'breeding-progress-panel');
 
   const externalId = document.getElementById('external_id').value;

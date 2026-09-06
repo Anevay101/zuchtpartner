@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <title>Turnier & Leistung – MDR Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5408" />
+  <link rel="stylesheet" href="css/style.css?v=5409" />
 </head>
 <body class="turnierplaner-page">
 <header class="topbar">
@@ -33,14 +33,14 @@
     </div>
 
     <details class="card tp-compact-card tp-threshold-details">
-      <summary>⚙️ Turniergrenze für sinnvolle Nebendisziplinen</summary>
+      <summary>Absolute Mindestgrenze</summary>
       <div class="form-grid">
         <div>
-          <label for="tp-secondary-threshold">Sinnvolle Nebendisziplin ab Punkten</label>
+          <label for="tp-secondary-threshold">Absolute Mindestgrenze in Punkten</label>
           <input id="tp-secondary-threshold" min="0" step="1" type="number" value="150" />
         </div>
       </div>
-      <p class="small muted">Nebendisziplinen oberhalb dieser Grenze werden als zusätzliche Turnieroption markiert.</p>
+      <p class="small muted">Eine Disziplin ist nur geeignet, wenn sie mindestens diese Punktzahl und zusätzlich den gelernten P25-Referenzwert ihrer Disziplin erreicht.</p>
     </details>
 
     <details class="card tp-collapsible-card">
@@ -53,8 +53,8 @@
           <div><label for="tp-horse-points-min">Nur Disziplinen ab Punkten</label><input id="tp-horse-points-min" min="0" placeholder="optional, z. B. 150" step="1" type="number" /></div>
           <div><label for="tp-horse-lk">Nur LK</label><select id="tp-horse-lk"><option value="">Alle</option><option>LK10</option><option>LK9</option><option>LK8</option><option>LK7</option><option>LK6</option><option>LK5</option><option>LK4</option><option>LK3</option><option>LK2</option><option>LK1</option></select></div>
         </div>
-        <div class="table-inline-filters">
-          <strong>Tabellenfilter</strong>
+        <details class="table-inline-filters tp-table-filter-details">
+          <summary><strong>Tabellenfilter</strong></summary>
           <div class="form-grid">
             <div><label for="tp-horse-table-discipline">Disziplin</label><input id="tp-horse-table-discipline" placeholder="z. B. Dressur" type="text" /></div>
             <div><label for="tp-horse-table-points">Punkte mindestens</label><input id="tp-horse-table-points" min="0" placeholder="z. B. 150" step="1" type="number" /></div>
@@ -67,7 +67,7 @@
             </div>
             <button class="secondary small" id="tp-horse-table-reset" type="button">Tabellenfilter zurücksetzen</button>
           </div>
-        </div>
+        </details>
         <div id="tp-horse-summary"></div>
         <div id="tp-horse-options"><p class="muted">Bitte ein Pferd auswählen.</p></div>
       </div>
@@ -175,13 +175,14 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5408"></script>
-<script src="js/database-local.js?v=5408"></script>
-<script src="js/local-app.js?v=5408"></script>
-<script src="js/learning-file.js?v=5408"></script>
-<script src="js/parser.js?v=5408"></script>
-<script src="js/data-quality.js?v=5408"></script>
-<script src="js/planer-common.js?v=5408"></script>
-<script src="js/turnierplaner-local.js?v=5408"></script>
+<script src="js/supabase-config.js?v=5409"></script>
+<script src="js/database-local.js?v=5409"></script>
+<script src="js/local-app.js?v=5409"></script>
+<script src="js/learning-file.js?v=5409"></script>
+<script src="js/parser.js?v=5409"></script>
+<script src="js/data-quality.js?v=5409"></script>
+<script src="js/planer-common.js?v=5409"></script>
+<script src="js/tournament-recommendation.js?v=5409"></script>
+<script src="js/turnierplaner-local.js?v=5409"></script>
 </body>
 </html>

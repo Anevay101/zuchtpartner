@@ -100,19 +100,28 @@ function renderHorseCupStatus(horse) {
     <p class="tiny muted">Cupstern und Cup-LK werden aus „MDR-Cup Qualifikation“ automatisch übernommen und bleiben auf der Bearbeitungsseite korrigierbar; 15 Siege allein erzeugen keinen Cupstern.</p>`;
 }
 
-function renderHorseTournamentProfile(horse) {
+async function renderHorseTournamentProfile(horse, allHorsesArg = null) {
   const root = document.getElementById('horse-tournament-profile');
   if (!root) return;
 
-  const results = Object.keys(MDR_TOURNAMENT_DISCIPLINES || {})
-    .map(name => htpScore(horse, name))
-    .filter(Boolean)
-    .sort((a,b) => b.points - a.points || (a.interior ?? 99) - (b.interior ?? 99));
+  root.innerHTML = '<p class="muted">Turnierprofil wird berechnet…</p>';
+
+  let allHorses = Array.isArray(allHorsesArg) && allHorsesArg.length ? allHorsesArg : [horse];
+  try {
+    if ((!Array.isArray(allHorsesArg) || !allHorsesArg.length) && typeof localGetAll === 'function' && typeof LOCAL_STORES !== 'undefined') {
+      allHorses = await localGetAll(LOCAL_STORES.horses);
+    }
+  } catch (error) {
+    console.warn('Turnierreferenzen konnten nicht vollständig geladen werden:', error);
+  }
 
   const talent = plannerHorseTalent(horse);
   const mainGroup = plannerHorseMainGroup(horse);
+  const profile = plannerAnalyzeTournamentProfile(horse, allHorses, htpScore, {
+    absoluteMin: plannerTournamentAbsoluteMin(150),
+  });
 
-  if (!results.length) {
+  if (!profile.rows.length) {
     root.innerHTML = `
       <p><strong>Hauptdisziplin:</strong> ${plannerEscape(mainGroup || '–')} · <strong>Begabung:</strong> ${plannerEscape(talent || '–')}</p>
       <p class="muted">Noch nicht genügend vollständige Turnierwerte vorhanden. Falls die Werte im Spiel vorhanden sind, Pferd bearbeiten und die Pferdeseite mit ausgeklappten Disziplinen erneut einlesen.</p>`;
@@ -120,25 +129,80 @@ function renderHorseTournamentProfile(horse) {
     return;
   }
 
-  const best = results[0];
+  const best = profile.best;
+  const alt = profile.alternatives[0] || null;
+  const alternativeText = alt ? `${plannerEscape(alt.group)} · ${alt.count} geeignete Disziplinen` : 'keine';
+
+  const groupRows = profile.groups.length
+    ? profile.groups.map(g => {
+        const status = g.isMain ? 'Hauptdisziplin' : g.count >= 2 ? 'Alternative prüfen' : 'Einzeloption';
+        return `<tr><th>${plannerEscape(g.group)}</th><td><strong>${g.count}</strong></td><td>${plannerEscape(status)}</td></tr>`;
+      }).join('')
+    : '<tr><td colspan="3" class="muted">Keine Hauptgruppe mit geeigneter Disziplin.</td></tr>';
+
+  const suitableRows = profile.suitableRows.length
+    ? profile.suitableRows.map(r => `<tr>
+        <th>${plannerEscape(r.discipline)}</th>
+        <td>${plannerEscape(r.group)}</td>
+        <td><strong>${Math.round(r.points)}</strong></td>
+        <td>${r.interior == null ? '–' : r.interior.toFixed(2)}</td>
+        <td>${plannerEscape(r.lk || '–')}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" class="muted">Keine geeignete Disziplin erkannt.</td></tr>';
+
   const grouped = MDR_TOURNAMENT_GROUP_ORDER.map(group => ({
     group,
-    rows: results.filter(r => r.group === group),
+    rows: profile.rows.filter(r => r.group === group),
   })).filter(x => x.rows.length);
 
   root.innerHTML = `
-    <div class="planner-summary horse-tournament-summary">
-      <p><strong>Hauptdisziplin:</strong> ${plannerEscape(mainGroup || best.group || '–')} · <strong>Begabung:</strong> ${plannerEscape(talent || '–')}</p>
-      <p>Beste berechnete Disziplin: <strong>${plannerEscape(best.discipline)}</strong> · <strong>${Math.round(best.points)} Punkte</strong> · <strong>${plannerEscape(best.lk || '–')}</strong> · Interieur <strong>${best.interior == null ? '–' : best.interior.toFixed(2)}</strong></p>
+    <div class="planner-summary horse-tournament-summary tournament-recommendation-card selectable-copy-area">
+      <div class="tournament-recommendation-head">
+        <div>
+          <p class="tournament-recommendation-line"><strong>Empfehlung:</strong> ${plannerEscape(profile.recommendation)}</p>
+          <p><strong>Hauptdisziplin:</strong> ${plannerEscape(mainGroup || '–')} · <strong>Begabung:</strong> ${plannerEscape(talent || '–')}</p>
+        </div>
+        <button type="button" class="secondary small" id="horse-copy-tournament">Für Notizen kopieren</button>
+      </div>
+      <p>Beste Disziplin: <strong>${plannerEscape(best.discipline)}</strong> · <strong>${Math.round(best.points)} Punkte</strong> · Int <strong>${best.interior == null ? '–' : best.interior.toFixed(2)}</strong> · <strong>${plannerEscape(best.lk || '–')}</strong></p>
+      <p class="small"><strong>Alternative:</strong> ${alternativeText}</p>
+      <p class="tiny muted">Geeignet = mindestens ${Math.round(profile.absoluteMin)} Punkte und mindestens P25 der Pferde, deren Hauptdisziplin zu dieser Disziplingruppe gehört. Referenz erst ab n=${profile.minN}.</p>
     </div>
-    <details class="horse-all-disciplines">
+
+    <section class="tournament-compact-section selectable-copy-area">
+      <h3>Hauptgruppenübersicht</h3>
+      <div class="table-wrap"><table class="detail-table tournament-group-overview">
+        <thead><tr><th>Hauptgruppe</th><th>Geeignet</th><th>Einordnung</th></tr></thead>
+        <tbody>${groupRows}</tbody>
+      </table></div>
+    </section>
+
+    <section class="tournament-compact-section selectable-copy-area">
+      <div class="tournament-section-head"><h3>Geeignete Disziplinen</h3><button type="button" class="secondary small" id="horse-copy-suitable">Geeignete Disziplinen kopieren</button></div>
+      <div class="table-wrap"><table class="detail-table tournament-suitable-table">
+        <thead><tr><th>Disziplin</th><th>Gruppe</th><th>Punkte</th><th>Int</th><th>LK</th></tr></thead>
+        <tbody>${suitableRows}</tbody>
+      </table></div>
+    </section>
+
+    <details class="horse-all-disciplines tournament-all-details">
       <summary>Alle 28 Disziplinen anzeigen</summary>
       ${grouped.map(g => `
         <div class="group-heading">${plannerEscape(g.group)}</div>
-        <div class="table-wrap"><table class="detail-table compact-tournament-table">
-          <thead><tr><th>Disziplin</th><th>Punkte</th><th>Interieur</th><th>LK</th></tr></thead>
-          <tbody>${g.rows.map(r=>`<tr><th>${plannerEscape(r.discipline)}</th><td>${Math.round(r.points)}</td><td>${r.interior == null ? '–' : r.interior.toFixed(2)}</td><td>${plannerEscape(r.lk || '–')}</td></tr>`).join('')}</tbody>
+        <div class="table-wrap"><table class="detail-table compact-tournament-table tournament-all-table">
+          <thead><tr><th>Disziplin</th><th>Punkte</th><th>Interieur</th><th>LK</th><th>Referenz</th></tr></thead>
+          <tbody>${g.rows.map(r=>`<tr>
+            <th>${plannerEscape(r.discipline)}</th>
+            <td>${Math.round(r.points)}</td>
+            <td>${r.interior == null ? '–' : r.interior.toFixed(2)}</td>
+            <td>${plannerEscape(r.lk || '–')}</td>
+            <td>${r.suitable ? '<strong>geeignet</strong>' : plannerEscape(plannerReferenceLabel(r.reference))}</td>
+          </tr>`).join('')}</tbody>
         </table></div>`).join('')}
     </details>`;
+
+  document.getElementById('horse-copy-tournament')?.addEventListener('click', e => plannerCopyText(plannerTournamentCopyText(profile), e.currentTarget));
+  document.getElementById('horse-copy-suitable')?.addEventListener('click', e => plannerCopyText(plannerSuitableTournamentCopyText(profile), e.currentTarget));
+
   renderHorseCupStatus(horse);
 }

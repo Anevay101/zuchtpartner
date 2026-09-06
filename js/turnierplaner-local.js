@@ -2,6 +2,7 @@
 let TP_HORSES = [];
 let TP_ALL_HORSES = [];
 let TP_SELECTED = null;
+let TP_TOURNAMENT_REFERENCES = {};
 
 document.addEventListener('DOMContentLoaded', () => {
   initTurnierplaner().catch(error => {
@@ -22,6 +23,10 @@ async function initTurnierplaner() {
   // wird aber aus allen operativen Turnier-/Cup-Listen ausgeblendet.
   TP_HORSES = TP_ALL_HORSES.filter(h => isActiveBreeder(h.owner) && !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
   TP_HORSES.sort((a,b) => (a.name || '').localeCompare(b.name || '', 'de'));
+
+  const thresholdInput = document.getElementById('tp-secondary-threshold');
+  if (thresholdInput) thresholdInput.value = String(plannerTournamentAbsoluteMin(150));
+  TP_TOURNAMENT_REFERENCES = plannerBuildTournamentReferences(TP_ALL_HORSES, tournamentScore);
 
   buildTournamentControls();
   buildCupAndShowControls();
@@ -152,6 +157,7 @@ function wireTournamentControls() {
   document.getElementById('tp-reset').addEventListener('click', resetTournamentFilters);
 
   document.getElementById('tp-secondary-threshold').addEventListener('input', () => {
+    plannerSetTournamentAbsoluteMin(tournamentSecondaryThreshold());
     renderTournamentRanking();
     renderHorseTournamentOptions();
   });
@@ -258,7 +264,7 @@ function tournamentInteriorMap(horse) {
 function tournamentSecondaryThreshold() {
   const el = document.getElementById('tp-secondary-threshold');
   const value = Number(el?.value);
-  return Number.isFinite(value) && value >= 0 ? value : 150;
+  return Number.isFinite(value) && value >= 0 ? value : plannerTournamentAbsoluteMin(150);
 }
 
 function tournamentScore(horse, disciplineName) {
@@ -419,11 +425,17 @@ function renderTournamentRanking() {
   }
 
   tbody.innerHTML = rows.map(({horse, eval}, index) => {
+    const reference = TP_TOURNAMENT_REFERENCES[eval.discipline] || null;
+    const suitability = plannerTournamentSuitability(eval, reference, tournamentSecondaryThreshold());
     let label = '';
-    if (eval.isMainGroup) {
-      label = '<span class="planner-badge tournament-main-badge">Hauptdisziplin</span>';
-    } else if (eval.secondaryGood) {
-      label = '<span class="planner-badge tournament-secondary-badge">sinnvolle Nebendisziplin</span>';
+    if (eval.isMainGroup && suitability.suitable) {
+      label = '<span class="planner-badge tournament-main-badge">Hauptdisziplin · geeignet</span>';
+    } else if (eval.isMainGroup) {
+      label = `<span class="muted small">Hauptdisziplin · ${plannerEscape(suitability.reason)}</span>`;
+    } else if (suitability.suitable) {
+      label = '<span class="planner-badge tournament-secondary-badge">geeignete Option</span>';
+    } else if (!reference?.usable) {
+      label = `<span class="muted small">Referenz n=${reference?.n ?? 0}</span>`;
     } else {
       label = '<span class="muted small">Nebendisziplin</span>';
     }
@@ -459,12 +471,10 @@ function renderHorseTournamentOptions() {
     return;
   }
 
-  const mainGroup = detectHorseMainGroup(horse);
   const pointsMinRaw = document.getElementById('tp-horse-points-min').value;
   const lkFilter = document.getElementById('tp-horse-lk').value;
   const pointsMin = pointsMinRaw === '' ? null : Number(pointsMinRaw);
 
-  // Zusätzliche Filter direkt an der Einzelpferd-Tabelle
   const tableDiscipline = document.getElementById('tp-horse-table-discipline').value.trim().toLowerCase();
   const tablePointsRaw = document.getElementById('tp-horse-table-points').value;
   const tableInteriorRaw = document.getElementById('tp-horse-table-interior').value;
@@ -472,34 +482,11 @@ function renderHorseTournamentOptions() {
   const tableInterior = tableInteriorRaw === '' ? null : Number(tableInteriorRaw);
   const tableLks = selectedLks('tp-horse-table-lks');
 
-  let rows = Object.keys(MDR_TOURNAMENT_DISCIPLINES)
-    .map(name => tournamentScore(horse, name))
-    .filter(r => r?.complete)
-    .sort((a,b) => {
-      const points = b.points - a.points;
-      if (points) return points;
-
-      const ai = a.interior ?? 99;
-      const bi = b.interior ?? 99;
-      if (ai !== bi) return ai - bi;
-
-      return plannerLKRank(a.lk) - plannerLKRank(b.lk);
-    });
-
-  const allRows = rows.slice();
-
-  rows = rows.filter(r => {
-    if (pointsMin != null && r.points < pointsMin) return false;
-    if (lkFilter && r.lk !== lkFilter) return false;
-
-    // Tabellenfilter wirken zusätzlich
-    if (tableDiscipline && !r.discipline.toLowerCase().includes(tableDiscipline)) return false;
-    if (tablePoints != null && r.points < tablePoints) return false;
-    if (tableInterior != null && (r.interior == null || r.interior > tableInterior)) return false;
-    if (tableLks.length && !tableLks.includes(r.lk)) return false;
-
-    return true;
+  const profile = plannerAnalyzeTournamentProfile(horse, TP_ALL_HORSES, tournamentScore, {
+    absoluteMin: tournamentSecondaryThreshold(),
+    references: TP_TOURNAMENT_REFERENCES,
   });
+  const allRows = profile.rows;
 
   if (!allRows.length) {
     summary.innerHTML = '';
@@ -507,76 +494,101 @@ function renderHorseTournamentOptions() {
     return;
   }
 
-  const best = allRows[0];
-  const usefulSecondaries = allRows.filter(r => !r.isMainGroup && r.points >= tournamentSecondaryThreshold());
+  let rows = allRows.filter(r => {
+    if (pointsMin != null && r.points < pointsMin) return false;
+    if (lkFilter && r.lk !== lkFilter) return false;
+    if (tableDiscipline && !r.discipline.toLowerCase().includes(tableDiscipline)) return false;
+    if (tablePoints != null && r.points < tablePoints) return false;
+    if (tableInterior != null && (r.interior == null || r.interior > tableInterior)) return false;
+    if (tableLks.length && !tableLks.includes(r.lk)) return false;
+    return true;
+  });
+
+  const best = profile.best;
+  const mainLabel = profile.mainGroup || 'unbekannt';
+  const alt = profile.alternatives[0] || null;
+  const alternativeText = alt
+    ? `${plannerEscape(alt.group)} · ${alt.count} geeignete Disziplinen`
+    : 'keine';
 
   summary.innerHTML = `
-    <div class="planner-summary">
-      <h3>${plannerEscape(horse.name || '(ohne Name)')}</h3>
-      <p>
-        ${mainGroup ? `Hauptgruppe: <strong>${plannerEscape(mainGroup)}</strong> · ` : ''}
-        Beste Disziplin: <strong>${plannerEscape(best.discipline)}</strong>
-        mit <strong>${Math.round(best.points)} Punkten</strong>,
-        Interieur <strong>${best.interior == null ? '–' : best.interior.toFixed(2)}</strong>,
-        ${plannerEscape(best.lk || 'LK ?')}
-      </p>
-      <p class="small muted">
-        ${usefulSecondaries.length
-          ? `Sinnvolle Nebendisziplinen ab ${Math.round(tournamentSecondaryThreshold())} Punkten: ${usefulSecondaries.map(r => `${plannerEscape(r.discipline)} (${Math.round(r.points)})`).join(' · ')}`
-          : `Keine Nebendisziplin ab ${Math.round(tournamentSecondaryThreshold())} Punkten erkannt.`}
-      </p>
-    </div>
-  `;
+    <div class="planner-summary tournament-recommendation-card selectable-copy-area">
+      <div class="tournament-recommendation-head">
+        <div>
+          <h3>${plannerEscape(horse.name || '(ohne Name)')}</h3>
+          <p class="tournament-recommendation-line"><strong>Empfehlung:</strong> ${plannerEscape(profile.recommendation)}</p>
+        </div>
+        <button type="button" class="secondary small" id="tp-copy-recommendation">Für Notizen kopieren</button>
+      </div>
+      <p><strong>Hauptdisziplin:</strong> ${plannerEscape(mainLabel)} · <strong>Beste Disziplin:</strong> ${plannerEscape(best.discipline)} ${Math.round(best.points)} · Int ${best.interior == null ? '–' : best.interior.toFixed(2)} · ${plannerEscape(best.lk || 'LK –')}</p>
+      <p class="small"><strong>Alternative:</strong> ${alternativeText}</p>
+      <p class="tiny muted">Geeignet = mindestens ${Math.round(profile.absoluteMin)} Punkte und mindestens P25 der Pferde, deren Hauptdisziplin zu dieser Disziplingruppe gehört. Referenz erst ab n=${profile.minN}.</p>
+    </div>`;
 
-  if (!rows.length) {
-    root.innerHTML = '<p class="muted">Keine Disziplin entspricht den gewählten Einzelpferd-Filtern.</p>';
-    return;
-  }
+  const groupRows = profile.groups.length
+    ? profile.groups.map(g => {
+        const status = g.isMain ? 'Hauptdisziplin' : g.count >= 2 ? 'Alternative prüfen' : 'Einzeloption';
+        return `<tr><th>${plannerEscape(g.group)}</th><td><strong>${g.count}</strong></td><td>${plannerEscape(status)}</td></tr>`;
+      }).join('')
+    : '<tr><td colspan="3" class="muted">Keine Hauptgruppe mit geeigneter Disziplin.</td></tr>';
+
+  const suitableRows = profile.suitableRows.length
+    ? profile.suitableRows.map(r => `<tr>
+        <th>${plannerEscape(r.discipline)}</th>
+        <td>${plannerEscape(r.group)}</td>
+        <td><strong>${Math.round(r.points)}</strong></td>
+        <td>${r.interior == null ? '–' : r.interior.toFixed(2)}</td>
+        <td>${plannerEscape(r.lk || '–')}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" class="muted">Keine geeignete Disziplin erkannt.</td></tr>';
+
+  const fullRows = rows.length
+    ? rows.map((r, index) => {
+        let label = '';
+        if (r.suitable && r.group === profile.mainGroup) label = '<span class="planner-badge tournament-main-badge">geeignet · Hauptdisziplin</span>';
+        else if (r.suitable) label = '<span class="planner-badge tournament-secondary-badge">geeignet</span>';
+        else if (!r.reference?.usable) label = `<span class="muted small">Referenz n=${r.reference?.n ?? 0}</span>`;
+        else label = `<span class="muted small">unter Referenz (${plannerReferenceLabel(r.reference)})</span>`;
+        return `<tr>
+          <td>${index + 1}</td>
+          <th>${plannerEscape(r.discipline)}</th>
+          <td>${plannerEscape(r.group)}</td>
+          <td><strong>${Math.round(r.points)}</strong></td>
+          <td>${r.interior == null ? '–' : r.interior.toFixed(2)}</td>
+          <td>${plannerEscape(r.lk || '–')}</td>
+          <td>${label}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="7" class="muted">Keine Disziplin entspricht den gewählten Tabellenfiltern.</td></tr>';
 
   root.innerHTML = `
-    <div class="table-wrap">
-      <table class="detail-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Disziplin</th>
-            <th>Punkte</th>
-            <th>Interieur</th>
-            <th>LK</th>
-            <th>Einordnung</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map((r, index) => {
-            let label;
-            if (r.isMainGroup) {
-              label = '<span class="planner-badge tournament-main-badge">Hauptdisziplin</span>';
-            } else if (r.secondaryGood) {
-              label = '<span class="planner-badge tournament-secondary-badge">sinnvolle Turnieroption</span>';
-            } else {
-              label = '<span class="muted small">Nebendisziplin</span>';
-            }
+    <section class="tournament-compact-section selectable-copy-area">
+      <h3>Hauptgruppenübersicht</h3>
+      <div class="table-wrap"><table class="detail-table tournament-group-overview">
+        <thead><tr><th>Hauptgruppe</th><th>Geeignet</th><th>Einordnung</th></tr></thead>
+        <tbody>${groupRows}</tbody>
+      </table></div>
+    </section>
 
-            return `
-              <tr>
-                <td>${index + 1}</td>
-                <th>${plannerEscape(r.discipline)}</th>
-                <td><strong>${Math.round(r.points)}</strong></td>
-                <td>${r.interior == null ? '–' : r.interior.toFixed(2)}</td>
-                <td>${plannerEscape(r.lk || '–')}</td>
-                <td>${label}</td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table>
-    </div>
+    <section class="tournament-compact-section selectable-copy-area">
+      <div class="tournament-section-head"><h3>Geeignete Disziplinen</h3><button type="button" class="secondary small" id="tp-copy-suitable">Geeignete Disziplinen kopieren</button></div>
+      <div class="table-wrap"><table class="detail-table tournament-suitable-table">
+        <thead><tr><th>Disziplin</th><th>Gruppe</th><th>Punkte</th><th>Int</th><th>LK</th></tr></thead>
+        <tbody>${suitableRows}</tbody>
+      </table></div>
+    </section>
 
-    <p class="small muted">
-      Berechnet wurden alle 28 Disziplinen. Nebendisziplinen werden ab
-      <strong>${Math.round(tournamentSecondaryThreshold())} Punkten</strong> als sinnvolle zusätzliche Turnieroption markiert.
-    </p>
+    <details class="tournament-all-details">
+      <summary>Alle 28 Disziplinen anzeigen</summary>
+      <div class="table-wrap"><table class="detail-table tournament-all-table">
+        <thead><tr><th>#</th><th>Disziplin</th><th>Gruppe</th><th>Punkte</th><th>Interieur</th><th>LK</th><th>Einordnung</th></tr></thead>
+        <tbody>${fullRows}</tbody>
+      </table></div>
+    </details>
   `;
+
+  document.getElementById('tp-copy-recommendation')?.addEventListener('click', e => plannerCopyText(plannerTournamentCopyText(profile), e.currentTarget));
+  document.getElementById('tp-copy-suitable')?.addEventListener('click', e => plannerCopyText(plannerSuitableTournamentCopyText(profile), e.currentTarget));
 }
 
 

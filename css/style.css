@@ -4743,3 +4743,60 @@ body.planner-high-contrast .filter-checkbox-label {
 .remembered-pairings-table th:nth-child(5),
 .remembered-pairings-table td:nth-child(4),
 .remembered-pairings-table td:nth-child(5) { white-space: nowrap; }
+
+/* V54.0.9 – kompakte Turnierempfehlung */
+.tournament-recommendation-card { margin-top: .75rem; }
+.tournament-recommendation-head,
+.tournament-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .75rem;
+}
+.tournament-recommendation-head h3,
+.tournament-section-head h3 { margin: 0; }
+.tournament-recommendation-line { margin: .15rem 0 .35rem; font-size: 1.02rem; }
+.tournament-compact-section {
+  margin-top: .75rem;
+  padding: .7rem .8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.tournament-compact-section > h3 { margin: 0 0 .5rem; }
+.tournament-section-head { margin-bottom: .5rem; }
+.tournament-group-overview { max-width: 680px; }
+.tournament-group-overview th:nth-child(1) { width: 38%; }
+.tournament-group-overview th:nth-child(2) { width: 18%; }
+.tournament-suitable-table tbody tr { background: rgba(91, 139, 67, .10); }
+.tournament-suitable-table th:nth-child(1) { width: 29%; }
+.tournament-suitable-table th:nth-child(2) { width: 21%; }
+.tournament-all-details {
+  margin-top: .75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: .55rem .7rem;
+  background: var(--surface);
+}
+.tournament-all-details > summary { cursor: pointer; font-weight: 750; }
+.tournament-all-details > .table-wrap,
+.tournament-all-details > .group-heading { margin-top: .6rem; }
+.tp-table-filter-details > summary { cursor: pointer; }
+.tp-table-filter-details[open] > summary { margin-bottom: .65rem; }
+.selectable-copy-area,
+.selectable-copy-area p,
+.selectable-copy-area td,
+.selectable-copy-area th,
+.tournament-all-table td,
+.tournament-all-table th {
+  user-select: text !important;
+  cursor: text;
+}
+.selectable-copy-area button,
+.tournament-section-head button { user-select: none !important; cursor: pointer; }
+@media (max-width: 720px) {
+  .tournament-recommendation-head,
+  .tournament-section-head { flex-direction: column; align-items: stretch; }
+  .tournament-recommendation-head button,
+  .tournament-section-head button { width: 100%; }
+}

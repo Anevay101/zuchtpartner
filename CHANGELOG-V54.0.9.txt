@@ -1,0 +1,13 @@
+V54.0.9
+
+- Neue disziplinspezifische Turnierreferenz: Vergleich mit Pferden, deren Hauptdisziplin zur jeweiligen Disziplingruppe gehört.
+- Geeignet nur bei mindestens 150 Punkten (bzw. eingestellter Mindestgrenze) und mindestens P25 der passenden Referenzgruppe.
+- Referenzbewertung erst ab 15 passenden Pferden; darunter wird die Referenzbasis als zu klein gekennzeichnet.
+- Einzelpferd-Rechner kompakter: Empfehlung, Hauptgruppenübersicht und alle geeigneten Disziplinen vor der vollständigen 28er-Tabelle.
+- Hauptgruppen mit 0 geeigneten Disziplinen werden in der Übersicht nicht angezeigt.
+- Geeignete Disziplinen zeigen Punkte, Interieur und LK.
+- Kopierbutton für kompakte Turniernotiz sowie separater Kopierbutton für alle geeigneten Disziplinen.
+- Tabellenwerte im neuen Turnierprofil sind per Maus markierbar/kopierbar.
+- Dieselbe Turnierempfehlung wird auf der Pferdeseite unter Turnierwerte > Turnierprofil verwendet.
+- Vollständige Liste aller 28 Disziplinen bleibt einklappbar erhalten.
+- Bestands-Rangliste verwendet die neue Referenzlogik für die Einordnung geeigneter Optionen.
