@@ -1,0 +1,8 @@
+MDR Pferdedatenbank V54.0.12 – Einzelpferd-Filter repariert
+
+- Die oberen Filter „Nur Disziplinen ab Punkten“ und „Nur LK“ wirken wieder auf das komplette sichtbare Einzelpferd-Turnierprofil.
+- Gefiltert werden jetzt gleichzeitig: Empfehlung, Hauptgruppenübersicht, geeignete Disziplinen und die vollständige 28-Disziplinen-Tabelle.
+- Der Kopiertext berücksichtigt dieselben oberen Filter.
+- Die einklappbaren „Tabellenfilter“ bleiben zusätzliche Detailfilter nur für die 28er-Tabelle.
+- Wenn kein Wert zum oberen Filter passt, wird dies in der Zusammenfassung ausdrücklich angezeigt.
+- Turnierlogik 180 Punkte Hauptdisziplin / 150 Punkte Nebendisziplin bleibt unverändert.

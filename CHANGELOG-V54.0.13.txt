@@ -1,0 +1,8 @@
+MDR Pferdedatenbank V54.0.13 – Filterfix + Kopieren mit Zeilenumbrüchen
+
+- Enthält den Einzelpferd-Filterfix aus V54.0.12: „Nur Disziplinen ab Punkten“ und „Nur LK“ wirken auf Empfehlung, Hauptgruppenübersicht, geeignete Disziplinen und 28er-Tabelle.
+- „Für Notizen kopieren“ schreibt jede Disziplin in eine eigene Zeile.
+- „Geeignete Disziplinen kopieren“ schreibt ebenfalls jede Disziplin in eine eigene Zeile.
+- Hauptdisziplin und Alternative stehen jeweils als eigene Überschriftszeile im Kopiertext.
+- Punkte, Interieur, LK und „bewährt“ bleiben im Kopiertext erhalten.
+- Turnierlogik bleibt unverändert: Hauptdisziplin ab 180 Punkten, Nebendisziplin ab 150 Punkten.
