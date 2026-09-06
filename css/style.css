@@ -4807,3 +4807,12 @@ body.planner-high-contrast .filter-checkbox-label {
   line-height: 1.25;
   margin: 0.18rem 0 0;
 }
+
+/* V54.0.11 – kompakte Kennzeichnung real bewährter Turnieroptionen */
+.tournament-suitable-table .planner-badge,
+.tournament-all-table .planner-badge {
+  font-size: 0.72rem;
+  padding: 0.05rem 0.3rem;
+  margin-left: 0.25rem;
+  vertical-align: middle;
+}

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <title>Turnier & Leistung – MDR Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5410" />
+  <link rel="stylesheet" href="css/style.css?v=5411" />
 </head>
 <body class="turnierplaner-page">
 <header class="topbar">
@@ -33,14 +33,14 @@
     </div>
 
     <details class="card tp-compact-card tp-threshold-details">
-      <summary>Absolute Mindestgrenze</summary>
+      <summary>Turniergrenzen</summary>
       <div class="form-grid">
         <div>
-          <label for="tp-secondary-threshold">Absolute Mindestgrenze in Punkten</label>
-          <input id="tp-secondary-threshold" min="0" step="1" type="number" value="150" />
+          <label for="tp-secondary-threshold">Nebendisziplin ab Punkten</label>
+          <input id="tp-secondary-threshold" min="150" step="1" type="number" value="150" />
         </div>
       </div>
-      <p class="small muted">Eine Disziplin ist mindestens ab dieser Punktzahl geeignet. Ab 5 passenden Referenzpferden wird zusätzlich der P25-Referenzwert der Disziplin berücksichtigt; bei 5–14 Pferden vorläufig, ab 15 regulär.</p>
+      <p class="small muted">Nebendisziplinen gelten ab 150 Punkten als geeignet; die Grenze kann hier nur nach oben angepasst werden. Disziplinen der eingetragenen Hauptdisziplin gelten ab 180 Punkten als geeignet. Der Spezialisten-P25 bleibt als kleiner Vergleichswert sichtbar, beeinflusst die Empfehlung aber nicht mehr.</p>
     </details>
 
     <details class="card tp-collapsible-card">
@@ -175,14 +175,14 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5410"></script>
-<script src="js/database-local.js?v=5410"></script>
-<script src="js/local-app.js?v=5410"></script>
-<script src="js/learning-file.js?v=5410"></script>
-<script src="js/parser.js?v=5410"></script>
-<script src="js/data-quality.js?v=5410"></script>
-<script src="js/planer-common.js?v=5410"></script>
-<script src="js/tournament-recommendation.js?v=5410"></script>
-<script src="js/turnierplaner-local.js?v=5410"></script>
+<script src="js/supabase-config.js?v=5411"></script>
+<script src="js/database-local.js?v=5411"></script>
+<script src="js/local-app.js?v=5411"></script>
+<script src="js/learning-file.js?v=5411"></script>
+<script src="js/parser.js?v=5411"></script>
+<script src="js/data-quality.js?v=5411"></script>
+<script src="js/planer-common.js?v=5411"></script>
+<script src="js/tournament-recommendation.js?v=5411"></script>
+<script src="js/turnierplaner-local.js?v=5411"></script>
 </body>
 </html>

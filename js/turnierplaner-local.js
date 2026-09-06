@@ -156,8 +156,12 @@ function wireTournamentControls() {
   document.getElementById('tp-run').addEventListener('click', renderTournamentRanking);
   document.getElementById('tp-reset').addEventListener('click', resetTournamentFilters);
 
-  document.getElementById('tp-secondary-threshold').addEventListener('input', () => {
-    plannerSetTournamentAbsoluteMin(tournamentSecondaryThreshold());
+  document.getElementById('tp-secondary-threshold').addEventListener('input', (event) => {
+    const threshold = tournamentSecondaryThreshold();
+    if (event.currentTarget && Number(event.currentTarget.value) < MDR_TOURNAMENT_DEFAULT_ABSOLUTE_MIN) {
+      event.currentTarget.value = String(threshold);
+    }
+    plannerSetTournamentAbsoluteMin(threshold);
     renderTournamentRanking();
     renderHorseTournamentOptions();
   });
@@ -264,7 +268,7 @@ function tournamentInteriorMap(horse) {
 function tournamentSecondaryThreshold() {
   const el = document.getElementById('tp-secondary-threshold');
   const value = Number(el?.value);
-  return Number.isFinite(value) && value >= 0 ? value : plannerTournamentAbsoluteMin(150);
+  return Number.isFinite(value) ? Math.max(MDR_TOURNAMENT_DEFAULT_ABSOLUTE_MIN, value) : plannerTournamentAbsoluteMin(150);
 }
 
 function tournamentScore(horse, disciplineName) {
@@ -426,16 +430,22 @@ function renderTournamentRanking() {
 
   tbody.innerHTML = rows.map(({horse, eval}, index) => {
     const reference = TP_TOURNAMENT_REFERENCES[eval.discipline] || null;
-    const suitability = plannerTournamentSuitability(eval, reference, tournamentSecondaryThreshold());
+    const proof = plannerTournamentProof(horse, eval.discipline);
+    const suitability = plannerTournamentSuitability(eval, reference, tournamentSecondaryThreshold(), {
+      isMainGroup: eval.isMainGroup === true,
+      mainMin: MDR_TOURNAMENT_MAIN_MIN,
+      proof,
+    });
+    const provenText = proof.proven ? ' · bewährt' : '';
     let label = '';
     if (eval.isMainGroup && suitability.suitable) {
-      label = `<span class="planner-badge tournament-main-badge">Hauptdisziplin · ${suitability.provisional ? 'geeignet · vorläufig' : 'geeignet'}</span>`;
+      label = `<span class="planner-badge tournament-main-badge">Hauptdisziplin · geeignet${provenText}</span>`;
     } else if (eval.isMainGroup) {
-      label = `<span class="muted small">Hauptdisziplin · ${plannerEscape(suitability.reason)}</span>`;
+      label = `<span class="muted small">Hauptdisziplin · ${plannerEscape(suitability.reason)} (${Math.round(suitability.minimum)} P.)</span>`;
     } else if (suitability.suitable) {
-      label = `<span class="planner-badge tournament-secondary-badge">geeignete Option${suitability.provisional ? ' · vorläufig' : ''}</span>`;
+      label = `<span class="planner-badge tournament-secondary-badge">geeignete Option${provenText}</span>`;
     } else {
-      label = `<span class="muted small">${plannerEscape(suitability.reason)}</span>`;
+      label = `<span class="muted small">${plannerEscape(suitability.reason)} (${Math.round(suitability.minimum)} P.)</span>`;
     }
 
     return `
@@ -506,7 +516,7 @@ function renderHorseTournamentOptions() {
   const mainLabel = profile.mainGroup || 'unbekannt';
   const alt = profile.alternatives[0] || null;
   const alternativeText = alt
-    ? `${plannerEscape(alt.group)} · ${alt.count} geeignete Disziplinen${alt.provisional ? ' · vorläufig' : ''}`
+    ? `${plannerEscape(alt.group)} · ${alt.count} geeignete Disziplinen${alt.provenCount ? ` · ${alt.provenCount} bewährt` : ''}`
     : 'keine';
 
   summary.innerHTML = `
@@ -520,21 +530,21 @@ function renderHorseTournamentOptions() {
       </div>
       <p><strong>Hauptdisziplin:</strong> ${plannerEscape(mainLabel)} · <strong>Beste Disziplin:</strong> ${plannerEscape(best.discipline)} ${Math.round(best.points)} · Int ${best.interior == null ? '–' : best.interior.toFixed(2)} · ${plannerEscape(best.lk || 'LK –')}</p>
       <p class="small"><strong>Alternative:</strong> ${alternativeText}</p>
-      <p class="tiny muted">Geeignet = mindestens ${Math.round(profile.absoluteMin)} Punkte. Ab n=5 wird zusätzlich P25 der Pferde mit passender Hauptdisziplin verwendet; n=5–14 vorläufig, ab n=15 regulär.</p>
+      <p class="tiny muted">Hauptdisziplin geeignet ab <strong>${Math.round(profile.mainMin)} Punkten</strong> · Nebendisziplinen ab <strong>${Math.round(profile.secondaryMin)} Punkten</strong>. Spezialisten-P25 ist nur Vergleichswert und kein Ausschlusskriterium.</p>
       <p class="tiny muted tournament-reference-basis"><strong>Referenzbasis:</strong> ${plannerEscape(plannerTournamentReferenceBasisText(profile.references))}</p>
     </div>`;
 
   const groupRows = profile.groups.length
     ? profile.groups.map(g => {
         const statusBase = g.isMain ? 'Hauptdisziplin' : g.count >= 2 ? 'Alternative prüfen' : 'Einzeloption';
-        const status = `${statusBase}${g.provisional ? ' · vorläufig' : ''}`;
+        const status = `${statusBase}${g.provenCount ? ` · ${g.provenCount} bewährt` : ''}`;
         return `<tr><th>${plannerEscape(g.group)}</th><td><strong>${g.count}</strong></td><td>${plannerEscape(status)}</td></tr>`;
       }).join('')
     : '<tr><td colspan="3" class="muted">Keine Hauptgruppe mit geeigneter Disziplin.</td></tr>';
 
   const suitableRows = profile.suitableRows.length
     ? profile.suitableRows.map(r => `<tr>
-        <th>${plannerEscape(r.discipline)}</th>
+        <th>${plannerEscape(r.discipline)}${r.proven ? ' <span class="planner-badge tournament-secondary-badge">bewährt</span>' : ''}</th>
         <td>${plannerEscape(r.group)}</td>
         <td><strong>${Math.round(r.points)}</strong></td>
         <td>${r.interior == null ? '–' : r.interior.toFixed(2)}</td>
@@ -545,9 +555,11 @@ function renderHorseTournamentOptions() {
   const fullRows = rows.length
     ? rows.map((r, index) => {
         let label = '';
-        if (r.suitable && r.group === profile.mainGroup) label = `<span class="planner-badge tournament-main-badge">geeignet · Hauptdisziplin${r.suitability?.provisional ? ' · vorläufig' : ''}</span>`;
-        else if (r.suitable) label = `<span class="planner-badge tournament-secondary-badge">geeignet${r.suitability?.provisional ? ' · vorläufig' : ''}</span>`;
-        else label = `<span class="muted small">${plannerEscape(r.suitability?.reason || 'nicht geeignet')} · ${plannerEscape(plannerReferenceLabel(r.reference))}</span>`;
+        const proofText = r.proven ? ' · bewährt' : '';
+        const refText = plannerEscape(plannerReferenceLabel(r.reference));
+        if (r.suitable && r.group === profile.mainGroup) label = `<span class="planner-badge tournament-main-badge">geeignet · Hauptdisziplin${proofText}</span><br><span class="tiny muted">${refText}</span>`;
+        else if (r.suitable) label = `<span class="planner-badge tournament-secondary-badge">geeignet${proofText}</span><br><span class="tiny muted">${refText}</span>`;
+        else label = `<span class="muted small">${plannerEscape(r.suitability?.reason || 'nicht geeignet')} (${Math.round(r.suitability?.minimum || 0)} P.)</span><br><span class="tiny muted">${refText}</span>`;
         return `<tr>
           <td>${index + 1}</td>
           <th>${plannerEscape(r.discipline)}</th>

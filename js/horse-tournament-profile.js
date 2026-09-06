@@ -131,19 +131,19 @@ async function renderHorseTournamentProfile(horse, allHorsesArg = null) {
 
   const best = profile.best;
   const alt = profile.alternatives[0] || null;
-  const alternativeText = alt ? `${plannerEscape(alt.group)} · ${alt.count} geeignete Disziplinen${alt.provisional ? ' · vorläufig' : ''}` : 'keine';
+  const alternativeText = alt ? `${plannerEscape(alt.group)} · ${alt.count} geeignete Disziplinen${alt.provenCount ? ` · ${alt.provenCount} bewährt` : ''}` : 'keine';
 
   const groupRows = profile.groups.length
     ? profile.groups.map(g => {
         const statusBase = g.isMain ? 'Hauptdisziplin' : g.count >= 2 ? 'Alternative prüfen' : 'Einzeloption';
-        const status = `${statusBase}${g.provisional ? ' · vorläufig' : ''}`;
+        const status = `${statusBase}${g.provenCount ? ` · ${g.provenCount} bewährt` : ''}`;
         return `<tr><th>${plannerEscape(g.group)}</th><td><strong>${g.count}</strong></td><td>${plannerEscape(status)}</td></tr>`;
       }).join('')
     : '<tr><td colspan="3" class="muted">Keine Hauptgruppe mit geeigneter Disziplin.</td></tr>';
 
   const suitableRows = profile.suitableRows.length
     ? profile.suitableRows.map(r => `<tr>
-        <th>${plannerEscape(r.discipline)}</th>
+        <th>${plannerEscape(r.discipline)}${r.proven ? ' <span class="planner-badge tournament-secondary-badge">bewährt</span>' : ''}</th>
         <td>${plannerEscape(r.group)}</td>
         <td><strong>${Math.round(r.points)}</strong></td>
         <td>${r.interior == null ? '–' : r.interior.toFixed(2)}</td>
@@ -167,7 +167,7 @@ async function renderHorseTournamentProfile(horse, allHorsesArg = null) {
       </div>
       <p>Beste Disziplin: <strong>${plannerEscape(best.discipline)}</strong> · <strong>${Math.round(best.points)} Punkte</strong> · Int <strong>${best.interior == null ? '–' : best.interior.toFixed(2)}</strong> · <strong>${plannerEscape(best.lk || '–')}</strong></p>
       <p class="small"><strong>Alternative:</strong> ${alternativeText}</p>
-      <p class="tiny muted">Geeignet = mindestens ${Math.round(profile.absoluteMin)} Punkte. Ab n=5 wird zusätzlich P25 der Pferde mit passender Hauptdisziplin verwendet; n=5–14 vorläufig, ab n=15 regulär.</p>
+      <p class="tiny muted">Hauptdisziplin geeignet ab <strong>${Math.round(profile.mainMin)} Punkten</strong> · Nebendisziplinen ab <strong>${Math.round(profile.secondaryMin)} Punkten</strong>. Spezialisten-P25 dient nur als Vergleich und schließt keine Disziplin aus.</p>
     </div>
 
     <section class="tournament-compact-section selectable-copy-area">
@@ -193,11 +193,13 @@ async function renderHorseTournamentProfile(horse, allHorsesArg = null) {
         <div class="table-wrap"><table class="detail-table compact-tournament-table tournament-all-table">
           <thead><tr><th>Disziplin</th><th>Punkte</th><th>Interieur</th><th>LK</th><th>Referenz</th></tr></thead>
           <tbody>${g.rows.map(r=>`<tr>
-            <th>${plannerEscape(r.discipline)}</th>
+            <th>${plannerEscape(r.discipline)}${r.proven ? ' <span class="planner-badge tournament-secondary-badge">bewährt</span>' : ''}</th>
             <td>${Math.round(r.points)}</td>
             <td>${r.interior == null ? '–' : r.interior.toFixed(2)}</td>
             <td>${plannerEscape(r.lk || '–')}</td>
-            <td>${r.suitable ? `<strong>geeignet${r.suitability?.provisional ? ' · vorläufig' : ''}</strong>` : plannerEscape(plannerReferenceLabel(r.reference))}</td>
+            <td>${r.suitable
+              ? `<strong>geeignet</strong><br><span class="tiny muted">${plannerEscape(plannerReferenceLabel(r.reference))}</span>`
+              : `<span class="muted small">${plannerEscape(r.suitability?.reason || 'nicht geeignet')} (${Math.round(r.suitability?.minimum || 0)} P.)</span><br><span class="tiny muted">${plannerEscape(plannerReferenceLabel(r.reference))}</span>`}</td>
           </tr>`).join('')}</tbody>
         </table></div>`).join('')}
     </details>`;
