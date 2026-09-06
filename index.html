@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <title>Pferde – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5407" />
+  <link rel="stylesheet" href="css/style.css?v=5408" />
 </head>
 <body class="list-page">
   <header class="topbar">
@@ -71,6 +71,14 @@
           <div class="field">
             <label for="f-zzl">ZZL</label>
             <select id="f-zzl">
+              <option value="">Alle</option>
+              <option value="true">Ja</option>
+              <option value="false">Nein</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-breeding-station">In Zuchtstation</label>
+            <select id="f-breeding-station">
               <option value="">Alle</option>
               <option value="true">Ja</option>
               <option value="false">Nein</option>
@@ -370,13 +378,13 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5407"></script>
-<script src="js/database-local.js?v=5407"></script>
-  <script src="js/local-app.js?v=5407"></script>
-  <script src="js/learning-file.js?v=5407"></script>
-  <script src="js/parser.js?v=5407"></script>
-  <script src="js/data-quality.js?v=5407"></script>
-  <script src="js/breeding-progress.js?v=5407"></script>
-  <script src="js/list.js?v=5407"></script>
+<script src="js/supabase-config.js?v=5408"></script>
+<script src="js/database-local.js?v=5408"></script>
+  <script src="js/local-app.js?v=5408"></script>
+  <script src="js/learning-file.js?v=5408"></script>
+  <script src="js/parser.js?v=5408"></script>
+  <script src="js/data-quality.js?v=5408"></script>
+  <script src="js/breeding-progress.js?v=5408"></script>
+  <script src="js/list.js?v=5408"></script>
 </body>
 </html>

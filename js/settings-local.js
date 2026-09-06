@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', initSettings);
 
-const SETTINGS_SYSTEM_TAGS = new Set(['GBH','Cupstern']);
+const SETTINGS_SYSTEM_TAGS = new Set(['GBH','Cupstern','Zuchtstation']);
 
 async function initSettings() {
   await requireSession();
@@ -358,6 +358,7 @@ function settingsPresetSummary(filters) {
   if (f.breed) bits.push(`Rasse: ${settingsEsc(f.breed)}`);
   if (f.gender) bits.push(`Geschlecht: ${settingsEsc(f.gender)}`);
   if (f.gameVersion) bits.push(`Version: ${settingsEsc(f.gameVersion)}`);
+  if (f.breedingStation) bits.push(`Zuchtstation: ${f.breedingStation === 'true' ? 'Ja' : 'Nein'}`);
   if (f.dataQuality) bits.push(`Datenqualität: ${settingsEsc(f.dataQuality)}`);
   const triSummary=(label,value)=>{const t=typeof normalizeTriStateSavedState==='function'?normalizeTriStateSavedState(value):(Array.isArray(value)?{include:value,exclude:[]}:{include:[],exclude:[]});if(t.include.length)bits.push(`${label} +: ${t.include.map(settingsEsc).join(', ')}`);if(t.exclude.length)bits.push(`${label} −: ${t.exclude.map(settingsEsc).join(', ')}`);};
   triSummary('Tags',f.tags); triSummary('Genetik',f.genetik); triSummary('EKH',f.ekh);
@@ -422,6 +423,7 @@ function settingsColorHex(color,label) {
     Verkauf:'#c84149',
     GBH:'#8a5fb0',
     Cupstern:'#4f83cc',
+    Zuchtstation:'#6b9d00',
     Favorit:'#b48a22',
   })[label] || '#6b9d00';
 }

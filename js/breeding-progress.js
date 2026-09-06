@@ -411,8 +411,11 @@ function bpRenderOwnProgress(horse, context) {
 
   const parentMissing = [parents.father ? null : parents.fatherName ? `Vater „${parents.fatherName}“ fehlt in der Datenbank` : 'Vater nicht im Stammbaum erkannt', parents.mother ? null : parents.motherName ? `Mutter „${parents.motherName}“ fehlt in der Datenbank` : 'Mutter nicht im Stammbaum erkannt'].filter(Boolean);
 
+  const parentLine = `<div class="bp-parent-line small"><strong>Mutter:</strong> ${parents.mother ? bpHorseLink(parents.mother) : bpEsc(parents.motherName || '–')} <span class="muted">·</span> <strong>Vater:</strong> ${parents.father ? bpHorseLink(parents.father) : bpEsc(parents.fatherName || '–')}</div>`;
+
   return `<section class="card bp-section">
     <div class="bp-section-head"><div><h2>Eigener Zuchtfortschritt</h2><p class="small muted">Vergleich zum Mittelwert beider Eltern und zusätzlich zum Elternteil gleichen Geschlechts.</p></div>${bpAssessmentBadge(rec)}</div>
+    ${parentLine}
     ${parentMissing.length ? `<div class="notice small">${bpEsc(parentMissing.join(' · '))}</div>` : ''}
     <div class="table-wrap"><table class="detail-table bp-progress-table"><thead><tr><th>Wert</th><th>Vater</th><th>Mutter</th><th>Elternmittel</th><th>Pferd</th><th>ggü. Elternmittel</th><th>${bpEsc(sameLabel)}</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div class="bp-sibling-summary">

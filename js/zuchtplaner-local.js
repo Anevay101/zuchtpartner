@@ -16,6 +16,7 @@ let turnierzuchtMode = 'off';
 let turnierzuchtDiscipline = 'Reining';
 let appaloosaWish = 'any';
 let talentWish = '';
+const REMEMBERED_PAIRING_TTL_DAYS = 60;
 
 document.addEventListener('DOMContentLoaded', initZucht);
 
@@ -64,7 +65,7 @@ async function repairStoredEnglishHorsesForPlanner(horses) {
       'disease_free','genetic_diseases','colors','exterior_genetics',
       'exterior_descriptive','temperament','disciplines','traits',
       'tournament_potential','pedigree','ico','purebred_pct',
-      'breed_composition','breeding_goal','breeding_goal_source'
+      'breed_composition','breeding_goal','breeding_goal_source','in_breeding_station','stud_fee'
     ];
 
     const next = { ...old };
@@ -218,8 +219,16 @@ function tagMatchesFilter(horse, tag) {
   return plannerHorseTagLabels(horse).some(label => normalizeFilterText(label) === normalizeFilterText(tag));
 }
 
-function candidateMatchesFilters(horse, owner, breed) {
-  return ownerMatchesFilter(horse, owner) && breedMatchesFilter(horse, breed);
+function plannerHorseInBreedingStation(horse) {
+  if (horse?.in_breeding_station === true) return true;
+  return plannerHorseTagLabels(horse).some(label => normalizeFilterText(label) === 'zuchtstation');
+}
+
+function candidateMatchesFilters(horse, owner, breed, station = '') {
+  if (!ownerMatchesFilter(horse, owner) || !breedMatchesFilter(horse, breed)) return false;
+  if (station === 'true' && !plannerHorseInBreedingStation(horse)) return false;
+  if (station === 'false' && plannerHorseInBreedingStation(horse)) return false;
+  return true;
 }
 
 // Im Verpaarungsratgeber ist der Gegenpartner-Filter dieselbe Sache wie
@@ -292,6 +301,12 @@ function refreshCandidateFilters() {
   const pool = richtung === 'hengst' ? ZH_MARES : ZH_STALLIONS;
   fillSelect('candidate-owner-select', uniqueSorted(pool.map(h => h.owner)));
   fillSelect('candidate-breed-select', uniqueSorted(pool.map(h => normalizeBreed(h.breed) || 'Rasselos')));
+  const stationWrap = document.getElementById('candidate-station-wrap');
+  const stationSelect = document.getElementById('candidate-station-select');
+  // Zuchtstation ist eine Hengst-Eigenschaft und daher nur sinnvoll, wenn
+  // der gesuchte Gegenpartner ein Hengst ist.
+  if (stationWrap) stationWrap.hidden = richtung === 'hengst';
+  if (richtung === 'hengst' && stationSelect) stationSelect.value = '';
   syncCandidateFiltersFromParentControls();
 }
 
@@ -588,6 +603,7 @@ function wireControls() {
       renderInzuchtResult();
       renderBestMatches();
     }));
+  document.getElementById('candidate-station-select')?.addEventListener('change', renderBestMatches);
 
   document.getElementById('farbwunsch-options').addEventListener('change', renderBestMatches);
 
@@ -769,7 +785,7 @@ function studFeeDisplay(horse) {
   const raw = horse?.stud_fee;
   if (raw == null || raw === '' || Number(raw) === 0) return 'kostenlos';
   const n = Number(raw);
-  return Number.isFinite(n) ? String(n) : 'kostenlos';
+  return Number.isFinite(n) ? `${n} DD` : 'kostenlos';
 }
 
 function studFeeHtml(horse) {
@@ -985,7 +1001,8 @@ function renderBestMatches() {
 
   const owner = document.getElementById('candidate-owner-select').value;
   const breed = document.getElementById('candidate-breed-select').value;
-  const filtered = pool.filter(h => candidateMatchesFilters(h, owner, breed));
+  const station = richtung === 'hengst' ? '' : (document.getElementById('candidate-station-select')?.value || '');
+  const filtered = pool.filter(h => candidateMatchesFilters(h, owner, breed, station));
 
   const ranked = rankStallions(primary, filtered, {
     schwerpunkt,
@@ -1075,14 +1092,14 @@ function renderBestMatches() {
   }
 
   ranked.top = rankingPool
-    .filter(c => candidateMatchesFilters(c.stallion, owner, breed))
+    .filter(c => candidateMatchesFilters(c.stallion, owner, breed, station))
     .slice(0, resultLimit);
 
   // Sicherheitsprüfung: keine Karte darf den aktiven Besitzer-/Rassefilter verletzen.
-  const leaked = ranked.top.filter(c => !candidateMatchesFilters(c.stallion, owner, breed));
+  const leaked = ranked.top.filter(c => !candidateMatchesFilters(c.stallion, owner, breed, station));
   if (leaked.length) {
     console.error('Kandidatenfilter-Sicherheitsprüfung fehlgeschlagen', leaked);
-    ranked.top = ranked.top.filter(c => candidateMatchesFilters(c.stallion, owner, breed));
+    ranked.top = ranked.top.filter(c => candidateMatchesFilters(c.stallion, owner, breed, station));
   }
 
   const ex = ranked.exclusionStats || {};
@@ -1354,30 +1371,67 @@ async function renderRememberedPairings() {
   const root = document.getElementById('remembered-pairings');
   if (!root) return;
 
-  const rows = (await localGetAll(LOCAL_STORES.pairingNotes))
-    .sort((a,b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  let rows = await localGetAll(LOCAL_STORES.pairingNotes);
+  const now = Date.now();
+  const ttlMs = REMEMBERED_PAIRING_TTL_DAYS * 24 * 60 * 60 * 1000;
+
+  // Altbestände ohne Merkdatum bekommen beim ersten Laden ein Startdatum,
+  // damit sie nicht unvermittelt gelöscht werden.
+  for (const row of rows) {
+    if (!row.created_at) {
+      row.created_at = new Date().toISOString();
+      row.updated_at = row.updated_at || row.created_at;
+      await localPut(LOCAL_STORES.pairingNotes,row);
+    }
+  }
+
+  const expired = rows.filter(row => {
+    const t = new Date(row.created_at).getTime();
+    return Number.isFinite(t) && now - t >= ttlMs;
+  });
+  for (const row of expired) await localDelete(LOCAL_STORES.pairingNotes, Number(row.id));
+  if (expired.length) rows = rows.filter(row => !expired.some(x => String(x.id) === String(row.id)));
+
+  rows.sort((a,b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
 
   if (!rows.length) {
     root.innerHTML = '<p class="muted">Noch nichts gemerkt.</p>';
     return;
   }
 
+  const horseById = new Map(ZH_HORSES.map(h => [String(h.id),h]));
+  const horseByName = new Map(ZH_HORSES.map(h => [normalizeName(h.name),h]));
+  const remainingDays = row => {
+    const t = new Date(row.created_at).getTime();
+    if (!Number.isFinite(t)) return REMEMBERED_PAIRING_TTL_DAYS;
+    return Math.max(0, Math.ceil((ttlMs - (now - t)) / (24*60*60*1000)));
+  };
+  const currentStallion = row => horseById.get(String(row.stallion_id)) || horseByName.get(normalizeName(row.stallion_name)) || null;
+  const currentFee = row => {
+    const horse = currentStallion(row);
+    const fee = horse?.stud_fee ?? row.stallion_stud_fee;
+    if (fee == null || fee === '' || Number(fee) === 0) return 'kostenlos';
+    return `${Number(fee)} DD`;
+  };
+
   root.innerHTML = `
     <div class="table-wrap">
-      <table class="detail-table">
-        <thead><tr><th>Stute</th><th>Hengst</th><th>Zuchtziel</th><th>gemerkt am</th><th></th></tr></thead>
+      <table class="detail-table remembered-pairings-table">
+        <thead><tr><th>Stute</th><th>Hengst</th><th>Zuchtziel</th><th>Gemerkt</th><th>Noch</th><th></th></tr></thead>
         <tbody>
           ${rows.map(r => `
             <tr>
-              <td><strong>${esc(r.mare_name || '–')}</strong>${r.mare_owner ? `<br><span class="small muted">${esc(r.mare_owner)}</span>` : ''}</td>
-              <td><strong>${esc(r.stallion_name || '–')}</strong>${r.stallion_owner ? `<br><span class="small muted">${esc(r.stallion_owner)}</span>` : ''}<br><span class="tiny muted">Decktaxe: ${r.stallion_stud_fee == null || Number(r.stallion_stud_fee) === 0 ? 'kostenlos' : esc(r.stallion_stud_fee)}</span></td>
+              <td><strong>${r.mare_id ? `<a href="view.html?id=${encodeURIComponent(r.mare_id)}">${esc(r.mare_name || '–')}</a>` : esc(r.mare_name || '–')}</strong>${r.mare_owner ? `<br><span class="small muted">${esc(r.mare_owner)}</span>` : ''}</td>
+              <td><strong>${r.stallion_id ? `<a href="view.html?id=${encodeURIComponent(r.stallion_id)}">${esc(r.stallion_name || '–')}</a>` : esc(r.stallion_name || '–')}</strong>${r.stallion_owner ? `<br><span class="small muted">${esc(r.stallion_owner)}</span>` : ''}<br><span class="tiny muted">Decktaxe: ${esc(currentFee(r))}</span></td>
               <td>${esc(r.mare_goal || r.stallion_goal || '–')}</td>
               <td>${r.created_at ? esc(new Date(r.created_at).toLocaleDateString('de-DE')) : '–'}</td>
+              <td><strong>${remainingDays(r)} Tage</strong></td>
               <td><button type="button" class="btn secondary delete-remembered-pairing" data-id="${r.id}">Löschen</button></td>
             </tr>
           `).join('')}
         </tbody>
       </table>
     </div>
+    <p class="tiny muted">Gemerkte Verpaarungen werden 60 Tage nach dem Merken automatisch entfernt. Echte Einträge im Verpaarungs-Log bleiben erhalten.</p>
   `;
 }

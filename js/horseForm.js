@@ -3,7 +3,7 @@ const TEXT_FIELDS = [
 ];
 const DATE_FIELDS = ['birthdate'];
 const NUMBER_FIELDS = ['purebred_pct', 'ico', 'stud_fee', 'tournament_starts_total', 'breeding_show_points'];
-const BOOLEAN_FIELDS = ['disease_free', 'breeding_allowed', 'learning_file'];
+const BOOLEAN_FIELDS = ['disease_free', 'breeding_allowed', 'learning_file', 'in_breeding_station'];
 const JSONB_KEYS = [
   'genetic_diseases', 'colors', 'exterior_genetics', 'exterior_descriptive',
   'temperament', 'disciplines', 'traits', 'tournament_potential', 'pedigree',
@@ -44,6 +44,26 @@ function applyDetectedLocalTags(parsed) {
   const hasCup = tags.some((t) => (typeof t === 'string' ? t : t?.label) === 'Cupstern');
   if (!hasCup) tags.push({ label: 'Cupstern' });
   return { ...parsed, tags };
+}
+
+function syncBreedingStationRecord(payload) {
+  if (!payload || typeof payload !== 'object') return payload;
+  const tags = Array.isArray(payload.tags)
+    ? payload.tags.map(t => typeof t === 'string' ? {label:t} : {...t})
+    : [];
+  const hasTag = tags.some(t => t?.label === 'Zuchtstation');
+
+  if (payload.in_breeding_station === true) {
+    if (!hasTag) tags.push({label:'Zuchtstation'});
+  } else if (payload.in_breeding_station === false) {
+    payload.tags = tags.filter(t => t?.label !== 'Zuchtstation');
+    return payload;
+  } else if (hasTag) {
+    // Manuell gesetztes Schlagwort ist ebenfalls eine eindeutige Ja-Angabe.
+    payload.in_breeding_station = true;
+  }
+  payload.tags = tags;
+  return payload;
 }
 
 document.addEventListener('DOMContentLoaded', init);
@@ -238,6 +258,7 @@ async function loadHorse(id) {
     document.getElementById('form-error').textContent = 'Pferd wurde in der lokalen Datenbank nicht gefunden.';
     return;
   }
+  syncBreedingStationRecord(data);
   fillForm(data);
   extraData = data;
   updateAppaloosaPatternVisibility();
@@ -261,6 +282,8 @@ async function onParse() {
   currentParsedPregnancy = parsed.pregnancy || null;
   fillForm(parsed);
   extraData = mergeParsedIntoExisting(extraData, parsed);
+  syncBreedingStationRecord(extraData);
+  fillTagCheckboxes(extraData.tags);
   updateAppaloosaPatternVisibility();
   maybePromptAppaloosaPattern();
   await renderDetailTables(extraData);
@@ -345,6 +368,16 @@ function updateImagePreview() {
 document.getElementById('image_url')?.addEventListener('input', updateImagePreview);
 document.getElementById('coat_color')?.addEventListener('input', updateAppaloosaPatternVisibility);
 document.getElementById('gender')?.addEventListener('change', updateStudFeeVisibility);
+document.getElementById('in_breeding_station')?.addEventListener('change', (e) => {
+  const container = document.getElementById('tag-checkboxes');
+  const cb = container?.querySelector('[data-tag-checkbox="Zuchtstation"]');
+  if (!cb) return;
+  if (e.target.value === 'true') cb.checked = true;
+  if (e.target.value === 'false') cb.checked = false;
+  const noteInput = container.querySelector('[data-tag-note="Zuchtstation"]');
+  if (noteInput) { noteInput.disabled = !cb.checked; if (!cb.checked) noteInput.value = ''; }
+  syncTagsFromCheckboxes();
+});
 document.getElementById('breed')?.addEventListener('input', updateAppaloosaPatternVisibility);
 document.getElementById('appaloosa_pattern')?.addEventListener('change', updateAppaloosaPatternVisibility);
 
@@ -492,6 +525,12 @@ function syncTagsFromCheckboxes() {
     return note ? { label: cb.dataset.tagCheckbox, note } : { label: cb.dataset.tagCheckbox };
   });
   extraData.tags = tags;
+  const station = document.getElementById('in_breeding_station');
+  if (station) {
+    const hasStation = tags.some(t => t.label === 'Zuchtstation');
+    if (hasStation) station.value = 'true';
+    else if (station.value === 'true') station.value = 'false';
+  }
 }
 
 // Das Rasseanteile-Feld ist nur relevant, wenn das Pferd NICHT sicher zu
@@ -509,10 +548,12 @@ function updateBreedCompositionVisibility() {
 }
 
 function updateStudFeeVisibility() {
-  const field = document.getElementById('stud-fee-field');
-  if (!field) return;
+  const feeField = document.getElementById('stud-fee-field');
+  const stationField = document.getElementById('stud-station-field');
   const gender = String(document.getElementById('gender')?.value || '').toLowerCase();
-  field.hidden = !(gender === 'hengst' || gender === 'stallion');
+  const isStallion = gender === 'hengst' || gender === 'stallion';
+  if (feeField) feeField.hidden = !isStallion;
+  if (stationField) stationField.hidden = !isStallion;
 }
 
 function updateAppaloosaPatternVisibility() {
@@ -754,6 +795,7 @@ async function runSaveFlow() {
   // Datenbank stehen, nicht der Rohtext selbst.
   payload.raw_text = null;
   syncCupsternTagForSave(payload);
+  syncBreedingStationRecord(payload);
   if (typeof mdrLearningFileForSave === 'function') mdrLearningFileForSave(payload);
 
   // Muss VOR der Vollständigkeits-Prüfung laufen (siehe unten): ist das
@@ -768,6 +810,7 @@ async function runSaveFlow() {
   const { targetId, payload: mergedPayload, beforeRecord } = resolved;
   // Zweiter Durchlauf mit dem bestehenden Datensatz: so kann beim Lösen
   // der Lerndatei der zuvor intern gemerkte Besitzer wiederhergestellt werden.
+  syncBreedingStationRecord(mergedPayload);
   if (typeof mdrLearningFileForSave === 'function') mdrLearningFileForSave(mergedPayload, beforeRecord);
 
   const warnings = missingDataWarnings(mergedPayload);
@@ -1388,7 +1431,10 @@ async function renderDetailTables(data) {
   if (data.disciplines && Object.keys(data.disciplines).length) turnierParts.push(percentGroupsHtml('Disziplinen', data.disciplines, true, data));
   if (data.traits && Object.keys(data.traits).length) turnierParts.push(percentGroupsHtml('Eigenschaften', data.traits, true));
 
-  if (hasPedigreeData(data.pedigree)) stammbaumParts.push(pedigreeHtml(data.pedigree));
+  if (hasPedigreeData(data.pedigree)) {
+    const pedigreeLinks = await getPedigreeHorseLinkMap();
+    stammbaumParts.push(pedigreeHtml(data.pedigree, pedigreeLinks));
+  }
 
   fillDetailContainer('detail-genetik', genetikParts);
   fillDetailContainer('detail-turnier', turnierParts);
@@ -1801,9 +1847,38 @@ const PEDIGREE_SECTION_ORDER = [
   'Urgroßeltern (Großvater mütterlicherseits)', 'Urgroßeltern (Großmutter mütterlicherseits)',
 ];
 
-function pedigreeGroupTableHtml(title, entries) {
+let pedigreeHorseLinkMapCache = null;
+
+function pedigreeLinkKey(name) {
+  return String(name || '').trim().replace(/\s+/g,' ').toLocaleLowerCase('de');
+}
+
+async function getPedigreeHorseLinkMap() {
+  if (pedigreeHorseLinkMapCache) return pedigreeHorseLinkMapCache;
+  const horses = await localGetAll(LOCAL_STORES.horses);
+  const byName = new Map();
+  const duplicates = new Set();
+  for (const horse of horses) {
+    const key = pedigreeLinkKey(horse?.name);
+    if (!key) continue;
+    if (byName.has(key)) duplicates.add(key);
+    else byName.set(key, horse);
+  }
+  for (const key of duplicates) byName.delete(key);
+  pedigreeHorseLinkMapCache = byName;
+  return byName;
+}
+
+function pedigreeNameHtml(name, linkMap) {
+  const safe = escapeHtml(name || '');
+  const horse = linkMap?.get(pedigreeLinkKey(name));
+  if (!horse?.id) return safe;
+  return `<a href="view.html?id=${encodeURIComponent(horse.id)}" title="Pferd in der Datenbank öffnen">${safe}</a>`;
+}
+
+function pedigreeGroupTableHtml(title, entries, linkMap = null) {
   if (!entries?.length) return '';
-  const body = entries.map((p) => `<tr><th>${escapeHtml(p.name)}</th><td>${escapeHtml(normalizeBreed(p.breed) || '')}</td></tr>`).join('');
+  const body = entries.map((p) => `<tr><th>${pedigreeNameHtml(p.name,linkMap)}</th><td>${escapeHtml(normalizeBreed(p.breed) || '')}</td></tr>`).join('');
   return `<p class="small muted" style="margin-bottom:0.1rem;">${escapeHtml(title)}</p><table class="detail-table">${body}</table>`;
 }
 
@@ -1814,7 +1889,7 @@ function pedigreeGroupTableHtml(title, entries) {
 // "ancestors" gespeichert) - das Feld bleibt hier nur zur Anzeige bereits
 // vor dieser Änderung gespeicherter Datensätze erhalten, bei denen es noch
 // gefüllt ist.
-function pedigreeHtml(pedigree) {
+function pedigreeHtml(pedigree, linkMap = null) {
   const isLegacyArray = Array.isArray(pedigree);
   const ancestors = isLegacyArray ? pedigree.slice(1) : (pedigree.ancestors || []);
   const sections = isLegacyArray ? null : pedigree.sections;
@@ -1822,17 +1897,17 @@ function pedigreeHtml(pedigree) {
   let body;
   let note;
   if (sections) {
-    body = PEDIGREE_SECTION_ORDER.map((label) => pedigreeGroupTableHtml(label, sections[label])).join('');
+    body = PEDIGREE_SECTION_ORDER.map((label) => pedigreeGroupTableHtml(label, sections[label], linkMap)).join('');
     note = 'Einteilung anhand der im Text enthaltenen Abschnittsüberschriften (mobile Ansicht).';
   } else {
     const parents = ancestors.slice(0, 2);
     const grandparents = ancestors.slice(2, 6);
     const greatGrandparents = ancestors.slice(6, 14);
     const rest = ancestors.slice(14);
-    body = pedigreeGroupTableHtml('Eltern', parents)
-      + pedigreeGroupTableHtml('Großeltern', grandparents)
-      + pedigreeGroupTableHtml('Urgroßeltern', greatGrandparents)
-      + pedigreeGroupTableHtml('Weitere Vorfahren', rest);
+    body = pedigreeGroupTableHtml('Eltern', parents, linkMap)
+      + pedigreeGroupTableHtml('Großeltern', grandparents, linkMap)
+      + pedigreeGroupTableHtml('Urgroßeltern', greatGrandparents, linkMap)
+      + pedigreeGroupTableHtml('Weitere Vorfahren', rest, linkMap);
     note = 'Einteilung anhand der Reihenfolge im kopierten Text – keine Garantie bei künftigen Layout-Änderungen im Spiel.';
   }
 

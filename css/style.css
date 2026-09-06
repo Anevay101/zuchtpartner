@@ -4710,3 +4710,36 @@ body.planner-high-contrast .filter-checkbox-label {
     margin-left: 2.45rem;
   }
 }
+
+
+/* V54.0.8 – Stammbaum/Zuchtstation/Merkliste/Farbwünsche */
+.farbwunsch-grid > label {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-width: 0;
+  margin: 0;
+  padding: .32rem .4rem;
+  border-radius: .45rem;
+  line-height: 1.25;
+  color: var(--text);
+}
+.farbwunsch-grid > label input[type="checkbox"] {
+  width: auto !important;
+  min-width: 1rem;
+  height: 1rem;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+}
+.bp-parent-line {
+  margin: -.15rem 0 .65rem;
+  padding: .35rem .55rem;
+  border-radius: .55rem;
+  background: rgba(255,255,255,.42);
+}
+.bp-parent-line a { font-weight: 700; }
+.remembered-pairings-table th:nth-child(4),
+.remembered-pairings-table th:nth-child(5),
+.remembered-pairings-table td:nth-child(4),
+.remembered-pairings-table td:nth-child(5) { white-space: nowrap; }

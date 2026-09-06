@@ -461,6 +461,29 @@ function parseHorseText(rawText) {
   const pregnancy = parsePregnancy(nonEmpty);
   if (pregnancy) result.pregnancy = pregnancy;
 
+  // Deckhengst / Zuchtstation. Diese Angaben stehen im MDR-Profil im
+  // Zuchtbereich als eigene Label-Zeilen. Ein ausdrückliches Nein wird
+  // ebenfalls gespeichert, damit ein früher gesetztes Zuchtstation-Tag
+  // beim erneuten Einlesen wieder entfernt werden kann.
+  const stationValue = findValueForLabel(nonEmpty, 'In Zuchtstation?');
+  if (stationValue) {
+    if (/^(ja|yes)$/i.test(stationValue)) result.in_breeding_station = true;
+    else if (/^(nein|no)$/i.test(stationValue)) result.in_breeding_station = false;
+  }
+  const studFeeRaw = findValueForLabel(nonEmpty, 'Decktaxe');
+  if (studFeeRaw) {
+    if (/kostenlos|free/i.test(String(studFeeRaw))) result.stud_fee = 0;
+    else {
+      const compact = String(studFeeRaw).replace(/\s+/g, '').replace(/\.(?=\d{3}(?:\D|$))/g, '').replace(',', '.');
+      const feeMatch = compact.match(/(\d+(?:\.\d+)?)/);
+      if (feeMatch) result.stud_fee = Number(feeMatch[1]);
+    }
+  } else if (result.in_breeding_station === false) {
+    // Ein ausdrücklich nicht mehr in der Zuchtstation stehender Hengst
+    // soll keine alte Decktaxe aus einem früheren Import behalten.
+    result.stud_fee = 0;
+  }
+
   // --- Tabellen ---
   result.genetic_diseases = extractSimpleTable(lines, 'Erbkrankheiten', ['Farben']);
   result.colors = extractSimpleTable(lines, 'Farben', ['Exterieur']).filter(
@@ -1783,6 +1806,7 @@ const HORSE_TAG_DEFAULT_OPTIONS = [
   { label: 'Verkauf', color: 'var(--danger)' },
   { label: 'GBH', color: 'var(--tag-purple)' },
   { label: 'Cupstern', color: 'var(--tag-blue, #4f83cc)' },
+  { label: 'Zuchtstation', color: 'var(--accent, #6b9d00)' },
   { label: 'Favorit', color: 'var(--tag-gold, #b48a22)' },
 ];
 
@@ -1804,6 +1828,16 @@ function getHorseTagOptions() {
         color: String(x?.color || 'var(--muted)').trim() || 'var(--muted)',
       }))
       .filter(x => x.label);
+
+    // Neue System-Schlagwörter werden auch in bereits bestehenden,
+    // benutzerdefinierten Tag-Konfigurationen ergänzt, ohne eigene Tags
+    // oder Farben zu überschreiben.
+    for (const systemLabel of ['GBH','Cupstern','Zuchtstation']) {
+      if (!clean.some(x => x.label === systemLabel)) {
+        const fallback = HORSE_TAG_DEFAULT_OPTIONS.find(x => x.label === systemLabel);
+        if (fallback) clean.push({ ...fallback });
+      }
+    }
 
     return clean.length ? clean : HORSE_TAG_DEFAULT_OPTIONS.map(x => ({ ...x }));
   } catch {

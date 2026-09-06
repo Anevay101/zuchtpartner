@@ -589,6 +589,7 @@ async function buildQuery() {
   const breed = document.querySelector('#f-breed').value;
   const gameVersion = document.querySelector('#f-game-version').value;
   const zzl = document.querySelector('#f-zzl').value;
+  const breedingStation = document.querySelector('#f-breeding-station')?.value || '';
   const dataQuality = document.querySelector('#f-data-quality').value;
   const learningFile = document.querySelector('#f-learning-file')?.value || 'exclude';
   const cupStarOnly = Boolean(document.querySelector('#f-cupstar')?.checked);
@@ -611,6 +612,11 @@ async function buildQuery() {
 
     if (zzl === 'true' && row.breeding_allowed !== true) return false;
     if (zzl === 'false' && row.breeding_allowed === true) return false;
+
+    const stationTag = (row.tags || []).some(tag => (typeof tag === 'string' ? tag : tag?.label) === 'Zuchtstation');
+    const isInStation = row.in_breeding_station === true || stationTag;
+    if (breedingStation === 'true' && !isInStation) return false;
+    if (breedingStation === 'false' && isInStation) return false;
 
     const isLearning = typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(row);
     if (learningFile === 'exclude' && isLearning) return false;
@@ -1039,7 +1045,7 @@ function applySort(rows) {
 function databaseFilterActiveCount() {
   const state = collectFilterState();
   let count = 0;
-  const filled = [state.name,state.owner,state.gender,state.breed,state.gameVersion,state.zzl,state.dataQuality,state.gpVal,state.extVal,state.extpctVal,state.intVal];
+  const filled = [state.name,state.owner,state.gender,state.breed,state.gameVersion,state.zzl,state.breedingStation,state.dataQuality,state.gpVal,state.extVal,state.extpctVal,state.intVal];
   count += filled.filter(v => String(v ?? '').trim() !== '').length;
   count += [state.tags,state.genetik,state.ekh].filter(v => { const t = normalizeTriStateSavedState(v); return t.include.length || t.exclude.length; }).length;
   // 'Alle' bedeutet keine Lerndatei-Einschränkung; sowohl Ausblenden als auch
@@ -1385,6 +1391,7 @@ function collectFilterState() {
     breed: document.querySelector('#f-breed').value,
     gameVersion: document.querySelector('#f-game-version').value,
     zzl: document.querySelector('#f-zzl').value,
+    breedingStation: document.querySelector('#f-breeding-station')?.value || '',
     dataQuality: document.querySelector('#f-data-quality').value,
     learningFile: document.querySelector('#f-learning-file')?.value || 'exclude',
     cupStarOnly: Boolean(document.querySelector('#f-cupstar')?.checked),
@@ -1421,6 +1428,7 @@ async function applyFilterState(state) {
   document.querySelector('#f-breed').value = state.breed || '';
   document.querySelector('#f-game-version').value = state.gameVersion || '';
   document.querySelector('#f-zzl').value = state.zzl || '';
+  if (document.querySelector('#f-breeding-station')) document.querySelector('#f-breeding-station').value = state.breedingStation || '';
   document.querySelector('#f-data-quality').value = state.dataQuality || '';
   if (document.querySelector('#f-learning-file')) document.querySelector('#f-learning-file').value = state.learningFile || 'exclude';
   if (document.querySelector('#f-cupstar')) document.querySelector('#f-cupstar').checked = Boolean(state.cupStarOnly);

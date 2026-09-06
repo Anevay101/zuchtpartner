@@ -50,7 +50,9 @@ function renderHorseViewHeader(horse) {
       stars.length ? `⭐ ${stars.map(r=>r.discipline + (r.lk ? ' '+r.lk : '')).join(', ')}` : null,
     ];
     if (/hengst|stallion/i.test(String(horse?.gender || ''))) {
-      bits.push(`Decktaxe: ${horse?.stud_fee == null || horse?.stud_fee === '' || Number(horse.stud_fee) === 0 ? 'kostenlos' : horse.stud_fee}`);
+      const inStation = horse?.in_breeding_station === true || viewTagLabels(horse).includes('Zuchtstation');
+      if (inStation) bits.push('Zuchtstation');
+      bits.push(`Decktaxe: ${horse?.stud_fee == null || horse?.stud_fee === '' || Number(horse.stud_fee) === 0 ? 'kostenlos' : `${horse.stud_fee} DD`}`);
     }
     chips.innerHTML = bits.filter(Boolean).map(x => `<span>${plannerEscape(x)}</span>`).join('');
   }

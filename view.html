@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <title>Pferd ansehen – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5407" />
+  <link rel="stylesheet" href="css/style.css?v=5408" />
 </head>
 <body>
 <header class="topbar">
@@ -73,7 +73,8 @@
     <fieldset><legend>Verwaltung</legend><div class="form-grid"><div><label for="owner">Besitzer</label><input id="owner" readonly /></div></div></fieldset>
     <fieldset><legend>Papiere &amp; Zucht</legend><div class="form-grid">
       <div><label for="breeding_allowed">Zuchtzulassung</label><select id="breeding_allowed" disabled><option value="">unbekannt</option><option value="true">Ja</option><option value="false">Nein</option></select></div>
-      <div id="stud-fee-field" hidden><label for="stud_fee">Decktaxe / Decksprungkosten</label><input id="stud_fee" type="number" readonly placeholder="kostenlos" /><div class="tiny muted">Leer = kostenlos</div></div>
+      <div id="stud-station-field" hidden><label for="in_breeding_station">In Zuchtstation?</label><select id="in_breeding_station" disabled><option value="">unbekannt</option><option value="true">Ja</option><option value="false">Nein</option></select></div>
+      <div id="stud-fee-field" hidden><label for="stud_fee">Decktaxe</label><input id="stud_fee" type="number" readonly placeholder="kostenlos" /><div class="tiny muted">Leer = kostenlos</div></div>
       <div><label for="hlp_slp">HLP/SLP</label><input id="hlp_slp" readonly /></div>
       <div><label for="ico">ICO (%)</label><input id="ico" type="number" readonly /></div>
     </div></fieldset>
@@ -96,15 +97,15 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5407"></script>
-<script src="js/database-local.js?v=5407"></script>
-<script src="js/local-app.js?v=5407"></script>
-<script src="js/learning-file.js?v=5407"></script>
-<script src="js/parser.js?v=5407"></script>
-<script src="js/data-quality.js?v=5407"></script>
-<script src="js/planer-common.js?v=5407"></script>
-<script src="js/horseForm.js?v=5407"></script>
-<script src="js/horse-tournament-profile.js?v=5407"></script>
-<script src="js/breeding-progress.js?v=5407"></script>
-<script src="js/horseView.js?v=5407"></script>
+<script src="js/supabase-config.js?v=5408"></script>
+<script src="js/database-local.js?v=5408"></script>
+<script src="js/local-app.js?v=5408"></script>
+<script src="js/learning-file.js?v=5408"></script>
+<script src="js/parser.js?v=5408"></script>
+<script src="js/data-quality.js?v=5408"></script>
+<script src="js/planer-common.js?v=5408"></script>
+<script src="js/horseForm.js?v=5408"></script>
+<script src="js/horse-tournament-profile.js?v=5408"></script>
+<script src="js/breeding-progress.js?v=5408"></script>
+<script src="js/horseView.js?v=5408"></script>
 </body></html>

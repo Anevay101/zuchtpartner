@@ -96,8 +96,29 @@ async function mdrCurrentUser() {
   } catch { return null; }
 }
 
+function mdrSyncBreedingStationPayload(payload) {
+  if (!payload || typeof payload !== 'object') return payload;
+  const tags = Array.isArray(payload.tags)
+    ? payload.tags.map(t => typeof t === 'string' ? {label:t} : {...t})
+    : [];
+  const hasTag = tags.some(t => t?.label === 'Zuchtstation');
+  if (payload.in_breeding_station === true) {
+    if (!hasTag) tags.push({label:'Zuchtstation'});
+  } else if (payload.in_breeding_station === false) {
+    payload.tags = tags.filter(t => t?.label !== 'Zuchtstation');
+    return payload;
+  } else if (hasTag) {
+    payload.in_breeding_station = true;
+  }
+  payload.tags = tags;
+  return payload;
+}
+
 async function mdrPreparePayload(storeName, value) {
   const copy = (value && typeof value === 'object') ? structuredClone(value) : value;
+  if (storeName === LOCAL_STORES.horses && copy && typeof copy === 'object') {
+    mdrSyncBreedingStationPayload(copy);
+  }
   if (storeName === LOCAL_STORES.filterPresets && copy && typeof copy === 'object') {
     const user = await mdrCurrentUser();
     if (user?.id && (!copy.user_id || copy.user_id === 'local-user')) copy.user_id = user.id;
