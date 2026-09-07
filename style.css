@@ -4816,3 +4816,67 @@ body.planner-high-contrast .filter-checkbox-label {
   margin-left: 0.25rem;
   vertical-align: middle;
 }
+
+/* V54.0.15 – kompakter Import-Prüfbereich / Appaloosa-Popup / ZS-Mehrfachauswahl */
+.import-review-panel {
+  margin: 0 0 .8rem;
+  padding: .65rem .8rem;
+  border: 1px solid var(--border, #ccd6c8);
+  border-radius: .65rem;
+  background: color-mix(in srgb, var(--card, #fff) 88%, var(--accent, #6b9d00) 12%);
+}
+.import-review-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: .45rem;
+}
+.import-review-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  align-items: center;
+}
+.import-review-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.9rem;
+  padding: .2rem .55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border, #ccd6c8);
+  background: var(--card, #fff);
+  font-size: .84rem;
+}
+.import-review-ok { margin: 0; }
+.appaloosa-pattern-modal-card select {
+  width: 100%;
+  margin-top: .35rem;
+}
+.cup-star-auto {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  font-size: .82rem;
+  white-space: nowrap;
+}
+.tp-zs-owner-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem .55rem;
+  padding: .42rem .5rem;
+  min-height: 2.25rem;
+  border: 1px solid var(--border, #ccd6c8);
+  border-radius: .45rem;
+  background: var(--input-bg, transparent);
+}
+.tp-zs-owner-option {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  margin: 0;
+  white-space: nowrap;
+  font-size: .9rem;
+}
+.tp-zs-owner-option input { margin: 0; }

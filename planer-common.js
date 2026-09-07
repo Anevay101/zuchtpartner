@@ -513,8 +513,9 @@ function plannerTournamentResults(horse) {
   }
 
   // V53-Kompatibilität: ältere Cup-Erfassung bestand nur aus Siegen je
-  // Disziplin. Diese Werte werden als 1. Plätze übernommen, aber NICHT
-  // automatisch als Cupstern interpretiert.
+  // Disziplin. Diese Werte werden als 1. Plätze übernommen; zusammen mit
+  // mindestens 50 Gesamtstarts greift anschließend ebenfalls die automatische
+  // 15-Siege-Cupstern-Regel.
   const legacy = horse?.cup_results;
   if (legacy && typeof legacy === 'object' && !Array.isArray(legacy)) {
     for (const [discipline, wins] of Object.entries(legacy)) {
@@ -523,6 +524,22 @@ function plannerTournamentResults(horse) {
       if (!MDR_TOURNAMENT_DISCIPLINES[normalized] || !n) continue;
       if (!out[normalized]) out[normalized] = { first:n, second:0, third:0, cup_star:false, cup_lk:'' };
       else out[normalized].first = Math.max(out[normalized].first || 0, n);
+    }
+  }
+
+  // V54.0.15: Cupsterne werden aus den bekannten MDR-Grundkriterien
+  // automatisch abgeleitet. Eine explizit ausgelesene Cup-Qualifikation
+  // bleibt ebenfalls Cupstern; die Cup-LK wird nur übernommen, wenn sie
+  // tatsächlich im Datensatz vorhanden ist.
+  const starts = plannerTournamentStarts(horse);
+  if (starts != null && starts >= 50) {
+    for (const [discipline,row] of Object.entries(out)) {
+      if (Number(row.first || 0) < 15) continue;
+      row.cup_star = true;
+      // Derselbe LK-Fallback, der bisher erst beim Bestätigungs-Klick
+      // gesetzt wurde: wenn MDR keine Cup-LK mitliefert, ist die aus den
+      // sieben Potenzialwerten berechnete LK die automatische Vorgabe.
+      if (!row.cup_lk) row.cup_lk = plannerTournamentEvaluation(horse, discipline)?.lk || '';
     }
   }
 

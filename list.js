@@ -572,11 +572,17 @@ function fillSelect(selector, values) {
 }
 
 function databaseHorseHasConfirmedCupStar(row) {
-  // Strukturierte V53-Cupdaten sind maßgeblich. Das historische System-
-  // Schlagwort bleibt als Kompatibilitätsweg erhalten, damit ältere Bestände
-  // beim Filtern nicht unerwartet verschwinden.
+  // V54.0.15: Neben ausdrücklich gespeicherten Cupsternen gilt die bekannte
+  // MDR-Grundregel automatisch: mindestens 50 Gesamtstarts + mindestens
+  // 15 Siege in einer Disziplin. Dadurch funktionieren auch Datenbankfilter
+  // sofort, ohne dass ein Pferd erst erneut gespeichert werden muss.
   const structured = Object.values(row?.tournament_results || {}).some((result) => result?.cup_star === true);
-  if (structured) return true;
+  const starts = Number(row?.tournament_starts_total);
+  const automatic = Number.isFinite(starts) && starts >= 50 && (
+    Object.values(row?.tournament_results || {}).some(result => Number(result?.first || 0) >= 15) ||
+    Object.values(row?.cup_results || {}).some(wins => Number(wins || 0) >= 15)
+  );
+  if (structured || automatic) return true;
   return (row?.tags || []).some((tag) => (typeof tag === 'string' ? tag : tag?.label) === 'Cupstern');
 }
 

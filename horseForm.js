@@ -39,7 +39,11 @@ let applyingParsedData = false;
 
 
 function applyDetectedLocalTags(parsed) {
-  if (!parsed?.cup_star_detected) return parsed;
+  if (!parsed || typeof parsed !== 'object') return parsed;
+  const starts = Number(parsed.tournament_starts_total);
+  const hasAutomaticCup = Number.isFinite(starts) && starts >= 50 &&
+    Object.values(parsed.tournament_results || {}).some(row => Number(row?.first || 0) >= 15);
+  if (!parsed.cup_star_detected && !hasAutomaticCup) return parsed;
   const tags = Array.isArray(parsed.tags) ? [...parsed.tags] : [];
   const hasCup = tags.some((t) => (typeof t === 'string' ? t : t?.label) === 'Cupstern');
   if (!hasCup) tags.push({ label: 'Cupstern' });
@@ -101,6 +105,11 @@ document.addEventListener('click', (e) => {
   else delete overrides[key];
   extraData[field] = overrides;
   renderDetailTables(extraData);
+  if (field === 'color_gene_overrides' && /appaloosa/i.test(String(key))) {
+    updateAppaloosaPatternVisibility();
+    renderImportReviewPanel(null, extraData);
+    maybePromptAppaloosaPattern();
+  }
 });
 
 // Erlaubt, ein Bild direkt aus der Zwischenablage einzufügen (Screenshot
@@ -285,6 +294,8 @@ async function onParse() {
   syncBreedingStationRecord(extraData);
   fillTagCheckboxes(extraData.tags);
   updateAppaloosaPatternVisibility();
+  activateTab('stammdaten');
+  renderImportReviewPanel(parsed, extraData);
   maybePromptAppaloosaPattern();
   await renderDetailTables(extraData);
   if (typeof bpRenderBreedingPanel === 'function') await bpRenderBreedingPanel(extraData, 'breeding-progress-panel');
@@ -292,7 +303,7 @@ async function onParse() {
   const qualityBox = document.getElementById('import-quality-check');
   if (qualityBox) qualityBox.innerHTML = dataQualityPanelHtml(extraData);
   const parsedTournamentRows = Object.keys(parsed.tournament_results || {}).length;
-  const parsedStars = Object.values(parsed.tournament_results || {}).filter((r) => r?.cup_star).length;
+  const parsedStars = typeof plannerCupStarRows === 'function' ? plannerCupStarRows(parsed).length : Object.values(parsed.tournament_results || {}).filter((r) => r?.cup_star).length;
   statusEl.textContent =
     'Erkannt: ' + (parsed.name || 'kein Name gefunden') +
     (parsed.breeding_goal ? ` · Zuchtziel automatisch: ${parsed.breeding_goal}` : '') +
@@ -368,6 +379,10 @@ function updateImagePreview() {
 document.getElementById('image_url')?.addEventListener('input', updateImagePreview);
 document.getElementById('coat_color')?.addEventListener('input', updateAppaloosaPatternVisibility);
 document.getElementById('gender')?.addEventListener('change', updateStudFeeVisibility);
+document.getElementById('tournament_starts_total')?.addEventListener('change', (e) => {
+  extraData.tournament_starts_total = e.target.value === '' ? null : Math.max(0, Math.floor(Number(e.target.value) || 0));
+  renderCupResultsEditor(extraData);
+});
 document.getElementById('in_breeding_station')?.addEventListener('change', (e) => {
   const container = document.getElementById('tag-checkboxes');
   const cb = container?.querySelector('[data-tag-checkbox="Zuchtstation"]');
@@ -379,6 +394,7 @@ document.getElementById('in_breeding_station')?.addEventListener('change', (e) =
   syncTagsFromCheckboxes();
 });
 document.getElementById('breed')?.addEventListener('input', updateAppaloosaPatternVisibility);
+document.getElementById('name')?.addEventListener('input', updateAppaloosaPatternVisibility);
 document.getElementById('appaloosa_pattern')?.addEventListener('change', updateAppaloosaPatternVisibility);
 
 // Baut die Checkbox-Liste der Schlagwörter einmalig aus HORSE_TAG_OPTIONS
@@ -428,6 +444,8 @@ function renderCupResultsEditor(data = extraData) {
   const root = document.getElementById('cup-results-editor');
   if (!root || typeof MDR_TOURNAMENT_GROUPS === 'undefined') return;
   const results = plannerTournamentResults(data || {});
+  const rawResults = data?.tournament_results && typeof data.tournament_results === 'object' && !Array.isArray(data.tournament_results)
+    ? data.tournament_results : {};
   const mainGroup = plannerHorseMainGroup(data || {});
   const starts = plannerTournamentStarts(data || {});
 
@@ -440,10 +458,9 @@ function renderCupResultsEditor(data = extraData) {
       <div class="tournament-achievement-grid">
         ${(MDR_TOURNAMENT_GROUPS[group] || []).map(name => {
           const row = results[name] || {first:0,second:0,third:0,cup_star:false,cup_lk:''};
-          const progress = plannerCupProgress({...data,tournament_results:{...results,[name]:row}}, name);
+          const progress = plannerCupProgress({...data,tournament_results:{...rawResults,[name]:rawResults[name] || row}}, name);
           let status = '';
-          if (row.cup_star) status = `⭐${row.cup_lk ? ' '+row.cup_lk : ''}`;
-          else if (progress.requirementsReached) status = '⭐ Cupstern wahrscheinlich';
+          if (row.cup_star) status = `⭐ Cupstern${row.cup_lk ? ' · '+row.cup_lk : ''}`;
           else if (row.first >= 10) status = `${row.first}/15 Siege`;
           return `
             <div class="tournament-achievement-row">
@@ -451,7 +468,7 @@ function renderCupResultsEditor(data = extraData) {
               <input type="number" min="0" step="1" value="${row.first || ''}" data-tournament-result="${escapeHtml(name)}" data-result-field="first" aria-label="${escapeHtml(name)} 1. Plätze" />
               <input type="number" min="0" step="1" value="${row.second || ''}" data-tournament-result="${escapeHtml(name)}" data-result-field="second" aria-label="${escapeHtml(name)} 2. Plätze" />
               <input type="number" min="0" step="1" value="${row.third || ''}" data-tournament-result="${escapeHtml(name)}" data-result-field="third" aria-label="${escapeHtml(name)} 3. Plätze" />
-              <label class="cup-star-checkbox"><input type="checkbox" ${row.cup_star ? 'checked' : ''} data-tournament-result="${escapeHtml(name)}" data-result-field="cup_star" /> <span>⭐</span></label>
+              <span class="cup-star-auto" title="Cupstern wird automatisch aus 50 Gesamtstarts + 15 Siegen erkannt">${row.cup_star ? '⭐ automatisch' : '–'}</span>
               <select data-tournament-result="${escapeHtml(name)}" data-result-field="cup_lk" aria-label="${escapeHtml(name)} Cup-LK">
                 <option value="">–</option>
                 ${['LK10','LK9','LK8','LK7','LK6','LK5','LK4','LK3','LK2','LK1'].map(lk=>`<option value="${lk}" ${row.cup_lk===lk?'selected':''}>${lk}</option>`).join('')}
@@ -462,9 +479,8 @@ function renderCupResultsEditor(data = extraData) {
       </div>
     </details>`).join('') + `
       <p class="tiny muted cup-rule-note">
-        Ab den bekannten Grundvoraussetzungen zeigt die Datenbank <strong>„Cupstern wahrscheinlich“</strong>. Im Tab „Cups &amp; Erfolge“ kann der Stern mit einem Klick bestätigt werden und zählt erst dann für die Zuchtschau. Bekannte Grundvoraussetzungen:
-        insgesamt mindestens 50 Starts + mindestens 15 Siege in der Disziplin. Wenn im eingefügten MDR-Text der Bereich
-        <strong>MDR-Cup Qualifikation</strong> enthalten ist, werden Cupstern und LK automatisch übernommen; sie bleiben hier manuell korrigierbar.
+        Cupsterne werden automatisch erkannt: insgesamt mindestens 50 Starts + mindestens 15 Siege in der Disziplin.
+        Eine im MDR-Text enthaltene <strong>MDR-Cup Qualifikation</strong> und ihre LK werden direkt übernommen; eine Bestätigung ist nicht mehr nötig.
         ${starts == null ? 'Gesamtstarts sind noch nicht hinterlegt.' : `Aktuell hinterlegte Gesamtstarts: ${starts}.`}
       </p>`;
 }
@@ -472,13 +488,24 @@ function renderCupResultsEditor(data = extraData) {
 function syncTournamentResultsFromEditor() {
   const root = document.getElementById('cup-results-editor');
   if (!root) return;
+  const previousRaw = extraData?.tournament_results && typeof extraData.tournament_results === 'object' && !Array.isArray(extraData.tournament_results)
+    ? extraData.tournament_results : {};
   const results = {};
   root.querySelectorAll('[data-tournament-result]').forEach(el => {
     const discipline = el.dataset.tournamentResult;
     const field = el.dataset.resultField;
-    results[discipline] ||= {first:0,second:0,third:0,cup_star:false,cup_lk:''};
-    if (field === 'cup_star') results[discipline][field] = Boolean(el.checked);
-    else if (field === 'cup_lk') results[discipline][field] = el.value || '';
+    if (!results[discipline]) {
+      const old = previousRaw[discipline] && typeof previousRaw[discipline] === 'object' ? previousRaw[discipline] : {};
+      results[discipline] = {
+        first:0, second:0, third:0,
+        // Nur ausdrücklich aus MDR-Daten gespeicherte Cupsterne werden roh
+        // konserviert. Die 50/15-Regel wird beim Auswerten automatisch
+        // hinzugerechnet und muss nicht manuell gespeichert werden.
+        cup_star: old.cup_star === true,
+        cup_lk: /^LK(?:10|[1-9])$/.test(String(old.cup_lk || '')) ? String(old.cup_lk) : '',
+      };
+    }
+    if (field === 'cup_lk') results[discipline][field] = el.value || '';
     else results[discipline][field] = el.value === '' ? 0 : Math.max(0, Math.floor(Number(el.value) || 0));
   });
 
@@ -488,8 +515,8 @@ function syncTournamentResultsFromEditor() {
   }
 
   extraData.tournament_results = results;
-  // Legacy-Feld nur als kompatibler Spiegel der Siege weiterführen.
   extraData.cup_results = Object.fromEntries(Object.entries(results).filter(([,r])=>r.first>0).map(([name,r])=>[name,r.first]));
+  renderCupResultsEditor(extraData);
 }
 
 document.addEventListener('change', (e) => {
@@ -499,18 +526,33 @@ document.addEventListener('change', (e) => {
   }
 });
 
+function syncAutomaticCupStarsForSave(payload) {
+  if (!payload || typeof payload !== 'object') return payload;
+  const derived = typeof plannerTournamentResults === 'function' ? plannerTournamentResults(payload) : {};
+  const raw = payload.tournament_results && typeof payload.tournament_results === 'object' && !Array.isArray(payload.tournament_results)
+    ? { ...payload.tournament_results } : {};
+  for (const [discipline,row] of Object.entries(derived)) {
+    if (!row?.cup_star) continue;
+    const old = raw[discipline] && typeof raw[discipline] === 'object' ? raw[discipline] : {};
+    raw[discipline] = {
+      ...old,
+      first: Number(row.first || old.first || 0),
+      second: Number(row.second || old.second || 0),
+      third: Number(row.third || old.third || 0),
+      cup_star: true,
+      cup_lk: row.cup_lk || old.cup_lk || '',
+    };
+  }
+  if (Object.keys(raw).length) payload.tournament_results = raw;
+  return payload;
+}
+
 function syncCupsternTagForSave(payload) {
-  const structured = plannerTournamentResults(payload);
   const hasStructured = Boolean(payload?.tournament_results && typeof payload.tournament_results === 'object' && Object.keys(payload.tournament_results).length);
   const hasStar = plannerCupStarRows(payload).length > 0;
   const tags = Array.isArray(payload.tags) ? payload.tags.map(t => typeof t === 'string' ? {label:t} : {...t}) : [];
   const hadLegacyTag = tags.some(t => t?.label === 'Cupstern');
   const without = tags.filter(t => t?.label !== 'Cupstern');
-
-  // Wird ein Cupstern nur im kopierten MDR-Profil erkannt, aber die
-  // Disziplin/LK ist noch nicht strukturiert eingetragen, bleibt das
-  // bestehende Cupstern-Schlagwort erhalten. Sobald strukturierte Cupdaten
-  // vorhanden sind, ist deren expliziter Cupstern-Haken maßgeblich.
   const keepCupTag = hasStructured ? hasStar : hadLegacyTag;
   payload.tags = keepCupTag ? [...without,{label:'Cupstern'}] : without;
   return payload;
@@ -556,43 +598,37 @@ function updateStudFeeVisibility() {
   if (stationField) stationField.hidden = !isStallion;
 }
 
-function updateAppaloosaPatternVisibility() {
-  const field = document.getElementById('appaloosa-pattern-field');
+function appaloosaPatternTriggerState() {
   const select = document.getElementById('appaloosa_pattern');
-  if (!field || !select) return;
-
   const coat = document.getElementById('coat_color')?.value || '';
   const breed = document.getElementById('breed')?.value || '';
+  const name = document.getElementById('name')?.value || '';
   const detected = typeof detectAppaloosaPatternFromCoatColor === 'function'
     ? detectAppaloosaPatternFromCoatColor(coat)
     : null;
 
-  const hasLp = typeof presentGenesSummary === 'function'
+  const geneRows = typeof presentGenesSummary === 'function'
     ? presentGenesSummary(
-        extraData?.colors || [],
-        coat,
-        document.getElementById('notes')?.value || '',
-        document.getElementById('name')?.value || '',
-        null,
-        extraData?.color_gene_overrides
-      ).some((g) => g.locus === 'Appaloosa' && /Lp/.test(g.alleles))
-    : false;
+        extraData?.colors || [], coat,
+        document.getElementById('notes')?.value || '', name,
+        null, extraData?.color_gene_overrides
+      )
+    : [];
+  const lpGene = geneRows.find((g) => g.locus === 'Appaloosa' && /Lp/.test(String(g.alleles || '')));
+  const hasLp = Boolean(lpGene);
+  const nameTrigger = /\bappaloosa\b/i.test(name);
+  const relevant = Boolean(select?.value || detected || nameTrigger || hasLp || /\bappaloosa\b/i.test(breed));
+  return { relevant, detected, nameTrigger, hasLp, lpSource: lpGene?.source || '' };
+}
 
-  const relevant =
-    !!select.value ||
-    !!detected ||
-    /\bappaloosa\b/i.test(coat) ||
-    /\bappaloosa\b/i.test(breed) ||
-    hasLp;
-
-  // V54.0.7: Nur die automatische Musterabfrage bleibt sichtbar.
-  // Das Select existiert weiterhin als technisches Speicherfeld, wird aber
-  // nicht zusätzlich im Formular angezeigt.
-  field.dataset.relevant = relevant ? 'true' : 'false';
+function updateAppaloosaPatternVisibility() {
+  const field = document.getElementById('appaloosa-pattern-field');
+  const select = document.getElementById('appaloosa_pattern');
+  if (!field || !select) return;
+  const state = appaloosaPatternTriggerState();
+  field.dataset.relevant = state.relevant ? 'true' : 'false';
   field.hidden = true;
-
-  // Eindeutig aus der Fellfarbe erkennbare Muster werden automatisch gesetzt.
-  if (relevant && !select.value && detected) select.value = detected;
+  if (state.relevant && !select.value && state.detected) select.value = state.detected;
 }
 
 function maybePromptAppaloosaPattern() {
@@ -602,39 +638,76 @@ function maybePromptAppaloosaPattern() {
   if (!field || !select || field.dataset.relevant !== 'true' || select.value) return;
   if (document.getElementById('appaloosa-pattern-modal')) return;
 
+  activateTab('stammdaten');
   const modal = document.createElement('div');
   modal.id = 'appaloosa-pattern-modal';
   modal.className = 'modal';
   modal.innerHTML = `
     <div class="modal-card appaloosa-pattern-modal-card">
-      <h2>Sichtbares Appaloosa-Muster</h2>
-      <p>
-        Dieses Pferd wurde als Appaloosa erkannt. Welches Muster ist am Pferd sichtbar?
-        Die Auswahl wird als <strong>Phänotyp</strong> gespeichert – nicht als Gentest.
-      </p>
-      <div class="appaloosa-pattern-choice-grid">
-        ${APPALOOSA_PATTERN_OPTIONS.map(option =>
-          `<button type="button" class="secondary" data-app-pattern="${escapeHtml(option)}">${escapeHtml(option)}</button>`
-        ).join('')}
-      </div>
+      <h2>Appaloosa-Muster prüfen</h2>
+      <p class="small">Beim Einlesen wurde Appaloosa im Namen bzw. nachweisbares LP erkannt. Bitte das sichtbare Muster auswählen.</p>
+      <label for="appaloosa-pattern-modal-select"><strong>Appaloosa-Muster</strong></label>
+      <select id="appaloosa-pattern-modal-select">
+        <option value="">Bitte auswählen…</option>
+        ${APPALOOSA_PATTERN_OPTIONS.map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('')}
+      </select>
       <div class="modal-actions">
-        <button type="button" class="secondary" data-app-pattern-close>Später auswählen</button>
+        <button type="button" class="secondary" data-app-pattern-close>Später</button>
+        <button type="button" data-app-pattern-save>Übernehmen</button>
       </div>
     </div>`;
 
   document.body.appendChild(modal);
   modal.hidden = false;
-
-  modal.addEventListener('click', (event) => {
-    const choice = event.target.closest('[data-app-pattern]');
-    if (choice) {
-      select.value = choice.dataset.appPattern;
-      currentChangeSource = 'manuell geändert';
-      modal.remove();
-      return;
-    }
-    if (event.target.closest('[data-app-pattern-close]')) modal.remove();
+  const modalSelect = modal.querySelector('#appaloosa-pattern-modal-select');
+  modalSelect?.focus();
+  modal.querySelector('[data-app-pattern-save]')?.addEventListener('click', () => {
+    const value = modalSelect?.value || '';
+    if (!value) return;
+    select.value = value;
+    currentChangeSource = 'manuell geändert';
+    updateAppaloosaPatternVisibility();
+    renderImportReviewPanel(null, extraData);
+    modal.remove();
   });
+  modal.querySelector('[data-app-pattern-close]')?.addEventListener('click', () => modal.remove());
+}
+
+function importRecognizedCount(parsed) {
+  if (!parsed || typeof parsed !== 'object') return 0;
+  const keys = ['name','external_id','game_version','gender','breed','purebred_pct','breed_composition','coat_color','birthdate','owner','disease_free','breeding_allowed','hlp_slp','ico','in_breeding_station','stud_fee','breeding_goal','genetic_diseases','colors','exterior_genetics','exterior_descriptive','temperament','disciplines','traits','tournament_potential','tournament_results','tournament_starts_total','pedigree'];
+  return keys.reduce((n,key) => n + (isEmptyValue(key, parsed[key]) ? 0 : 1), 0);
+}
+
+function importReviewItems(payload) {
+  const items = [];
+  const state = appaloosaPatternTriggerState();
+  if (state.relevant && !String(document.getElementById('appaloosa_pattern')?.value || '').trim()) {
+    items.push({ key:'appaloosa', label:'Appaloosa-Muster auswählen', action:'appaloosa' });
+  }
+  for (const label of missingDataLabels(payload || {})) items.push({ key:label, label });
+  if (!Array.isArray(payload?.colors) || payload.colors.length === 0) items.push({ key:'colors', label:'Farbgenetik / Gentest prüfen' });
+  if (payload?.disease_free == null) items.push({ key:'disease', label:'Erbkrankheitsstatus prüfen' });
+  return items.filter((item,index,arr)=>arr.findIndex(x=>x.key===item.key)===index);
+}
+
+function renderImportReviewPanel(parsed = null, payload = extraData) {
+  const panel = document.getElementById('import-review-panel');
+  if (!panel) return;
+  const items = importReviewItems(payload || {});
+  const recognized = parsed ? importRecognizedCount(parsed) : null;
+  const summary = recognized == null
+    ? `${items.length ? `${items.length} Punkt${items.length===1?'':'e'} noch prüfen` : 'Keine offenen Prüfpunkte'}`
+    : `Automatisch erkannt: ${recognized} · noch prüfen: ${items.length}`;
+  panel.hidden = false;
+  panel.innerHTML = `
+    <div class="import-review-head"><strong>Noch prüfen</strong><span class="small muted">${escapeHtml(summary)}</span></div>
+    ${items.length ? `<div class="import-review-items">${items.map(item => item.action === 'appaloosa'
+      ? `<button type="button" class="secondary small" data-import-review-appaloosa>${escapeHtml(item.label)}</button>`
+      : `<span class="import-review-chip">${escapeHtml(item.label)}</span>`).join('')}</div>`
+      : '<div class="small import-review-ok">Alle zentralen Import-Prüfpunkte sind vollständig.</div>'}`;
+  panel.querySelector('[data-import-review-appaloosa]')?.addEventListener('click', maybePromptAppaloosaPattern);
+  panel.scrollIntoView({block:'nearest'});
 }
 
 
@@ -794,6 +867,7 @@ async function runSaveFlow() {
   // Speichern soll ausschließlich das daraus extrahierte Ergebnis in der
   // Datenbank stehen, nicht der Rohtext selbst.
   payload.raw_text = null;
+  syncAutomaticCupStarsForSave(payload);
   syncCupsternTagForSave(payload);
   syncBreedingStationRecord(payload);
   if (typeof mdrLearningFileForSave === 'function') mdrLearningFileForSave(payload);
@@ -1323,6 +1397,8 @@ async function resetFormForNextEntry(savedName, savedId, wasUpdate) {
   document.getElementById('paste-details').open = true;
   document.getElementById('parse-status').textContent = '';
   document.getElementById('form-error').textContent = '';
+  const reviewPanel = document.getElementById('import-review-panel');
+  if (reviewPanel) { reviewPanel.hidden = true; reviewPanel.innerHTML = ''; }
   fillTagCheckboxes([]);
   updateBreedCompositionVisibility();
   updateStudFeeVisibility();

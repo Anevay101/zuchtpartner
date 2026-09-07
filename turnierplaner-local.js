@@ -19,6 +19,7 @@ async function initTurnierplaner() {
   await renderSharedNav();
 
   TP_ALL_HORSES = await localGetAll(LOCAL_STORES.horses);
+  await persistAutomaticCupStars();
   // Lerndatei bleibt bewusst in TP_ALL_HORSES für das ZS-Lernmodell,
   // wird aber aus allen operativen Turnier-/Cup-Listen ausgeblendet.
   TP_HORSES = TP_ALL_HORSES.filter(h => isActiveBreeder(h.owner) && !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
@@ -36,6 +37,44 @@ async function initTurnierplaner() {
   renderCupAchievements();
   renderCupCalendar();
   renderBreedingShowOverview();
+}
+
+
+async function persistAutomaticCupStars() {
+  // Einmalige/laufende Datenpflege ohne Bestätigungsdialog: bereits
+  // vorhandene Pferde, die 50 Gesamtstarts + 15 Siege in einer Disziplin
+  // erfüllen, bekommen den automatisch abgeleiteten Cupstern samt
+  // berechenbarer LK auch strukturiert gespeichert. Dadurch sind Tag-
+  // Filter, JSON-Backups und andere Seiten konsistent, nicht nur die
+  // Laufzeit-Auswertung im Turnierplaner.
+  for (let i=0;i<TP_ALL_HORSES.length;i++) {
+    const horse=TP_ALL_HORSES[i];
+    const derived=plannerTournamentResults(horse);
+    const starRows=Object.entries(derived).filter(([,row])=>row?.cup_star === true);
+    if (!starRows.length) continue;
+
+    const raw=horse?.tournament_results && typeof horse.tournament_results==='object' && !Array.isArray(horse.tournament_results)
+      ? {...horse.tournament_results} : {};
+    let changed=false;
+    for (const [discipline,row] of starRows) {
+      const old=raw[discipline] && typeof raw[discipline]==='object' ? {...raw[discipline]} : {};
+      if (old.cup_star !== true || (!old.cup_lk && row.cup_lk)) changed=true;
+      raw[discipline]={
+        ...old,
+        first:Number(row.first || old.first || 0),
+        second:Number(row.second || old.second || 0),
+        third:Number(row.third || old.third || 0),
+        cup_star:true,
+        cup_lk:old.cup_lk || row.cup_lk || '',
+      };
+    }
+    const tags=Array.isArray(horse.tags) ? horse.tags.map(t=>typeof t==='string'?{label:t}:{...t}) : [];
+    if (!tags.some(t=>t?.label==='Cupstern')) { tags.push({label:'Cupstern'}); changed=true; }
+    if (!changed) continue;
+    const saved={...horse,tournament_results:raw,tags,updated_at:new Date().toISOString()};
+    await localPut(LOCAL_STORES.horses,saved);
+    TP_ALL_HORSES[i]=saved;
+  }
 }
 
 function buildTournamentControls() {
@@ -75,13 +114,17 @@ function buildCupAndShowControls() {
   const cupGroup=document.getElementById('tp-cup-group');
   if (cupGroup) cupGroup.innerHTML='<option value="">Alle Gruppen</option>' + MDR_TOURNAMENT_GROUP_ORDER.map(g=>`<option value="${plannerEscape(g)}">${plannerEscape(g)}</option>`).join('');
 
-  // Zuchtschau-Lernmodell und ZS-Liste arbeiten bewusst mit dem gesamten
-  // Datenbestand, nicht nur mit den in Einstellungen gesetzten aktiven Züchtern.
+  // Das Lernmodell nutzt weiterhin ALLE geeigneten Pferde der gesamten
+  // Datenbank. Für die sichtbare ZS-Liste werden dagegen nur die in den
+  // Einstellungen aktiven Züchter als Mehrfachauswahl angeboten.
   const zsVisibleHorses=TP_ALL_HORSES.filter(h=>!(typeof mdrIsLearningHorse==='function' && mdrIsLearningHorse(h)));
-  const zsOwners=[...new Set(zsVisibleHorses.map(h=>h.owner).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
-  const zsBreeds=[...new Set(zsVisibleHorses.map(h=>normalizeBreed(h.breed)||'Rasselos'))].sort((a,b)=>a.localeCompare(b,'de'));
-  const ownerSel=document.getElementById('tp-zs-owner');
-  if (ownerSel) ownerSel.innerHTML='<option value="">Alle Besitzer</option>' + zsOwners.map(v=>`<option value="${plannerEscape(v)}">${plannerEscape(v)}</option>`).join('');
+  const allOwners=[...new Set(zsVisibleHorses.map(h=>h.owner).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+  const zsOwners=typeof activeBreederOptions==='function' ? activeBreederOptions(allOwners) : allOwners.filter(isActiveBreeder);
+  const ownerRoot=document.getElementById('tp-zs-owners');
+  if (ownerRoot) ownerRoot.innerHTML=zsOwners.length
+    ? zsOwners.map(v=>`<label class="tp-zs-owner-option"><input type="checkbox" value="${plannerEscape(v)}" checked> <span>${plannerEscape(v)}</span></label>`).join('')
+    : '<span class="tiny muted">Keine aktiven Züchter konfiguriert.</span>';
+  const zsBreeds=[...new Set(zsVisibleHorses.filter(h=>zsOwners.includes(String(h.owner||'').trim())).map(h=>normalizeBreed(h.breed)||'Rasselos'))].sort((a,b)=>a.localeCompare(b,'de'));
   const breedSel=document.getElementById('tp-zs-breed');
   if (breedSel) breedSel.innerHTML='<option value="">Alle Rassen</option>' + zsBreeds.map(v=>`<option value="${plannerEscape(v)}">${plannerEscape(v)}</option>`).join('');
 }
@@ -108,26 +151,15 @@ function wireTurnierMainTabs() {
   });
 
   ['tp-zs-name'].forEach(id=>document.getElementById(id)?.addEventListener('input',renderBreedingShowOverview));
-  ['tp-zs-owner','tp-zs-breed','tp-zs-only','tp-zs-breeding'].forEach(id=>document.getElementById(id)?.addEventListener('change',renderBreedingShowOverview));
+  ['tp-zs-breed','tp-zs-only','tp-zs-breeding'].forEach(id=>document.getElementById(id)?.addEventListener('change',renderBreedingShowOverview));
+  document.getElementById('tp-zs-owners')?.addEventListener('change',renderBreedingShowOverview);
   document.getElementById('tp-zs-reset')?.addEventListener('click',()=>{
     const defaults={
-      'tp-zs-name':'','tp-zs-owner':'','tp-zs-breed':'','tp-zs-only':'with','tp-zs-breeding':''
+      'tp-zs-name':'','tp-zs-breed':'','tp-zs-only':'with','tp-zs-breeding':''
     };
     Object.entries(defaults).forEach(([id,value])=>{ const el=document.getElementById(id); if(el) el.value=value; });
+    document.querySelectorAll('#tp-zs-owners input[type="checkbox"]').forEach(cb=>{ cb.checked=true; });
     renderBreedingShowOverview();
-  });
-
-  document.getElementById('tp-cup-body')?.addEventListener('click', async (e) => {
-    const btn=e.target.closest('[data-confirm-cup]');
-    if (!btn) return;
-    btn.disabled=true;
-    try {
-      await confirmProbableCupStar(btn.dataset.horseId, btn.dataset.discipline);
-    } catch (error) {
-      console.error(error);
-      alert('Cupstern konnte nicht bestätigt werden: ' + (error.message || String(error)));
-      btn.disabled=false;
-    }
   });
 }
 
@@ -726,27 +758,18 @@ function cupNextDateForDiscipline(discipline, refDate=new Date()) {
 
 function cupCalendarAvailability(discipline, lk) {
   const ready=[];
-  const probable=[];
   const unknown=[];
 
   for (const horse of TP_HORSES) {
-    const results=plannerTournamentResults(horse);
-    const row=results[discipline];
-    if (row?.cup_star) {
-      if (row.cup_lk === lk) ready.push(horse);
-      else if (!row.cup_lk) unknown.push(horse);
-      continue;
-    }
-
-    const progress=plannerCupProgress(horse,discipline);
-    if (!progress.requirementsReached) continue;
-    const calculatedLk=plannerTournamentEvaluation(horse,discipline)?.lk || '';
-    if (calculatedLk === lk) probable.push(horse);
+    const row=plannerTournamentResults(horse)[discipline];
+    if (!row?.cup_star) continue;
+    if (row.cup_lk === lk) ready.push(horse);
+    else if (!row.cup_lk) unknown.push(horse);
   }
 
   const byName=(a,b)=>(a.name||'').localeCompare(b.name||'','de');
-  ready.sort(byName); probable.sort(byName); unknown.sort(byName);
-  return {ready,probable,unknown};
+  ready.sort(byName); unknown.sort(byName);
+  return {ready,unknown};
 }
 
 function cupCandidateLinks(horses) {
@@ -754,14 +777,11 @@ function cupCandidateLinks(horses) {
 }
 
 function cupAvailabilityHtml(discipline, lk) {
-  const {ready,probable}=cupCalendarAvailability(discipline,lk);
+  const {ready}=cupCalendarAvailability(discipline,lk);
   const readyHtml=ready.length
     ? `<details class="cup-availability cup-availability-ready"><summary>🟢 ${ready.length} verfügbar</summary><div class="cup-candidate-list">${cupCandidateLinks(ready)}</div></details>`
     : '<div class="cup-availability cup-availability-none">⚪ 0 verfügbar</div>';
-  const probableHtml=probable.length
-    ? `<details class="cup-availability cup-availability-probable"><summary>🟡 +${probable.length} wahrscheinlich</summary><div class="cup-candidate-list">${cupCandidateLinks(probable)}</div></details>`
-    : '';
-  return `<div class="cup-lk-slot"><strong>${lk} · ${MDR_CUP_TIMES[lk]}</strong>${readyHtml}${probableHtml}</div>`;
+  return `<div class="cup-lk-slot"><strong>${lk} · ${MDR_CUP_TIMES[lk]}</strong>${readyHtml}</div>`;
 }
 
 function renderCupCalendar() {
@@ -778,7 +798,6 @@ function renderCupCalendar() {
   const first=rows[0];
   const firstAvail=MDR_CUP_LKS.map(lk=>({lk,...cupCalendarAvailability(first.discipline,lk)}));
   const readyTotal=firstAvail.reduce((sum,x)=>sum+x.ready.length,0);
-  const probableTotal=firstAvail.reduce((sum,x)=>sum+x.probable.length,0);
   const firstReg=cupRegistrationDate(first.date);
   const firstOpen=today >= cupLocalDateOnly(firstReg) && today <= cupLocalDateOnly(first.date);
 
@@ -791,10 +810,9 @@ function renderCupCalendar() {
       </div>
       <div class="cup-calendar-hero-counts">
         <span class="cup-count-ready">🟢 ${readyTotal} verfügbar</span>
-        <span class="cup-count-probable">🟡 ${probableTotal} wahrscheinlich</span>
       </div>
     </div>
-    <p class="tiny muted cup-calendar-rule">Fester MDR-Regelplan: 1. = Dressur bis 28. = Racking. LK10 um 21:00, LK9 um 22:00, LK8 um 23:00. Freischaltung zur Anmeldung jeweils 3 Tage vorher. Verfügbarkeit bezieht sich auf die in den Einstellungen aktiven Züchter. Grün zählt nur bestätigte Cupsterne mit passender Cup-LK; Gelb sind noch unbestätigte Vorerkennungen.</p>
+    <p class="tiny muted cup-calendar-rule">Fester MDR-Regelplan: 1. = Dressur bis 28. = Racking. LK10 um 21:00, LK9 um 22:00, LK8 um 23:00. Freischaltung zur Anmeldung jeweils 3 Tage vorher. Verfügbarkeit bezieht sich auf die in den Einstellungen aktiven Züchter. Grün zählt automatisch erkannte Cupsterne mit passender gespeicherter Cup-LK.</p>
     <div class="cup-calendar-list">
       ${rows.map((row,index)=>{
         const distance=cupDayDistance(today,row.date);
@@ -817,14 +835,14 @@ function renderCupCalendar() {
             <span>${plannerEscape(MDR_TOURNAMENT_DISCIPLINES[row.discipline]?.group || '')}</span>
           </div>
           <div class="cup-calendar-lks">${MDR_CUP_LKS.map(lk=>cupAvailabilityHtml(row.discipline,lk)).join('')}</div>
-          ${unknown.length ? `<details class="cup-calendar-unknown"><summary>⚠️ ${unknown.length} bestätigte${unknown.length===1?'r Cupstern':' Cupsterne'} ohne gespeicherte LK</summary><div class="cup-candidate-list">${cupCandidateLinks(unknown)}</div></details>` : ''}
+          ${unknown.length ? `<details class="cup-calendar-unknown"><summary>⚠️ ${unknown.length} Cupstern${unknown.length===1?'':'e'} ohne gespeicherte LK</summary><div class="cup-candidate-list">${cupCandidateLinks(unknown)}</div></details>` : ''}
         </article>`;
       }).join('')}
     </div>`;
 }
 
 // ---------------------------------------------------------------------
-// V53.3 – Cups & Erfolge mit bestätigbarer Cup-Vorerkennung
+// V54.0.15 – Cups & Erfolge mit vollautomatischer Cupstern-Erkennung
 // ---------------------------------------------------------------------
 function cupAchievementRows() {
   const rows=[];
@@ -834,63 +852,12 @@ function cupAchievementRows() {
       if (!result.first && !result.second && !result.third && !result.cup_star) continue;
       rows.push({horse,discipline,result,progress:plannerCupProgress(horse,discipline)});
     }
-    // Altes Cupstern-Schlagwort ohne strukturierte Disziplin sichtbar halten.
     const legacy=(horse?.tags || []).some(t=>(typeof t==='string'?t:t?.label)==='Cupstern');
     if (legacy && !plannerCupStarRows(horse).length && !Object.keys(results).length) {
       rows.push({horse,discipline:'',result:{first:0,second:0,third:0,cup_star:true,cup_lk:''},progress:{wins:0,starts:plannerTournamentStarts(horse),requirementsReached:false,cupStar:true}});
     }
   }
   return rows;
-}
-
-function cupProbableUnconfirmedRows(horse) {
-  const results=plannerTournamentResults(horse);
-  return Object.entries(results)
-    .filter(([discipline,row]) => !row.cup_star && plannerCupProgress(horse,discipline).requirementsReached)
-    .map(([discipline,row]) => ({discipline,row}));
-}
-
-async function confirmProbableCupStar(horseId, discipline) {
-  const horse=TP_ALL_HORSES.find(h=>String(h.id)===String(horseId));
-  if (!horse) throw new Error('Pferd nicht gefunden.');
-  if (!MDR_TOURNAMENT_DISCIPLINES[discipline]) throw new Error('Disziplin nicht erkannt.');
-  const progress=plannerCupProgress(horse,discipline);
-  if (!progress.requirementsReached && !progress.cupStar) {
-    throw new Error('Die bekannten Grundvoraussetzungen (50 Starts + 15 Siege) sind noch nicht erreicht.');
-  }
-
-  const raw = horse.tournament_results && typeof horse.tournament_results==='object' && !Array.isArray(horse.tournament_results)
-    ? {...horse.tournament_results} : {};
-  const existing = raw[discipline] && typeof raw[discipline]==='object' ? {...raw[discipline]} : {};
-  raw[discipline] = {
-    ...existing,
-    first: Number(progress.first || existing.first || 0),
-    second: Number(progress.second || existing.second || 0),
-    third: Number(progress.third || existing.third || 0),
-    cup_star: true,
-    // Bei einer manuellen Bestätigung der Vorerkennung ist die Cup-LK noch
-    // nicht aus dem MDR-Turnierreiter bekannt. Da ein Pferd je Disziplin nur
-    // in seiner durch den schwächsten Leistungswert bestimmten LK starten kann,
-    // übernehmen wir diese berechnete LK als sinnvolle Voreinstellung. Sie bleibt
-    // auf der Pferdeseite jederzeit korrigierbar.
-    cup_lk: existing.cup_lk || progress.cup_lk || plannerTournamentEvaluation(horse, discipline)?.lk || '',
-  };
-
-  const tags=Array.isArray(horse.tags) ? horse.tags.map(t=>typeof t==='string'?{label:t}:{...t}) : [];
-  if (!tags.some(t=>t?.label==='Cupstern')) tags.push({label:'Cupstern'});
-  const legacyCupResults={...(horse.cup_results || {})};
-  legacyCupResults[discipline]=Math.max(Number(legacyCupResults[discipline] || 0), Number(progress.first || 0));
-  const saved={...horse,tournament_results:raw,cup_results:legacyCupResults,tags,updated_at:new Date().toISOString()};
-  await localPut(LOCAL_STORES.horses,saved);
-
-  const replaceIn=(arr)=>{
-    const idx=arr.findIndex(h=>String(h.id)===String(horseId));
-    if (idx>=0) arr[idx]=saved;
-  };
-  replaceIn(TP_ALL_HORSES); replaceIn(TP_HORSES);
-  renderCupAchievements();
-  renderCupCalendar();
-  renderBreedingShowOverview();
 }
 
 function renderCupAchievements() {
@@ -909,17 +876,13 @@ function renderCupAchievements() {
     if (discipline && row.discipline!==discipline) return false;
     if (group && MDR_TOURNAMENT_DISCIPLINES[row.discipline]?.group!==group) return false;
 
-    const confirmed=Boolean(row.result.cup_star);
-    const probable=Boolean(row.progress.requirementsReached && !confirmed);
+    const hasStar=Boolean(row.result.cup_star);
     const wins=Number(row.result.first || 0);
-    // Cupsterne und wahrscheinliche Cupsterne bleiben immer sichtbar.
-    // Alle anderen Pferde werden erst ab 10 Siegen in dieser Disziplin gezeigt.
-    if (!confirmed && !probable && wins < 10) return false;
+    if (!hasStar && wins < 10) return false;
 
-    if (status==='star' && !confirmed) return false;
-    if (status==='no-star' && confirmed) return false;
-    if (status==='requirements' && !probable) return false;
-    if (status==='near' && !(wins>=10 && wins<15 && !confirmed)) return false;
+    if (status==='star' && !hasStar) return false;
+    if (status==='no-star' && hasStar) return false;
+    if (status==='near' && !(wins>=10 && wins<15 && !hasStar)) return false;
     return true;
   });
 
@@ -950,21 +913,15 @@ function renderCupAchievements() {
 
   body.innerHTML=rows.map(({horse,discipline,result,progress,evaluation,tournamentValue})=>{
     const starts=plannerTournamentStarts(horse);
-    const probable=progress.requirementsReached && !result.cup_star;
-    const confirmButton=probable
-      ? `<br><button type="button" class="secondary small cup-confirm-inline" data-confirm-cup data-horse-id="${plannerEscape(horse.id)}" data-discipline="${plannerEscape(discipline)}">⭐ bestätigen</button>`
-      : '';
     const statusText=result.cup_star
-      ? '<strong>⭐ Cupstern</strong>'
-      : probable
-        ? `<strong>⭐ Cupstern wahrscheinlich</strong>${confirmButton}`
-        : result.first>=10 ? `${result.first}/15 Siege` : 'ohne Cupstern';
+      ? '<strong>⭐ Cupstern · automatisch</strong>'
+      : result.first>=10 ? `${result.first}/15 Siege` : 'ohne Cupstern';
     const nextCupDate=discipline ? cupNextDateForDiscipline(discipline) : null;
     const cupDistance=nextCupDate ? cupDayDistance(cupLocalDateOnly(new Date()),nextCupDate) : null;
-    const upcomingClass=(result.cup_star || probable) && cupDistance!=null
+    const upcomingClass=result.cup_star && cupDistance!=null
       ? (cupDistance<=3 ? 'cup-row-urgent' : cupDistance<=7 ? 'cup-row-soon' : '')
       : '';
-    const upcomingBadge=(result.cup_star || probable) && cupDistance!=null && cupDistance<=7
+    const upcomingBadge=result.cup_star && cupDistance!=null && cupDistance<=7
       ? `<br><span class="tiny cup-upcoming-badge">📅 ${cupDistance===0?'Cup heute':`Cup in ${cupDistance} Tag${cupDistance===1?'':'en'}`}</span>`
       : '';
     const cupLk=result.cup_lk || progress.cup_lk || evaluation?.lk || '–';
@@ -1003,10 +960,6 @@ function zsFeatureObject(horse) {
   return values;
 }
 
-function zsHasUnconfirmedProbableCup(horse) {
-  return cupProbableUnconfirmedRows(horse).length>0;
-}
-
 function zsTrainingStatus(horse) {
   const total=plannerBreedingShowPoints(horse);
   if (total==null) return {eligible:false,reason:'no-zs'};
@@ -1017,10 +970,6 @@ function zsTrainingStatus(horse) {
   // abziehbare Turnierbonus offensichtlich unvollständig und darf das
   // Lernmodell nicht verfälschen.
   if (plannerTournamentPlacements(horse)<1) return {eligible:false,reason:'missing-tournament'};
-  // Ein wahrscheinlicher, aber noch nicht bestätigter Cupstern verschiebt
-  // den Grundwert um 100 Punkte. Bis zur Bestätigung wird dieses Pferd
-  // daher bewusst nicht als Trainingsdatensatz benutzt.
-  if (zsHasUnconfirmedProbableCup(horse)) return {eligible:false,reason:'cup-unconfirmed'};
   const y=plannerBreedingShowBase(horse);
   if (y==null || !Number.isFinite(y) || y<0) return {eligible:false,reason:'invalid-base'};
   return {eligible:true,y,x};
@@ -1110,14 +1059,13 @@ function zsCrossValidate(rows, featureKeys, lambda) {
 
 function zsTrainingRowsAndExclusions() {
   const rows=[];
-  const exclusions={noZs:0,missingFeatures:0,missingTournament:0,cupUnconfirmed:0,invalidBase:0};
+  const exclusions={noZs:0,missingFeatures:0,missingTournament:0,invalidBase:0};
   for (const horse of TP_ALL_HORSES) {
     const st=zsTrainingStatus(horse);
     if (st.eligible) rows.push({horse,y:st.y,x:st.x});
     else if (st.reason==='no-zs') exclusions.noZs++;
     else if (st.reason==='missing-features') exclusions.missingFeatures++;
     else if (st.reason==='missing-tournament') exclusions.missingTournament++;
-    else if (st.reason==='cup-unconfirmed') exclusions.cupUnconfirmed++;
     else if (st.reason==='invalid-base') exclusions.invalidBase++;
   }
   return {rows,exclusions};
@@ -1200,7 +1148,6 @@ function renderBreedingShowOverview() {
   if (info) {
     const ex=model.exclusions || {};
     const waiting=[];
-    if (ex.cupUnconfirmed) waiting.push(`${ex.cupUnconfirmed} mit noch unbestätigtem wahrscheinlichem Cupstern`);
     if (ex.missingTournament) waiting.push(`${ex.missingTournament} mit fehlenden Turnierplatzierungen`);
     if (ex.missingFeatures) waiting.push(`${ex.missingFeatures} mit unvollständigen GP/Ext/Ext%/Int-Daten`);
     if (model.n<8) {
@@ -1221,14 +1168,20 @@ function renderBreedingShowOverview() {
   }
 
   const nameQ=(document.getElementById('tp-zs-name')?.value || '').trim().toLowerCase();
-  const owner=document.getElementById('tp-zs-owner')?.value || '';
+  const selectedOwners=[...document.querySelectorAll('#tp-zs-owners input[type="checkbox"]:checked')].map(cb=>cb.value);
   const breed=document.getElementById('tp-zs-breed')?.value || '';
   const only=document.getElementById('tp-zs-only')?.value || '';
   const breeding=document.getElementById('tp-zs-breeding')?.value || '';
-  let rows=TP_ALL_HORSES.filter(h=>{
-    if (typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)) return false;
+  const nonLearning=TP_ALL_HORSES.filter(h=>!(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
+  const ownerScope=nonLearning.filter(h=>selectedOwners.includes(String(h.owner||'').trim()));
+  const missingTournamentCount=ownerScope.filter(h=>plannerTournamentPlacements(h)<1).length;
+  let rows=ownerScope.filter(h=>{
+    // V54.0.15: Pferde ohne eingelesene Turnierplatzierungen werden in der
+    // ZS-Liste gar nicht erst gezeigt, da ihr abziehbarer Turnierbonus
+    // nicht verlässlich bestimmt werden kann. Das Lernmodell selbst nutzt
+    // weiterhin den gesamten Datenbestand und wendet dieselbe Schutzregel an.
+    if (plannerTournamentPlacements(h)<1) return false;
     if (nameQ && !(h.name||'').toLowerCase().includes(nameQ)) return false;
-    if (owner && h.owner!==owner) return false;
     if (breed && (normalizeBreed(h.breed)||'Rasselos')!==breed) return false;
     const total=plannerBreedingShowPoints(h);
     if (only==='with' && total==null) return false;
@@ -1239,7 +1192,7 @@ function renderBreedingShowOverview() {
     return true;
   });
   rows.sort((a,b)=>(plannerBreedingShowPoints(b)??-1)-(plannerBreedingShowPoints(a)??-1) || (a.name||'').localeCompare(b.name||'','de'));
-  document.getElementById('tp-zs-count').textContent=`${rows.length} Pferde`;
+  document.getElementById('tp-zs-count').textContent=`${rows.length} angezeigt · ${missingTournamentCount} wegen fehlender Turnierdaten ausgeblendet`;
   if (!rows.length) {
     body.innerHTML='<tr><td colspan="7" class="muted">Noch keine passenden Pferde. ZS-Gesamtpunkte werden auf der Pferdeseite im Reiter Turnierwerte manuell eingetragen.</td></tr>';
     return;
@@ -1256,7 +1209,6 @@ function renderBreedingShowOverview() {
     if (total!=null && !st.eligible) {
       const map={
         'missing-tournament':'Turnierdaten fehlen – nicht im Lernmodell',
-        'cup-unconfirmed':'Cupstern wahrscheinlich – erst bestätigen',
         'missing-features':'Grundwerte unvollständig – nicht im Lernmodell',
         'invalid-base':'ZS-Grundwert unplausibel – bitte prüfen',
       };

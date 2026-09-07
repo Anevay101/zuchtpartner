@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <title>Pferd – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5414" />
+  <link rel="stylesheet" href="css/style.css?v=5415" />
 </head>
 <body>
   <header class="topbar">
@@ -54,6 +54,7 @@
       </div>
 
       <div class="tab-panel" data-tab-panel="stammdaten">
+        <div id="import-review-panel" class="import-review-panel" hidden></div>
         <div style="display: flex; align-items: center; gap: 0.6rem;">
           <button type="button" id="prev-horse-btn" class="secondary" hidden title="Speichern &amp; vorheriges Pferd (alphabetisch)">←</button>
           <fieldset style="flex: 1; min-width: 0;">
@@ -212,7 +213,7 @@
         <div id="detail-turnier"></div>
 
         <details class="card cup-editor-card">
-          <summary><strong>🏅 Turniererfolge &amp; MDR-Cup-Status prüfen / korrigieren</strong></summary>
+          <summary><strong>🏅 Turniererfolge &amp; MDR-Cup-Status</strong></summary>
           <div class="form-grid tournament-meta-fields">
             <div>
               <label for="tournament_starts_total">Turnierstarts gesamt</label>
@@ -224,7 +225,7 @@
             Je Disziplin 1., 2. und 3. Plätze. Für die Zuchtschau zählen: <strong>35 / 25 / 15 Punkte</strong>, zusammen maximal <strong>500 Turnier-Zusatzpunkte</strong>. Ein Cupstern zählt <strong>100 Punkte</strong>.
           </p>
           <p class="small muted">
-            Der tatsächliche Cupstern wird aus „MDR-Cup Qualifikation“ übernommen oder hier manuell gesetzt; 15 Siege allein setzen ihn nicht automatisch. Mehrere Cupstern-Disziplinen sind möglich.
+            Cupsterne werden automatisch erkannt: mindestens 50 Gesamtstarts und mindestens 15 Siege in der jeweiligen Disziplin. Eine vorhandene MDR-Cup-Qualifikation samt LK wird direkt übernommen. Mehrere Cupstern-Disziplinen sind möglich.
           </p>
           <div id="cup-results-editor"></div>
         </details>
@@ -282,19 +283,19 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5414"></script>
-<script src="js/database-local.js?v=5414"></script>
-  <script src="js/local-app.js?v=5414"></script>
-  <script src="js/learning-file.js?v=5414"></script>
-  <script src="js/parser.js?v=5414"></script>
-  <script src="js/data-quality.js?v=5414"></script>
-  <script src="js/planer-common.js?v=5414"></script>
-  <script src="js/zuchtplaner-engine-helpers.js?v=5414"></script>
-  <script src="js/breeding-original.js?v=5414"></script>
-  <script src="js/verpaarungsratgeber-engine.js?v=5414"></script>
-  <script src="js/foal-prediction.js?v=5414"></script>
-  <script src="js/pregnancy-sync.js?v=5414"></script>
-  <script src="js/breeding-progress.js?v=5414"></script>
-  <script src="js/horseForm.js?v=5414"></script>
+<script src="js/supabase-config.js?v=5415"></script>
+<script src="js/database-local.js?v=5415"></script>
+  <script src="js/local-app.js?v=5415"></script>
+  <script src="js/learning-file.js?v=5415"></script>
+  <script src="js/parser.js?v=5415"></script>
+  <script src="js/data-quality.js?v=5415"></script>
+  <script src="js/planer-common.js?v=5415"></script>
+  <script src="js/zuchtplaner-engine-helpers.js?v=5415"></script>
+  <script src="js/breeding-original.js?v=5415"></script>
+  <script src="js/verpaarungsratgeber-engine.js?v=5415"></script>
+  <script src="js/foal-prediction.js?v=5415"></script>
+  <script src="js/pregnancy-sync.js?v=5415"></script>
+  <script src="js/breeding-progress.js?v=5415"></script>
+  <script src="js/horseForm.js?v=5415"></script>
 </body>
 </html>
