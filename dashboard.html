@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Dashboard – MDR Pferdedatenbank</title>
+  <link rel="stylesheet" href="css/style.css?v=5416" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>📊 Dashboard</h1>
+    <nav>
+      <a class="btn secondary" href="index.html">← Zur Übersicht</a>
+      
+          <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
+      <a class="btn secondary" href="turnierplaner.html">🏆 Turnierplaner</a>
+      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <p class="muted small">
+      Bestandsübersicht für die aktiven Züchter: Durchschnittswerte sowie Verteilung von Hauptgruppen und Begabungen. Die Filter wirken auf beide Bereiche.
+    </p>
+
+    <section id="dashboard-saved-tiles-section" class="dashboard-saved-tiles-section" hidden>
+      <h2>Gespeicherte Kacheln</h2><div id="dashboard-saved-tiles" class="dashboard-saved-tiles"></div>
+    </section>
+
+    <form id="avg-filter-form" class="filter-bar">
+      <div class="field">
+        <label>Besitzer (Mehrfachauswahl)</label>
+        <div class="checkdrop" id="d-owner-drop">
+          <button type="button" class="checkdrop-toggle">Alle</button>
+          <div class="checkdrop-panel" hidden></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="d-breed">Rasse</label>
+        <select id="d-breed"><option value="">Alle</option></select>
+      </div>
+      <div class="field">
+        <label for="d-gender">Geschlecht</label>
+        <select id="d-gender"><option value="">Alle</option></select>
+      </div>
+      <div class="field">
+        <label for="d-zzl">ZZL</label>
+        <select id="d-zzl">
+          <option value="">Alle</option>
+          <option value="true">Mit ZZL</option>
+          <option value="false">Ohne ZZL</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Schlagwörter</label>
+        <div class="checkdrop" id="d-tag-drop">
+          <button type="button" class="checkdrop-toggle">Alle</button>
+          <div class="checkdrop-panel" hidden></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" id="avg-reset" class="secondary">Zurücksetzen</button>
+        <button type="submit">Berechnen</button>
+      </div>
+    </form>
+
+    <fieldset class="dashboard-panel">
+      <legend>Bestands-Durchschnitt</legend>
+      <div id="avg-result"><p class="muted small">Lade…</p></div>
+    </fieldset>
+
+    <fieldset class="dashboard-panel">
+      <legend>Pferd vs. eigener Rassedurchschnitt</legend>
+      <div class="form-grid">
+        <div>
+          <label for="compare-horse">Pferd</label>
+          <select id="compare-horse"><option value="">Bitte wählen…</option></select>
+        </div>
+      </div>
+      <div id="breed-compare-result"><p class="muted small">Bitte ein Pferd auswählen.</p></div>
+    </fieldset>
+
+    <details class="card dashboard-breeding-card dashboard-panel">
+      <summary><strong>📊 Zuchtbestand &amp; Turnierausrichtung</strong></summary>
+      <p class="small muted">Zeigt, wie stark die 7 Hauptgruppen und ihre jeweils 4 Begabungen im aktuell gefilterten aktiven Zuchtbestand vertreten sind. Unterrepräsentierte Begabungen sind nur ein Hinweis und verändern kein Zuchtranking.</p>
+      <div id="breeding-dashboard"><p class="muted small">Lade…</p></div>
+    </details>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js?v=5416"></script>
+<script src="js/database-local.js?v=5416"></script>
+  <script src="js/local-app.js?v=5416"></script>
+  <script src="js/learning-file.js?v=5416"></script>
+  <script src="js/parser.js?v=5416"></script>
+  <script src="js/data-quality.js?v=5416"></script>
+  <script src="js/breeding-progress.js?v=5416"></script>
+  <script src="js/planer-common.js?v=5416"></script>
+  <script src="js/durchschnitt.js?v=5416"></script>
+</body>
+</html>
