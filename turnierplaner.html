@@ -4,8 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
+  <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Turnier & Leistung – MDR Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5417" />
+  <link rel="stylesheet" href="css/style.css?v=5418" />
 </head>
 <body class="turnierplaner-page">
 <header class="topbar">
@@ -141,16 +143,16 @@
 
   <section id="tp-tab-show" class="tp-main-panel" hidden>
     <div class="notice small">
-      <strong>Zuchtschau:</strong> 1. Platz = 35, 2. Platz = 25, 3. Platz = 15 Zusatzpunkte; Turnierbonus maximal 500. Jeder automatisch erkannte Cupstern zählt 100 Punkte. Die ZS-Gesamtpunkte werden auf der Pferdeseite manuell eingetragen.
+      <strong>Zuchtschau:</strong> 1. Platz = 35, 2. Platz = 25, 3. Platz = 15 Zusatzpunkte; Turnierbonus maximal 500. Jeder automatisch erkannte Cupstern zählt 100 Punkte. Die ZS-Gesamtpunkte werden auf der Pferdeseite manuell eingetragen. Nur positive ZS-Punktangaben gelten als echte ZS-Daten; leer oder 0 bedeutet „kein ZS-Wert vorhanden“.
     </div>
     <section class="card">
       <div id="tp-zs-model-info" class="tp-zs-model-status"></div>
       <details class="tp-zs-model-details">
         <summary>ℹ️ Wie funktioniert das Lernmodell?</summary>
         <div class="tp-zs-model-explanation small">
-          <p><strong>Was lernt die Datenbank?</strong> Sie lernt ausschließlich aus Pferden, bei denen echte Zuchtschau-Punkte eingetragen sind und GP, Ext, Ext%, Int sowie der Erbkrankheitsstatus auswertbar sind. Pferde ohne ZS-Punkte werden niemals als Lerndaten verwendet – für sie wird nur eine Prognose berechnet.</p>
+          <p><strong>Was lernt die Datenbank?</strong> Sie lernt ausschließlich aus Pferden, bei denen eine echte positive Zuchtschau-Punktzahl eingetragen ist und GP, Ext, Ext%, Int sowie der Erbkrankheitsstatus auswertbar sind. Leer oder 0 gilt als „kein ZS-Wert vorhanden“ und wird weder in der sichtbaren ZS-Auswertung noch als Lerndatum verwendet. Für solche Pferde kann die gelernte Formel weiterhin eine Prognose berechnen.</p>
           <p><strong>Schritt 1 – Grundwert:</strong> Von den eingetragenen ZS-Gesamtpunkten werden die bekannten Turnierpunkte (35/25/15, maximal 500) und 100 Punkte je automatisch erkanntem Cupstern abgezogen. Dieser verbleibende ZS-Grundwert ist der Zielwert des Lernmodells.</p>
-          <p><strong>Schritt 2 – Lernformel:</strong> Aus allen geeigneten Pferden der gesamten Datenbank – unabhängig vom aktiven Züchter – wird eine <strong>stabilisierte lineare Regression</strong> aus GP, Ext, Ext% und Int berechnet. Die Stärke der Stabilisierung wird nicht mehr fest vorgegeben, sondern per Kreuzvalidierung aus den vorhandenen echten ZS-Daten gewählt. Erbkrankheiten werden erst als eigener Faktor mitgelernt, wenn mindestens 3 betroffene und 3 unauffällige Lernpferde vorhanden sind.</p>
+          <p><strong>Schritt 2 – Lernformel:</strong> Aus allen geeigneten Pferden der gesamten Datenbank – einschließlich geeigneter Lerndatei-Datensätze und unabhängig vom sichtbaren Züchterfilter – wird eine <strong>stabilisierte lineare Regression</strong> aus GP, Ext, Ext% und Int berechnet. Die Stärke der Stabilisierung wird nicht mehr fest vorgegeben, sondern per Kreuzvalidierung aus den vorhandenen echten ZS-Daten gewählt. Erbkrankheiten werden erst als eigener Faktor mitgelernt, wenn mindestens 3 betroffene und 3 unauffällige Lernpferde vorhanden sind.</p>
           <p><strong>Wichtig zur Formel:</strong> Die Koeffizienten sind gemeinsame statistische Effekte. GP, Ext und Ext% hängen teilweise miteinander zusammen; deshalb ist ein einzelnes Vorzeichen nicht als geheime MDR-Spielregel zu lesen. Entscheidend ist, wie gut die komplette Formel in der Kreuzvalidierung neue Pferde trifft.</p>
           <p><strong>Schritt 3 – Prognose:</strong> Für jedes Pferd mit ausreichenden Grunddaten kann die gelernte Formel anschließend einen „DB-Prognose Grundwert“ berechnen. Diese Prognose fließt nie wieder als vermeintlich echter Wert ins Lernmodell zurück. Zusätzlich zeigt die Datenbank nun den Kreuzvalidierungsfehler (MAE/RMSE), damit erkennbar ist, wie gut die Formel auf bisher ungesehenen Pferden funktioniert.</p>
           <p><strong>Wie lese ich die Modellprüfung?</strong> <strong>MAE</strong> ist die durchschnittliche Abweichung der Prognose in ZS-Punkten – kleiner ist besser. <strong>RMSE</strong> reagiert stärker auf einzelne große Fehlprognosen. <strong>R²</strong> beschreibt, wie viel der Unterschiede zwischen den Pferden erklärt wird: näher an 1 ist besser; um 0 bringt die Formel gegenüber einem einfachen Durchschnitt kaum Zusatznutzen. Diese Werte werden mit Pferden berechnet, die beim jeweiligen Testdurchlauf nicht zum Anpassen der Formel benutzt wurden.</p>
@@ -162,7 +164,7 @@
         <div><label for="tp-zs-name">Name</label><input id="tp-zs-name" type="text" placeholder="Pferdename" /></div>
         <div class="tp-zs-breeder-filter"><label>Aktive Züchter</label><div id="tp-zs-owners" class="tp-zs-owner-checkboxes"></div></div>
         <div><label for="tp-zs-breed">Rasse</label><select id="tp-zs-breed"><option value="">Alle Rassen</option></select></div>
-        <div><label for="tp-zs-only">Anzeige</label><select id="tp-zs-only"><option value="">Alle Pferde</option><option value="with" selected>Nur mit Zuchtschau-Punkten</option><option value="forecast">Nur Prognose (ohne ZS-Punkte)</option></select></div>
+        <div><label for="tp-zs-only">Anzeige</label><select id="tp-zs-only"><option value="with" selected>ZS-Auswertung (nur echte ZS-Punkte)</option><option value="forecast">Nur Prognose (ohne ZS-Punkte)</option></select></div>
         <div><label for="tp-zs-breeding">Zuchtzulassung</label><select id="tp-zs-breeding"><option value="">Alle</option><option value="yes">Mit Zuchtzulassung</option><option value="no">Keine Zuchtzulassung</option><option value="unknown">Nicht erfasst</option></select></div>
       </div>
       <div class="actions"><button class="secondary" id="tp-zs-reset" type="button">Filter zurücksetzen</button></div>
@@ -175,14 +177,14 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5417"></script>
-<script src="js/database-local.js?v=5417"></script>
-<script src="js/local-app.js?v=5417"></script>
-<script src="js/learning-file.js?v=5417"></script>
-<script src="js/parser.js?v=5417"></script>
-<script src="js/data-quality.js?v=5417"></script>
-<script src="js/planer-common.js?v=5417"></script>
-<script src="js/tournament-recommendation.js?v=5417"></script>
-<script src="js/turnierplaner-local.js?v=5417"></script>
+<script src="js/supabase-config.js?v=5418"></script>
+<script src="js/database-local.js?v=5418"></script>
+<script src="js/local-app.js?v=5418"></script>
+<script src="js/learning-file.js?v=5418"></script>
+<script src="js/parser.js?v=5418"></script>
+<script src="js/data-quality.js?v=5418"></script>
+<script src="js/planer-common.js?v=5418"></script>
+<script src="js/tournament-recommendation.js?v=5418"></script>
+<script src="js/turnierplaner-local.js?v=5418"></script>
 </body>
 </html>

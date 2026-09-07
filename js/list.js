@@ -29,6 +29,8 @@ let currentSession = null;
 let currentIdentity = null;
 let bestFoalOverviewEnabled = true;
 let breedingOverviewContext = null;
+let breedingOverviewContextVersion = -1;
+const derivedHorseCache = new WeakMap();
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -88,9 +90,14 @@ async function init() {
   await loadUserSettings(session);
   await showMissingDataNotice(session);
   await checkAgeNotices(session);
-  await loadTagSuggestions();
-  await populateFilterOptions();
-  await loadFilterPresets();
+  // Diese drei Bereiche sind voneinander unabhängig. Nach dem einmaligen
+  // Pferde-Ladevorgang dürfen ihre restlichen Stores parallel aus Supabase
+  // kommen statt drei Warteketten nacheinander zu bilden.
+  await Promise.all([
+    loadTagSuggestions(),
+    populateFilterOptions(),
+    loadFilterPresets(),
+  ]);
   await loadHorses();
 }
 
@@ -646,7 +653,8 @@ async function buildQuery() {
     return true;
   });
 
-  data.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'));
+  // Die endgültige Sortierung passiert zentral in applySort(); ein zweiter
+  // Namens-Sortierlauf hier wäre bei jedem Filter unnötige Arbeit.
   return { data, error: null };
 }
 
@@ -659,9 +667,10 @@ function colorCodeOf(row) {
 // zentral, damit Anzeige (rowHtml) und Filterung (applyClientFilters)
 // exakt dieselben Werte verwenden.
 function computeDerived(h) {
+  if (h && typeof h === 'object' && derivedHorseCache.has(h)) return derivedHorseCache.get(h);
   const gpRaw = h.tournament_potential?.['Gesamtpotenzial'];
   const genes = presentGenesSummary(h.colors, h.coat_color, h.notes, h.name, null, h.color_gene_overrides);
-  return {
+  const derived={
     colorCode: colorCodeOf(h),
     presentGenes: genes.map((g) => g.alleles).join(' '),
     gp: gpRaw != null && gpRaw !== '' ? Number(gpRaw) : null,
@@ -669,6 +678,8 @@ function computeDerived(h) {
     extPercent: h.exterior_genetics?.overall?.percent ?? null,
     intAvg: averageScore(h.temperament, scoreTemperamentTerm),
   };
+  if (h && typeof h === 'object') derivedHorseCache.set(h,derived);
+  return derived;
 }
 
 // --- Ø-Vergleich (Checkbox "Ø-Vergleich anzeigen") ---
@@ -783,14 +794,12 @@ async function computeCompareBaseline() {
     const nums = values.filter((v) => v != null && !Number.isNaN(v));
     return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
   };
+  const derived=data.map(computeDerived);
   return {
-    gp: avg(data.map((h) => {
-      const raw = h.tournament_potential?.['Gesamtpotenzial'];
-      return raw != null && raw !== '' ? Number(raw) : null;
-    })),
-    ext: avg(data.map((h) => averageScore(h.exterior_descriptive, scoreExteriorTerm))),
-    extPercent: avg(data.map((h) => h.exterior_genetics?.overall?.percent ?? null)),
-    int: avg(data.map((h) => averageScore(h.temperament, scoreTemperamentTerm))),
+    gp: avg(derived.map((d) => d.gp)),
+    ext: avg(derived.map((d) => d.extAvg)),
+    extPercent: avg(derived.map((d) => d.extPercent)),
+    int: avg(derived.map((d) => d.intAvg)),
   };
 }
 
@@ -1081,8 +1090,12 @@ async function loadHorses() {
   const { data, error } = await buildQuery();
 
   if (typeof bpBuildContext === 'function') {
-    const allHorsesForBreeding = await localGetAll(LOCAL_STORES.horses);
-    breedingOverviewContext = bpBuildContext(allHorsesForBreeding);
+    const cacheVersion=typeof mdrStoreCacheVersion === 'function' ? mdrStoreCacheVersion(LOCAL_STORES.horses) : 0;
+    if (!breedingOverviewContext || breedingOverviewContextVersion !== cacheVersion) {
+      const allHorsesForBreeding = await localGetAll(LOCAL_STORES.horses);
+      breedingOverviewContext = bpBuildContext(allHorsesForBreeding);
+      breedingOverviewContextVersion = typeof mdrStoreCacheVersion === 'function' ? mdrStoreCacheVersion(LOCAL_STORES.horses) : cacheVersion;
+    }
   }
 
   if (error) {

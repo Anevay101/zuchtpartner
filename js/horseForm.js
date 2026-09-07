@@ -382,7 +382,11 @@ function fillForm(data) {
   }
   for (const id of NUMBER_FIELDS) {
     const el = document.getElementById(id);
-    if (el && data[id] !== undefined && data[id] !== null) el.value = data[id];
+    if (!el || data[id] === undefined || data[id] === null) continue;
+    // Alte 0-Werte bei der Zuchtschau bedeuten „nicht mehr abrufbar“,
+    // nicht eine echte ZS-Punktzahl. Beim Bearbeiten deshalb wie leer zeigen.
+    if (id === 'breeding_show_points' && Number(data[id]) <= 0) el.value = '';
+    else el.value = data[id];
   }
   const flaxenCarrier = derivedFlaxenCarrierValue(data);
   if (flaxenCarrier !== null) data = { ...data, flaxen_carrier: flaxenCarrier };

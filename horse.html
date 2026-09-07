@@ -4,8 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
+  <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Pferd – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5417" />
+  <link rel="stylesheet" href="css/style.css?v=5418" />
 </head>
 <body>
   <header class="topbar">
@@ -215,8 +217,8 @@
           <div class="form-grid">
             <div>
               <label for="breeding_show_points">ZS-Punkte (manuell)</label>
-              <input id="breeding_show_points" type="number" min="0" step="1" placeholder="Gesamtpunktzahl der Zuchtschau" />
-              <div class="tiny muted">Dieser Wert steht nicht dauerhaft auf der MDR-Pferdeseite und wird deshalb bewusst manuell eingetragen. Turnier- und Cup-Zusatzpunkte zieht die Datenbank für den ZS-Grundwert selbst ab.</div>
+              <input id="breeding_show_points" type="number" min="1" step="1" placeholder="Gesamtpunktzahl der Zuchtschau" />
+              <div class="tiny muted">Dieser Wert steht nicht dauerhaft auf der MDR-Pferdeseite und wird deshalb bewusst manuell eingetragen. Wenn der ZS-Wert unbekannt oder nicht mehr abrufbar ist, das Feld leer lassen. Eine ältere 0-Angabe wird wie „kein ZS-Wert vorhanden“ behandelt. Turnier- und Cup-Zusatzpunkte zieht die Datenbank für den ZS-Grundwert selbst ab.</div>
             </div>
           </div>
         </div>
@@ -294,19 +296,19 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5417"></script>
-<script src="js/database-local.js?v=5417"></script>
-  <script src="js/local-app.js?v=5417"></script>
-  <script src="js/learning-file.js?v=5417"></script>
-  <script src="js/parser.js?v=5417"></script>
-  <script src="js/data-quality.js?v=5417"></script>
-  <script src="js/planer-common.js?v=5417"></script>
-  <script src="js/zuchtplaner-engine-helpers.js?v=5417"></script>
-  <script src="js/breeding-original.js?v=5417"></script>
-  <script src="js/verpaarungsratgeber-engine.js?v=5417"></script>
-  <script src="js/foal-prediction.js?v=5417"></script>
-  <script src="js/pregnancy-sync.js?v=5417"></script>
-  <script src="js/breeding-progress.js?v=5417"></script>
-  <script src="js/horseForm.js?v=5417"></script>
+<script src="js/supabase-config.js?v=5418"></script>
+<script src="js/database-local.js?v=5418"></script>
+  <script src="js/local-app.js?v=5418"></script>
+  <script src="js/learning-file.js?v=5418"></script>
+  <script src="js/parser.js?v=5418"></script>
+  <script src="js/data-quality.js?v=5418"></script>
+  <script src="js/planer-common.js?v=5418"></script>
+  <script src="js/zuchtplaner-engine-helpers.js?v=5418"></script>
+  <script src="js/breeding-original.js?v=5418"></script>
+  <script src="js/verpaarungsratgeber-engine.js?v=5418"></script>
+  <script src="js/foal-prediction.js?v=5418"></script>
+  <script src="js/pregnancy-sync.js?v=5418"></script>
+  <script src="js/breeding-progress.js?v=5418"></script>
+  <script src="js/horseForm.js?v=5418"></script>
 </body>
 </html>

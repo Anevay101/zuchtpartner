@@ -3,6 +3,7 @@ let TP_HORSES = [];
 let TP_ALL_HORSES = [];
 let TP_SELECTED = null;
 let TP_TOURNAMENT_REFERENCES = {};
+let TP_ZS_MODEL = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initTurnierplaner().catch(error => {
@@ -20,6 +21,10 @@ async function initTurnierplaner() {
 
   TP_ALL_HORSES = await localGetAll(LOCAL_STORES.horses);
   await persistAutomaticCupStars();
+  // Das ZS-Modell hängt nur vom geladenen Datenbestand ab, nicht von den
+  // sichtbaren Filtern. Einmal berechnen statt bei jedem Tastendruck erneut
+  // Kreuzvalidierung + Regression laufen zu lassen.
+  TP_ZS_MODEL = buildBreedingShowModel();
   // Lerndatei bleibt bewusst in TP_ALL_HORSES für das ZS-Lernmodell,
   // wird aber aus allen operativen Turnier-/Cup-Listen ausgeblendet.
   TP_HORSES = TP_ALL_HORSES.filter(h => isActiveBreeder(h.owner) && !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
@@ -44,9 +49,10 @@ async function persistAutomaticCupStars() {
   // Einmalige/laufende Datenpflege ohne Bestätigungsdialog: bereits
   // vorhandene Pferde, die 50 Gesamtstarts + 15 Siege in einer Disziplin
   // erfüllen, bekommen den automatisch abgeleiteten Cupstern samt
-  // berechenbarer LK auch strukturiert gespeichert. Dadurch sind Tag-
-  // Filter, JSON-Backups und andere Seiten konsistent, nicht nur die
-  // Laufzeit-Auswertung im Turnierplaner.
+  // berechenbarer LK auch strukturiert gespeichert. V54.0.18 sammelt alle
+  // nötigen Änderungen und schreibt sie als Bulk-Upsert statt vieler
+  // einzelner Cloud-Anfragen.
+  const changedRows=[];
   for (let i=0;i<TP_ALL_HORSES.length;i++) {
     const horse=TP_ALL_HORSES[i];
     const derived=plannerTournamentResults(horse);
@@ -72,9 +78,10 @@ async function persistAutomaticCupStars() {
     if (!tags.some(t=>t?.label==='Cupstern')) { tags.push({label:'Cupstern'}); changed=true; }
     if (!changed) continue;
     const saved={...horse,tournament_results:raw,tags,updated_at:new Date().toISOString()};
-    await localPut(LOCAL_STORES.horses,saved);
     TP_ALL_HORSES[i]=saved;
+    changedRows.push(saved);
   }
+  if (changedRows.length) await localBulkPut(LOCAL_STORES.horses,changedRows);
 }
 
 function buildTournamentControls() {
@@ -117,7 +124,9 @@ function buildCupAndShowControls() {
   // Das Lernmodell nutzt weiterhin ALLE geeigneten Pferde der gesamten
   // Datenbank. Für die sichtbare ZS-Liste werden dagegen nur die in den
   // Einstellungen aktiven Züchter als Mehrfachauswahl angeboten.
-  const zsVisibleHorses=TP_ALL_HORSES.filter(h=>!(typeof mdrIsLearningHorse==='function' && mdrIsLearningHorse(h)));
+  const zsVisibleHorses=TP_ALL_HORSES.filter(h=>
+    !(typeof mdrIsLearningHorse==='function' && mdrIsLearningHorse(h))
+  );
   const allOwners=[...new Set(zsVisibleHorses.map(h=>h.owner).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
   const zsOwners=typeof activeBreederOptions==='function' ? activeBreederOptions(allOwners) : allOwners.filter(isActiveBreeder);
   const ownerRoot=document.getElementById('tp-zs-owners');
@@ -1142,14 +1151,14 @@ function zsFormulaText(model) {
 function renderBreedingShowOverview() {
   const body=document.getElementById('tp-zs-body');
   if (!body) return;
-  const model=buildBreedingShowModel();
+  const model=TP_ZS_MODEL || (TP_ZS_MODEL=buildBreedingShowModel());
   const info=document.getElementById('tp-zs-model-info');
   const formula=document.getElementById('tp-zs-model-formula');
   if (info) {
     const ex=model.exclusions || {};
     const waiting=[];
-    if (ex.missingTournament) waiting.push(`${ex.missingTournament} mit fehlenden Turnierplatzierungen`);
-    if (ex.missingFeatures) waiting.push(`${ex.missingFeatures} mit unvollständigen GP/Ext/Ext%/Int-Daten`);
+    if (ex.missingTournament) waiting.push(`${ex.missingTournament} ZS-Datensätze mit fehlenden Turnierplatzierungen`);
+    if (ex.missingFeatures) waiting.push(`${ex.missingFeatures} ZS-Datensätze mit unvollständigen GP/Ext/Ext%/Int-Daten`);
     if (model.n<8) {
       info.innerHTML=`Lernmodell: <strong>n=${model.n}</strong> verwertbare echte Zuchtschau-Grundwerte. Ab n=8 startet eine vorsichtige Prognose.${waiting.length?` Noch nicht im Lernmodell: ${waiting.join(' · ')}.`:''}`;
     } else {
@@ -1163,38 +1172,47 @@ function renderBreedingShowOverview() {
   }
   if (formula) {
     formula.innerHTML=model.fit
-      ? `<strong>Aktuell gelernte Formel:</strong> ${plannerEscape(zsFormulaText(model))}<br><span class="muted">Die Formel wird bei jeder Änderung echter ZS-Daten neu aus allen verwertbaren Pferden berechnet. Die Kreuzvalidierung prüft sie auf jeweils zurückgehaltenen Pferden und ist daher aussagekräftiger als die reine Anpassung an die Lerndaten.</span>`
+      ? `<strong>Aktuell gelernte Formel:</strong> ${plannerEscape(zsFormulaText(model))}<br><span class="muted">Die Formel wird aus allen verwertbaren echten ZS-Daten der gesamten Datenbank berechnet. Sichtbare Züchter-/Rassefilter beeinflussen das Lernmodell nicht.</span>`
       : 'Noch keine Formel – mindestens 8 verwertbare ZS-Datensätze nötig.';
   }
 
   const nameQ=(document.getElementById('tp-zs-name')?.value || '').trim().toLowerCase();
   const selectedOwners=[...document.querySelectorAll('#tp-zs-owners input[type="checkbox"]:checked')].map(cb=>cb.value);
   const breed=document.getElementById('tp-zs-breed')?.value || '';
-  const only=document.getElementById('tp-zs-only')?.value || '';
+  const only=document.getElementById('tp-zs-only')?.value || 'with';
   const breeding=document.getElementById('tp-zs-breeding')?.value || '';
-  const nonLearning=TP_ALL_HORSES.filter(h=>!(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
-  const ownerScope=nonLearning.filter(h=>selectedOwners.includes(String(h.owner||'').trim()));
-  const missingTournamentCount=ownerScope.filter(h=>plannerTournamentPlacements(h)<1).length;
-  let rows=ownerScope.filter(h=>{
-    // V54.0.15: Pferde ohne eingelesene Turnierplatzierungen werden in der
-    // ZS-Liste gar nicht erst gezeigt, da ihr abziehbarer Turnierbonus
-    // nicht verlässlich bestimmt werden kann. Das Lernmodell selbst nutzt
-    // weiterhin den gesamten Datenbestand und wendet dieselbe Schutzregel an.
-    if (plannerTournamentPlacements(h)<1) return false;
-    if (nameQ && !(h.name||'').toLowerCase().includes(nameQ)) return false;
-    if (breed && (normalizeBreed(h.breed)||'Rasselos')!==breed) return false;
+
+  // V54.0.18: Im Modus „ZS-Auswertung“ erscheinen ausschließlich Pferde
+  // mit einer echten, positiven ZS-Punktangabe. 0/leer = ZS-Wert unbekannt
+  // bzw. nicht mehr abrufbar. Der separate Prognose-Modus bleibt erhalten,
+  // damit Pferde ohne echten ZS-Wert weiterhin mit dem unveränderten Modell
+  // prognostiziert werden können.
+  let candidates=TP_ALL_HORSES.filter(h=>{
+    if (typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)) return false;
     const total=plannerBreedingShowPoints(h);
     if (only==='with' && total==null) return false;
     if (only==='forecast' && total!=null) return false;
+    if (!selectedOwners.includes(String(h.owner||'').trim())) return false;
+    if (nameQ && !(h.name||'').toLowerCase().includes(nameQ)) return false;
+    if (breed && (normalizeBreed(h.breed)||'Rasselos')!==breed) return false;
     if (breeding==='yes' && h.breeding_allowed!==true) return false;
     if (breeding==='no' && h.breeding_allowed!==false) return false;
     if (breeding==='unknown' && h.breeding_allowed!=null) return false;
     return true;
   });
+
+  const missingTournamentCount=candidates.filter(h=>plannerTournamentPlacements(h)<1).length;
+  let rows=candidates.filter(h=>plannerTournamentPlacements(h)>=1);
   rows.sort((a,b)=>(plannerBreedingShowPoints(b)??-1)-(plannerBreedingShowPoints(a)??-1) || (a.name||'').localeCompare(b.name||'','de'));
-  document.getElementById('tp-zs-count').textContent=`${rows.length} angezeigt · ${missingTournamentCount} wegen fehlender Turnierdaten ausgeblendet`;
+
+  const count=document.getElementById('tp-zs-count');
+  if (count) count.textContent=only==='forecast'
+    ? `${rows.length} Prognosen angezeigt · ${missingTournamentCount} wegen fehlender Turnierdaten ausgeblendet`
+    : `${rows.length} ZS-Datensätze angezeigt · ${missingTournamentCount} ZS-Datensätze wegen fehlender Turnierdaten ausgeblendet`;
   if (!rows.length) {
-    body.innerHTML='<tr><td colspan="7" class="muted">Noch keine passenden Pferde. ZS-Gesamtpunkte werden auf der Pferdeseite im Reiter Turnierwerte manuell eingetragen.</td></tr>';
+    body.innerHTML=only==='forecast'
+      ? '<tr><td colspan="7" class="muted">Keine passenden Prognose-Pferde mit eingelesenen Turnierplatzierungen gefunden.</td></tr>'
+      : '<tr><td colspan="7" class="muted">Keine passenden auswertbaren ZS-Datensätze. Für die ZS-Auswertung zählen nur positive ZS-Punktangaben mit eingelesenen Turnierplatzierungen.</td></tr>';
     return;
   }
   body.innerHTML=rows.map(h=>{
@@ -1206,9 +1224,8 @@ function renderBreedingShowOverview() {
     const diff=base==null || pred==null ? null : base-pred;
     const st=zsTrainingStatus(h);
     let dataNote='';
-    if (total!=null && !st.eligible) {
+    if (!st.eligible) {
       const map={
-        'missing-tournament':'Turnierdaten fehlen – nicht im Lernmodell',
         'missing-features':'Grundwerte unvollständig – nicht im Lernmodell',
         'invalid-base':'ZS-Grundwert unplausibel – bitte prüfen',
       };
@@ -1221,4 +1238,3 @@ function renderBreedingShowOverview() {
     </tr>`;
   }).join('');
 }
-

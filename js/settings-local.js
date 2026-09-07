@@ -52,7 +52,7 @@ async function renderSettingsBackupOverview() {
 
   const lastServer = localStorage.getItem(MDR_LAST_SERVER_BACKUP_KEY);
   const lastExternal = localStorage.getItem(MDR_LAST_EXTERNAL_BACKUP_KEY);
-  const zsCount = horses.filter(h => typeof mdrHasBreedingShowPoints === 'function' ? mdrHasBreedingShowPoints(h) : (h?.breeding_show_points !== null && h?.breeding_show_points !== undefined && String(h.breeding_show_points).trim() !== '')).length;
+  const zsCount = horses.filter(h => typeof mdrHasBreedingShowPoints === 'function' ? mdrHasBreedingShowPoints(h) : (h?.breeding_show_points !== null && h?.breeding_show_points !== undefined && String(h.breeding_show_points).trim() !== '' && Number(h.breeding_show_points) > 0)).length;
   const online = typeof mdrIsHostedOnlineOrigin === 'function' && mdrIsHostedOnlineOrigin();
   root.innerHTML = `
     <div class="settings-stat"><span>Gemeinsamer Bestand</span><strong>${horses.length} Pferde</strong></div>
@@ -115,10 +115,10 @@ function learningExportParentNames(horse) {
 }
 
 function learningExportHasZs(horse) {
-  return horse?.breeding_show_points !== null
-    && horse?.breeding_show_points !== undefined
-    && String(horse.breeding_show_points).trim() !== ''
-    && Number.isFinite(Number(horse.breeding_show_points));
+  const raw=horse?.breeding_show_points;
+  if (raw === null || raw === undefined || String(raw).trim() === '') return false;
+  const n=Number(raw);
+  return Number.isFinite(n) && n > 0;
 }
 
 function learningExportCleanHorse(source) {

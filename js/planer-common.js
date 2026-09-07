@@ -589,8 +589,13 @@ function plannerCupShowBonus(horse) {
 }
 
 function plannerBreedingShowPoints(horse) {
-  const n = Number(horse?.breeding_show_points);
-  return Number.isFinite(n) && n >= 0 ? n : null;
+  const raw=horse?.breeding_show_points;
+  if (raw === null || raw === undefined || String(raw).trim() === '') return null;
+  const n = Number(raw);
+  // V54.0.18: 0 bedeutet in älteren Datensätzen „kein ZS-Wert mehr
+  // abrufbar“ und ist keine echte Zuchtschau-Punktangabe. Nur positive
+  // Gesamtpunkte dürfen für ZS-Auswertung und Lernmodell verwendet werden.
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 function plannerBreedingShowBase(horse) {

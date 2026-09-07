@@ -1,3 +1,5 @@
+const durchschnittDerivedCache = new WeakMap();
+
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
@@ -52,13 +54,16 @@ function fillSelect(selector, values) {
 }
 
 function computeDerived(h) {
+  if (h && typeof h === 'object' && durchschnittDerivedCache.has(h)) return durchschnittDerivedCache.get(h);
   const gpRaw = h.tournament_potential?.['Gesamtpotenzial'];
-  return {
+  const derived={
     gp: gpRaw != null && gpRaw !== '' ? Number(gpRaw) : null,
     extAvg: averageScore(h.exterior_descriptive, scoreExteriorTerm),
     extPercent: h.exterior_genetics?.overall?.percent ?? null,
     intAvg: averageScore(h.temperament, scoreTemperamentTerm),
   };
+  if (h && typeof h === 'object') durchschnittDerivedCache.set(h,derived);
+  return derived;
 }
 
 function average(values) {

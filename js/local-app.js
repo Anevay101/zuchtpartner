@@ -215,7 +215,8 @@ function backupStoreCounts(payload) {
 function mdrHasBreedingShowPoints(horse) {
   const value = horse?.breeding_show_points;
   if (value === null || value === undefined || String(value).trim() === '') return false;
-  return Number.isFinite(Number(value));
+  const n=Number(value);
+  return Number.isFinite(n) && n > 0;
 }
 
 function backupSummary(payload) {
@@ -534,15 +535,19 @@ async function createLocalBackupPayload() {
     stores: {},
   };
 
-  for (const storeName of Object.values(LOCAL_STORES)) {
+  // V54.0.18: Die Stores sind voneinander unabhängig. Parallel laden
+  // reduziert besonders beim Sitzungs-/JSON-Backup die Wartezeit deutlich,
+  // ohne die Sicherungslogik oder Supabase als Quelle der Wahrheit zu ändern.
+  const storeEntries = await Promise.all(Object.values(LOCAL_STORES).map(async (storeName) => {
     let rows = await localGetAll(storeName);
     // Ein FileSystemDirectoryHandle gehört nur zu diesem Browser/PC und
     // ist kein sinnvoller Bestandteil einer portablen JSON-Sicherung.
     if (storeName === LOCAL_STORES.userSettings) {
       rows = rows.filter(row => row?.key !== MDR_BACKUP_HANDLE_KEY);
     }
-    payload.stores[storeName] = rows;
-  }
+    return [storeName, rows];
+  }));
+  for (const [storeName, rows] of storeEntries) payload.stores[storeName] = rows;
 
   await attachBackupIntegrity(payload);
   return payload;
