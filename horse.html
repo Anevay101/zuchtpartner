@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <title>Pferd – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5416" />
+  <link rel="stylesheet" href="css/style.css?v=5417" />
 </head>
 <body>
   <header class="topbar">
@@ -82,6 +82,15 @@
               <div><label for="purebred_pct">Reinrassigkeit (%)</label><input id="purebred_pct" type="number" step="0.01" /></div>
               <div id="breed-composition-field"><label for="breed_composition">Rasseanteile</label><input id="breed_composition" placeholder="z.B. 50% Araber, 50% Vollblut" /></div>
               <div><label for="coat_color">Fellfarbe</label><input id="coat_color" /></div>
+              <div>
+                <label for="flaxen_carrier">Flaxen-Träger (fl)?</label>
+                <select id="flaxen_carrier">
+                  <option value="">unbekannt</option>
+                  <option value="true">Ja</option>
+                  <option value="false">Nein</option>
+                </select>
+                <span class="tiny muted">Explizite Dokumentation. Sichtbares Flaxen (flfl) wird weiterhin automatisch erkannt.</span>
+              </div>
               <div id="appaloosa-pattern-field" hidden>
                 <label for="appaloosa_pattern">Appaloosa-Muster</label>
                 <select id="appaloosa_pattern">
@@ -285,19 +294,19 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5416"></script>
-<script src="js/database-local.js?v=5416"></script>
-  <script src="js/local-app.js?v=5416"></script>
-  <script src="js/learning-file.js?v=5416"></script>
-  <script src="js/parser.js?v=5416"></script>
-  <script src="js/data-quality.js?v=5416"></script>
-  <script src="js/planer-common.js?v=5416"></script>
-  <script src="js/zuchtplaner-engine-helpers.js?v=5416"></script>
-  <script src="js/breeding-original.js?v=5416"></script>
-  <script src="js/verpaarungsratgeber-engine.js?v=5416"></script>
-  <script src="js/foal-prediction.js?v=5416"></script>
-  <script src="js/pregnancy-sync.js?v=5416"></script>
-  <script src="js/breeding-progress.js?v=5416"></script>
-  <script src="js/horseForm.js?v=5416"></script>
+<script src="js/supabase-config.js?v=5417"></script>
+<script src="js/database-local.js?v=5417"></script>
+  <script src="js/local-app.js?v=5417"></script>
+  <script src="js/learning-file.js?v=5417"></script>
+  <script src="js/parser.js?v=5417"></script>
+  <script src="js/data-quality.js?v=5417"></script>
+  <script src="js/planer-common.js?v=5417"></script>
+  <script src="js/zuchtplaner-engine-helpers.js?v=5417"></script>
+  <script src="js/breeding-original.js?v=5417"></script>
+  <script src="js/verpaarungsratgeber-engine.js?v=5417"></script>
+  <script src="js/foal-prediction.js?v=5417"></script>
+  <script src="js/pregnancy-sync.js?v=5417"></script>
+  <script src="js/breeding-progress.js?v=5417"></script>
+  <script src="js/horseForm.js?v=5417"></script>
 </body>
 </html>
