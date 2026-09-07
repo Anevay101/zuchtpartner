@@ -4895,3 +4895,47 @@ body.planner-high-contrast .filter-checkbox-label {
   outline: 2px solid color-mix(in srgb, var(--accent, #6b9d00) 60%, transparent);
   background: color-mix(in srgb, var(--card, #fff) 88%, var(--accent, #6b9d00) 12%);
 }
+
+/* V54.0.19 – kompakter Guide, relative Turnierreferenz, Verpaarungsfilter */
+.guide-content { max-width: 1080px; }
+.guide-intro { margin: 0 0 .75rem; }
+.guide-faq { display: grid; gap: .65rem; }
+.guide-faq-item { margin: 0; padding: 0; overflow: visible; }
+.guide-faq-item > summary { cursor: pointer; font-weight: 700; padding: .8rem 1rem; }
+.guide-faq-body { padding: 0 1rem 1rem; }
+.guide-faq-body p { margin: .45rem 0; }
+.guide-function-table th, .guide-lifecycle-table th { white-space: nowrap; }
+.guide-function-table td, .guide-lifecycle-table td { vertical-align: top; }
+
+.pairing-filter-bar { align-items: start; }
+.pairing-owner-filter-field { min-width: min(520px, 100%); flex: 1 1 420px; }
+.pairing-owner-checkboxes { display: flex; flex-wrap: wrap; gap: .45rem .7rem; margin-top: .25rem; }
+.pairing-owner-option { display: inline-flex; align-items: center; gap: .35rem; padding: .32rem .55rem; border: 1px solid var(--border); border-radius: .45rem; background: var(--surface, transparent); }
+.pairing-owner-option input { margin: 0; }
+
+.tp-relative-help { margin: .55rem 0; }
+.tp-relative-help > summary { cursor: pointer; font-weight: 600; width: fit-content; }
+.tp-relative-help-inline { margin: .35rem 0 0; }
+.tp-info-dot { display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; border: 1px solid currentColor; border-radius: 50%; font-size: .75rem; font-weight: 700; line-height: 1; vertical-align: middle; }
+.tp-relative-link { font-weight: 700; white-space: nowrap; }
+.tp-stats-card h2 { margin-bottom: .15rem; }
+.tp-stats-groups { margin-top: .75rem; }
+.tp-stats-groups > summary { cursor: pointer; font-weight: 700; margin-bottom: .55rem; }
+
+@media (max-width: 720px) {
+  .guide-function-table th, .guide-lifecycle-table th { white-space: normal; }
+  .pairing-owner-filter-field { min-width: 100%; }
+}
+
+/* V54.0.20 – lernende Appaloosa- und Interieurhinweise */
+.appaloosa-pattern-hint {
+  display: block;
+  margin-top: .35rem;
+  line-height: 1.35;
+}
+.turnierzucht-empirical {
+  margin-top: .65rem;
+}
+.turnierzucht-empirical-list p {
+  margin: .45rem 0;
+}

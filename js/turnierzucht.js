@@ -116,6 +116,111 @@ function turnierzuchtCategoryPoints(score) {
   return ({1:30,2:0,3:-10,4:-42,5:-68})[score] ?? null;
 }
 
+
+// V54.0.20: empirische Interieur-Lernbasis für Turnierzucht.
+// Gemessen wird nicht ein erfundener H/h-Genotyp, sondern nur das, was bei
+// echten Eltern–Fohlen-Trios mit demselben Eltern-Kategorienpaar für den
+// jeweiligen Interieurwert tatsächlich aufgetreten ist.
+let TURNIERZUCHT_EMPIRICAL_CACHE_SOURCE = null;
+let TURNIERZUCHT_EMPIRICAL_CACHE = null;
+
+function turnierzuchtEmpiricalReferenceHorses(allHorses = null) {
+  if (Array.isArray(allHorses) && allHorses.length) return allHorses;
+  const globalRows = typeof globalThis !== 'undefined'
+    ? globalThis.MDR_INTERIOR_EMPIRICAL_HORSES
+    : null;
+  return Array.isArray(globalRows) ? globalRows : [];
+}
+
+function turnierzuchtEmpiricalIndex(allHorses = null) {
+  const source = turnierzuchtEmpiricalReferenceHorses(allHorses);
+  if (TURNIERZUCHT_EMPIRICAL_CACHE_SOURCE === source && TURNIERZUCHT_EMPIRICAL_CACHE) {
+    return TURNIERZUCHT_EMPIRICAL_CACHE;
+  }
+
+  const unique = [];
+  const seen = new Set();
+  for (const horse of source) {
+    const anc = typeof pedigreeAncestorNames === 'function' ? pedigreeAncestorNames(horse) : [];
+    const key = [
+      String(horse?.external_id || ''),
+      typeof normalizeName === 'function' ? normalizeName(horse?.name) : String(horse?.name || '').trim().toLowerCase(),
+      ...anc.slice(0,2).map(x => typeof normalizeName === 'function' ? normalizeName(x) : String(x || '').trim().toLowerCase()),
+    ].join('||');
+    if (!key.replace(/\|/g,'')) continue;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(horse);
+  }
+
+  const byName = new Map();
+  for (const horse of unique) {
+    const key = typeof normalizeName === 'function' ? normalizeName(horse?.name) : String(horse?.name || '').trim().toLowerCase();
+    if (key && !byName.has(key)) byName.set(key, horse);
+  }
+
+  const index = new Map();
+  for (const child of unique) {
+    const anc = typeof pedigreeAncestorNames === 'function' ? pedigreeAncestorNames(child) : [];
+    const fatherName = anc?.[0];
+    const motherName = anc?.[1];
+    if (!fatherName || !motherName) continue;
+    const father = byName.get(typeof normalizeName === 'function' ? normalizeName(fatherName) : String(fatherName).trim().toLowerCase());
+    const mother = byName.get(typeof normalizeName === 'function' ? normalizeName(motherName) : String(motherName).trim().toLowerCase());
+    if (!father || !mother) continue;
+
+    const fatherMap = turnierzuchtTemperamentMap(father);
+    const motherMap = turnierzuchtTemperamentMap(mother);
+    const childMap = turnierzuchtTemperamentMap(child);
+
+    for (const trait of TURNIERZUCHT_ALL_INTERIOR) {
+      const a = scoreTemperamentTerm(fatherMap.get(trait));
+      const b = scoreTemperamentTerm(motherMap.get(trait));
+      const c = scoreTemperamentTerm(childMap.get(trait));
+      if (a == null || b == null || c == null) continue;
+      const lo = Math.min(a,b), hi = Math.max(a,b);
+      const key = `${trait}|${lo}-${hi}`;
+      if (!index.has(key)) index.set(key,{ trait, lo, hi, n:0, counts:[0,0,0,0,0,0] });
+      const row = index.get(key);
+      row.n++;
+      row.counts[c] = (row.counts[c] || 0) + 1;
+    }
+  }
+
+  TURNIERZUCHT_EMPIRICAL_CACHE_SOURCE = source;
+  TURNIERZUCHT_EMPIRICAL_CACHE = index;
+  return index;
+}
+
+function turnierzuchtEmpiricalTraitStats(mare, stallion, traitName, projection = null, allHorses = null) {
+  const mareMap = turnierzuchtTemperamentMap(mare);
+  const stallionMap = turnierzuchtTemperamentMap(stallion);
+  const a = scoreTemperamentTerm(mareMap.get(traitName));
+  const b = scoreTemperamentTerm(stallionMap.get(traitName));
+  if (a == null || b == null) return null;
+  const lo = Math.min(a,b), hi = Math.max(a,b);
+  const row = turnierzuchtEmpiricalIndex(allHorses).get(`${traitName}|${lo}-${hi}`);
+  if (!row?.n) return { n:0, lo, hi, counts:[0,0,0,0,0,0], distribution:[] };
+
+  const distribution = [1,2,3,4,5]
+    .map(score => ({ score, count:row.counts[score] || 0, p:(row.counts[score] || 0)/row.n }))
+    .filter(x => x.count > 0);
+  const average = distribution.reduce((sum,x)=>sum+x.score*x.count,0)/row.n;
+  const best = projection?.best ?? null;
+  const worst = projection?.worst ?? null;
+  const low = best == null || worst == null ? null : Math.min(best,worst);
+  const high = best == null || worst == null ? null : Math.max(best,worst);
+  const within = low == null ? null : distribution
+    .filter(x=>x.score>=low && x.score<=high)
+    .reduce((sum,x)=>sum+x.count,0);
+
+  return {
+    n:row.n, lo, hi, counts:[...row.counts], distribution, average,
+    withinProjected: within,
+    withinProjectedPct: within == null ? null : within/row.n,
+  };
+}
+
 function turnierzuchtTraitProjection(mare, stallion, traitName) {
   const mareMap = turnierzuchtTemperamentMap(mare);
   const stallionMap = turnierzuchtTemperamentMap(stallion);
@@ -153,11 +258,16 @@ function turnierzuchtEvaluate(mare, stallion, mode, specificDiscipline, mainHors
     const isPriority = setup.priority.has(trait);
     const target = isPriority ? 1 : 3;
 
+    const empirical = isPriority
+      ? turnierzuchtEmpiricalTraitStats(mare, stallion, trait, projection)
+      : null;
+
     rows.push({
       ...projection,
       weight,
       isPriority,
       target,
+      empirical,
       meetsBestTarget: projection.best <= target,
       meetsWorstTarget: projection.worst <= target,
     });

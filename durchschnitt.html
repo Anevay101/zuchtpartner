@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Dashboard – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5418" />
+  <link rel="stylesheet" href="css/style.css?v=5420" />
 </head>
 <body>
   <header class="topbar">
@@ -23,7 +23,7 @@
 
   <main class="container">
     <p class="muted small">
-      Bestandsübersicht für die aktiven Züchter: Durchschnittswerte sowie Verteilung von Hauptgruppen und Begabungen. Die Filter wirken auf beide Bereiche.
+      Bestandsübersicht der aktiven Züchter. Filter gelten für alle Auswertungen.
     </p>
 
     <form id="avg-filter-form" class="filter-bar">
@@ -70,7 +70,7 @@
 
     <details class="card dashboard-breeding-card" open>
       <summary><strong>📊 Zuchtbestand &amp; Turnierausrichtung</strong></summary>
-      <p class="small muted">Zeigt, wie stark die 7 Hauptgruppen und ihre jeweils 4 Begabungen im aktuell gefilterten aktiven Zuchtbestand vertreten sind. Unterrepräsentierte Begabungen sind nur ein Hinweis und verändern kein Zuchtranking.</p>
+      <p class="small muted">Verteilung der 7 Hauptgruppen und ihrer Begabungen im gefilterten Bestand. Unterrepräsentierung ist nur ein Hinweis.</p>
       <div id="breeding-dashboard"><p class="muted small">Lade…</p></div>
     </details>
     <fieldset>
@@ -86,12 +86,12 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5418"></script>
-<script src="js/database-local.js?v=5418"></script>
-  <script src="js/local-app.js?v=5418"></script>
-  <script src="js/learning-file.js?v=5418"></script>
-  <script src="js/parser.js?v=5418"></script>
-  <script src="js/planer-common.js?v=5418"></script>
-  <script src="js/durchschnitt.js?v=5418"></script>
+<script src="js/supabase-config.js?v=5420"></script>
+<script src="js/database-local.js?v=5420"></script>
+  <script src="js/local-app.js?v=5420"></script>
+  <script src="js/learning-file.js?v=5420"></script>
+  <script src="js/parser.js?v=5420"></script>
+  <script src="js/planer-common.js?v=5420"></script>
+  <script src="js/durchschnitt.js?v=5420"></script>
 </body>
 </html>

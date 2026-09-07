@@ -1754,9 +1754,9 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
 const HORSE_TAG_CONFIG_STORAGE_KEY = 'mdr-horse-tag-options-v47';
 const HORSE_TAG_CONFIG_DB_KEY = 'horse_tag_options_v47';
 
-// V48: Aktive Züchter begrenzen NUR persönliche Auswertungen
-// (Durchschnitt, Turnierplaner, Aussortierhilfe). Datenbank, Verpaarungslog
-// und Zuchtplaner arbeiten weiterhin mit ALLEN gespeicherten Züchtern.
+// Aktive Züchter begrenzen persönliche Auswertungen. Das Verpaarungs-Log
+// bietet nur aktive Züchter als persönliche Sichtauswahl an; Datenbank und
+// Zuchtplaner bleiben vollständig.
 const ACTIVE_BREEDERS_STORAGE_KEY = 'mdr-active-breeders-v48'; // Legacy-Fallback
 const ACTIVE_BREEDERS_DB_KEY = 'active_breeders_v48'; // Legacy-Fallback
 

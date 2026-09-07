@@ -398,7 +398,7 @@ async function saveActiveBreeders() {
   });
   localStorage.setItem(storageKey,JSON.stringify(owners));
   const status=document.getElementById('active-breeders-status');
-  if (status) status.textContent=`Gespeichert: ${owners.length} aktive Züchter. Dashboard, Turnierplaner und Aussortierhilfe verwenden ab jetzt nur deren Pferde.`;
+  if (status) status.textContent=`Gespeichert: ${owners.length} aktive Züchter. Dashboard, Turnierplaner und Aussortierhilfe nutzen diese Züchter; das Verpaarungs-Log bietet sie als persönliche Auswahl an.`;
 }
 
 async function ensureTagConfigInitialized() {

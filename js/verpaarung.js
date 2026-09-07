@@ -11,6 +11,10 @@ let foalReferenceById = new Map();
 const PAST_PAIRING_VISIBLE_LIMIT = 50;
 let showAllPastPairings = false;
 let pairingEmpiricalDeviations = null;
+const PAIRING_BREEDER_FILTER_SETTING = 'pairing_log_breeders_v54';
+const PAIRING_BREEDER_FILTER_STORAGE = 'pairing-log-breeders-v54';
+let pairingFilterOwners = [];
+
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -28,7 +32,7 @@ async function init() {
   document.querySelector('#pairing-form').addEventListener('submit', onAddPairing);
   document.querySelector('#p-mare').addEventListener('change', syncPairingOwnerFromMare);
   document.querySelector('#p-mare').addEventListener('input', syncPairingOwnerFromMare);
-  document.querySelector('#f-owner').addEventListener('change', loadPairings);
+  document.querySelector('#f-owner').addEventListener('change', onPairingBreederFilterChange);
   document.querySelector('#f-breed').addEventListener('change', loadPairings);
   document.querySelector('#foal-modal-skip').addEventListener('click', closeFoalModal);
   document.querySelector('#foal-modal-save').addEventListener('click', onSaveFoal);
@@ -101,9 +105,7 @@ async function populateBreedFilter() {
   sel.value = previous || '';
 }
 
-// Besitzer-Filter ist standardmäßig auf den eigenen Benutzernamen gesetzt,
-// damit jede*r zuerst nur die eigenen Verpaarungen sieht - über die
-// Auswahl lassen sich aber auch die anderer Besitzer*innen ansehen.
+// Sichtbare Züchter: nur aktive Züchter, Auswahl pro Login gespeichert.
 async function populateOwnerFilter() {
   const [pairings, horses] = await Promise.all([
     localGetAll(LOCAL_STORES.pairings),
@@ -112,34 +114,58 @@ async function populateOwnerFilter() {
 
   const pairingOwners = new Set((pairings || []).map((p) => (p.owner || '').trim()).filter(Boolean));
   const horseOwners = new Set((horses || []).map((h) => (h.owner || '').trim()).filter(Boolean));
+  const allKnownOwners=[...new Set([...pairingOwners, ...horseOwners])]
+    .filter(owner=>owner && owner.toLowerCase() !== 'local')
+    .sort((a,b)=>a.localeCompare(b,'de'));
 
-  // Filter: auch alte/technische Besitzerwerte zeigen, damit bestehende
-  // Verpaarungen weiterhin auffindbar bleiben.
-  const filterOwners = new Set([...pairingOwners, ...horseOwners]);
-  const filterSel = document.querySelector('#f-owner');
-  const previousFilter = filterSel.value;
-  filterSel.innerHTML = '<option value="">Alle</option>';
-  [...filterOwners].sort((a, b) => a.localeCompare(b, 'de')).forEach((owner) => {
-    const opt = document.createElement('option');
-    opt.value = owner;
-    opt.textContent = owner;
-    filterSel.appendChild(opt);
-  });
-  filterSel.value = [...filterSel.options].some((o) => o.value === previousFilter)
-    ? previousFilter
-    : '';
+  // Verpaarungslog: nur aktive Züchter, Auswahl pro Login gespeichert.
+  const activeOwners=typeof activeBreederOptions === 'function'
+    ? activeBreederOptions(allKnownOwners)
+    : allKnownOwners;
+  const dbKey=typeof mdrPersonalSettingKey === 'function'
+    ? mdrPersonalSettingKey(PAIRING_BREEDER_FILTER_SETTING)
+    : PAIRING_BREEDER_FILTER_SETTING;
+  const storageKey=typeof mdrPersonalSettingKey === 'function'
+    ? `mdr-${mdrPersonalSettingKey(PAIRING_BREEDER_FILTER_STORAGE)}`
+    : PAIRING_BREEDER_FILTER_STORAGE;
 
-  // Neue Verpaarung: ausschließlich bekannte echte Züchter aus Pferden
-  // und bisherigen Verpaarungen. Der technische lokale Login-Name "local"
-  // wird hier bewusst nicht als Standard angeboten.
-  const knownBreeders = [...new Set([...horseOwners, ...pairingOwners])]
-    .filter((owner) => owner && owner.toLowerCase() !== 'local')
-    .sort((a, b) => a.localeCompare(b, 'de'));
+  let savedOwners=null;
+  try {
+    const row=await localGet(LOCAL_STORES.userSettings,dbKey);
+    if (Array.isArray(row?.owners)) savedOwners=row.owners.map(x=>String(x).trim()).filter(Boolean);
+  } catch {}
+  if (savedOwners == null) {
+    try {
+      const parsed=JSON.parse(localStorage.getItem(storageKey) || 'null');
+      if (Array.isArray(parsed)) savedOwners=parsed.map(x=>String(x).trim()).filter(Boolean);
+    } catch {}
+  }
 
+  const activeSet=new Set(activeOwners);
+  let selected=(savedOwners || []).filter(owner=>activeSet.has(owner));
+  if (savedOwners == null) {
+    const personal=typeof mdrPersonalOwnerNames === 'function' ? mdrPersonalOwnerNames() : [];
+    selected=personal.filter(owner=>activeSet.has(owner));
+    if (!selected.length) selected=activeOwners.slice();
+  } else if (!selected.length && activeOwners.length) {
+    selected=activeOwners.slice();
+  }
+  pairingFilterOwners=selected;
+
+  const root=document.querySelector('#f-owner');
+  root.innerHTML=activeOwners.length
+    ? activeOwners.map(owner=>`<label class="pairing-owner-option"><input type="checkbox" value="${escapeHtml(owner)}" ${selected.includes(owner)?'checked':''}> <span>${escapeHtml(owner)}</span></label>`).join('')
+    : '<span class="tiny muted">Keine aktiven Züchter.</span>';
+  const status=document.getElementById('f-owner-status');
+  if (status) status.textContent=activeOwners.length
+    ? `${selected.length} von ${activeOwners.length} aktiv · pro Login gespeichert`
+    : 'Keine aktiven Züchter in den Einstellungen.';
+
+  // Neue Verpaarung: bekannte echte Züchter bleiben vollständig auswählbar.
   const ownerSel = document.querySelector('#p-owner');
   const previousOwner = ownerSel.value;
   ownerSel.innerHTML = '<option value="">Bitte auswählen…</option>';
-  knownBreeders.forEach((owner) => {
+  allKnownOwners.forEach((owner) => {
     const opt = document.createElement('option');
     opt.value = owner;
     opt.textContent = owner;
@@ -150,6 +176,33 @@ async function populateOwnerFilter() {
     : '';
 
   syncPairingOwnerFromMare();
+}
+
+function selectedPairingBreeders() {
+  return [...document.querySelectorAll('#f-owner input[type="checkbox"]:checked')]
+    .map(cb=>String(cb.value || '').trim()).filter(Boolean);
+}
+
+async function onPairingBreederFilterChange() {
+  const root=document.querySelector('#f-owner');
+  const options=[...root.querySelectorAll('input[type="checkbox"]')];
+  let owners=selectedPairingBreeders();
+  if (!owners.length && options.length) {
+    options[0].checked=true;
+    owners=selectedPairingBreeders();
+  }
+  pairingFilterOwners=owners;
+  const dbKey=typeof mdrPersonalSettingKey === 'function'
+    ? mdrPersonalSettingKey(PAIRING_BREEDER_FILTER_SETTING)
+    : PAIRING_BREEDER_FILTER_SETTING;
+  const storageKey=typeof mdrPersonalSettingKey === 'function'
+    ? `mdr-${mdrPersonalSettingKey(PAIRING_BREEDER_FILTER_STORAGE)}`
+    : PAIRING_BREEDER_FILTER_STORAGE;
+  await localPut(LOCAL_STORES.userSettings,{key:dbKey,owners,updated_at:new Date().toISOString()});
+  localStorage.setItem(storageKey,JSON.stringify(owners));
+  const status=document.getElementById('f-owner-status');
+  if (status) status.textContent=`${owners.length} Züchter ausgewählt · gespeichert`;
+  await loadPairings();
 }
 
 function ensurePairingOwnerOption(owner) {
@@ -303,7 +356,7 @@ function pairingPredictionDetailsHtml(pairing) {
   const actual = actualRecord && typeof foalActualMetricSnapshot === 'function'
     ? foalActualMetricSnapshot(actualRecord)
     : null;
-  const rows = snapshot && actual && typeof compareFoalPrediction === 'function'
+  const baseRows = snapshot && actual && typeof compareFoalPrediction === 'function'
     ? compareFoalPrediction(snapshot, actual)
     : (snapshot ? FOAL_PREDICTION_METRICS.map(metric => ({
         ...metric,
@@ -319,6 +372,10 @@ function pairingPredictionDetailsHtml(pairing) {
         databaseCoverage: Number(snapshot.database_range?.[metric.key]?.coverage || 0) || null,
         sampleSize: Number(snapshot.sample_sizes?.[metric.key] || snapshot.database_range?.[metric.key]?.n || 0),
       })) : []);
+  const rows = baseRows.map(row => ({
+    ...row,
+    currentSampleSize: Number(pairingEmpiricalDeviations?.[row.key]?.n || 0),
+  }));
 
   const hasPrediction = snapshot && typeof foalPredictionHasAnyValue === 'function'
     ? foalPredictionHasAnyValue(snapshot)
@@ -379,7 +436,7 @@ function pairingPredictionDetailsHtml(pairing) {
                 <td>${predictionFormat(row, row.best)}</td>
                 <td>
                   ${predictionFormat(row, row.estimate)}
-                  ${row.sampleSize ? `<span class="prediction-n">n=${row.sampleSize}</span>` : ''}
+                  ${row.sampleSize || row.currentSampleSize ? `<span class="prediction-n">${row.sampleSize ? `damals n=${row.sampleSize}` : ''}${row.sampleSize && row.currentSampleSize && row.currentSampleSize !== row.sampleSize ? ' · ' : ''}${row.currentSampleSize && row.currentSampleSize !== row.sampleSize ? `heute n=${row.currentSampleSize}` : ''}</span>` : ''}
                 </td>
                 <td>${
                   row.databaseLow != null && row.databaseHigh != null
@@ -404,6 +461,7 @@ function pairingPredictionDetailsHtml(pairing) {
         </table>
         <p class="tiny muted">${escapeHtml(sourceNote)}</p>
         <p class="tiny muted">${escapeHtml(rangeSourceNote)}</p>
+        <p class="tiny muted">„damals n“ gehört zum gespeicherten Prognose-Snapshot; „heute n“ zeigt die aktuelle Lernbasis. Die historische Prognose wird nicht rückwirkend verändert.</p>
         <p class="tiny muted">
           <strong>Best/Worst</strong> ist die theoretische Prognosespanne.
           Der <strong>typische DB-Bereich</strong> ist etwas anderes: Er umfasst den zentralen 80%-Bereich
@@ -704,7 +762,7 @@ async function loadPairings() {
   currentTbody.innerHTML = '<tr><td colspan="8">Lade…</td></tr>';
   pastTbody.innerHTML = '<tr><td colspan="13">Lade…</td></tr>';
 
-  const owner = document.querySelector('#f-owner').value;
+  const selectedOwners = selectedPairingBreeders();
   let data;
   try {
     data = await localGetAll(LOCAL_STORES.pairings);
@@ -716,8 +774,9 @@ async function loadPairings() {
     return;
   }
 
-  if (owner) {
-    data = data.filter((p) => (p.owner || '').toLowerCase() === owner.toLowerCase());
+  if (document.querySelectorAll('#f-owner input[type="checkbox"]').length) {
+    const selectedSet=new Set(selectedOwners.map(owner=>owner.toLocaleLowerCase('de')));
+    data=data.filter(p=>selectedSet.has(String(p.owner || '').trim().toLocaleLowerCase('de')));
   }
 
   const breed = document.querySelector('#f-breed').value;

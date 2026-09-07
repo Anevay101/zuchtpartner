@@ -484,9 +484,22 @@ function turnierzuchtResultHtml(tz) {
           <strong>Relevante Werte unter In Ordnung:</strong> ${tz.weakPriority?.length || 0}.
         </p>
 
+        ${priorityRows.some(r => r.empirical?.n) ? `
+          <details class="turnierzucht-empirical">
+            <summary><strong>Beobachtete Interieur-Vererbung</strong></summary>
+            <div class="turnierzucht-empirical-list">
+              ${priorityRows.filter(r => r.empirical?.n).map(r => {
+                const e = r.empirical;
+                const dist = e.distribution.map(x => `${turnierzuchtCategoryLabel(x.score)} ${Math.round(x.p*100)}%`).join(' · ');
+                const hit = e.withinProjectedPct == null ? '' : ` · Prognosespanne ${Math.round(e.withinProjectedPct*100)}% getroffen`;
+                return `<p class="small"><strong>${esc(r.trait)}</strong> · Eltern ${esc(turnierzuchtCategoryLabel(e.lo))} × ${esc(turnierzuchtCategoryLabel(e.hi))} · n=${e.n}<br><span class="muted">${esc(dist)}${esc(hit)}</span></p>`;
+              }).join('')}
+            </div>
+            <p class="tiny muted">Verglichen werden echte Fohlen mit demselben Eltern-Kategorienpaar beim jeweiligen Interieurwert. Das sind Erfahrungswerte, keine Gentest-Wahrscheinlichkeiten.</p>
+          </details>` : '<p class="tiny muted">Für diese Interieur-Kombinationen gibt es noch keine passenden Eltern–Fohlen-Vergleiche.</p>'}
+
         <p class="tiny muted">
-          Der Score ist eine konservative Ranking-Hilfe aus den sichtbaren Interieur-Kategorien,
-          keine Mendel-Wahrscheinlichkeit. Der unbekannte H/h-Genotyp wird nicht erfunden.
+          Der Score ist eine Ranking-Hilfe aus sichtbaren Interieur-Kategorien. Der unbekannte H/h-Genotyp wird nicht erfunden.
         </p>
       </div>
     </details>
@@ -728,6 +741,7 @@ async function loadEmpiricalLocal() {
   globalThis.MDR_COLOR_EMPIRICAL_HORSES = combined;
   globalThis.MDR_APPALOOSA_EMPIRICAL_HORSES = combined;
   globalThis.MDR_TALENT_EMPIRICAL_HORSES = combined;
+  globalThis.MDR_INTERIOR_EMPIRICAL_HORSES = combined;
 
   flaxenLookup = new Map();
   for (const h of combined) {

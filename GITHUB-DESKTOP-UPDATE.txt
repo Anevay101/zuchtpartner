@@ -1,22 +1,17 @@
-MDR V54.0.18 – Update mit GitHub Desktop
+MDR V54.0.20 – Update mit GitHub Desktop
 
-1. Diese ZIP vollständig entpacken.
-2. GitHub Desktop öffnen und das bestehende Repository „zuchtpartner“ auswählen.
-   Falls es noch nicht lokal vorhanden ist: File > Clone repository… und das vorhandene GitHub-Repository klonen.
-3. In GitHub Desktop: Repository > Show in Explorer.
-4. Den versteckten Ordner .git niemals löschen.
-5. Den INHALT des entpackten V54.0.18-Ordners in den lokalen Repository-Ordner kopieren.
-   Bei Rückfrage „Dateien im Ziel ersetzen?“: ersetzen.
-   Danach müssen im Repository-Hauptordner u. a. index.html sowie die Ordner css und js liegen.
-6. Falls aus einem früheren fehlerhaften Web-Upload noch lose Doppeldateien im Hauptordner liegen
-   (z. B. list.js, parser.js, database-local.js oder style.css), diese lokalen Doppeldateien löschen.
-   Die richtigen Dateien liegen in js/ bzw. css/. Nicht die Ordner js oder css löschen.
-7. In GitHub Desktop unter Changes kontrollieren, dass die HTML-Dateien sowie css/ und js/ als geändert/neu erscheinen.
-   Keine privaten JSON-Daten oder Sicherungsdateien committen.
-8. Summary: „MDR V54.0.18 Performance + ZS“
-9. „Commit to main“ anklicken.
-10. Danach oben „Push origin“ anklicken.
-11. Auf GitHub kontrollieren: Im Hauptverzeichnis müssen die Ordner css und js sichtbar sein.
-12. GitHub Pages kurz neu deployen lassen und die MDR-Seite anschließend mit Strg+F5 neu laden.
+1. MDR-Pferdedatenbank-V54.0.20-Interieur-Appaloosa.zip entpacken.
+2. GitHub Desktop öffnen und das bestehende Repository wählen.
+3. Repository -> Show in Explorer.
+4. NICHT den .git-Ordner löschen.
+5. Den INHALT des entpackten V54.0.20-Ordners in den lokalen Repository-Ordner kopieren.
+6. Vorhandene Dateien ersetzen; neue Dateien wie guide.html und js/guide.js mitkopieren.
+7. GitHub Desktop -> Changes prüfen. Keine privaten JSON-Backups committen.
+8. Summary: „MDR V54.0.20 Interieur + Appaloosa“.
+9. Commit to main.
+10. Push origin.
+11. GitHub Pages kurz deployen lassen und die Seite mit Strg+F5 neu laden.
 
-Das Aktualisieren der Programmdateien verändert oder löscht keine Pferdedaten in Supabase.
+Wichtig:
+- css/ und js/ müssen als Ordner bestehen bleiben.
+- Supabase-Daten werden durch dieses Code-Update nicht gelöscht.

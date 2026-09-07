@@ -149,6 +149,7 @@ document.addEventListener('click', (e) => {
   renderDetailTables(extraData);
   if (field === 'color_gene_overrides' && /appaloosa/i.test(String(key))) {
     updateAppaloosaPatternVisibility();
+    updateAppaloosaPatternAssistant({ applySuggestion:true });
     renderImportReviewPanel(null, extraData);
     maybePromptAppaloosaPattern();
   }
@@ -313,6 +314,7 @@ async function loadHorse(id) {
   fillForm(data);
   extraData = data;
   updateAppaloosaPatternVisibility();
+  await updateAppaloosaPatternAssistant({ applySuggestion:false });
   originalRecord = data;
   fillTagCheckboxes(data.tags);
   document.getElementById('raw-text').value = data.raw_text || '';
@@ -336,6 +338,7 @@ async function onParse() {
   syncBreedingStationRecord(extraData);
   fillTagCheckboxes(extraData.tags);
   updateAppaloosaPatternVisibility();
+  await updateAppaloosaPatternAssistant({ applySuggestion:true });
   activateTab('stammdaten');
   renderImportReviewPanel(parsed, extraData);
   maybePromptAppaloosaPattern();
@@ -425,7 +428,7 @@ function updateImagePreview() {
   }
 }
 document.getElementById('image_url')?.addEventListener('input', updateImagePreview);
-document.getElementById('coat_color')?.addEventListener('input', updateAppaloosaPatternVisibility);
+document.getElementById('coat_color')?.addEventListener('input', () => { updateAppaloosaPatternVisibility(); updateAppaloosaPatternAssistant({applySuggestion:false}); });
 document.getElementById('gender')?.addEventListener('change', updateStudFeeVisibility);
 document.getElementById('tournament_starts_total')?.addEventListener('change', (e) => {
   extraData.tournament_starts_total = e.target.value === '' ? null : Math.max(0, Math.floor(Number(e.target.value) || 0));
@@ -441,11 +444,12 @@ document.getElementById('in_breeding_station')?.addEventListener('change', (e) =
   if (noteInput) { noteInput.disabled = !cb.checked; if (!cb.checked) noteInput.value = ''; }
   syncTagsFromCheckboxes();
 });
-document.getElementById('breed')?.addEventListener('input', updateAppaloosaPatternVisibility);
-document.getElementById('name')?.addEventListener('input', updateAppaloosaPatternVisibility);
-document.getElementById('appaloosa_pattern')?.addEventListener('change', (e) => {
+document.getElementById('breed')?.addEventListener('input', () => { updateAppaloosaPatternVisibility(); updateAppaloosaPatternAssistant({applySuggestion:false}); });
+document.getElementById('name')?.addEventListener('input', () => { updateAppaloosaPatternVisibility(); updateAppaloosaPatternAssistant({applySuggestion:false}); });
+document.getElementById('appaloosa_pattern')?.addEventListener('change', async (e) => {
   updateAppaloosaPatternVisibility();
   if (e.target.value) document.getElementById('appaloosa-pattern-field')?.classList.remove('appaloosa-pattern-attention');
+  await updateAppaloosaPatternAssistant({ applySuggestion:false });
   renderImportReviewPanel(null, extraData);
 });
 
@@ -648,6 +652,167 @@ function updateStudFeeVisibility() {
   const isStallion = gender === 'hengst' || gender === 'stallion';
   if (feeField) feeField.hidden = !isStallion;
   if (stationField) stationField.hidden = !isStallion;
+}
+
+
+let appaloosaReferenceCache = null;
+
+async function ensureAppaloosaReferenceHorses() {
+  if (Array.isArray(appaloosaReferenceCache)) return appaloosaReferenceCache;
+  try {
+    const [horses, refs] = await Promise.all([
+      localGetAll(LOCAL_STORES.horses),
+      localGetAll(LOCAL_STORES.foalReferenceData),
+    ]);
+    const liveIds = new Set((horses || []).map(h => String(h.id)));
+    const extras = (refs || []).filter(r => !r.horse_id || !liveIds.has(String(r.horse_id)));
+    appaloosaReferenceCache = [...(horses || []), ...extras];
+  } catch {
+    appaloosaReferenceCache = [];
+  }
+  return appaloosaReferenceCache;
+}
+
+function appaloosaNormalizeLp(value) {
+  const v = String(value || '').replace(/\s+/g, '');
+  if (v === 'LpLp') return 'LpLp';
+  if (v === 'Lplp' || v === 'lpLp') return 'Lplp';
+  if (v === 'lplp') return 'lplp';
+  return null;
+}
+
+function appaloosaNormalizePatn1(value) {
+  const v = String(value || '').replace(/\s+/g, '');
+  if (v === 'P1P1') return 'P1P1';
+  if (v === 'P1p1' || v === 'p1P1') return 'P1p1';
+  if (v === 'p1p1') return 'p1p1';
+  return null;
+}
+
+function appaloosaTestedCategories(horse) {
+  const rows = horse?.colors || [];
+  const lp = appaloosaNormalizeLp(rows.find(r => r?.label === 'Appaloosa')?.value);
+  const p1 = appaloosaNormalizePatn1(rows.find(r => r?.label === 'PATN1')?.value);
+  return { lp, p1 };
+}
+
+function appaloosaReferencePattern(horse) {
+  const manual = String(horse?.appaloosa_pattern || '').trim();
+  if (manual) return manual;
+  return typeof detectAppaloosaPatternFromCoatColor === 'function'
+    ? detectAppaloosaPatternFromCoatColor(horse?.coat_color)
+    : null;
+}
+
+function appaloosaPatternSuggestion(current, refs) {
+  const tested = appaloosaTestedCategories(current);
+  if (!tested.lp || !tested.p1 || tested.lp === 'lplp') return null;
+
+  const rows = [];
+  for (const horse of refs || []) {
+    const pattern = appaloosaReferencePattern(horse);
+    if (!pattern || pattern === 'anderes / unklar') continue;
+    const cats = appaloosaTestedCategories(horse);
+    if (!cats.lp || !cats.p1 || cats.lp === 'lplp') continue;
+    rows.push({ pattern, ...cats });
+  }
+
+  const summarize = (subset, basis) => {
+    if (!subset.length) return null;
+    const counts = new Map();
+    for (const row of subset) counts.set(row.pattern, (counts.get(row.pattern) || 0) + 1);
+    const ranked = [...counts.entries()].sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0],'de'));
+    const [pattern,count] = ranked[0];
+    return { pattern, count, n:subset.length, confidence:count/subset.length, lp:tested.lp, p1:tested.p1, basis };
+  };
+
+  // Möglichst die exakt getestete Kombination verwenden. Bei sehr kleiner
+  // Stichprobe fällt die Empfehlung auf die nächstbreitere, aber weiterhin
+  // genetisch passende Referenz zurück. Dadurch wird aus n=1 nicht unnötig
+  // eine scheinbar sichere Musterregel.
+  const exact = rows.filter(r => r.lp === tested.lp && r.p1 === tested.p1);
+  if (exact.length >= 3) return summarize(exact, 'exakt gleiche LP/PATN1-Kombination');
+
+  const p1Carrier = tested.p1 === 'p1p1' ? 'p1p1' : 'P1_';
+  const sameCarrierClass = rows.filter(r =>
+    r.lp === tested.lp && (r.p1 === 'p1p1' ? 'p1p1' : 'P1_') === p1Carrier
+  );
+  if (sameCarrierClass.length >= 3) return summarize(sameCarrierClass, 'gleicher LP-Status und gleicher PATN1-Trägerstatus');
+
+  const sameLp = rows.filter(r => r.lp === tested.lp);
+  if (sameLp.length >= 3) return summarize(sameLp, 'gleicher LP-Genotyp');
+
+  return summarize(exact.length ? exact : (sameCarrierClass.length ? sameCarrierClass : sameLp), 'kleine Vergleichsbasis');
+}
+
+function appaloosaGeneHypothesis(pattern, refs) {
+  const target = String(pattern || '').trim();
+  if (!target || target === 'anderes / unklar') return null;
+  const lpCounts = new Map();
+  const p1Counts = new Map();
+  let lpN = 0, p1N = 0;
+  for (const horse of refs || []) {
+    if (appaloosaReferencePattern(horse) !== target) continue;
+    const cats = appaloosaTestedCategories(horse);
+    if (cats.lp) { lpN++; lpCounts.set(cats.lp,(lpCounts.get(cats.lp)||0)+1); }
+    if (cats.p1) { p1N++; p1Counts.set(cats.p1,(p1Counts.get(cats.p1)||0)+1); }
+  }
+  const top = (counts,n) => {
+    if (!n) return null;
+    const [value,count] = [...counts.entries()].sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0],'de'))[0];
+    return { value, count, n, confidence:count/n };
+  };
+  return { lp:top(lpCounts,lpN), p1:top(p1Counts,p1N) };
+}
+
+function appaloosaCurrentRecordForHint() {
+  return {
+    ...extraData,
+    name: document.getElementById('name')?.value || extraData?.name || '',
+    breed: document.getElementById('breed')?.value || extraData?.breed || '',
+    coat_color: document.getElementById('coat_color')?.value || extraData?.coat_color || '',
+    appaloosa_pattern: document.getElementById('appaloosa_pattern')?.value || extraData?.appaloosa_pattern || '',
+  };
+}
+
+async function updateAppaloosaPatternAssistant({ applySuggestion = false } = {}) {
+  const hint = document.getElementById('appaloosa-pattern-hint');
+  const select = document.getElementById('appaloosa_pattern');
+  if (!hint || !select) return;
+  const state = appaloosaPatternTriggerState();
+  if (!state.relevant) { hint.textContent = ''; return; }
+
+  const refs = await ensureAppaloosaReferenceHorses();
+  const current = appaloosaCurrentRecordForHint();
+  const tested = appaloosaTestedCategories(current);
+  const suggestion = appaloosaPatternSuggestion(current, refs);
+
+  if (applySuggestion && !select.value && suggestion?.pattern && [...select.options].some(o => o.value === suggestion.pattern)) {
+    select.value = suggestion.pattern;
+    extraData.appaloosa_pattern = suggestion.pattern;
+  }
+
+  const lines = [];
+  if (suggestion) {
+    const pct = Math.round(suggestion.confidence * 100);
+    lines.push(`Muster-Vorschlag: ${suggestion.pattern} (${suggestion.count}/${suggestion.n}, ${pct}%; ${suggestion.basis}). Manuell änderbar.`);
+  }
+
+  const pattern = String(select.value || current.appaloosa_pattern || '').trim();
+  if (pattern) {
+    const hypothesis = appaloosaGeneHypothesis(pattern, refs);
+    if (!tested.lp) {
+      const empirical = hypothesis?.lp
+        ? ` Beobachtet am häufigsten: ${hypothesis.lp.value} (${hypothesis.lp.count}/${hypothesis.lp.n}, ${Math.round(hypothesis.lp.confidence * 100)}%).`
+        : '';
+      lines.push(`LP-Vermutung: sichtbares Appaloosa bedeutet mindestens Lp_.${empirical} Kein Gentest.`);
+    }
+    if (!tested.p1 && hypothesis?.p1) {
+      lines.push(`PATN1-Vermutung: bei ${pattern} bisher am häufigsten ${hypothesis.p1.value} (${hypothesis.p1.count}/${hypothesis.p1.n}, ${Math.round(hypothesis.p1.confidence * 100)}%). Kein Gentest.`);
+    }
+  }
+
+  hint.textContent = lines.join(' ');
 }
 
 function appaloosaPatternTriggerState() {
@@ -1340,6 +1505,10 @@ async function performSave(formData, payload, session, targetId, beforeRecord) {
     return;
   }
 
+  // Neue/aktualisierte Muster sollen bei der nächsten Neuanlage derselben
+  // Sitzung sofort in die empirische Appaloosa-Referenz einfließen.
+  appaloosaReferenceCache = null;
+
   let pregnancyPairingResult = { action: 'none' };
   const savedHorseId = targetId || insertedId;
   if (
@@ -1436,6 +1605,8 @@ async function resetFormForNextEntry(savedName, savedId, wasUpdate) {
   updateBreedCompositionVisibility();
   updateStudFeeVisibility();
   updateAppaloosaPatternVisibility();
+  const appHint = document.getElementById('appaloosa-pattern-hint');
+  if (appHint) appHint.textContent = '';
   renderCupResultsEditor(extraData);
   updateImagePreview();
   await renderDetailTables(extraData);

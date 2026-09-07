@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Einstellungen – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5418" />
+  <link rel="stylesheet" href="css/style.css?v=5420" />
 </head>
 <body>
 <header class="topbar">
@@ -40,10 +40,7 @@
       <button id="settings-folder-forget" type="button" class="secondary">Ordner vergessen</button>
     </div>
     <input id="settings-import-file" type="file" accept=".json,application/json" hidden />
-    <p class="small muted">
-      In der Online-Version gibt es keinen Server-Sicherheits-Spiegel im MDR-Ordner. Der zentrale Arbeitsbestand liegt in Supabase; ein gewählter externer Backup-Ordner ist eine zusätzliche lokale Sicherung.<br>
-      <strong>Bereinigte Lerndatei:</strong> enthält nur für Lernmodelle relevante Pferde-/Fohlendaten; persönliche Verwaltungsdaten werden entfernt und der Besitzer aller enthaltenen Lernpferde wird auf <strong>Lerndatei</strong> gesetzt.
-    </p>
+    <p class="small muted">Arbeitsbestand: Supabase. Der Backup-Ordner ist eine zusätzliche lokale Sicherung. <strong>Bereinigte Lerndatei:</strong> nur Lernwerte; persönliche Verwaltungsdaten werden entfernt.</p>
   </section>
 
 
@@ -57,11 +54,7 @@
 
   <section class="card settings-section">
     <h2>🔎 Filtervorlagen verwalten</h2>
-    <p class="small muted">
-      Laden und Speichern bleibt weiterhin direkt in der Pferdedatenbank möglich.
-      Zusätzlich kannst du hier den zuletzt verwendeten Datenbankfilter als neue Vorlage speichern
-      und vorhandene Vorlagen zentral umbenennen oder löschen.
-    </p>
+    <p class="small muted">Filtervorlagen speichern, umbenennen oder löschen. Laden bleibt auch in der Pferdedatenbank möglich.</p>
     <div class="actions">
       <button id="settings-save-last-filter" type="button">💾 Letzten Datenbankfilter als Vorlage speichern</button>
       <a class="btn secondary" href="index.html">Zur Datenbank / Vorlage laden</a>
@@ -83,11 +76,7 @@
 
   <section class="card settings-section">
     <h2>👥 Aktive Züchter</h2>
-    <p class="small muted">
-      Hier legst du fest, wessen Bestand zu deinen persönlichen Auswertungen gehört.
-      Die Auswahl begrenzt <strong>Dashboard, Turnierplaner und Aussortierhilfe</strong> und wird <strong>für jeden Login getrennt</strong> gespeichert.
-      Für Anevay sind standardmäßig Anevay + Wilder Wolf aktiv, für Saeculume nur Saeculume. In Pferdedatenbank, Verpaarungslog und Zuchtplaner bleiben weiterhin <strong>alle Züchter</strong> und Pferde verfügbar.
-    </p>
+    <p class="small muted">Aktive Züchter gelten pro Login für <strong>Dashboard, Turnierplaner, Aussortierhilfe</strong> und die Auswahl im <strong>Verpaarungs-Log</strong>. Datenbank und Zuchtplaner bleiben vollständig. Die Verpaarungsansicht wird separat pro Login gespeichert.</p>
     <div class="actions">
       <button type="button" id="active-breeders-all" class="secondary">Alle markieren</button>
       <button type="button" id="active-breeders-none" class="secondary">Alle abwählen</button>
@@ -100,9 +89,7 @@
   <section class="card settings-section">
     <h2>🏷️ Schlagwörter konfigurieren</h2>
     <p class="small muted">
-      Du kannst eigene Schlagwörter ergänzen, Farben ändern und eigene Einträge umbenennen oder löschen.
-      <strong>GBH</strong>, <strong>Cupstern</strong> und <strong>Zuchtstation</strong> sind System-Schlagwörter und bleiben namentlich geschützt,
-      weil automatische Funktionen daran hängen.
+      Eigene Schlagwörter können ergänzt, umbenannt, eingefärbt oder gelöscht werden. <strong>GBH</strong>, <strong>Cupstern</strong> und <strong>Zuchtstation</strong> bleiben als System-Schlagwörter geschützt.
     </p>
     <div id="settings-tags"></div>
 
@@ -120,11 +107,11 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5418"></script>
-<script src="js/database-local.js?v=5418"></script>
-<script src="js/local-app.js?v=5418"></script>
-<script src="js/learning-file.js?v=5418"></script>
-<script src="js/parser.js?v=5418"></script>
-<script src="js/settings-local.js?v=5418"></script>
+<script src="js/supabase-config.js?v=5420"></script>
+<script src="js/database-local.js?v=5420"></script>
+<script src="js/local-app.js?v=5420"></script>
+<script src="js/learning-file.js?v=5420"></script>
+<script src="js/parser.js?v=5420"></script>
+<script src="js/settings-local.js?v=5420"></script>
 </body>
 </html>

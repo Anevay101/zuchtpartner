@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Pferd – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5418" />
+  <link rel="stylesheet" href="css/style.css?v=5420" />
 </head>
 <body>
   <header class="topbar">
@@ -22,22 +22,12 @@
   </header>
 
   <main class="container">
-    <div class="notice data-copy-notice">
-      <strong>📌 Wichtig für vollständige Daten:</strong>
-      Bitte auf der Pferdeseite die <strong>Gentest-/Genetic-Tests-Seite öffnen</strong>, 
-      <strong>alle Disziplinen / all disciplines ausklappen</strong> und auch die <strong>Rasseanteile / breed percentages einblenden</strong>,
-      bevor du die Seite mit Strg+A / Strg+C kopierst. Nur dann können möglichst alle Werte automatisch ausgelesen werden.
+    <div class="notice data-copy-notice small">
+      <strong>Für vollständige Daten:</strong> Gentest öffnen, alle Disziplinen und Rasseanteile einblenden, dann die komplette MDR-Seite kopieren.
     </div>
     <details class="paste-box" id="paste-details" open>
       <summary>Text von der Pferdeseite einfügen</summary>
-      <p class="muted small">
-        Öffne zuerst die Gentest-Seite im Spiel, klappe alle Disziplinen aus
-        und blende die Rasseanteile ein. Markiere anschließend die komplette
-        Pferdeseite (Strg+A) und kopiere sie (Strg+C). Text hier einfügen und
-        auf "Automatisch auslesen" klicken. Die erkannten Werte erscheinen unten im Formular zur Kontrolle –
-        bitte vor dem Speichern kurz prüfen, da die automatische Erkennung nicht
-        perfekt sein kann.
-      </p>
+      <p class="muted small">Seite einfügen, „Automatisch auslesen“ wählen und nur offene Angaben unter „Noch prüfen“ kontrollieren.</p>
       <textarea id="raw-text" placeholder="Hier den kopierten Seitentext einfügen…"></textarea>
       <div class="paste-actions">
         <button type="button" id="parse-btn">Automatisch auslesen</button>
@@ -106,6 +96,7 @@
                   <option>anderes / unklar</option>
                 </select>
                 <span class="tiny muted">Sichtbarer Phänotyp, kein Gentest.</span>
+                <div id="appaloosa-pattern-hint" class="tiny muted appaloosa-pattern-hint"></div>
               </div>
               <div><label for="birthdate">Geburtsdatum</label><input id="birthdate" type="date" /></div>
               <div><label for="disease_free">Erbkrankheiten</label>
@@ -238,7 +229,7 @@
             Je Disziplin 1., 2. und 3. Plätze. Für die Zuchtschau zählen: <strong>35 / 25 / 15 Punkte</strong>, zusammen maximal <strong>500 Turnier-Zusatzpunkte</strong>. Ein Cupstern zählt <strong>100 Punkte</strong>.
           </p>
           <p class="small muted">
-            Cupsterne werden automatisch erkannt: mindestens 50 Gesamtstarts und mindestens 15 Siege in der jeweiligen Disziplin. Eine vorhandene MDR-Cup-Qualifikation samt LK wird direkt übernommen. Mehrere Cupstern-Disziplinen sind möglich.
+            Cupstern automatisch ab 50 Gesamtstarts und 15 Siegen je Disziplin. Vorhandene Cup-LK wird übernommen; mehrere Cupsterne sind möglich.
           </p>
           <div id="cup-results-editor"></div>
         </details>
@@ -296,19 +287,19 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5418"></script>
-<script src="js/database-local.js?v=5418"></script>
-  <script src="js/local-app.js?v=5418"></script>
-  <script src="js/learning-file.js?v=5418"></script>
-  <script src="js/parser.js?v=5418"></script>
-  <script src="js/data-quality.js?v=5418"></script>
-  <script src="js/planer-common.js?v=5418"></script>
-  <script src="js/zuchtplaner-engine-helpers.js?v=5418"></script>
-  <script src="js/breeding-original.js?v=5418"></script>
-  <script src="js/verpaarungsratgeber-engine.js?v=5418"></script>
-  <script src="js/foal-prediction.js?v=5418"></script>
-  <script src="js/pregnancy-sync.js?v=5418"></script>
-  <script src="js/breeding-progress.js?v=5418"></script>
-  <script src="js/horseForm.js?v=5418"></script>
+<script src="js/supabase-config.js?v=5420"></script>
+<script src="js/database-local.js?v=5420"></script>
+  <script src="js/local-app.js?v=5420"></script>
+  <script src="js/learning-file.js?v=5420"></script>
+  <script src="js/parser.js?v=5420"></script>
+  <script src="js/data-quality.js?v=5420"></script>
+  <script src="js/planer-common.js?v=5420"></script>
+  <script src="js/zuchtplaner-engine-helpers.js?v=5420"></script>
+  <script src="js/breeding-original.js?v=5420"></script>
+  <script src="js/verpaarungsratgeber-engine.js?v=5420"></script>
+  <script src="js/foal-prediction.js?v=5420"></script>
+  <script src="js/pregnancy-sync.js?v=5420"></script>
+  <script src="js/breeding-progress.js?v=5420"></script>
+  <script src="js/horseForm.js?v=5420"></script>
 </body>
 </html>

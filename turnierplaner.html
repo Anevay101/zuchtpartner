@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Turnier & Leistung – MDR Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5418" />
+  <link rel="stylesheet" href="css/style.css?v=5420" />
 </head>
 <body class="turnierplaner-page">
 <header class="topbar">
@@ -25,13 +25,12 @@
     <button type="button" class="tab-btn active" data-tp-main-tab="planner">🏆 Turnierplaner</button>
     <button type="button" class="tab-btn" data-tp-main-tab="cups">⭐ Cups &amp; Erfolge</button>
     <button type="button" class="tab-btn" data-tp-main-tab="show">🌿 Zuchtschau</button>
+    <button type="button" class="tab-btn" data-tp-main-tab="stats">Durchschnittliche Turnierwerte</button>
   </div>
 
   <section id="tp-tab-planner" class="tp-main-panel">
-    <div class="notice">
-      <strong>Punkteformel:</strong> 3 × Disziplin-Potenzial + die 6 weiteren benötigten Leistungs-Potenziale.
-      Die <strong>LK</strong> wird aus dem schlechtesten der 7 benötigten Potenzialwerte bestimmt.
-      Das <strong>Interieur</strong> ist der Durchschnitt der 3 für die Disziplin wichtigen Interieurwerte.
+    <div class="notice small">
+      <strong>Punkte:</strong> 3 × Disziplin-Potenzial + 6 weitere Leistungspotenziale. <strong>LK:</strong> schlechtester der 7 Werte. <strong>Int:</strong> Mittel der 3 relevanten Interieurwerte.
     </div>
 
     <details class="card tp-compact-card tp-threshold-details">
@@ -42,7 +41,7 @@
           <input id="tp-secondary-threshold" min="150" step="1" type="number" value="150" />
         </div>
       </div>
-      <p class="small muted">Nebendisziplinen gelten ab 150 Punkten als geeignet; die Grenze kann hier nur nach oben angepasst werden. Disziplinen der eingetragenen Hauptdisziplin gelten ab 180 Punkten als geeignet. Der Spezialisten-P25 bleibt als kleiner Vergleichswert sichtbar, beeinflusst die Empfehlung aber nicht mehr.</p>
+      <p class="small muted">Aktuell: Hauptdisziplin ab 180 Punkten, Nebendisziplin ab 150. Relative LK-Werte sind Vergleichswerte und ändern die Empfehlung noch nicht.</p>
     </details>
 
     <details class="card tp-collapsible-card">
@@ -113,9 +112,7 @@
   </section>
 
   <section id="tp-tab-cups" class="tp-main-panel" hidden>
-    <div class="notice small">
-      <strong>Cup &amp; Erfolge:</strong> Cupsterne werden automatisch erkannt: mindestens 50 Gesamtstarts und mindestens 15 Siege in der betreffenden Disziplin. Eine im MDR-Text enthaltene Cup-LK wird zusätzlich übernommen. Eine manuelle Bestätigung ist nicht mehr nötig.
-    </div>
+    <div class="notice small"><strong>Cupstern:</strong> automatisch ab 50 Gesamtstarts und 15 Siegen in der Disziplin. Vorhandene Cup-LK wird übernommen.</div>
     <details class="card tp-cup-calendar-card tp-collapsible-card">
       <summary>📅 Cup-Kalender</summary>
       <div class="tp-details-body">
@@ -150,13 +147,12 @@
       <details class="tp-zs-model-details">
         <summary>ℹ️ Wie funktioniert das Lernmodell?</summary>
         <div class="tp-zs-model-explanation small">
-          <p><strong>Was lernt die Datenbank?</strong> Sie lernt ausschließlich aus Pferden, bei denen eine echte positive Zuchtschau-Punktzahl eingetragen ist und GP, Ext, Ext%, Int sowie der Erbkrankheitsstatus auswertbar sind. Leer oder 0 gilt als „kein ZS-Wert vorhanden“ und wird weder in der sichtbaren ZS-Auswertung noch als Lerndatum verwendet. Für solche Pferde kann die gelernte Formel weiterhin eine Prognose berechnen.</p>
-          <p><strong>Schritt 1 – Grundwert:</strong> Von den eingetragenen ZS-Gesamtpunkten werden die bekannten Turnierpunkte (35/25/15, maximal 500) und 100 Punkte je automatisch erkanntem Cupstern abgezogen. Dieser verbleibende ZS-Grundwert ist der Zielwert des Lernmodells.</p>
-          <p><strong>Schritt 2 – Lernformel:</strong> Aus allen geeigneten Pferden der gesamten Datenbank – einschließlich geeigneter Lerndatei-Datensätze und unabhängig vom sichtbaren Züchterfilter – wird eine <strong>stabilisierte lineare Regression</strong> aus GP, Ext, Ext% und Int berechnet. Die Stärke der Stabilisierung wird nicht mehr fest vorgegeben, sondern per Kreuzvalidierung aus den vorhandenen echten ZS-Daten gewählt. Erbkrankheiten werden erst als eigener Faktor mitgelernt, wenn mindestens 3 betroffene und 3 unauffällige Lernpferde vorhanden sind.</p>
-          <p><strong>Wichtig zur Formel:</strong> Die Koeffizienten sind gemeinsame statistische Effekte. GP, Ext und Ext% hängen teilweise miteinander zusammen; deshalb ist ein einzelnes Vorzeichen nicht als geheime MDR-Spielregel zu lesen. Entscheidend ist, wie gut die komplette Formel in der Kreuzvalidierung neue Pferde trifft.</p>
-          <p><strong>Schritt 3 – Prognose:</strong> Für jedes Pferd mit ausreichenden Grunddaten kann die gelernte Formel anschließend einen „DB-Prognose Grundwert“ berechnen. Diese Prognose fließt nie wieder als vermeintlich echter Wert ins Lernmodell zurück. Zusätzlich zeigt die Datenbank nun den Kreuzvalidierungsfehler (MAE/RMSE), damit erkennbar ist, wie gut die Formel auf bisher ungesehenen Pferden funktioniert.</p>
-          <p><strong>Wie lese ich die Modellprüfung?</strong> <strong>MAE</strong> ist die durchschnittliche Abweichung der Prognose in ZS-Punkten – kleiner ist besser. <strong>RMSE</strong> reagiert stärker auf einzelne große Fehlprognosen. <strong>R²</strong> beschreibt, wie viel der Unterschiede zwischen den Pferden erklärt wird: näher an 1 ist besser; um 0 bringt die Formel gegenüber einem einfachen Durchschnitt kaum Zusatznutzen. Diese Werte werden mit Pferden berechnet, die beim jeweiligen Testdurchlauf nicht zum Anpassen der Formel benutzt wurden.</p>
-          <p><strong>Wie viele Pferde sind sinnvoll?</strong> Ab n=8 kann das Modell technisch rechnen. Unter n=15 ist es experimentell; n=15–29 zeigt eine erste brauchbare Tendenz; n=30–49 ist brauchbar; n=50–99 ist eine gute Datenbasis; ab n=100 wird das globale Modell deutlich stabiler. Zusätzlich ist Streuung wichtig: ähnliche Pferde allein erklären die Zusammenhänge schlechter als unterschiedliche GP-/Ext-/Int-Werte. Pferde mit ZS-Punkten, aber ohne eingelesene Turnierplatzierungen werden zum Schutz des Grundwerts vorübergehend nicht zum Lernen verwendet.</p>
+          <p><strong>Lerndaten:</strong> nur Pferde mit positiver ZS-Punktzahl und auswertbarem GP, Ext, Ext%, Int sowie EKH-Status. Leer oder 0 bleibt Prognose und wird nicht gelernt.</p>
+          <p><strong>Grundwert:</strong> ZS gesamt minus Turnierbonus (35/25/15, max. 500) minus 100 je Cupstern.</p>
+          <p><strong>Modell:</strong> stabilisierte Regression aus allen geeigneten Datenbank- und Lerndatei-Pferden; sichtbare Filter ändern das Lernen nicht. EKH ab 3 betroffenen und 3 unauffälligen Pferden.</p>
+          <p><strong>Prognose:</strong> wird aus echten Lerndaten berechnet und nie selbst wieder zum Lerndatum.</p>
+          <p><strong>Prüfung:</strong> MAE = mittlere absolute Abweichung; RMSE gewichtet große Fehler stärker; R² näher an 1 ist besser.</p>
+          <p><strong>Datenmenge:</strong> n&lt;15 experimentell, 15–29 erste Tendenz, 30–49 brauchbar, 50–99 gut, ab 100 stabiler. ZS-Pferde ohne vollständige Turnierplatzierungen werden nicht gelernt.</p>
           <p id="tp-zs-model-formula" class="tp-zs-current-formula"></p>
         </div>
       </details>
@@ -174,17 +170,48 @@
       </div>
     </section>
   </section>
+
+  <section id="tp-tab-stats" class="tp-main-panel" hidden>
+    <section class="card tp-stats-card">
+      <div class="tournament-section-head">
+        <div>
+          <h2>Durchschnittliche Turnierwerte</h2>
+          <p class="small muted">Referenz sind Pferde mit erkannter Hauptbegabung. Je Pferd zählt der beste Wert innerhalb seiner Hauptgruppe.</p>
+        </div>
+      </div>
+      <details id="tp-relative-help" class="tp-relative-help">
+        <summary><span class="tp-info-dot">i</span> Relative Stärke</summary>
+        <p class="small">P72 = höher als etwa 72&nbsp;% der Hauptbegabungs-Referenz derselben LK. Gruppen ab n=3 zählen gleich. Vorerst nur Vergleich; Empfehlung unverändert.</p>
+      </details>
+      <p id="tp-stats-basis" class="small muted"></p>
+      <div class="table-wrap">
+        <table class="detail-table tp-stats-table">
+          <thead><tr><th>LK</th><th>n</th><th>Gruppen</th><th>Ø</th><th>P25</th><th>Median</th><th>P75</th></tr></thead>
+          <tbody id="tp-stats-body"><tr><td colspan="7" class="muted">Lade…</td></tr></tbody>
+        </table>
+      </div>
+      <details class="tp-stats-groups">
+        <summary>Nach Hauptbegabung</summary>
+        <div class="table-wrap">
+          <table class="detail-table tp-stats-group-table">
+            <thead><tr><th>Hauptbegabung</th><th>LK</th><th>n</th><th>Ø</th><th>P25</th><th>Median</th><th>P75</th></tr></thead>
+            <tbody id="tp-stats-group-body"></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+  </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5418"></script>
-<script src="js/database-local.js?v=5418"></script>
-<script src="js/local-app.js?v=5418"></script>
-<script src="js/learning-file.js?v=5418"></script>
-<script src="js/parser.js?v=5418"></script>
-<script src="js/data-quality.js?v=5418"></script>
-<script src="js/planer-common.js?v=5418"></script>
-<script src="js/tournament-recommendation.js?v=5418"></script>
-<script src="js/turnierplaner-local.js?v=5418"></script>
+<script src="js/supabase-config.js?v=5420"></script>
+<script src="js/database-local.js?v=5420"></script>
+<script src="js/local-app.js?v=5420"></script>
+<script src="js/learning-file.js?v=5420"></script>
+<script src="js/parser.js?v=5420"></script>
+<script src="js/data-quality.js?v=5420"></script>
+<script src="js/planer-common.js?v=5420"></script>
+<script src="js/tournament-recommendation.js?v=5420"></script>
+<script src="js/turnierplaner-local.js?v=5420"></script>
 </body>
 </html>

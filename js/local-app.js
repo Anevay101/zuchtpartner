@@ -1654,6 +1654,9 @@ async function injectDataSafetyPanel() {
   if (!main) return;
 
   const isSettingsPage = /(?:^|\/)einstellungen\.html$/i.test(location.pathname);
+  // Datensicherung wird nur in den Einstellungen angezeigt. Autosave,
+  // Wiederherstellung und Sicherheitsprüfungen laufen auf allen Seiten weiter.
+  if (!isSettingsPage) return;
   const panel = document.createElement('div');
   panel.id = 'mdr-data-safety-panel';
   panel.className = 'mdr-data-safety-panel';
@@ -1723,6 +1726,18 @@ async function renderSharedNav() {
   const nav = document.querySelector('.topbar nav');
   if (!nav || nav.dataset.localNavReady === '1') return;
   nav.dataset.localNavReady = '1';
+
+  if (
+    !/(?:^|\/)guide\.html$/i.test(location.pathname) &&
+    !nav.querySelector('a[href="guide.html"]')
+  ) {
+    const guideLink = document.createElement('a');
+    guideLink.className = 'btn secondary';
+    guideLink.href = 'guide.html';
+    guideLink.textContent = 'Guide';
+    guideLink.title = 'Kurzanleitung und MDR-Lebenszyklus';
+    nav.append(guideLink);
+  }
 
   if (
     !/(?:^|\/)einstellungen\.html$/i.test(location.pathname) &&

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Lokal – Verpaarungs-Log – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5418" />
+  <link rel="stylesheet" href="css/style.css?v=5420" />
 </head>
 <body>
   <header class="topbar">
@@ -56,10 +56,11 @@
       </form>
     </fieldset>
 
-    <form id="pairing-filter-form" class="filter-bar">
-      <div class="field">
-        <label for="f-owner">Besitzer</label>
-        <select id="f-owner"></select>
+    <form id="pairing-filter-form" class="filter-bar pairing-filter-bar">
+      <div class="field pairing-owner-filter-field">
+        <label>Züchter</label>
+        <div id="f-owner" class="pairing-owner-checkboxes"></div>
+        <span id="f-owner-status" class="tiny muted">Auswahl wird pro Login gespeichert.</span>
       </div>
       <div class="field">
         <label for="f-breed">Rasse</label>
@@ -78,7 +79,7 @@
         <span><b class="traffic-dot traffic-orange"></b><strong>Orange – prüfen</strong><small>Mindestens auf Elternniveau, aber unter der grünen GP-Grenze oder mit leichter Ext/Ext%/Int-Schwäche.</small></span>
         <span><b class="traffic-dot traffic-red"></b><strong>Rot – aussortieren empfohlen</strong><small>GP unter dem Elternmittel oder eine deutliche Verschlechterung bei Ext, Ext% oder Int.</small></span>
       </div>
-      <p class="tiny muted">Variante B (ausgewogen). Die Ampel ist eine Entscheidungshilfe; Nebenwerte dienen als Qualitätskontrolle. Bei fehlenden Vergleichsdaten erscheint kompakt „Noch offen“ – die Details stehen im Tooltip.</p>
+      <p class="tiny muted">Variante B. Fehlende Vergleichsdaten erscheinen als „Noch offen“.</p>
     </div>
 
     <details id="current-pairings-section" class="pairing-log-section pairing-log-collapsible" open>
@@ -110,10 +111,7 @@
         <span><strong>Vergangene Verpaarungen</strong> <span id="past-pairings-count" class="small muted"></span></span>
         <span class="small muted">Neueste Geburt zuerst</span>
       </summary>
-      <p class="small muted pairing-section-note">
-        Verpaarungen mit einem Abfohldatum vor heute werden automatisch hier einsortiert.
-        Das zuletzt geborene Fohlen steht ganz oben.
-      </p>
+      <p class="small muted pairing-section-note">Vergangene Verpaarungen werden automatisch einsortiert; neueste Geburt zuerst.</p>
       <div id="past-pairings-scroll" class="table-wrap pairing-table-scroll">
         <table id="past-pairing-table" class="past-pairing-table">
           <thead>
@@ -286,17 +284,17 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5418"></script>
-<script src="js/database-local.js?v=5418"></script>
-  <script src="js/local-app.js?v=5418"></script>
-  <script src="js/learning-file.js?v=5418"></script>
-  <script src="js/parser.js?v=5418"></script>
-  <script src="js/zuchtplaner-engine-helpers.js?v=5418"></script>
-  <script src="js/breeding-original.js?v=5418"></script>
-  <script src="js/verpaarungsratgeber-engine.js?v=5418"></script>
-  <script src="js/foal-prediction.js?v=5418"></script>
-  <script src="js/breeding-progress.js?v=5418"></script>
-  <script src="js/horseForm.js?v=5418"></script>
-  <script src="js/verpaarung.js?v=5418"></script>
+<script src="js/supabase-config.js?v=5420"></script>
+<script src="js/database-local.js?v=5420"></script>
+  <script src="js/local-app.js?v=5420"></script>
+  <script src="js/learning-file.js?v=5420"></script>
+  <script src="js/parser.js?v=5420"></script>
+  <script src="js/zuchtplaner-engine-helpers.js?v=5420"></script>
+  <script src="js/breeding-original.js?v=5420"></script>
+  <script src="js/verpaarungsratgeber-engine.js?v=5420"></script>
+  <script src="js/foal-prediction.js?v=5420"></script>
+  <script src="js/breeding-progress.js?v=5420"></script>
+  <script src="js/horseForm.js?v=5420"></script>
+  <script src="js/verpaarung.js?v=5420"></script>
 </body>
 </html>
