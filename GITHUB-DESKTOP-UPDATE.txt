@@ -1,17 +1,13 @@
-MDR V54.0.20 – Update mit GitHub Desktop
+MDR V54.0.21 – Update mit GitHub Desktop
 
-1. MDR-Pferdedatenbank-V54.0.20-Interieur-Appaloosa.zip entpacken.
-2. GitHub Desktop öffnen und das bestehende Repository wählen.
-3. Repository -> Show in Explorer.
-4. NICHT den .git-Ordner löschen.
-5. Den INHALT des entpackten V54.0.20-Ordners in den lokalen Repository-Ordner kopieren.
-6. Vorhandene Dateien ersetzen; neue Dateien wie guide.html und js/guide.js mitkopieren.
-7. GitHub Desktop -> Changes prüfen. Keine privaten JSON-Backups committen.
-8. Summary: „MDR V54.0.20 Interieur + Appaloosa“.
+1. MDR-Pferdedatenbank-V54.0.21-Aktive-Rassen.zip entpacken.
+2. GitHub Desktop öffnen und das bestehende zuchtpartner-Repository auswählen.
+3. Repository → Show in Explorer.
+4. Den versteckten Ordner .git NICHT löschen.
+5. Den INHALT des entpackten V54.0.21-Ordners in den lokalen Repository-Ordner kopieren.
+6. Vorhandene Dateien ersetzen. Die Ordner css/ und js/ bleiben erhalten.
+7. In GitHub Desktop unter Changes kontrollieren, dass keine private JSON-Datensicherung enthalten ist.
+8. Summary: „MDR V54.0.21 aktive Rassen + Stutenfilter“.
 9. Commit to main.
 10. Push origin.
-11. GitHub Pages kurz deployen lassen und die Seite mit Strg+F5 neu laden.
-
-Wichtig:
-- css/ und js/ müssen als Ordner bestehen bleiben.
-- Supabase-Daten werden durch dieses Code-Update nicht gelöscht.
+11. Nach dem GitHub-Pages-Deployment die Seite mit Strg+F5 neu laden.

@@ -56,26 +56,51 @@ async function init() {
 // außerhalb dieser Datenbank eingetragen werden können).
 async function populateHorseNames() {
   const data = (await localGetAll(LOCAL_STORES.horses)).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'));
-  const datalist = document.querySelector('#horse-names');
+  const stallionDatalist = document.querySelector('#stallion-horse-names');
+  const mareDatalist = document.querySelector('#mare-horse-names');
   const foalDatalist = document.querySelector('#foal-horse-names');
-  datalist.innerHTML = '';
+  if (stallionDatalist) stallionDatalist.innerHTML = '';
+  if (mareDatalist) mareDatalist.innerHTML = '';
   if (foalDatalist) foalDatalist.innerHTML = '';
   nameToBreed = new Map();
   nameToHorse = new Map();
   horseById = new Map();
+
+  const activeBreeds = new Set(typeof activeBreedingBreeds === 'function'
+    ? activeBreedingBreeds(data)
+    : data.filter(h => isActiveBreeder(h.owner) && /stute|mare|female/i.test(String(h.gender || ''))).map(h => normalizeBreed(h.breed) || 'Rasselos'));
+
+  const genderOf = (h) => String(h?.gender || '').toLocaleLowerCase('de');
+  const isMare = (h) => /stute|mare|female/.test(genderOf(h));
+  const isStallion = (h) => /hengst|stallion|male/.test(genderOf(h));
+  const isLearning = (h) => typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h);
+
   (data || []).forEach((h) => {
-    const opt = document.createElement('option');
-    opt.value = h.name;
-    datalist.appendChild(opt);
+    const breed = normalizeBreed(h.breed) || 'Rasselos';
+    // Neue Verpaarung: Stutenvorschläge nur aus aktivem Besitz. Hengste
+    // dürfen fremden Züchtern gehören, bleiben aber auf die Rassen der aktiven
+    // Stuten begrenzt. Freitext bleibt für Sonderfälle weiterhin möglich.
+    if (!isLearning(h) && isMare(h) && isActiveBreeder(h.owner) && mareDatalist) {
+      const opt = document.createElement('option');
+      opt.value = h.name;
+      opt.label = [h.owner, breed].filter(Boolean).join(' · ');
+      mareDatalist.appendChild(opt);
+    }
+    if (!isLearning(h) && isStallion(h) && activeBreeds.has(breed) && stallionDatalist) {
+      const opt = document.createElement('option');
+      opt.value = h.name;
+      opt.label = [h.owner, breed].filter(Boolean).join(' · ');
+      stallionDatalist.appendChild(opt);
+    }
     if (foalDatalist) {
       const foalOpt = document.createElement('option');
       foalOpt.value = h.name;
-      foalOpt.label = [h.gender, normalizeBreed(h.breed), h.external_id ? `ID ${h.external_id}` : null]
+      foalOpt.label = [h.gender, breed, h.external_id ? `ID ${h.external_id}` : null]
         .filter(Boolean).join(' · ');
       foalDatalist.appendChild(foalOpt);
     }
     const key = (h.name || '').trim().toLowerCase();
-    nameToBreed.set(key, normalizeBreed(h.breed) || '');
+    nameToBreed.set(key, breed || '');
     if (key && !nameToHorse.has(key)) nameToHorse.set(key, h);
     if (h.id != null) horseById.set(String(h.id), h);
   });
@@ -88,21 +113,20 @@ async function populateHorseNames() {
 // normalisierte Altdaten vorkommen.
 async function populateBreedFilter() {
   const data = await localGetAll(LOCAL_STORES.horses);
-  const breeds = new Set((data || []).map((h) => normalizeBreed(h.breed)).filter(Boolean));
-  breeds.delete('American Paint Horse');
-  breeds.delete('Rasselos');
+  const breeds = typeof activeBreedingBreeds === 'function'
+    ? activeBreedingBreeds(data)
+    : [...new Set((data || []).filter(h => isActiveBreeder(h.owner) && /stute|mare|female/i.test(String(h.gender || ''))).map((h) => normalizeBreed(h.breed) || 'Rasselos'))].sort((a,b)=>a.localeCompare(b,'de'));
 
   const sel = document.querySelector('#f-breed');
   const previous = sel.value;
-  sel.querySelectorAll('option[data-dynamic]').forEach((o) => o.remove());
-  [...breeds].sort((a, b) => a.localeCompare(b, 'de')).forEach((b) => {
+  sel.innerHTML = '<option value="">Alle</option>';
+  breeds.forEach((b) => {
     const opt = document.createElement('option');
     opt.value = b;
     opt.textContent = b;
-    opt.dataset.dynamic = 'true';
     sel.appendChild(opt);
   });
-  sel.value = previous || '';
+  sel.value = [...sel.options].some(o => o.value === previous) ? previous : '';
 }
 
 // Sichtbare Züchter: nur aktive Züchter, Auswahl pro Login gespeichert.

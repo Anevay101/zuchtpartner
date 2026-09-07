@@ -2,6 +2,7 @@
 let ZH_HORSES = [];
 let ZH_MARES = [];
 let ZH_STALLIONS = [];
+let ZH_ACTIVE_BREEDS = [];
 let foreignStallion = null;
 let empiricalDeviations = null;
 let flaxenLookup = null;
@@ -118,8 +119,26 @@ async function initZucht() {
   // geladenen Bestand. Nicht nur aus dem beim Bau bekannten Snapshot.
   globalThis.MDR_APPALOOSA_EMPIRICAL_HORSES = ZH_HORSES;
 
-  ZH_MARES = ZH_HORSES.filter((h) => plannerGenderLocal(h) === 'stute' && breedingEligibleLocal(h) && !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
-  ZH_STALLIONS = ZH_HORSES.filter((h) => plannerGenderLocal(h) === 'hengst' && breedingEligibleLocal(h) && !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
+  // Persönliche Zuchtbasis: Die Stuten müssen einem aktiven Züchter gehören.
+  // Hengste dürfen von beliebigen Besitzern stammen, aber nur aus Rassen,
+  // die bei den Stuten der aktiven Züchter tatsächlich vorkommen.
+  ZH_ACTIVE_BREEDS = typeof activeBreedingBreeds === 'function'
+    ? activeBreedingBreeds(ZH_HORSES)
+    : uniqueSorted(ZH_HORSES.filter(h => isActiveBreeder(h.owner) && /stute|mare|female/i.test(String(h.gender || ''))).map(h => normalizeBreed(h.breed) || 'Rasselos'));
+  const activeBreedSet = new Set(ZH_ACTIVE_BREEDS);
+
+  ZH_MARES = ZH_HORSES.filter((h) =>
+    plannerGenderLocal(h) === 'stute' &&
+    isActiveBreeder(h.owner) &&
+    breedingEligibleLocal(h) &&
+    !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h))
+  );
+  ZH_STALLIONS = ZH_HORSES.filter((h) =>
+    plannerGenderLocal(h) === 'hengst' &&
+    activeBreedSet.has(normalizeBreed(h.breed) || 'Rasselos') &&
+    breedingEligibleLocal(h) &&
+    !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h))
+  );
 
   if (repairedEnglish > 0) {
     console.info(`${repairedEnglish} englische Pferde für den Verpaarungsratgeber neu ausgewertet.`);
@@ -180,8 +199,8 @@ function fillSelect(id, values, allLabel='Alle') {
 function buildFilters() {
   fillSelect('mare-owner-select', uniqueSorted(ZH_MARES.map(h => h.owner)));
   fillSelect('stallion-owner-select', uniqueSorted(ZH_STALLIONS.map(h => h.owner)));
-  fillSelect('mare-breed-select', uniqueSorted(ZH_MARES.map(h => normalizeBreed(h.breed) || 'Rasselos')));
-  fillSelect('stallion-breed-select', uniqueSorted(ZH_STALLIONS.map(h => normalizeBreed(h.breed) || 'Rasselos')));
+  fillSelect('mare-breed-select', ZH_ACTIVE_BREEDS);
+  fillSelect('stallion-breed-select', ZH_ACTIVE_BREEDS);
 
   refreshHorseSelectors();
   refreshCandidateFilters();
@@ -300,7 +319,7 @@ function refreshHorseSelectors() {
 function refreshCandidateFilters() {
   const pool = richtung === 'hengst' ? ZH_MARES : ZH_STALLIONS;
   fillSelect('candidate-owner-select', uniqueSorted(pool.map(h => h.owner)));
-  fillSelect('candidate-breed-select', uniqueSorted(pool.map(h => normalizeBreed(h.breed) || 'Rasselos')));
+  fillSelect('candidate-breed-select', ZH_ACTIVE_BREEDS);
   const stationWrap = document.getElementById('candidate-station-wrap');
   const stationSelect = document.getElementById('candidate-station-select');
   // Zuchtstation ist eine Hengst-Eigenschaft und daher nur sinnvoll, wenn
@@ -841,22 +860,24 @@ function empiricalHtml(mare, stallion) {
     return `${metricFormatter(value + stats.typicalLowOffset)}–${metricFormatter(value + stats.typicalHighOffset)}`;
   };
 
-  const ns = Object.entries(empiricalDeviations)
-    .map(([k,v]) => `${k}: n=${v.n}`)
-    .join(', ');
+  const rangeNote = (key, metricFormatter) => {
+    const stats = empiricalDeviations?.[key];
+    const n = Number(stats?.n || 0);
+    return `typisch ${rangeText(key, metricFormatter)} · n=${n}`;
+  };
 
   return `
     <div class="planner-empirical-estimate">
       <p class="small">
         <strong>Datenbank-Schätzung</strong><br>
-        GP <strong>${fmtGp(est.gp)}</strong> <span class="tiny muted">(typisch ${rangeText('gp',fmtGp)})</span> ·
-        Ext <strong>${fmtScore(est.ext)}</strong> <span class="tiny muted">(typisch ${rangeText('ext',fmtScore)})</span> ·
-        Ext% <strong>${fmtPct(est.extPct)}</strong> <span class="tiny muted">(typisch ${rangeText('extPct',fmtPct)})</span> ·
-        Int <strong>${fmtScore(est.int)}</strong> <span class="tiny muted">(typisch ${rangeText('int',fmtScore)})</span>
+        GP <strong>${fmtGp(est.gp)}</strong> <span class="tiny muted">(${rangeNote('gp',fmtGp)})</span> ·
+        Ext <strong>${fmtScore(est.ext)}</strong> <span class="tiny muted">(${rangeNote('ext',fmtScore)})</span> ·
+        Ext% <strong>${fmtPct(est.extPct)}</strong> <span class="tiny muted">(${rangeNote('extPct',fmtPct)})</span> ·
+        Int <strong>${fmtScore(est.int)}</strong> <span class="tiny muted">(${rangeNote('int',fmtScore)})</span>
       </p>
       <p class="tiny muted">
         Schätzung = Elternmittel + Ø-Abweichung echter Fohlen. „Typisch“ = zentraler 80%-Bereich
-        der bisher beobachteten Schätzfehler (10.–90. Perzentil; ${esc(ns)}).
+        der bisher beobachteten Schätzfehler (10.–90. Perzentil). n = auswertbare Eltern–Fohlen-Trios je Wert.
       </p>
     </div>`;
 }

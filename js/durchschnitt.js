@@ -27,9 +27,11 @@ async function populateFilterOptions() {
   // Die Anzahl steht direkt dabei, damit sofort sichtbar ist, welche Basis
   // der Durchschnitt bei Auswahl dieser Rasse verwendet.
   const breedCounts = new Map();
-  for (const h of data) {
-    const breed = normalizeBreed(h.breed);
-    if (!breed) continue;
+  const ownedRows = typeof activeOwnedHorses === 'function'
+    ? activeOwnedHorses(data)
+    : data.filter(h => isActiveBreeder(h.owner));
+  for (const h of ownedRows) {
+    const breed = normalizeBreed(h.breed) || 'Rasselos';
     breedCounts.set(breed, (breedCounts.get(breed) || 0) + 1);
   }
   const breedOptions = [...breedCounts.entries()]

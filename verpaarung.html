@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Lokal – Verpaarungs-Log – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5420" />
+  <link rel="stylesheet" href="css/style.css?v=5421" />
 </head>
 <body>
   <header class="topbar">
@@ -26,8 +26,8 @@
       <legend>Neue Verpaarung eintragen</legend>
       <form id="pairing-form">
         <div class="form-grid">
-          <div><label for="p-stallion">Deckhengst *</label><input id="p-stallion" list="horse-names" required /></div>
-          <div><label for="p-mare">Stute *</label><input id="p-mare" list="horse-names" required /></div>
+          <div><label for="p-stallion">Deckhengst *</label><input id="p-stallion" list="stallion-horse-names" required /></div>
+          <div><label for="p-mare">Stute *</label><input id="p-mare" list="mare-horse-names" required /></div>
           <div><label for="p-date">Abfohldatum</label><input id="p-date" type="text" inputmode="numeric" placeholder="TT.MM.JJJJ" autocomplete="off" /></div>
           <div><label for="p-keep-foal">Fohlen behalten?</label>
             <select id="p-keep-foal">
@@ -47,7 +47,8 @@
           </div>
           <div style="grid-column: 1 / -1;"><label for="p-notes">Notizen</label><input id="p-notes" /></div>
         </div>
-        <datalist id="horse-names"></datalist>
+        <datalist id="stallion-horse-names"></datalist>
+        <datalist id="mare-horse-names"></datalist>
         <datalist id="foal-horse-names"></datalist>
         <p id="pairing-form-error" class="error"></p>
         <div class="form-actions">
@@ -66,8 +67,6 @@
         <label for="f-breed">Rasse</label>
         <select id="f-breed">
           <option value="" selected>Alle</option>
-          <option value="American Paint Horse">American Paint Horse</option>
-          <option value="Rasselos">Rasselos</option>
         </select>
       </div>
     </form>
@@ -284,17 +283,17 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5420"></script>
-<script src="js/database-local.js?v=5420"></script>
-  <script src="js/local-app.js?v=5420"></script>
-  <script src="js/learning-file.js?v=5420"></script>
-  <script src="js/parser.js?v=5420"></script>
-  <script src="js/zuchtplaner-engine-helpers.js?v=5420"></script>
-  <script src="js/breeding-original.js?v=5420"></script>
-  <script src="js/verpaarungsratgeber-engine.js?v=5420"></script>
-  <script src="js/foal-prediction.js?v=5420"></script>
-  <script src="js/breeding-progress.js?v=5420"></script>
-  <script src="js/horseForm.js?v=5420"></script>
-  <script src="js/verpaarung.js?v=5420"></script>
+<script src="js/supabase-config.js?v=5421"></script>
+<script src="js/database-local.js?v=5421"></script>
+  <script src="js/local-app.js?v=5421"></script>
+  <script src="js/learning-file.js?v=5421"></script>
+  <script src="js/parser.js?v=5421"></script>
+  <script src="js/zuchtplaner-engine-helpers.js?v=5421"></script>
+  <script src="js/breeding-original.js?v=5421"></script>
+  <script src="js/verpaarungsratgeber-engine.js?v=5421"></script>
+  <script src="js/foal-prediction.js?v=5421"></script>
+  <script src="js/breeding-progress.js?v=5421"></script>
+  <script src="js/horseForm.js?v=5421"></script>
+  <script src="js/verpaarung.js?v=5421"></script>
 </body>
 </html>

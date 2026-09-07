@@ -99,8 +99,9 @@ function buildTournamentControls() {
     '<option value="">Alle</option>' +
     owners.map(o => `<option value="${plannerEscape(o)}">${plannerEscape(o)}</option>`).join('');
 
-  const breeds = [...new Set(TP_HORSES.map(h => h.breed).filter(Boolean))]
-    .sort((a,b) => a.localeCompare(b,'de'));
+  const breeds = typeof activeOwnedBreeds === 'function'
+    ? activeOwnedBreeds(TP_ALL_HORSES)
+    : [...new Set(TP_HORSES.map(h => normalizeBreed(h.breed) || 'Rasselos'))].sort((a,b) => a.localeCompare(b,'de'));
   const breedOptions =
     '<option value="">Alle</option>' +
     breeds.map(b => `<option value="${plannerEscape(b)}">${plannerEscape(b)}</option>`).join('');
@@ -179,7 +180,7 @@ function wireTurnierMainTabs() {
 function refreshTournamentHorseSelect() {
   const breed = document.getElementById('tp-horse-breed')?.value || '';
   const current = document.getElementById('tp-horse')?.value || '';
-  const horses = TP_HORSES.filter(h => !breed || h.breed === breed);
+  const horses = TP_HORSES.filter(h => !breed || (normalizeBreed(h.breed) || 'Rasselos') === breed);
 
   document.getElementById('tp-horse').innerHTML =
     '<option value="">Bitte wählen…</option>' +
@@ -560,7 +561,7 @@ function renderTournamentRanking() {
 
   rows = rows.filter(({horse, eval}) => {
     if (owner && horse.owner !== owner) return false;
-    if (breed && horse.breed !== breed) return false;
+    if (breed && (normalizeBreed(horse.breed) || 'Rasselos') !== breed) return false;
     if (pointsMin != null && eval.points < pointsMin) return false;
     if (interiorMax != null && (eval.interior == null || eval.interior > interiorMax)) return false;
     if (lkFilter && eval.lk !== lkFilter) return false;
@@ -571,7 +572,7 @@ function renderTournamentRanking() {
       if (!haystack.includes(tableHorse)) return false;
     }
     if (tableDiscipline && !eval.discipline.toLowerCase().includes(tableDiscipline)) return false;
-    if (tableBreed && horse.breed !== tableBreed) return false;
+    if (tableBreed && (normalizeBreed(horse.breed) || 'Rasselos') !== tableBreed) return false;
     if (tablePoints != null && eval.points < tablePoints) return false;
     if (tableInterior != null && (eval.interior == null || eval.interior > tableInterior)) return false;
     if (tableLks.length && !tableLks.includes(eval.lk)) return false;

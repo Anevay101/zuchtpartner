@@ -533,15 +533,17 @@ async function populateFilterOptions() {
 
   fillSelect('#f-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
   fillSelect('#f-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort());
-  const breeds = new Set(data.map((d) => normalizeBreed(d.breed)).filter(Boolean));
-  breeds.add('American Paint Horse');
-  breeds.add('Rasselos');
-  // 'Alle' muss wirklich alle Rassen bedeuten. Die bisherige V47-Logik
-  // hat bei gesetzter Rassenauswahl im Hintergrund bereits bei 'Alle'
-  // eingeschränkt – dadurch wirkte der sichtbare Filter defekt.
-  fillSelect('#f-breed', [...breeds].sort());
+  // Rasse-Auswahllisten sind persönlich: angeboten werden nur Rassen,
+  // die aktuell bei den aktiven Züchtern im Bestand vorkommen. Die
+  // Datenbank selbst bleibt vollständig; nur die Auswahl wird schlanker.
+  const breeds = typeof activeOwnedBreeds === 'function'
+    ? activeOwnedBreeds(data)
+    : [...new Set(data.filter(h => isActiveBreeder(h.owner)).map((d) => normalizeBreed(d.breed) || 'Rasselos'))].sort();
+  // 'Alle' bleibt bewusst uneingeschränkt; einzelne Rassen sind dagegen
+  // auf die persönliche aktive Zuchtbasis begrenzt.
+  fillSelect('#f-breed', breeds);
 
-  fillSelect('#cmp-breed', [...breeds].sort());
+  fillSelect('#cmp-breed', breeds);
   fillSelect('#cmp-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
   fillSelect('#cmp-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort());
 

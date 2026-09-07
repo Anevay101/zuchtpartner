@@ -398,7 +398,7 @@ async function saveActiveBreeders() {
   });
   localStorage.setItem(storageKey,JSON.stringify(owners));
   const status=document.getElementById('active-breeders-status');
-  if (status) status.textContent=`Gespeichert: ${owners.length} aktive Züchter. Dashboard, Turnierplaner und Aussortierhilfe nutzen diese Züchter; das Verpaarungs-Log bietet sie als persönliche Auswahl an.`;
+  if (status) status.textContent=`Gespeichert: ${owners.length} aktive Züchter. Dashboard, Turnierplaner und Aussortierhilfe nutzen diese Züchter. Rassefilter richten sich nach deren aktuellem Bestand; im Zuchtplaner stammen Stuten nur von aktiven Züchtern, Hengste dürfen fremden Besitzern gehören, wenn ihre Rasse bei einer aktiven Stute vorkommt.`;
 }
 
 async function ensureTagConfigInitialized() {

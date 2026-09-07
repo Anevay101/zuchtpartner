@@ -1754,9 +1754,9 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
 const HORSE_TAG_CONFIG_STORAGE_KEY = 'mdr-horse-tag-options-v47';
 const HORSE_TAG_CONFIG_DB_KEY = 'horse_tag_options_v47';
 
-// Aktive Züchter begrenzen persönliche Auswertungen. Das Verpaarungs-Log
-// bietet nur aktive Züchter als persönliche Sichtauswahl an; Datenbank und
-// Zuchtplaner bleiben vollständig.
+// Aktive Züchter begrenzen persönliche Arbeitsansichten und definieren die
+// dort angebotene Rassenbasis. Das Verpaarungs-Log speichert seine sichtbare
+// Züchterauswahl zusätzlich pro Login.
 const ACTIVE_BREEDERS_STORAGE_KEY = 'mdr-active-breeders-v48'; // Legacy-Fallback
 const ACTIVE_BREEDERS_DB_KEY = 'active_breeders_v48'; // Legacy-Fallback
 
@@ -1800,6 +1800,47 @@ function activeBreederOptions(owners) {
     .sort((a,b) => a.localeCompare(b,'de'));
   const configured = getActiveBreeders();
   return configured == null ? unique : unique.filter(owner => configured.includes(owner));
+}
+
+
+// Gemeinsame persönliche Rassenbasis für alle Arbeitsansichten.
+// Maßgeblich sind nur Pferde, die aktuell einem aktiven Züchter gehören.
+// Lerndatei-/Archivpferde zählen nicht als aktueller Besitz. Wenn noch keine
+// aktive Züchterauswahl gespeichert wurde, gelten wie bisher alle Besitzer.
+function activeOwnedHorses(horses) {
+  return (horses || []).filter((horse) => {
+    if (!isActiveBreeder(horse?.owner)) return false;
+    if (typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(horse)) return false;
+    return true;
+  });
+}
+
+function activeOwnedBreeds(horses) {
+  const values = activeOwnedHorses(horses).map((horse) => {
+    const raw = typeof normalizeBreed === 'function' ? normalizeBreed(horse?.breed) : horse?.breed;
+    return String(raw || 'Rasselos').trim() || 'Rasselos';
+  });
+  return [...new Set(values)].sort((a,b) => a.localeCompare(b,'de'));
+}
+
+function activeOwnedBreedSet(horses) {
+  return new Set(activeOwnedBreeds(horses));
+}
+
+
+// Für Verpaarungen bestimmen die eigenen/aktiven Stuten die tatsächlich
+// relevante Zuchtrassenbasis: Eine fremde Deckhengstrasse soll nicht allein
+// deshalb als Auswahl auftauchen, weil irgendwo ein Hengst dieser Rasse steht.
+function activeBreedingBreeds(horses) {
+  const mares = activeOwnedHorses(horses).filter((horse) => {
+    const g = String(horse?.gender || '').toLocaleLowerCase('de');
+    return /stute|mare|female/.test(g);
+  });
+  const values = mares.map((horse) => {
+    const raw = typeof normalizeBreed === 'function' ? normalizeBreed(horse?.breed) : horse?.breed;
+    return String(raw || 'Rasselos').trim() || 'Rasselos';
+  });
+  return [...new Set(values)].sort((a,b) => a.localeCompare(b,'de'));
 }
 
 const HORSE_TAG_DEFAULT_OPTIONS = [
