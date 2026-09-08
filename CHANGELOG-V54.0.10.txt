@@ -1,0 +1,11 @@
+MDR Pferdedatenbank V54.0.10 – Turnierreferenzen gestaffelt
+
+- Bereits vorhandene Pferde werden automatisch als Referenzbestand ausgewertet.
+- Referenzbasis = Pferde, deren eingetragene Hauptdisziplin zur betrachteten Disziplingruppe gehört.
+- Ab 15 passenden Pferden: reguläre P25-Referenz.
+- Bei 5–14 passenden Pferden: vorläufige P25-Referenz.
+- Bei 0–4 passenden Pferden: noch keine gelernte Referenz; die absolute Mindestgrenze (Standard 150) gilt vorläufig allein.
+- Vorläufig bewertete geeignete Disziplinen und Alternativen werden entsprechend gekennzeichnet.
+- Auf der Turnierseite erscheint eine sehr kleine Referenzbasis-Zeile je Hauptgruppe (n + Reifegrad).
+- Pferdeseite und Turnierseite verwenden weiterhin dieselbe gemeinsame Empfehlungslogik.
+- Kopiertexte bleiben erhalten und kennzeichnen eine vorläufige Alternative.

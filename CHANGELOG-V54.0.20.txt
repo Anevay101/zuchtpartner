@@ -1,0 +1,41 @@
+MDR Pferdedatenbank V54.0.20
+
+Diese Gesamtversion enthält auch die zuvor vorbereiteten V54.0.19-Änderungen.
+
+Turnier & Statistik
+- Neuer Tab „Durchschnittliche Turnierwerte“.
+- Referenz je LK aus echten Hauptbegabungen; Anzeige n, P25, Median und P75.
+- Hauptgruppen mit ausreichender Datenbasis werden im LK-Gesamtvergleich gleich gewichtet.
+- „Relative Stärke“ als Pxx mit Info-Erklärung; zunächst nur Kontext, Empfehlung bleibt 180/150.
+- Bestands-Rangliste zeigt standardmäßig nur die obere Hälfte; Gleichstände am 50%-Schnitt bleiben sichtbar.
+
+Guide
+- Neue kompakte FAQ-Seite guide.html.
+- Funktionsübersicht, MDR-Lebenszyklus, Dashboard, Verpaarungs-Log, Zuchtplaner, Turnierplaner und Aussortierhilfe.
+- Texte gekürzt; Datensicherungsanzeige außerhalb der Einstellungen entfernt.
+
+Verpaarungs-Log
+- Züchterfilter als Mehrfachauswahl nur aus aktiven Züchtern.
+- Auswahl wird pro Login separat in user_settings gespeichert.
+- Gespeicherte Prognosen zeigen ihre historische Lernbasis als „damals n“ und zusätzlich die aktuelle Lernbasis als „heute n“.
+- Historische Prognosen werden nicht rückwirkend verändert.
+
+Turnierzucht / Interieur
+- Interieur-Vererbung wird zusätzlich empirisch aus echten Eltern–Fohlen-Trios ausgewertet.
+- Für priorisierte Turnierzucht-Merkmale werden Elternkombination, n und beobachtete Verteilung der Interieurstufen angezeigt.
+- Die theoretische Turnierzucht-Rangliste bleibt erhalten; Erfahrungsdaten werden als zusätzliche Ebene gezeigt.
+
+Appaloosa
+- Bei getesteten LP/PATN1-Werten wird ein empirischer Muster-Vorschlag eingeblendet und bei leerem Musterfeld vorausgewählt.
+- Exakte Genkombinationen werden bevorzugt; bei kleiner Stichprobe wird auf eine breitere passende Referenz zurückgefallen.
+- Der Muster-Vorschlag bleibt manuell änderbar.
+- Bei sichtbarem Muster ohne Test werden LP/PATN1-Vermutungen aus den vorhandenen Vergleichspferden angezeigt.
+- Vermutungen werden ausdrücklich nicht als Gentest gespeichert; sichere Tests haben Vorrang.
+- Die Hinweise sind beim Eintragen und in der Pferdeansicht sichtbar.
+
+Farbzucht
+- Die bestehende Zahl auswertbarer Eltern–Fohlen-Trios bleibt dynamisch aus aktuellem Bestand + Fohlen-Lerndaten berechnet; kein eingefrorenes Snapshot-n.
+
+Technik
+- V54.0.18 Performance-Optimierungen bleiben enthalten.
+- Cachebuster 5420.

@@ -1,0 +1,8 @@
+MDR Pferdedatenbank V54.0.17
+
+- Neues Stammdatenfeld „Flaxen-Träger (fl)?“ mit unbekannt / Ja / Nein.
+- Explizites Ja/Nein wird mit der bestehenden Flaxen-Genetik synchronisiert und damit auch für die Farbvererbung genutzt.
+- Sichtbares Flaxen (flfl) bleibt die stärkere Information und wird automatisch als Trägerstatus Ja dargestellt.
+- Bestehende ältere manuelle Flaxen-Angaben werden im neuen Feld übernommen.
+- Feld ist auch auf der Pferde-Ansichtsseite sichtbar.
+- Cachebuster auf 5417 erhöht.

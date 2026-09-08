@@ -1,0 +1,13 @@
+Repository-Bereinigung – V54.0.23
+
+Die Website lädt JavaScript ausschließlich aus dem Ordner js/ und CSS ausschließlich aus css/.
+Die früher zusätzlich im Hauptordner liegenden *.js- und *.css-Dateien waren redundante/alte Kopien und wurden in dieser bereinigten Version entfernt.
+
+Wichtig für GitHub Desktop:
+- js/ NICHT löschen.
+- css/ NICHT löschen.
+- Die HTML-Dateien bleiben im Hauptordner.
+- Dateien wie „database-local (5).js“ entstehen typischerweise, wenn ein Browser/Windows eine bereits vorhandene Download-Datei nicht überschreibt und stattdessen eine Nummer anhängt.
+- Für Updates ZIP-Dateien immer in einen frischen temporären Ordner entpacken und dann die vorgesehenen Dateien/Ordner in das Repository kopieren. Keine einzelnen mehrfach heruntergeladenen JS-Dateien aus dem Download-Ordner in den Repository-Hauptordner ziehen.
+
+Wenn dein bestehendes Repository die alten Root-Kopien noch enthält, kannst du sie einmalig löschen. GitHub Desktop zeigt diese Löschungen anschließend unter Changes an; danach Commit + Push.
