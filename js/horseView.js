@@ -122,6 +122,50 @@ function wireViewSortControls() {
 }
 function viewAgeLabel(birthdate) { return typeof formatAgeShort === 'function' ? formatAgeShort(birthdate) : formatAge(birthdate); }
 
+
+function renderHorseBreedingShowSummary(horse, allHorses) {
+  const field = document.getElementById('breeding_show_summary');
+  const note = document.getElementById('breeding-show-summary-note');
+  if (!field) return;
+
+  const actual = typeof plannerBreedingShowPoints === 'function'
+    ? plannerBreedingShowPoints(horse)
+    : null;
+  if (actual != null) {
+    field.value = String(Math.round(actual));
+    if (note) note.textContent = 'Echter eingetragener ZS-Gesamtwert.';
+    return;
+  }
+
+  const isFoal = typeof plannerIsFoal === 'function' && plannerIsFoal(horse);
+  if (!isFoal) {
+    field.value = '–';
+    if (note) note.textContent = 'Keine echten ZS-Punkte. Prognosen werden nur für Fohlen angezeigt.';
+    return;
+  }
+
+  if (typeof plannerBuildBreedingShowModel !== 'function') {
+    field.value = '–';
+    if (note) note.textContent = 'ZS-Prognose derzeit nicht verfügbar.';
+    return;
+  }
+
+  const model = plannerBuildBreedingShowModel(allHorses);
+  const predicted = model.predict(horse);
+  if (predicted != null && Number.isFinite(predicted)) {
+    field.value = String(Math.round(predicted));
+    if (note) note.textContent = 'ZS-Prognose (Grundwert). Wird automatisch durch den echten ZS-Wert ersetzt, sobald dieser eingetragen ist.';
+    return;
+  }
+
+  field.value = '–';
+  if (note) {
+    if (model.n < 8) note.textContent = `Noch keine ZS-Prognose: aktuell ${model.n} verwertbare echte ZS-Datensätze, mindestens 8 nötig.`;
+    else if (typeof plannerBreedingShowFeatureObject === 'function' && !plannerBreedingShowFeatureObject(horse)) note.textContent = 'ZS-Prognose nicht berechenbar: GP, Ext, Ext% oder Int fehlen.';
+    else note.textContent = 'ZS-Prognose derzeit nicht berechenbar.';
+  }
+}
+
 async function initView() {
   const session = await requireSession();
   if (!session) return;
@@ -154,6 +198,7 @@ async function initView() {
   document.title = (name || 'Pferd') + ' – MDR Pferdedatenbank lokal';
 
   renderHorseViewHeader(extraData);
+  renderHorseBreedingShowSummary(extraData, viewHorseList);
   renderHorseTournamentProfile(extraData, viewHorseList);
   if (typeof bpRenderBreedingPanel === 'function') await bpRenderBreedingPanel(extraData, 'breeding-progress-panel');
 

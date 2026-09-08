@@ -696,3 +696,180 @@ function plannerTalentWishProjection(mare,stallion,wish,allHorses) {
   const score=matches===2 ? .75 : matches===1 ? .45 : .10;
   return {score,probability:null,n:0,source:'Eltern-Tendenz',rows:[]};
 }
+
+
+// ---------------------------------------------------------------------
+// V54.0.22 – gemeinsame ZS-Prognose für Turnierplaner und Pferdeansicht
+// ---------------------------------------------------------------------
+function plannerIsFoal(horse) {
+  const gender = plannerNorm(horse?.gender);
+  return /fohlen|foal|colt|filly/.test(gender);
+}
+
+function plannerBreedingShowFeatureObject(horse) {
+  const stats = plannerStats(horse);
+  const raw = {gp:stats.gp, ext:stats.ext, extpct:stats.extpct, int:stats.int};
+  // Number(null) wäre 0 und würde fehlende Grundwerte fälschlich als echte
+  // Nullwerte in Lernmodell/Prognose einschleusen. Erst auf Leerwerte prüfen.
+  if (Object.values(raw).some(value => value == null || value === '' || !Number.isFinite(Number(value)))) return null;
+  return {
+    gp: Number(raw.gp),
+    ext: Number(raw.ext),
+    extpct: Number(raw.extpct),
+    int: Number(raw.int),
+    disease: plannerHasActiveDiseaseRisk(horse) ? 1 : 0,
+  };
+}
+
+function plannerBreedingShowTrainingStatus(horse) {
+  const total = plannerBreedingShowPoints(horse);
+  if (total == null) return {eligible:false, reason:'no-zs'};
+  const x = plannerBreedingShowFeatureObject(horse);
+  if (!x) return {eligible:false, reason:'missing-features'};
+  // Nur echte ZS-Datensätze brauchen Turnierplatzierungen: der Turnierbonus
+  // muss für den Lern-Grundwert zuverlässig vom ZS-Gesamtwert abziehbar sein.
+  if (plannerTournamentPlacements(horse) < 1) return {eligible:false, reason:'missing-tournament'};
+  const y = plannerBreedingShowBase(horse);
+  if (y == null || !Number.isFinite(y) || y < 0) return {eligible:false, reason:'invalid-base'};
+  return {eligible:true, y, x};
+}
+
+function plannerBreedingShowSolveLinear(A, b) {
+  const n = A.length;
+  const M = A.map((row, i) => [...row, b[i]]);
+  for (let col=0; col<n; col++) {
+    let pivot = col;
+    for (let r=col+1; r<n; r++) if (Math.abs(M[r][col]) > Math.abs(M[pivot][col])) pivot = r;
+    if (Math.abs(M[pivot][col]) < 1e-10) return null;
+    [M[col], M[pivot]] = [M[pivot], M[col]];
+    const div = M[col][col];
+    for (let c=col; c<=n; c++) M[col][c] /= div;
+    for (let r=0; r<n; r++) {
+      if (r === col) continue;
+      const factor = M[r][col];
+      for (let c=col; c<=n; c++) M[r][c] -= factor * M[col][c];
+    }
+  }
+  return M.map(row => row[n]);
+}
+
+function plannerBreedingShowFitRidge(rows, featureKeys, lambda) {
+  if (!rows.length || !featureKeys.length) return null;
+  const means = featureKeys.map(key => rows.reduce((sum,row) => sum + row.x[key], 0) / rows.length);
+  const stds = featureKeys.map((key,j) => {
+    const variance = rows.reduce((sum,row) => sum + (row.x[key] - means[j]) ** 2, 0) / rows.length;
+    return Math.sqrt(variance) || 1;
+  });
+  const X = rows.map(row => [1, ...featureKeys.map((key,j) => (row.x[key] - means[j]) / stds[j])]);
+  const y = rows.map(row => row.y);
+  const m = featureKeys.length + 1;
+  const xtx = Array.from({length:m}, () => Array(m).fill(0));
+  const xty = Array(m).fill(0);
+  for (let r=0; r<X.length; r++) for (let i=0; i<m; i++) {
+    xty[i] += X[r][i] * y[r];
+    for (let j=0; j<m; j++) xtx[i][j] += X[r][i] * X[r][j];
+  }
+  for (let i=1; i<m; i++) xtx[i][i] += lambda;
+  const beta = plannerBreedingShowSolveLinear(xtx, xty);
+  if (!beta) return null;
+  const rawCoefficients = featureKeys.map((key,j) => beta[j+1] / stds[j]);
+  const rawIntercept = beta[0] - rawCoefficients.reduce((sum,c,j) => sum + c * means[j], 0);
+  return {
+    lambda, featureKeys, means, stds, beta, rawIntercept, rawCoefficients,
+    predictX(x) {
+      if (!x) return null;
+      if (featureKeys.some(key => !Number.isFinite(Number(x[key])))) return null;
+      return beta[0] + featureKeys.reduce((sum,key,j) => sum + beta[j+1] * ((x[key] - means[j]) / stds[j]), 0);
+    },
+  };
+}
+
+function plannerBreedingShowMetrics(actual, predicted) {
+  if (!actual.length || actual.length !== predicted.length) return null;
+  const errors = actual.map((y,i) => predicted[i] - y);
+  const mae = errors.reduce((sum,e) => sum + Math.abs(e), 0) / errors.length;
+  const rmse = Math.sqrt(errors.reduce((sum,e) => sum + e * e, 0) / errors.length);
+  const mean = actual.reduce((sum,v) => sum + v, 0) / actual.length;
+  const sst = actual.reduce((sum,v) => sum + (v - mean) ** 2, 0);
+  const sse = errors.reduce((sum,e) => sum + e * e, 0);
+  const r2 = sst > 0 ? 1 - sse / sst : null;
+  return {mae, rmse, r2, n:actual.length};
+}
+
+function plannerBreedingShowCrossValidate(rows, featureKeys, lambda) {
+  if (rows.length < 8) return null;
+  const folds = Math.min(5, Math.max(2, Math.floor(rows.length / 4)));
+  const actual = [], predicted = [];
+  const ordered = [...rows].sort((a,b) => String(a.horse.id || a.horse.name || '').localeCompare(String(b.horse.id || b.horse.name || ''), 'de'));
+  for (let fold=0; fold<folds; fold++) {
+    const train = ordered.filter((_,i) => i % folds !== fold);
+    const test = ordered.filter((_,i) => i % folds === fold);
+    const fit = plannerBreedingShowFitRidge(train, featureKeys, lambda);
+    if (!fit) return null;
+    for (const row of test) {
+      const pred = fit.predictX(row.x);
+      if (pred == null || !Number.isFinite(pred)) continue;
+      actual.push(row.y);
+      predicted.push(pred);
+    }
+  }
+  return plannerBreedingShowMetrics(actual, predicted);
+}
+
+function plannerBuildBreedingShowModel(allHorses) {
+  const training = [];
+  const exclusions = {noZs:0, missingFeatures:0, missingTournament:0, invalidBase:0};
+  for (const horse of Array.isArray(allHorses) ? allHorses : []) {
+    const status = plannerBreedingShowTrainingStatus(horse);
+    if (status.eligible) training.push({horse, y:status.y, x:status.x});
+    else if (status.reason === 'no-zs') exclusions.noZs++;
+    else if (status.reason === 'missing-features') exclusions.missingFeatures++;
+    else if (status.reason === 'missing-tournament') exclusions.missingTournament++;
+    else if (status.reason === 'invalid-base') exclusions.invalidBase++;
+  }
+
+  const featureKeys = ['gp','ext','extpct','int'];
+  const risky = training.filter(row => row.x.disease === 1).length;
+  const clear = training.length - risky;
+  if (risky >= 3 && clear >= 3) featureKeys.push('disease');
+  const featureInfo = {keys:featureKeys, risky, clear};
+  const base = {
+    n: training.length,
+    training,
+    exclusions,
+    featureInfo,
+    predict: () => null,
+    coefficients: null,
+    diagnostics: null,
+  };
+  if (training.length < 8) return base;
+
+  const lambdas = [0.03,0.1,0.3,1,3,10,30,100];
+  let best = null;
+  for (const lambda of lambdas) {
+    const metrics = plannerBreedingShowCrossValidate(training, featureKeys, lambda);
+    if (!metrics) continue;
+    const candidate = {lambda, metrics};
+    if (!best || metrics.rmse < best.metrics.rmse - 1e-9 || (Math.abs(metrics.rmse - best.metrics.rmse) < 1e-9 && lambda > best.lambda)) best = candidate;
+  }
+  const chosen = best?.lambda ?? 0.3;
+  const fit = plannerBreedingShowFitRidge(training, featureKeys, chosen);
+  if (!fit) return base;
+  const trainActual = training.map(row => row.y);
+  const trainPred = training.map(row => fit.predictX(row.x));
+  const trainMetrics = plannerBreedingShowMetrics(trainActual, trainPred);
+
+  return {
+    ...base,
+    lambda: chosen,
+    fit,
+    coefficients: fit.rawCoefficients,
+    intercept: fit.rawIntercept,
+    diagnostics: {cv:best?.metrics || null, train:trainMetrics},
+    predict(horse) {
+      const x = plannerBreedingShowFeatureObject(horse);
+      if (!x) return null;
+      return fit.predictX(x);
+    },
+  };
+}

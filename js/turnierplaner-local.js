@@ -1114,12 +1114,12 @@ const ZS_FEATURES = [
 
 function zsFeatureObject(horse) {
   const s=plannerStats(horse);
-  const values={
-    gp:Number(s.gp), ext:Number(s.ext), extpct:Number(s.extpct), int:Number(s.int),
+  const raw={gp:s.gp,ext:s.ext,extpct:s.extpct,int:s.int};
+  if (Object.values(raw).some(v=>v==null || v==='' || !Number.isFinite(Number(v)))) return null;
+  return {
+    gp:Number(raw.gp), ext:Number(raw.ext), extpct:Number(raw.extpct), int:Number(raw.int),
     disease:plannerHasActiveDiseaseRisk(horse)?1:0,
   };
-  if (['gp','ext','extpct','int'].some(k=>!Number.isFinite(values[k]))) return null;
-  return values;
 }
 
 function zsTrainingStatus(horse) {
@@ -1245,41 +1245,12 @@ function zsActiveFeatureKeys(rows) {
 }
 
 function buildBreedingShowModel() {
-  const {rows:training,exclusions}=zsTrainingRowsAndExclusions();
-  const featureInfo=zsActiveFeatureKeys(training);
-  const base={n:training.length,training,exclusions,featureInfo,predict:()=>null,coefficients:null,diagnostics:null};
-  if (training.length<8) return base;
-
-  // V53.1/V53.2 nutzten eine feste Ridge-Stärke 0.15. Mit wachsender
-  // Datenbasis kann diese willkürlich zu schwach/stark sein. V53.3 wählt
-  // die Stabilisierung per 5-facher Kreuzvalidierung auf den echten ZS-Daten.
-  const lambdas=[0.03,0.1,0.3,1,3,10,30,100];
-  let best=null;
-  for (const lambda of lambdas) {
-    const metrics=zsCrossValidate(training,featureInfo.keys,lambda);
-    if (!metrics) continue;
-    const candidate={lambda,metrics};
-    if (!best || metrics.rmse<best.metrics.rmse-1e-9 || (Math.abs(metrics.rmse-best.metrics.rmse)<1e-9 && lambda>best.lambda)) best=candidate;
-  }
-  const chosen=best?.lambda ?? 0.3;
-  const fit=zsFitRidge(training,featureInfo.keys,chosen);
-  if (!fit) return base;
-  const trainActual=training.map(r=>r.y);
-  const trainPred=training.map(r=>fit.predictX(r.x));
-  const trainMetrics=zsMetrics(trainActual,trainPred);
-
-  return {
-    ...base,
-    lambda:chosen,
-    fit,
-    coefficients:fit.rawCoefficients,
-    intercept:fit.rawIntercept,
-    diagnostics:{cv:best?.metrics || null,train:trainMetrics},
-    predict(horse) {
-      const x=zsFeatureObject(horse); if(!x) return null;
-      return fit.predictX(x);
-    }
-  };
+  // V54.0.22: dieselbe Modellfunktion wird jetzt auch auf der
+  // Pferde-Ansichtsseite verwendet. So können Turnierplaner und Stammdaten
+  // bei identischem Datenbestand nicht unterschiedliche ZS-Prognosen zeigen.
+  return typeof plannerBuildBreedingShowModel === 'function'
+    ? plannerBuildBreedingShowModel(TP_ALL_HORSES)
+    : {n:0,training:[],exclusions:{},featureInfo:{keys:[],risky:0,clear:0},predict:()=>null,coefficients:null,diagnostics:null};
 }
 
 function zsModelDataBand(n) {
@@ -1344,7 +1315,12 @@ function renderBreedingShowOverview() {
     if (typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)) return false;
     const total=plannerBreedingShowPoints(h);
     if (only==='with' && total==null) return false;
-    if (only==='forecast' && total!=null) return false;
+    if (only==='forecast') {
+      if (total!=null) return false;
+      // V54.0.22: Prognosen sind für noch nicht zur ZS angetretene Fohlen
+      // gedacht. Erwachsene Pferde ohne ZS-Wert gehören nicht in diese Liste.
+      if (!(typeof plannerIsFoal === 'function' && plannerIsFoal(h))) return false;
+    }
     if (!selectedOwners.includes(String(h.owner||'').trim())) return false;
     if (nameQ && !(h.name||'').toLowerCase().includes(nameQ)) return false;
     if (breed && (normalizeBreed(h.breed)||'Rasselos')!==breed) return false;
@@ -1354,17 +1330,34 @@ function renderBreedingShowOverview() {
     return true;
   });
 
-  const missingTournamentCount=candidates.filter(h=>plannerTournamentPlacements(h)<1).length;
-  let rows=candidates.filter(h=>plannerTournamentPlacements(h)>=1);
-  rows.sort((a,b)=>(plannerBreedingShowPoints(b)??-1)-(plannerBreedingShowPoints(a)??-1) || (a.name||'').localeCompare(b.name||'','de'));
+  // Echte ZS-Werte brauchen Turnierdaten, damit der Grundwert korrekt
+  // zurückgerechnet werden kann. Für Fohlen-Prognosen ist das ausdrücklich
+  // keine Voraussetzung – Fohlen haben noch keine Turnierplatzierungen.
+  const missingTournamentCount=only==='with'
+    ? candidates.filter(h=>plannerTournamentPlacements(h)<1).length
+    : 0;
+  let rows=only==='with'
+    ? candidates.filter(h=>plannerTournamentPlacements(h)>=1)
+    : candidates;
+  if (only==='forecast') {
+    rows.sort((a,b)=>{
+      const ap=model.predict(a), bp=model.predict(b);
+      if (ap==null && bp==null) return (a.name||'').localeCompare(b.name||'','de');
+      if (ap==null) return 1;
+      if (bp==null) return -1;
+      return bp-ap || (a.name||'').localeCompare(b.name||'','de');
+    });
+  } else {
+    rows.sort((a,b)=>(plannerBreedingShowPoints(b)??-1)-(plannerBreedingShowPoints(a)??-1) || (a.name||'').localeCompare(b.name||'','de'));
+  }
 
   const count=document.getElementById('tp-zs-count');
   if (count) count.textContent=only==='forecast'
-    ? `${rows.length} Prognosen angezeigt · ${missingTournamentCount} wegen fehlender Turnierdaten ausgeblendet`
+    ? `${rows.length} Fohlen ohne echte ZS-Punkte`
     : `${rows.length} ZS-Datensätze angezeigt · ${missingTournamentCount} ZS-Datensätze wegen fehlender Turnierdaten ausgeblendet`;
   if (!rows.length) {
     body.innerHTML=only==='forecast'
-      ? '<tr><td colspan="7" class="muted">Keine passenden Prognose-Pferde mit eingelesenen Turnierplatzierungen gefunden.</td></tr>'
+      ? '<tr><td colspan="7" class="muted">Keine passenden Fohlen ohne echten ZS-Wert gefunden.</td></tr>'
       : '<tr><td colspan="7" class="muted">Keine passenden auswertbaren ZS-Datensätze. Für die ZS-Auswertung zählen nur positive ZS-Punktangaben mit eingelesenen Turnierplatzierungen.</td></tr>';
     return;
   }
@@ -1377,7 +1370,14 @@ function renderBreedingShowOverview() {
     const diff=base==null || pred==null ? null : base-pred;
     const st=zsTrainingStatus(h);
     let dataNote='';
-    if (!st.eligible) {
+    if (only==='forecast' && pred==null) {
+      const forecastReason = model.n < 8
+        ? 'Noch keine Prognose – mindestens 8 verwertbare echte ZS-Datensätze nötig'
+        : (typeof plannerBreedingShowFeatureObject === 'function' && !plannerBreedingShowFeatureObject(h))
+          ? 'Prognose nicht möglich – GP/Ext/Ext%/Int unvollständig'
+          : 'Prognose derzeit nicht berechenbar';
+      dataNote=`<br><span class="tiny warning-text">${plannerEscape(forecastReason)}</span>`;
+    } else if (only!=='forecast' && !st.eligible) {
       const map={
         'missing-features':'Grundwerte unvollständig – nicht im Lernmodell',
         'invalid-base':'ZS-Grundwert unplausibel – bitte prüfen',
