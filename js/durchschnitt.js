@@ -158,10 +158,12 @@ async function calculate() {
     if (!data.length) {
       resultEl.innerHTML = '<p>Keine Pferde gefunden.</p>';
       renderBreedingDashboard([]);
+      renderColorGeneticsDashboard([], allData);
       return;
     }
 
     renderBreedingDashboard(data);
+    renderColorGeneticsDashboard(data, allData);
     const derived = data.map(computeDerived);
     const total = data.length;
     const gp = average(derived.map((d) => d.gp));
@@ -314,4 +316,272 @@ async function renderBreedComparison() {
       </tbody>
     </table>`}
   `;
+}
+
+
+// --- V54.0.30 Dashboard: Farbgenetik ---------------------------------
+// Explorative Bestandsstatistik. Es werden keine neuen MDR-Regeln erfunden:
+// sichtbare Fellfarben und echte gespeicherte Gentests werden getrennt ausgewertet.
+
+const DASHBOARD_COLOR_BASE_ORDER = ['Chestnut','Wild Bay','Bay','Sea Brown','Black','Grey'];
+const DASHBOARD_COLOR_GENE_LOCI = [
+  'Extension','Agouti','Cream','Dun','Champagne','Grey','Silver',
+  'Appaloosa','PATN1','Overo','Splashed','KIT','Flaxen'
+];
+
+function dashboardColorBaseLabel(value) {
+  const key = String(value || '').trim().toLowerCase();
+  if (key === 'wildbay' || key === 'wild bay') return 'Wild Bay';
+  if (key === 'sealbrown' || key === 'seal brown' || key === 'sea brown') return 'Sea Brown';
+  if (key === 'chestnut') return 'Chestnut';
+  if (key === 'bay') return 'Bay';
+  if (key === 'black') return 'Black';
+  if (key === 'grey' || key === 'gray') return 'Grey';
+  return value || null;
+}
+
+function dashboardColorUniqueGeneticBase(horse) {
+  if (typeof cgKnowledge !== 'function' || typeof cgBaseName !== 'function') return null;
+  const ext = cgKnowledge(horse, 'Extension');
+  const agouti = cgKnowledge(horse, 'Agouti');
+  if (!ext?.states?.length) return null;
+
+  // ee ist unabhängig vom Agouti-Locus sichtbar Chestnut.
+  const extBases = new Set();
+  for (const e of ext.states) {
+    if (e.filter(x => x === 'e').length === 2) extBases.add('Chestnut');
+    else if (agouti?.states?.length) {
+      for (const a of agouti.states) {
+        const base = cgBaseName(e, a);
+        if (base) extBases.add(dashboardColorBaseLabel(base));
+      }
+    }
+  }
+  return extBases.size === 1 ? [...extBases][0] : null;
+}
+
+function dashboardColorBase(horse) {
+  const coat = String(horse?.coat_color || '').trim();
+  const lc = coat.toLowerCase();
+  // Grey ist als sichtbare MDR-Farbgruppe relevant, selbst wenn darunter eine
+  // andere genetische Grundfarbe liegt.
+  if (/\bgr[ae]y\b/.test(lc)) return 'Grey';
+
+  if (typeof cgShade === 'function') {
+    const shade = cgShade(horse);
+    if (shade?.base) return dashboardColorBaseLabel(shade.base);
+  }
+  if (/wild\s*bay|wildbay/.test(lc)) return 'Wild Bay';
+  if (/seal\s*brown|sealbrown|sea\s*brown/.test(lc)) return 'Sea Brown';
+  if (/chestnut|sorrel/.test(lc)) return 'Chestnut';
+  if (/\bbay\b/.test(lc)) return 'Bay';
+  if (/\bblack\b/.test(lc)) return 'Black';
+
+  return dashboardColorUniqueGeneticBase(horse);
+}
+
+function dashboardColorShade(horse) {
+  if (typeof cgShade === 'function') {
+    const shade = cgShade(horse);
+    if (shade?.shade) return { base:dashboardColorBaseLabel(shade.base), shade:shade.shade };
+  }
+  const base = dashboardColorBase(horse);
+  const coat = String(horse?.coat_color || '').trim();
+  if (!base || !coat) return null;
+  // Für noch nicht im Farbguide benannte Skalen (z.B. einzelne Wild-Bay-
+  // Varianten) bleibt bewusst die echte MDR-Bezeichnung aus dem Datensatz stehen.
+  if (base === 'Grey') return {base, shade:'Grey'};
+  if (base === 'Wild Bay' || base === 'Sea Brown') return {base, shade:coat};
+  return null;
+}
+
+function dashboardCountMap(values) {
+  const map = new Map();
+  for (const value of values) {
+    const key = String(value || '').trim();
+    if (!key) continue;
+    map.set(key, (map.get(key) || 0) + 1);
+  }
+  return map;
+}
+
+function dashboardSortedCounts(map) {
+  return [...map.entries()].sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0],'de'));
+}
+
+function dashboardColorPills(entries, total, empty='Noch keine Daten.') {
+  if (!entries.length) return `<p class="muted small">${escapeHtml(empty)}</p>`;
+  return `<div class="color-count-pills">${entries.map(([label,n]) => {
+    const pct = total ? Math.round(n / total * 1000) / 10 : 0;
+    return `<span>${escapeHtml(label)} <strong>${n}</strong><small>${pct}%</small></span>`;
+  }).join('')}</div>`;
+}
+
+function dashboardColorGeneRows(horse) {
+  const rows = Array.isArray(horse?.colors) ? horse.colors : [];
+  return rows.filter(row => {
+    const label = String(row?.label || '').trim();
+    const value = String(row?.value || '').trim();
+    if (!label || !value) return false;
+    if (typeof cgUntested === 'function' && cgUntested(value)) return false;
+    return DASHBOARD_COLOR_GENE_LOCI.includes(label);
+  });
+}
+
+function dashboardShadeGeneticFingerprints(shadeGroups) {
+  const summaries = new Map();
+  for (const [key, group] of shadeGroups.entries()) {
+    const loci = new Map();
+    for (const horse of group.horses) {
+      for (const row of dashboardColorGeneRows(horse)) {
+        if (!loci.has(row.label)) loci.set(row.label, {tested:0, values:new Map()});
+        const stat = loci.get(row.label);
+        stat.tested++;
+        const value = String(row.value).trim();
+        stat.values.set(value, (stat.values.get(value) || 0) + 1);
+      }
+    }
+    const modes = new Map();
+    for (const [locus, stat] of loci.entries()) {
+      const sorted = dashboardSortedCounts(stat.values);
+      if (!sorted.length) continue;
+      const [value,count] = sorted[0];
+      modes.set(locus, {value,count,tested:stat.tested,share:count/stat.tested});
+    }
+    summaries.set(key,{...group,modes});
+  }
+
+  // Nur Marker hervorheben, deren häufigster getesteter Genotyp sich zwischen
+  // Schattierungen derselben Grundfarbe tatsächlich unterscheidet.
+  const varyingByBase = new Map();
+  for (const base of DASHBOARD_COLOR_BASE_ORDER) {
+    const baseRows = [...summaries.values()].filter(x => x.base === base && x.horses.length >= 2);
+    const varying = new Set();
+    for (const locus of DASHBOARD_COLOR_GENE_LOCI) {
+      const values = new Set(baseRows.map(x => x.modes.get(locus)).filter(x => x && x.tested >= 2).map(x => x.value));
+      if (values.size > 1) varying.add(locus);
+    }
+    varyingByBase.set(base,varying);
+  }
+
+  return [...summaries.values()]
+    .sort((a,b) => DASHBOARD_COLOR_BASE_ORDER.indexOf(a.base)-DASHBOARD_COLOR_BASE_ORDER.indexOf(b.base) || b.horses.length-a.horses.length || a.shade.localeCompare(b.shade,'de'))
+    .map(row => {
+      const varying = varyingByBase.get(row.base) || new Set();
+      const markers = [...row.modes.entries()]
+        .filter(([locus,stat]) => varying.has(locus) && stat.tested >= 2)
+        .sort((a,b) => b[1].tested-a[1].tested || b[1].share-a[1].share)
+        .slice(0,4)
+        .map(([locus,stat]) => `${locus} ${stat.value} ${Math.round(stat.share*100)}% (${stat.count}/${stat.tested})`);
+      return {...row,markers};
+    });
+}
+
+function dashboardAppaloosaAnalysis(rows) {
+  const patterns = new Map();
+  const combos = new Map();
+  for (const horse of rows) {
+    const pattern = typeof cgPatternHint === 'function' ? cgPatternHint(horse) : String(horse?.appaloosa_pattern || '').trim();
+    if (pattern) patterns.set(pattern,(patterns.get(pattern)||0)+1);
+    if (!pattern || typeof cgTestedAppaloosaCategories !== 'function') continue;
+    const tested = cgTestedAppaloosaCategories(horse);
+    if (!tested.lp || !tested.p1) continue;
+    const key = `${tested.lp}|${tested.p1}`;
+    if (!combos.has(key)) combos.set(key,{lp:tested.lp,p1:tested.p1,n:0,patterns:new Map()});
+    const row=combos.get(key); row.n++;
+    row.patterns.set(pattern,(row.patterns.get(pattern)||0)+1);
+  }
+  return {patterns:dashboardSortedCounts(patterns), combos:[...combos.values()].sort((a,b)=>b.n-a.n || a.lp.localeCompare(b.lp))};
+}
+
+function dashboardColorInheritance(filteredChildren, allRows) {
+  if (typeof bpParentNames !== 'function') return [];
+  const byName = new Map();
+  for (const horse of allRows || []) {
+    const key = dashboardOwnerKey(horse?.name);
+    if (key && !byName.has(key)) byName.set(key,horse);
+  }
+  const crosses = new Map();
+  for (const child of filteredChildren) {
+    const {fatherName,motherName}=bpParentNames(child);
+    const father=byName.get(dashboardOwnerKey(fatherName));
+    const mother=byName.get(dashboardOwnerKey(motherName));
+    const fatherBase=dashboardColorBase(father), motherBase=dashboardColorBase(mother), childBase=dashboardColorBase(child);
+    if (!fatherBase || !motherBase || !childBase) continue;
+    const key=`${motherBase}|${fatherBase}`;
+    if (!crosses.has(key)) crosses.set(key,{mother:motherBase,father:fatherBase,n:0,children:new Map()});
+    const row=crosses.get(key); row.n++;
+    row.children.set(childBase,(row.children.get(childBase)||0)+1);
+  }
+  return [...crosses.values()].filter(x=>x.n>=2).sort((a,b)=>b.n-a.n).slice(0,10);
+}
+
+function renderColorGeneticsDashboard(rows, allRows) {
+  const root=document.getElementById('color-genetics-dashboard');
+  if (!root) return;
+  if (!rows?.length) { root.innerHTML='<p class="muted">Keine Pferde im aktuellen Filter.</p>'; return; }
+
+  const baseCounts = new Map(DASHBOARD_COLOR_BASE_ORDER.map(x=>[x,0]));
+  let baseUnknown=0, coatKnown=0;
+  const coatCounts=new Map(), shadeGroups=new Map();
+  for (const horse of rows) {
+    const coat=String(horse?.coat_color||'').trim();
+    if (coat) { coatKnown++; coatCounts.set(coat,(coatCounts.get(coat)||0)+1); }
+    const base=dashboardColorBase(horse);
+    if (baseCounts.has(base)) baseCounts.set(base,baseCounts.get(base)+1); else baseUnknown++;
+    const info=dashboardColorShade(horse);
+    if (info) {
+      const key=`${info.base}|${info.shade}`;
+      if (!shadeGroups.has(key)) shadeGroups.set(key,{base:info.base,shade:info.shade,horses:[]});
+      shadeGroups.get(key).horses.push(horse);
+    }
+  }
+  const baseEntries=[...baseCounts.entries()].filter(([,n])=>n>0);
+  if (baseUnknown) baseEntries.push(['Nicht eindeutig zugeordnet',baseUnknown]);
+  const shadeRows=dashboardShadeGeneticFingerprints(shadeGroups);
+  const app=dashboardAppaloosaAnalysis(rows);
+  const inheritance=dashboardColorInheritance(rows,allRows||rows);
+
+  const shadeTable = shadeRows.length ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>Grundfarbe</th><th>Schattierung / Variante</th><th>n</th><th>auffällige getestete Marker</th></tr></thead><tbody>${shadeRows.map(row=>`<tr><td>${escapeHtml(row.base)}</td><td><strong>${escapeHtml(row.shade)}</strong></td><td>${row.horses.length}</td><td>${row.markers.length ? row.markers.map(escapeHtml).join('<br>') : '<span class="muted">noch kein unterscheidbarer getesteter Marker</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Noch keine eindeutig erkannten Grundfarben-Schattierungen.</p>';
+
+  const appComboTable = app.combos.length ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>LP</th><th>PATN1</th><th>n</th><th>beobachtete sichtbare Muster</th></tr></thead><tbody>${app.combos.map(row=>`<tr><td>${escapeHtml(row.lp)}</td><td>${escapeHtml(row.p1)}</td><td>${row.n}</td><td>${dashboardSortedCounts(row.patterns).map(([pattern,n])=>`${escapeHtml(pattern)} <strong>${n}</strong> (${Math.round(n/row.n*100)}%)`).join(' · ')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Noch keine Pferde mit gleichzeitig getestetem LP, getestetem PATN1 und sichtbarem Appaloosa-Muster im aktuellen Filter.</p>';
+
+  const inheritanceTable = inheritance.length ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>Mutter</th><th>Vater</th><th>verknüpfte Fohlen</th><th>beobachtete Grundfarben</th></tr></thead><tbody>${inheritance.map(row=>`<tr><td>${escapeHtml(row.mother)}</td><td>${escapeHtml(row.father)}</td><td>${row.n}</td><td>${dashboardSortedCounts(row.children).map(([color,n])=>`${escapeHtml(color)} <strong>${n}</strong> (${Math.round(n/row.n*100)}%)`).join(' · ')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Noch zu wenige verknüpfte Eltern-Fohlen-Paare mit auswertbarer Grundfarbe (mindestens 2 je Kombination).</p>';
+
+  root.innerHTML=`
+    <div class="color-genetics-grid">
+      <section class="color-genetics-subcard">
+        <h3>Grundfarben</h3>
+        <p class="tiny muted">Sichtbare bzw. aus eindeutigem Farbgenotyp ableitbare Grundfarb-Gruppe.</p>
+        ${dashboardColorPills(baseEntries,rows.length)}
+      </section>
+      <section class="color-genetics-subcard">
+        <h3>Sichtbare Fellfarben</h3>
+        <p class="tiny muted">Exakte MDR-Bezeichnungen werden bewusst nicht zusammengeführt.</p>
+        ${dashboardColorPills(dashboardSortedCounts(coatCounts).slice(0,18),coatKnown,'Keine Fellfarben erfasst.')}
+        ${coatCounts.size>18?`<p class="tiny muted">+ ${coatCounts.size-18} weitere Bezeichnungen im aktuellen Filter.</p>`:''}
+      </section>
+    </div>
+
+    <details class="color-genetics-detail" open>
+      <summary><strong>Schattierungen &amp; genetische Auffälligkeiten</strong></summary>
+      <p class="small muted">Chestnut, Bay, Sea Brown und Black nutzen bereits bekannte MDR-Bezeichnungen aus dem Farbguide. Noch nicht sicher benannte Varianten bleiben bei ihrer gespeicherten Originalbezeichnung. Die Markeranalyse verwendet ausschließlich echte gespeicherte Gentests und hebt nur Unterschiede zwischen Schattierungen derselben Grundfarbe hervor.</p>
+      ${shadeTable}
+      <p class="tiny muted">Explorativ: Häufigkeiten können auf einen Zusammenhang hinweisen, beweisen aber noch nicht, welches Gen die MDR-Schattierung verursacht.</p>
+    </details>
+
+    <details class="color-genetics-detail">
+      <summary><strong>Appaloosa · LP, PATN1 &amp; sichtbares Muster</strong></summary>
+      <p class="small muted">Appaloosa-Muster werden separat betrachtet. PATN2 wird nicht angenommen oder erfunden, solange kein echter entsprechender Gentest im Datenbestand existiert.</p>
+      <h4>Sichtbare Muster</h4>
+      ${dashboardColorPills(app.patterns,app.patterns.reduce((s,x)=>s+x[1],0),'Keine Appaloosa-Muster im aktuellen Filter.')}
+      <h4>Getestete Genetik → beobachtetes Muster</h4>
+      ${appComboTable}
+    </details>
+
+    <details class="color-genetics-detail">
+      <summary><strong>Beobachtete Farbvererbung</strong></summary>
+      <p class="small muted">Nur tatsächlich in der Datenbank verknüpfte Eltern und Fohlen. Die Prozentwerte sind Beobachtungen des vorhandenen Bestands, keine errechneten Mendel-Wahrscheinlichkeiten.</p>
+      ${inheritanceTable}
+    </details>`;
 }

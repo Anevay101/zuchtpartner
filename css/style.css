@@ -5199,3 +5199,21 @@ body.planner-high-contrast .filter-checkbox-label {
   .import-preview-stats { grid-template-columns: 1fr; }
   .undo-action-bar { align-items: flex-start; flex-direction: column; }
 }
+
+
+/* --- V54.0.30 Dashboard Farbgenetik --- */
+.dashboard-color-card { margin-top:.8rem; background:#edf5e9; border-color:#96ad8d; }
+.dashboard-color-card > summary { font-weight:800; color:var(--accent-dark); padding-bottom:.3rem; }
+.dashboard-color-card > p { margin-top:.35rem; }
+.color-genetics-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:.65rem; margin-top:.6rem; }
+.color-genetics-subcard { background:rgba(255,255,255,.62); border:1px solid rgba(91,126,78,.22); border-radius:12px; padding:.65rem .75rem; }
+.color-genetics-subcard h3 { margin:.05rem 0 .25rem; }
+.color-count-pills { display:flex; flex-wrap:wrap; gap:.34rem; margin:.45rem 0; }
+.color-count-pills > span { display:inline-flex; align-items:center; gap:.28rem; padding:.28rem .48rem; border:1px solid rgba(89,119,78,.25); border-radius:999px; background:rgba(255,255,255,.76); font-size:.84rem; }
+.color-count-pills > span small { color:#667361; font-size:.72rem; }
+.color-genetics-detail { margin-top:.68rem; padding:.58rem .68rem; border:1px solid rgba(91,126,78,.20); border-radius:11px; background:rgba(255,255,255,.52); }
+.color-genetics-detail > summary { cursor:pointer; color:var(--accent-dark); }
+.color-genetics-detail h4 { margin:.75rem 0 .25rem; }
+.color-genetics-table { min-width:720px; }
+.color-genetics-table td, .color-genetics-table th { vertical-align:top; }
+@media (max-width:760px) { .color-genetics-table { min-width:620px; } }
