@@ -702,6 +702,15 @@ function plannerTalentWishProjection(mare,stallion,wish,allHorses) {
 // V54.0.22 – gemeinsame ZS-Prognose für Turnierplaner und Pferdeansicht
 // ---------------------------------------------------------------------
 function plannerIsFoal(horse) {
+  // Im gespeicherten MDR-Datensatz steht bei jungen Pferden häufig bereits
+  // "Stute" bzw. "Hengst" statt "Stutfohlen/Hengstfohlen". Deshalb
+  // darf der Fohlenstatus nicht vom Geschlechtstext abhängen. Die App
+  // behandelt Pferde bis zum Bild-/Alterswechsel mit 3 Spieljahren als Fohlen.
+  if (horse?.birthdate && typeof gameAgeYears === 'function') {
+    const years = gameAgeYears(horse.birthdate);
+    if (years != null) return years < 3;
+  }
+  // Fallback für Alt-/Importdaten ohne verwertbares Geburtsdatum.
   const gender = plannerNorm(horse?.gender);
   return /fohlen|foal|colt|filly/.test(gender);
 }
