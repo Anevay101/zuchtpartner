@@ -70,7 +70,7 @@ function renderHorseCupStatus(horse) {
 
   const zs = zsTotal == null ? '' : `
     <div class="breeding-show-mini">
-      <strong>🌿 Zuchtschau:</strong> Gesamt ${Math.round(zsTotal)} · Bonusstand${zsSnapshotDate ? ` ${plannerEscape(new Date(`${zsSnapshotDate}T12:00:00`).toLocaleDateString('de-DE'))}` : ''}: Turniere −${zsTournamentBonus} · Cup −${zsCupBonus} · <strong>Grundwert ${Math.round(zsBase)}</strong>
+      <strong>Zuchtschau:</strong> Gesamt ${Math.round(zsTotal)} · Bonusstand${zsSnapshotDate ? ` ${plannerEscape(new Date(`${zsSnapshotDate}T12:00:00`).toLocaleDateString('de-DE'))}` : ''}: Turniere −${zsTournamentBonus} · Cup −${zsCupBonus} · <strong>Grundwert ${Math.round(zsBase)}</strong>
     </div>`;
 
   if (!rows.length) {

@@ -105,6 +105,157 @@ function bpResolveParents(horse, context) {
   };
 }
 
+function bpSiblingRelations(horse, context) {
+  const ownParents = bpParentNames(horse);
+  const ownFather = bpNorm(ownParents.fatherName);
+  const ownMother = bpNorm(ownParents.motherName);
+  if (!ownFather && !ownMother) return [];
+
+  const ownId = horse?.id != null ? String(horse.id) : null;
+  const ownName = bpNorm(horse?.name);
+  const seen = new Set();
+  const rows = [];
+
+  for (const sibling of context?.horses || []) {
+    if (!sibling) continue;
+    const siblingId = sibling?.id != null ? String(sibling.id) : null;
+    const siblingName = bpNorm(sibling?.name);
+    if ((ownId && siblingId === ownId) || (!ownId && ownName && siblingName === ownName)) continue;
+
+    const parents = bpParentNames(sibling);
+    const siblingFather = bpNorm(parents.fatherName);
+    const siblingMother = bpNorm(parents.motherName);
+    const sameFather = Boolean(ownFather && siblingFather && ownFather === siblingFather);
+    const sameMother = Boolean(ownMother && siblingMother && ownMother === siblingMother);
+    if (!sameFather && !sameMother) continue;
+
+    const key = siblingId ? `id:${siblingId}` : `name:${siblingName}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const relationKind = sameFather && sameMother ? 'full' : 'half';
+    const relationSide = relationKind === 'full' ? 'both' : sameMother ? 'mother' : 'father';
+    const relationLabel = relationKind === 'full'
+      ? 'Vollgeschwister'
+      : relationSide === 'mother'
+        ? 'Halbgeschwister · Mutter'
+        : 'Halbgeschwister · Vater';
+
+    rows.push({
+      horse:sibling,
+      relationKind,
+      relationSide,
+      relationLabel,
+      sex:bpSexKind(sibling),
+      metrics:bpMetricSnapshot(sibling),
+    });
+  }
+
+  const relationOrder = { full:0, half:1 };
+  const sideOrder = { both:0, mother:1, father:2 };
+  rows.sort((a,b) =>
+    (relationOrder[a.relationKind] ?? 9) - (relationOrder[b.relationKind] ?? 9) ||
+    (sideOrder[a.relationSide] ?? 9) - (sideOrder[b.relationSide] ?? 9) ||
+    String(a.horse?.name || '').localeCompare(String(b.horse?.name || ''), 'de')
+  );
+  return rows;
+}
+
+function bpSiblingDeltaHtml(value, ownValue, metric) {
+  if (value == null || ownValue == null) return '<span class="muted">–</span>';
+  const delta = Number(value) - Number(ownValue);
+  const epsilon = 10 ** (-(metric.decimals + 2));
+  if (Math.abs(delta) < epsilon) return '<span class="bp-sibling-delta bp-sibling-delta-equal">±0</span>';
+  const better = metric.higherBetter ? delta > 0 : delta < 0;
+  const cls = better ? 'bp-sibling-delta-good' : 'bp-sibling-delta-bad';
+  const sign = delta > 0 ? '+' : '−';
+  const abs = Math.abs(delta);
+  const formatted = metric.key === 'gp'
+    ? abs.toFixed(0)
+    : metric.key === 'extPct'
+      ? `${abs.toFixed(1)} %-Pkt.`
+      : abs.toFixed(metric.decimals);
+  return `<span class="bp-sibling-delta ${cls}" title="Differenz: Geschwister minus dieses Pferd">${sign}${formatted}</span>`;
+}
+
+function bpRenderSiblingComparison(horse, context) {
+  const siblings = bpSiblingRelations(horse, context);
+  const own = bpMetricSnapshot(horse);
+  const fullCount = siblings.filter(row => row.relationKind === 'full').length;
+  const motherCount = siblings.filter(row => row.relationSide === 'mother').length;
+  const fatherCount = siblings.filter(row => row.relationSide === 'father').length;
+
+  if (!siblings.length) {
+    return `<div class="bp-sibling-block">
+      <div class="bp-sibling-heading"><div><h3>Geschwistervergleich</h3><p class="small muted">Voll- und Halbgeschwister aller Geschlechter werden gemeinsam berücksichtigt.</p></div></div>
+      <div class="bp-sibling-summary"><strong>Noch keine verknüpften Voll- oder Halbgeschwister in der Datenbank.</strong></div>
+    </div>`;
+  }
+
+  const body = siblings.map(row => {
+    const sexKind = row.sex === 'female' ? 'female' : row.sex === 'male' ? 'male' : 'unknown';
+    return `<tr data-bp-sibling-row data-relation="${bpEsc(row.relationKind)}" data-sex="${bpEsc(sexKind)}">
+      <td>${bpHorseLink(row.horse)}</td>
+      <td><span class="bp-relation-badge bp-relation-${bpEsc(row.relationKind)}">${bpEsc(row.relationLabel)}</span></td>
+      <td>${bpEsc(row.horse?.gender || '–')}</td>
+      ${BP_METRICS.map(metric => `<td><strong>${bpFormatMetric(row.metrics[metric.key], metric)}</strong><br>${bpSiblingDeltaHtml(row.metrics[metric.key], own[metric.key], metric)}</td>`).join('')}
+    </tr>`;
+  }).join('');
+
+  return `<div class="bp-sibling-block">
+    <div class="bp-sibling-heading">
+      <div><h3>Geschwistervergleich</h3><p class="small muted">Alle Geschlechter gemeinsam. Δ zeigt die direkte Differenz „Geschwister minus dieses Pferd“; bei Ext und Int ist ein niedrigerer Wert besser.</p></div>
+      <div class="bp-sibling-count"><strong>${siblings.length}</strong> Geschwister · ${fullCount} voll · ${motherCount} über Mutter · ${fatherCount} über Vater</div>
+    </div>
+    <div class="bp-sibling-controls">
+      <label>Verwandtschaft
+        <select data-bp-sibling-relation>
+          <option value="all">Alle Geschwister</option>
+          <option value="full">Vollgeschwister</option>
+          <option value="half">Halbgeschwister</option>
+        </select>
+      </label>
+      <label>Geschlecht
+        <select data-bp-sibling-sex>
+          <option value="all">Alle Geschlechter</option>
+          <option value="female">Stuten</option>
+          <option value="male">Hengste / Wallache</option>
+        </select>
+      </label>
+    </div>
+    <div class="table-wrap"><table class="detail-table bp-sibling-table">
+      <thead><tr><th>Pferd</th><th>Verwandtschaft</th><th>Geschlecht</th><th>GP (Δ)</th><th>Ext (Δ)</th><th>Ext% (Δ)</th><th>Int (Δ)</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>
+    <p class="small muted bp-sibling-empty" data-bp-sibling-empty hidden>Für diese Filterkombination gibt es keine Geschwister.</p>
+  </div>`;
+}
+
+function bpBindSiblingFilters(root) {
+  if (!root) return;
+  const relationSelect = root.querySelector('[data-bp-sibling-relation]');
+  const sexSelect = root.querySelector('[data-bp-sibling-sex]');
+  const rows = [...root.querySelectorAll('[data-bp-sibling-row]')];
+  const empty = root.querySelector('[data-bp-sibling-empty]');
+  if (!rows.length || !relationSelect || !sexSelect) return;
+
+  const apply = () => {
+    const relation = relationSelect.value || 'all';
+    const sex = sexSelect.value || 'all';
+    let visible = 0;
+    for (const row of rows) {
+      const relationOk = relation === 'all' || row.dataset.relation === relation;
+      const sexOk = sex === 'all' || row.dataset.sex === sex;
+      row.hidden = !(relationOk && sexOk);
+      if (!row.hidden) visible++;
+    }
+    if (empty) empty.hidden = visible !== 0;
+  };
+  relationSelect.addEventListener('change', apply);
+  sexSelect.addEventListener('change', apply);
+  apply();
+}
+
 function bpMetricImprovement(childValue, referenceValue, metric) {
   if (childValue == null || referenceValue == null) return null;
   return metric.higherBetter
@@ -392,8 +543,6 @@ function bpRenderOwnProgress(horse, context) {
   const bestInfo = bpBestFoalInfo(horse, context);
   const sameParentMetrics = bpMetricSnapshot(bestInfo.sameParent);
   const sameLabel = bestInfo.sex === 'male' ? 'zum Vater' : bestInfo.sex === 'female' ? 'zur Mutter' : 'zum gleichgeschlechtlichen Elternteil';
-  const bestLabels = BP_METRICS.filter(metric => bestInfo.best[metric.key]).map(metric => metric.label);
-  const groupLabel = bestInfo.sex === 'male' ? 'Söhne desselben Vaters' : bestInfo.sex === 'female' ? 'Töchter derselben Mutter' : 'vergleichbare Fohlen';
 
   const rows = BP_METRICS.map(metric => {
     const vsAvg = bpMetricImprovement(own[metric.key], avg[metric.key], metric);
@@ -405,7 +554,7 @@ function bpRenderOwnProgress(horse, context) {
       <td>${bpFormatMetric(avg[metric.key],metric)}</td>
       <td><strong>${bpFormatMetric(own[metric.key],metric)}</strong></td>
       <td>${bpFormatImprovement(vsAvg,metric)}</td>
-      <td>${bpFormatImprovement(vsSame,metric)} ${bpStatusDotHtml(bestInfo.status[metric.key])}${bestInfo.best[metric.key] ? '<span class="bp-best-star" title="Bestes vergleichbares Fohlen">★</span>' : ''}</td>
+      <td>${bpFormatImprovement(vsSame,metric)} ${bpStatusDotHtml(bestInfo.status[metric.key])}</td>
     </tr>`;
   }).join('');
 
@@ -418,13 +567,7 @@ function bpRenderOwnProgress(horse, context) {
     ${parentLine}
     ${parentMissing.length ? `<div class="notice small">${bpEsc(parentMissing.join(' · '))}</div>` : ''}
     <div class="table-wrap"><table class="detail-table bp-progress-table"><thead><tr><th>Wert</th><th>Vater</th><th>Mutter</th><th>Elternmittel</th><th>Pferd</th><th>ggü. Elternmittel</th><th>${bpEsc(sameLabel)}</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <div class="bp-sibling-summary">
-      <strong>Geschwistervergleich:</strong> ${bestLabels.length
-        ? `Bestes Fohlen bei ${bpEsc(bestLabels.join(', '))} innerhalb der Gruppe „${bpEsc(groupLabel)}“.`
-        : bestInfo.siblings.length < 2
-          ? 'Noch keine ausreichende gleichgeschlechtliche Geschwistergruppe für einen Bestwert.'
-          : 'Aktuell kein Bestwert bei GP, Ext, Ext% oder Int.'}
-    </div>
+    ${bpRenderSiblingComparison(horse, context)}
   </section>`;
 }
 
@@ -488,6 +631,7 @@ async function bpRenderBreedingPanel(horse, rootOrId) {
     if (horse?.id == null) merged.push(horse);
     const context = bpBuildContext(merged);
     root.innerHTML = bpRenderOwnProgress(horse, context) + bpRenderOffspring(horse, context, pairings);
+    bpBindSiblingFilters(root);
   } catch (error) {
     root.innerHTML = `<p class="error">Zucht- und Nachzuchtdaten konnten nicht ausgewertet werden: ${bpEsc(error.message)}</p>`;
   }

@@ -2065,8 +2065,8 @@ async function openImportModeDialog(payload, fileName) {
         <span>➕ Sicher neu: <strong>${analysis.fresh.length}</strong></span>
         <span>⚠️ Zuordnungskonflikte: <strong>${analysis.conflicts.length}</strong></span>
         <span>💞 Verpaarungen in Datei: <strong>${pairings.length}</strong></span>
-        <span>🌿 ZS-Datensätze in Datei: <strong>${incomingSummary.zs_records || 0}</strong></span>
-        <span>🌿 ZS-Datensätze aktuell: <strong>${currentZsRecords}</strong></span>
+        <span>ZS-Datensätze in Datei: <strong>${incomingSummary.zs_records || 0}</strong></span>
+        <span>ZS-Datensätze aktuell: <strong>${currentZsRecords}</strong></span>
         <span>⭐ Gemerkte Vergleiche: <strong>${remembered.length}</strong></span>
         <span>🌍 Versionen: <strong>${mdrImportEscape(versions.length ? versions.join(', ') : 'keine')}</strong></span>
       </div>

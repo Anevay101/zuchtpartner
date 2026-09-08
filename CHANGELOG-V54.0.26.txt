@@ -1,7 +1,7 @@
 V54.0.26 – Zuchtschau-Reiter + automatische Modellwahl
 
 PFERDESEITE
-- Neuer eigener Reiter „🌿 Zuchtschau“ auf Bearbeiten- und Ansichtsseite.
+- Neuer eigener Reiter „Zuchtschau“ auf Bearbeiten- und Ansichtsseite.
 - Stammdaten behalten nur das kompakte Feld „ZS-Wert / Prognose“.
 - Im Zuchtschau-Reiter stehen ZS-Gesamtwert, ZS-Grundwert, Turnierbonus bei ZS, Cupbonus bei ZS und Snapshot-Datum.
 - Keine sichtbare Altbestand-Kennzeichnung; technische Herkunft bleibt nur intern im Snapshot gespeichert.
