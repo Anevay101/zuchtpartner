@@ -1,0 +1,21 @@
+V54.0.27 – Prüfhinweise ZS-Lernmodell
+
+1. MODELLAUSWAHL
+- Referenz: Kandidat mit niedrigstem Kreuzvalidierungs-RMSE.
+- Toleranz: +1% RMSE.
+- Kandidaten innerhalb dieser Toleranz gelten als praktisch gleichwertig.
+- Auswahlpriorität innerhalb der Toleranz:
+  1) fachlich gerichtete/constrained Variante,
+  2) weniger zusätzliche Modellterme,
+  3) niedrigeres MAE,
+  4) niedrigeres RMSE.
+
+2. AUSREISSER
+- Die Ausreißertabelle verwendet ausschließlich Out-of-fold-Prognosen aus derselben Kreuzvalidierung.
+- Jeder angezeigte Fehler wurde also berechnet, während das betreffende Pferd nicht im jeweiligen Trainings-Fold war.
+- Die Diagnose ist rein informativ und verändert keine Datensätze.
+
+3. ERWARTUNG BEI DEM ZULETZT GEMELDETEN DATENSTAND
+- Bei RMSE 128 für „Linear · 4 Kernwerte“ und RMSE 129 für „Linear · fachlich gerichtet“ liegt die gerichtete Variante innerhalb der 1%-Toleranz (Schwelle ca. 129,28).
+- Weil sie fachlich gerichtet und ohne Zusatzterm ist, sollte sie nach der neuen Auswahlregel bevorzugt werden.
+- Die exakten Kennzahlen werden erst im Browser gegen den aktuellen Supabase-Datenbestand berechnet.

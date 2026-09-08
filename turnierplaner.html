@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Turnier & Leistung – MDR Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5426" />
+  <link rel="stylesheet" href="css/style.css?v=5427" />
 </head>
 <body class="turnierplaner-page">
 <header class="topbar">
@@ -149,7 +149,7 @@
         <div class="tp-zs-model-explanation small">
           <p><strong>Lerndaten:</strong> nur Pferde mit positiver ZS-Punktzahl und auswertbarem GP, Ext, Ext% und Int. EKH wird nur optional mitgelernt, wenn dafür genügend eindeutig bekannte Daten vorliegen. Leer oder 0 bleibt Prognose und wird nicht gelernt.</p>
           <p><strong>Grundwert:</strong> ZS gesamt minus <em>historischem</em> Turnierbonus zum ZS-Snapshot (35/25/15, max. 500) minus 100 je damaligem Cupstern. Der Snapshot wird danach nicht mehr aus heutigen Erfolgen neu berechnet.</p>
-          <p><strong>Modellwahl:</strong> Ext und Ext% bleiben immer als getrennte Kernwerte erhalten. Mehrere Modellvarianten werden automatisch in derselben Kreuzvalidierung gegeneinander getestet. Verwendet wird die Variante mit dem niedrigsten RMSE; MAE dient als Gleichstandsentscheidung. Getestet werden lineare, fachlich gerichtete, Ext×Ext%- und vorsichtig nichtlineare Varianten.</p>
+          <p><strong>Modellwahl:</strong> Ext und Ext% bleiben immer als getrennte Kernwerte erhalten. Mehrere Modellvarianten werden automatisch in derselben Kreuzvalidierung gegeneinander getestet. Das niedrigste RMSE setzt die Referenz; Modelle bis 1% darüber gelten als praktisch gleichwertig. Innerhalb dieser Toleranz werden fachlich gerichtete und anschließend einfachere Modelle bevorzugt. Getestet werden lineare, fachlich gerichtete, Ext×Ext%- und vorsichtig nichtlineare Varianten.</p>
           <p><strong>Prognose:</strong> wird ausschließlich aus echten Lerndaten berechnet und nie selbst wieder zum Lerndatum. Sichtbare Züchter-/Rassefilter verändern das Lernen nicht.</p>
           <p><strong>Prüfung:</strong> MAE = mittlere absolute Abweichung; RMSE gewichtet große Fehler stärker; R² näher an 1 ist besser. Spearman misst, wie gut die Rangfolge der Pferde getroffen wird (1 = perfekte Reihenfolge). Zusätzlich wird mit einer einfachen Durchschnitts-Prognose verglichen.</p>
           <p><strong>Datenmenge:</strong> n&lt;15 experimentell, 15–29 erste Tendenz, 30–49 brauchbar, 50–99 gut, ab 100 stabiler. Ein echter historischer ZS-Snapshot mit Bonusstand 0 ist ein gültiger Lerndatensatz; Turnierplatzierungen sind keine Pflicht.</p>
@@ -205,14 +205,14 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5426"></script>
-<script src="js/database-local.js?v=5426"></script>
-<script src="js/local-app.js?v=5426"></script>
-<script src="js/learning-file.js?v=5426"></script>
-<script src="js/parser.js?v=5426"></script>
-<script src="js/data-quality.js?v=5426"></script>
-<script src="js/planer-common.js?v=5426"></script>
-<script src="js/tournament-recommendation.js?v=5426"></script>
-<script src="js/turnierplaner-local.js?v=5426"></script>
+<script src="js/supabase-config.js?v=5427"></script>
+<script src="js/database-local.js?v=5427"></script>
+<script src="js/local-app.js?v=5427"></script>
+<script src="js/learning-file.js?v=5427"></script>
+<script src="js/parser.js?v=5427"></script>
+<script src="js/data-quality.js?v=5427"></script>
+<script src="js/planer-common.js?v=5427"></script>
+<script src="js/tournament-recommendation.js?v=5427"></script>
+<script src="js/turnierplaner-local.js?v=5427"></script>
 </body>
 </html>

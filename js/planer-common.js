@@ -1037,7 +1037,7 @@ function plannerBreedingShowFitCandidate(rows, candidate, lambda) {
 function plannerBreedingShowCrossValidate(rows, candidate, lambda) {
   if (rows.length < 8) return null;
   const folds = Math.min(5, Math.max(2, Math.floor(rows.length / 4)));
-  const actual = [], predicted = [], baselinePredicted = [];
+  const actual = [], predicted = [], baselinePredicted = [], observations = [];
   const ordered = [...rows].sort((a,b) => String(a.horse.id || a.horse.name || '').localeCompare(String(b.horse.id || b.horse.name || ''), 'de'));
   for (let fold=0; fold<folds; fold++) {
     const train = ordered.filter((_,i) => i % folds !== fold);
@@ -1051,6 +1051,16 @@ function plannerBreedingShowCrossValidate(rows, candidate, lambda) {
       actual.push(row.y);
       predicted.push(pred);
       baselinePredicted.push(trainingMean);
+      const difference = row.y - pred;
+      observations.push({
+        horse: row.horse,
+        x: row.x,
+        actual: row.y,
+        predicted: pred,
+        difference,
+        absError: Math.abs(difference),
+        fold,
+      });
     }
   }
   const metrics = plannerBreedingShowMetrics(actual, predicted);
@@ -1058,7 +1068,7 @@ function plannerBreedingShowCrossValidate(rows, candidate, lambda) {
   if (!metrics) return null;
   const improvementRmsePct = baseline?.rmse > 0 ? ((baseline.rmse - metrics.rmse) / baseline.rmse) * 100 : null;
   const improvementMaePct = baseline?.mae > 0 ? ((baseline.mae - metrics.mae) / baseline.mae) * 100 : null;
-  return {...metrics, baseline, improvementRmsePct, improvementMaePct};
+  return {...metrics, baseline, improvementRmsePct, improvementMaePct, observations};
 }
 
 function plannerBreedingShowModelCandidates(includeDisease=false) {
@@ -1072,6 +1082,45 @@ function plannerBreedingShowModelCandidates(includeDisease=false) {
     {id:'ext-interaction-directed', label:'Ext-Zusammenspiel · gerichtet', shortLabel:'Gerichtet + Ext × Ext%', description:'4 Kernwerte + Ext × Ext%; Kernrichtungen begrenzt', featureKeys:[...core,'ext_x_extpct',...disease], fitType:'constrained-ridge', constraints},
     {id:'soft-nonlinear', label:'Sanft nichtlinear', shortLabel:'Nichtlinear', description:'4 Kernwerte + Ext × Ext% + GP² + Ext%²', featureKeys:[...core,'ext_x_extpct','gp_sq','extpct_sq',...disease], fitType:'ridge'},
   ];
+}
+
+const PLANNER_ZS_RMSE_TOLERANCE = 0.01;
+
+function plannerBreedingShowExtraFeatureCount(candidate) {
+  const core = new Set(['gp','ext','extpct','int','disease']);
+  return (candidate?.featureKeys || []).filter(key => !core.has(key)).length;
+}
+
+function plannerBreedingShowSelectCandidate(evaluated, tolerance=PLANNER_ZS_RMSE_TOLERANCE) {
+  const valid = (Array.isArray(evaluated) ? evaluated : []).filter(row => Number.isFinite(row?.metrics?.rmse));
+  if (!valid.length) return null;
+  const exactOrder = [...valid].sort((a,b) =>
+    a.metrics.rmse-b.metrics.rmse ||
+    a.metrics.mae-b.metrics.mae ||
+    plannerBreedingShowExtraFeatureCount(a.candidate)-plannerBreedingShowExtraFeatureCount(b.candidate) ||
+    (a.candidate?.featureKeys?.length||0)-(b.candidate?.featureKeys?.length||0) ||
+    String(a.candidate?.label||'').localeCompare(String(b.candidate?.label||''),'de')
+  );
+  const exactBest = exactOrder[0];
+  const thresholdRmse = exactBest.metrics.rmse * (1 + Math.max(0, Number(tolerance) || 0));
+  const nearBest = valid.filter(row => row.metrics.rmse <= thresholdRmse + 1e-9);
+  nearBest.sort((a,b) => {
+    const aDirected = a.candidate?.fitType === 'constrained-ridge' ? 0 : 1;
+    const bDirected = b.candidate?.fitType === 'constrained-ridge' ? 0 : 1;
+    return aDirected-bDirected ||
+      plannerBreedingShowExtraFeatureCount(a.candidate)-plannerBreedingShowExtraFeatureCount(b.candidate) ||
+      (a.candidate?.featureKeys?.length||0)-(b.candidate?.featureKeys?.length||0) ||
+      a.metrics.mae-b.metrics.mae ||
+      a.metrics.rmse-b.metrics.rmse ||
+      String(a.candidate?.label||'').localeCompare(String(b.candidate?.label||''),'de');
+  });
+  return {
+    selected: nearBest[0],
+    exactBest,
+    tolerance: Math.max(0, Number(tolerance) || 0),
+    thresholdRmse,
+    nearBestIds: nearBest.map(row => row.candidate?.id).filter(Boolean),
+  };
 }
 
 function plannerBuildBreedingShowModel(allHorses) {
@@ -1107,7 +1156,8 @@ function plannerBuildBreedingShowModel(allHorses) {
     if (bestForCandidate) evaluated.push(bestForCandidate);
   }
   evaluated.sort((a,b) => a.metrics.rmse-b.metrics.rmse || a.metrics.mae-b.metrics.mae || a.candidate.featureKeys.length-b.candidate.featureKeys.length || a.candidate.label.localeCompare(b.candidate.label,'de'));
-  const best = evaluated[0];
+  const selection = plannerBreedingShowSelectCandidate(evaluated);
+  const best = selection?.selected || null;
   if (!best) return base;
   const fit = plannerBreedingShowFitCandidate(training, best.candidate, best.lambda);
   if (!fit) return {...base, candidates:evaluated};
@@ -1123,6 +1173,13 @@ function plannerBuildBreedingShowModel(allHorses) {
     intercept:fit.rawIntercept,
     candidates:evaluated,
     selectedCandidate:best.candidate,
+    selectionInfo: selection ? {
+      tolerance: selection.tolerance,
+      thresholdRmse: selection.thresholdRmse,
+      exactBestCandidate: selection.exactBest?.candidate || null,
+      exactBestRmse: selection.exactBest?.metrics?.rmse ?? null,
+      nearBestIds: selection.nearBestIds || [],
+    } : null,
     diagnostics:{cv:best.metrics, train:trainMetrics},
     predict(horse) {
       const x = plannerBreedingShowFeatureObject(horse);

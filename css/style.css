@@ -5148,3 +5148,9 @@ body.planner-high-contrast .filter-checkbox-label {
 .zs-model-comparison-table { min-width: 760px; }
 .zs-model-comparison-table tr.zs-model-selected td { font-weight: 600; }
 .zs-model-comparison-table tr.zs-model-selected td:first-child { border-left: 4px solid var(--accent, #477b62); }
+
+/* V54.0.27 – ZS-Modellwahl mit Toleranz + Kreuzvalidierungs-Ausreißer */
+.zs-outlier-details { margin-top:.75rem; }
+.zs-outlier-details > summary { cursor:pointer; }
+.zs-outlier-table { min-width: 930px; }
+.zs-outlier-table td:last-child, .zs-outlier-table th:last-child { white-space: nowrap; }

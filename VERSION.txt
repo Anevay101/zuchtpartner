@@ -1,9 +1,8 @@
-MDR-Datenbank V54.0.26
+MDR-Datenbank V54.0.27
 Stand: 08.09.2026
 Kennzeichen dieser Version:
-- eigener Pferde-Reiter „Zuchtschau“
-- ZS-Prognose bleibt kompakt unter Stammdaten
-- automatische ZS-Modellwahl nach Kreuzvalidierungsleistung
+- ZS-Modellwahl mit 1% RMSE-Toleranz
+- fachlich gerichtete und einfachere Modelle werden bei praktisch gleicher Prognoseleistung bevorzugt
+- Kreuzvalidierungs-Ausreißerdiagnostik mit den 10 größten echten Testfehlern
 - Ext und Ext% bleiben getrennte Kernwerte
-- Spearman-Rangprüfung + Modellvergleich
-- Asset-Cache 5426
+- Asset-Cache 5427

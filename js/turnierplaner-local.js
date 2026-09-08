@@ -1191,13 +1191,44 @@ function zsModelComparisonHtml(model) {
   const rows=Array.isArray(model?.candidates) ? model.candidates : [];
   if (!rows.length) return '';
   const selectedId=model.selectedCandidate?.id;
+  const nearBestIds=new Set(model?.selectionInfo?.nearBestIds || []);
+  const tolerancePct=((Number(model?.selectionInfo?.tolerance)||0)*100).toFixed(0);
+  const exactBestId=model?.selectionInfo?.exactBestCandidate?.id || null;
   return `<details class="zs-model-comparison-details"><summary><strong>Getestete Modellvarianten vergleichen</strong></summary>
     <div class="table-wrap"><table class="detail-table zs-model-comparison-table"><thead><tr><th>Modell</th><th>MAE</th><th>RMSE</th><th>R²</th><th>Spearman</th><th>λ</th></tr></thead><tbody>${rows.map(row=>{
       const m=row.metrics || {};
       const selected=row.candidate?.id===selectedId;
-      return `<tr${selected?' class="zs-model-selected"':''}><td>${selected?'✓ ':''}<strong>${plannerEscape(row.candidate?.label||'Modell')}</strong><br><span class="tiny muted">${plannerEscape(row.candidate?.description||'')}</span></td><td>${Number.isFinite(m.mae)?m.mae.toFixed(0):'–'}</td><td><strong>${Number.isFinite(m.rmse)?m.rmse.toFixed(0):'–'}</strong></td><td>${Number.isFinite(m.r2)?m.r2.toFixed(2):'–'}</td><td>${Number.isFinite(m.spearman)?m.spearman.toFixed(2):'–'}</td><td>${row.lambda??'–'}</td></tr>`;
+      const nearBest=nearBestIds.has(row.candidate?.id);
+      const exactBest=row.candidate?.id===exactBestId;
+      const marker=selected?'✓ ':nearBest?'≈ ':'';
+      const meta=[nearBest?`innerhalb ${tolerancePct}% RMSE-Toleranz`:'', exactBest && !selected?'reines RMSE-Minimum':''].filter(Boolean).join(' · ');
+      return `<tr${selected?' class="zs-model-selected"':''}><td>${marker}<strong>${plannerEscape(row.candidate?.label||'Modell')}</strong><br><span class="tiny muted">${plannerEscape(row.candidate?.description||'')}${meta?` · ${plannerEscape(meta)}`:''}</span></td><td>${Number.isFinite(m.mae)?m.mae.toFixed(0):'–'}</td><td><strong>${Number.isFinite(m.rmse)?m.rmse.toFixed(0):'–'}</strong></td><td>${Number.isFinite(m.r2)?m.r2.toFixed(2):'–'}</td><td>${Number.isFinite(m.spearman)?m.spearman.toFixed(2):'–'}</td><td>${row.lambda??'–'}</td></tr>`;
     }).join('')}</tbody></table></div>
-    <p class="tiny muted">Automatische Auswahl: niedrigster Kreuzvalidierungs-RMSE; bei praktisch gleichem RMSE entscheidet MAE. Ext und Ext% sind in jeder Variante separat enthalten.</p>
+    <p class="tiny muted">Automatische Auswahl: Das niedrigste RMSE setzt die Referenz. Modelle bis ${tolerancePct}% darüber gelten als prognostisch praktisch gleichwertig; innerhalb dieser Gruppe werden fachlich gerichtete Modelle und danach einfachere Modelle ohne unnötige Zusatzterme bevorzugt. MAE und RMSE lösen verbleibende Gleichstände. ✓ = verwendet, ≈ = innerhalb der Toleranz.</p>
+  </details>`;
+}
+
+function zsOutlierDiagnosticsHtml(model) {
+  const observations=Array.isArray(model?.diagnostics?.cv?.observations) ? model.diagnostics.cv.observations : [];
+  if (!observations.length) return '';
+  const top=[...observations]
+    .filter(row=>Number.isFinite(Number(row?.absError)))
+    .sort((a,b)=>Number(b.absError)-Number(a.absError))
+    .slice(0,10);
+  if (!top.length) return '';
+  return `<details class="zs-outlier-details"><summary><strong>Größte Kreuzvalidierungs-Abweichungen</strong></summary>
+    <p class="tiny muted">Die Prognose jedes hier gezeigten Pferdes stammt aus einem Test-Fold, in dem dieses Pferd nicht zum Lernen verwendet wurde. Die Tabelle dient zur Fehlersuche und verändert das Modell nicht automatisch.</p>
+    <div class="table-wrap"><table class="detail-table zs-outlier-table"><thead><tr><th>Pferd</th><th>GP</th><th>Ext</th><th>Ext%</th><th>Int</th><th>ZS-Grundwert</th><th>CV-Prognose</th><th>Abweichung</th></tr></thead><tbody>${top.map(row=>{
+      const h=row.horse || {};
+      const x=row.x || {};
+      const learning=typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h);
+      const horseName=plannerEscape(h.name || '(ohne Name)');
+      const horseCell=learning
+        ? `<strong>${horseName}</strong><br><span class="tiny muted">Lerndatei</span>`
+        : `<a href="view.html?id=${encodeURIComponent(h.id)}"><strong>${horseName}</strong></a>${h.owner?`<br><span class="tiny muted">${plannerEscape(h.owner)}</span>`:''}`;
+      const diff=Number(row.difference);
+      return `<tr><td>${horseCell}</td><td>${Number.isFinite(Number(x.gp))?Number(x.gp).toFixed(0):'–'}</td><td>${Number.isFinite(Number(x.ext))?Number(x.ext).toFixed(2):'–'}</td><td>${Number.isFinite(Number(x.extpct))?Number(x.extpct).toFixed(2)+' %':'–'}</td><td>${Number.isFinite(Number(x.int))?Number(x.int).toFixed(2):'–'}</td><td>${Number.isFinite(Number(row.actual))?Math.round(Number(row.actual)):'–'}</td><td>${Number.isFinite(Number(row.predicted))?Math.round(Number(row.predicted)):'–'}</td><td><strong>${Number.isFinite(diff)?`${diff>=0?'+':''}${Math.round(diff)}`:'–'}</strong></td></tr>`;
+    }).join('')}</tbody></table></div>
   </details>`;
 }
 
@@ -1233,7 +1264,12 @@ function renderBreedingShowOverview() {
       const directionNote=directionWarnings.length
         ? ` Gewählte Variante zeigt bei ${directionWarnings.join(', ')} eine ungewohnte Teilkoeffizientenrichtung; wegen der Korrelation von Ext und Ext% ist das kein automatischer Ausschluss, die Kreuzvalidierung entscheidet.`
         : ' Die Kernkoeffizientenrichtungen der gewählten Variante sind fachlich plausibel.';
-      info.innerHTML=`Lernmodell: <strong>n=${model.n}</strong> · <strong>${zsModelDataBand(model.n)}</strong> · ausgewählt: <strong>${plannerEscape(selected)}</strong>${quality} · λ=${model.lambda}.<br><span class="tiny">${diseaseNote}${directionNote}${waiting.length?` Nicht zum Lernen verwendet: ${waiting.join(' · ')}.`:''}</span>`;
+      const tolerancePct=((Number(model.selectionInfo?.tolerance)||0)*100).toFixed(0);
+      const exactBest=model.selectionInfo?.exactBestCandidate?.label || selected;
+      const toleranceNote=model.selectionInfo && model.selectionInfo.exactBestCandidate?.id!==model.selectedCandidate?.id
+        ? ` Auswahl mit ${tolerancePct}% RMSE-Toleranz: ${plannerEscape(selected)} wird als fachlich stabilere, praktisch gleich gute Variante gegenüber dem reinen RMSE-Minimum ${plannerEscape(exactBest)} bevorzugt.`
+        : ` Auswahlregel: ${tolerancePct}% RMSE-Toleranz mit Vorrang für fachlich gerichtete und einfachere gleichwertige Modelle.`;
+      info.innerHTML=`Lernmodell: <strong>n=${model.n}</strong> · <strong>${zsModelDataBand(model.n)}</strong> · ausgewählt: <strong>${plannerEscape(selected)}</strong>${quality} · λ=${model.lambda}.<br><span class="tiny">${diseaseNote}${directionNote}${toleranceNote}${waiting.length?` Nicht zum Lernen verwendet: ${waiting.join(' · ')}.`:''}</span>`;
     }
   }
   if (formula) {
@@ -1241,7 +1277,7 @@ function renderBreedingShowOverview() {
       ? `<strong>Formel des automatisch gewählten Modells:</strong> ${plannerEscape(zsFormulaText(model))}<br><span class="muted">Ext und Ext% bleiben getrennte Eingangsgrößen. Zusatzterme werden nur verwendet, wenn sie in der Kreuzvalidierung besser prognostizieren.</span>`
       : 'Noch keine Formel – mindestens 8 verwertbare ZS-Datensätze nötig.';
   }
-  if (comparison) comparison.innerHTML=zsModelComparisonHtml(model);
+  if (comparison) comparison.innerHTML=zsModelComparisonHtml(model)+zsOutlierDiagnosticsHtml(model);
 
   const nameQ=(document.getElementById('tp-zs-name')?.value || '').trim().toLowerCase();
   const selectedOwners=[...document.querySelectorAll('#tp-zs-owners input[type="checkbox"]:checked')].map(cb=>cb.value);
