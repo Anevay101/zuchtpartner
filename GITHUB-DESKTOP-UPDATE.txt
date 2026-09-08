@@ -1,13 +1,19 @@
-MDR V54.0.21 – Update mit GitHub Desktop
+MDR-Datenbank V54.0.25 – Update mit GitHub Desktop
 
-1. MDR-Pferdedatenbank-V54.0.21-Aktive-Rassen.zip entpacken.
+1. zuchtpartner-main-V54.0.25-clean.zip entpacken.
 2. GitHub Desktop öffnen und das bestehende zuchtpartner-Repository auswählen.
 3. Repository → Show in Explorer.
 4. Den versteckten Ordner .git NICHT löschen.
-5. Den INHALT des entpackten V54.0.21-Ordners in den lokalen Repository-Ordner kopieren.
-6. Vorhandene Dateien ersetzen. Die Ordner css/ und js/ bleiben erhalten.
-7. In GitHub Desktop unter Changes kontrollieren, dass keine private JSON-Datensicherung enthalten ist.
-8. Summary: „MDR V54.0.21 aktive Rassen + Stutenfilter“.
-9. Commit to main.
-10. Push origin.
-11. Nach dem GitHub-Pages-Deployment die Seite mit Strg+F5 neu laden.
+5. Im Repository alle übrigen bisherigen Projektdateien/-ordner löschen.
+6. Den INHALT des entpackten Ordners zuchtpartner-main-V54.0.25-clean direkt in den Repository-Ordner kopieren.
+   Achtung: Nicht den äußeren Ordner als zusätzliche Unterebene hineinlegen.
+7. In GitHub Desktop unter Changes kurz kontrollieren, dass keine private JSON-Datensicherung enthalten ist.
+8. Empfohlene Commit-Nachricht: „MDR V54.0.25 Filter + historische ZS-Snapshots“.
+9. Commit to main und anschließend Push origin.
+10. GitHub Pages kurz deployen lassen und die Seite danach mit Strg+F5 neu laden.
+11. Zur Versionskontrolle kann VERSION.txt auf GitHub geöffnet werden. Dort muss „MDR-Datenbank V54.0.25“ stehen.
+
+Wichtig zu ZS:
+- Bereits vorhandene positive ZS-Werte ohne historischen Snapshot werden beim ersten Laden mit dem Bestandsstand vom 08.09.2026 eingefroren.
+- Bei einem künftig erstmals positiv gespeicherten ZS-Wert werden Turnierbonus und Cupbonus automatisch als historischer Snapshot mitgespeichert.
+- Spätere Turniererfolge verändern den daraus verwendeten ZS-Grundwert nicht mehr.

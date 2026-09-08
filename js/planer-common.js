@@ -598,9 +598,127 @@ function plannerBreedingShowPoints(horse) {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+const MDR_ZS_LEGACY_SNAPSHOT_DATE = '2026-09-08';
+
+function plannerBreedingShowSnapshot(horse) {
+  const snapshot = horse?.breeding_show_snapshot;
+  if (!snapshot || typeof snapshot !== 'object') return null;
+  const tournamentBonus = Number(snapshot.tournament_bonus);
+  const cupBonus = Number(snapshot.cup_bonus);
+  if (!Number.isFinite(tournamentBonus) || !Number.isFinite(cupBonus)) return null;
+  return snapshot;
+}
+
+function plannerBreedingShowSnapshotDate(horse) {
+  const snapshot = plannerBreedingShowSnapshot(horse);
+  return snapshot?.snapshot_date || (snapshot?.captured_at ? String(snapshot.captured_at).slice(0,10) : null);
+}
+
+function plannerBreedingShowSnapshotForHorse(horse, { snapshotDate=null, capturedAt=null, source='zs-entry' } = {}) {
+  const total = plannerBreedingShowPoints(horse);
+  if (total == null) return null;
+  const tournamentBonus = plannerTournamentShowBonus(horse);
+  const cupRows = plannerCupStarRows(horse);
+  const cupBonus = cupRows.length * 100;
+  const date = snapshotDate || (capturedAt ? String(capturedAt).slice(0,10) : new Date().toISOString().slice(0,10));
+  const captured = capturedAt || `${date}T12:00:00.000Z`;
+  let tournamentResults = {};
+  try { tournamentResults = structuredClone(plannerTournamentResults(horse)); }
+  catch { tournamentResults = JSON.parse(JSON.stringify(plannerTournamentResults(horse) || {})); }
+  return {
+    version: 1,
+    source,
+    snapshot_date: date,
+    captured_at: captured,
+    total_points: total,
+    tournament_bonus: tournamentBonus,
+    cup_bonus: cupBonus,
+    base_points: total - tournamentBonus - cupBonus,
+    tournament_starts_total: plannerTournamentStarts(horse),
+    cup_star_count: cupRows.length,
+    cup_stars: cupRows.map(row => ({ discipline: row.discipline, lk: row.lk || '' })),
+    tournament_results: tournamentResults,
+  };
+}
+
+function plannerApplyBreedingShowSnapshotForSave(payload, beforeRecord=null) {
+  if (!payload || typeof payload !== 'object') return payload;
+  const total = plannerBreedingShowPoints(payload);
+  if (total == null) {
+    payload.breeding_show_snapshot = null;
+    return payload;
+  }
+
+  const beforeTotal = plannerBreedingShowPoints(beforeRecord);
+  const existing = plannerBreedingShowSnapshot(beforeRecord) || plannerBreedingShowSnapshot(payload);
+  if (existing) {
+    // Korrigiert man nur den eingetragenen ZS-Gesamtwert, bleibt der historische
+    // Turnier-/Cupstand derselbe; nur Gesamt- und Grundwert werden angepasst.
+    payload.breeding_show_snapshot = {
+      ...existing,
+      total_points: total,
+      base_points: total - Number(existing.tournament_bonus || 0) - Number(existing.cup_bonus || 0),
+    };
+    return payload;
+  }
+
+  if (beforeTotal != null) {
+    // Bestandsdaten: den am 08.09.2026 vorhandenen Turnier-/Cupstand einfrieren.
+    payload.breeding_show_snapshot = plannerBreedingShowSnapshotForHorse(payload, {
+      snapshotDate: MDR_ZS_LEGACY_SNAPSHOT_DATE,
+      capturedAt: '2026-09-08T12:00:00.000Z',
+      source: 'bestand-eingefroren-2026-09-08',
+    });
+    return payload;
+  }
+
+  // Neue ZS-Eingabe: den Turnier-/Cupstand genau bei diesem Speichervorgang festhalten.
+  const now = new Date().toISOString();
+  payload.breeding_show_snapshot = plannerBreedingShowSnapshotForHorse(payload, {
+    snapshotDate: now.slice(0,10),
+    capturedAt: now,
+    source: 'zs-entry',
+  });
+  return payload;
+}
+
+async function plannerEnsureBreedingShowSnapshots() {
+  if (typeof localGetAll !== 'function' || typeof LOCAL_STORES === 'undefined') return {updated:0};
+  const horses = await localGetAll(LOCAL_STORES.horses);
+  const changed = [];
+  for (const horse of horses || []) {
+    if (plannerBreedingShowPoints(horse) == null || plannerBreedingShowSnapshot(horse)) continue;
+    const snapshot = plannerBreedingShowSnapshotForHorse(horse, {
+      snapshotDate: MDR_ZS_LEGACY_SNAPSHOT_DATE,
+      capturedAt: '2026-09-08T12:00:00.000Z',
+      source: 'bestand-eingefroren-2026-09-08',
+    });
+    if (!snapshot) continue;
+    changed.push({
+      ...horse,
+      breeding_show_snapshot: snapshot,
+      // Technische Bestandsmigration: fachliches Bearbeitungsdatum nicht künstlich ändern.
+      updated_at: horse.updated_at || new Date().toISOString(),
+    });
+  }
+  if (!changed.length) return {updated:0};
+  if (typeof localBulkPut === 'function') await localBulkPut(LOCAL_STORES.horses, changed);
+  else if (typeof localPut === 'function') {
+    for (const horse of changed) await localPut(LOCAL_STORES.horses, horse);
+  } else return {updated:0};
+  return {updated:changed.length};
+}
+
 function plannerBreedingShowBase(horse) {
   const total = plannerBreedingShowPoints(horse);
   if (total == null) return null;
+  const snapshot = plannerBreedingShowSnapshot(horse);
+  if (snapshot) {
+    return total - Number(snapshot.tournament_bonus || 0) - Number(snapshot.cup_bonus || 0);
+  }
+  // Nur als Fallback, falls ein Datensatz vor der einmaligen Migration gelesen wird.
+  // Sobald plannerEnsureBreedingShowSnapshots() läuft, wird dieser Stand persistent
+  // mit dem Stichtag 08.09.2026 eingefroren und verändert sich danach nicht mehr.
   return total - plannerTournamentShowBonus(horse) - plannerCupShowBonus(horse);
 }
 
@@ -745,9 +863,11 @@ function plannerBreedingShowTrainingStatus(horse) {
   if (total == null) return {eligible:false, reason:'no-zs'};
   const x = plannerBreedingShowFeatureObject(horse);
   if (!x) return {eligible:false, reason:'missing-features'};
-  // Nur echte ZS-Datensätze brauchen Turnierplatzierungen: der Turnierbonus
-  // muss für den Lern-Grundwert zuverlässig vom ZS-Gesamtwert abziehbar sein.
-  if (plannerTournamentPlacements(horse) < 1) return {eligible:false, reason:'missing-tournament'};
+  // Der Turnier-/Cupstand ist als historischer ZS-Snapshot eingefroren.
+  // Deshalb sind auch echte ZS-Datensätze mit 0 Turnierplatzierungen gültig:
+  // 0 ist dann ein belastbarer historischer Bonus und kein fehlender Wert.
+  const snapshot = plannerBreedingShowSnapshot(horse);
+  if (!snapshot) return {eligible:false, reason:'missing-snapshot'};
   const y = plannerBreedingShowBase(horse);
   if (y == null || !Number.isFinite(y) || y < 0) return {eligible:false, reason:'invalid-base'};
   return {eligible:true, y, x};
@@ -848,13 +968,13 @@ function plannerBreedingShowCrossValidate(rows, featureKeys, lambda) {
 
 function plannerBuildBreedingShowModel(allHorses) {
   const training = [];
-  const exclusions = {noZs:0, missingFeatures:0, missingTournament:0, invalidBase:0};
+  const exclusions = {noZs:0, missingFeatures:0, missingSnapshot:0, invalidBase:0};
   for (const horse of Array.isArray(allHorses) ? allHorses : []) {
     const status = plannerBreedingShowTrainingStatus(horse);
     if (status.eligible) training.push({horse, y:status.y, x:status.x});
     else if (status.reason === 'no-zs') exclusions.noZs++;
     else if (status.reason === 'missing-features') exclusions.missingFeatures++;
-    else if (status.reason === 'missing-tournament') exclusions.missingTournament++;
+    else if (status.reason === 'missing-snapshot') exclusions.missingSnapshot++;
     else if (status.reason === 'invalid-base') exclusions.invalidBase++;
   }
 

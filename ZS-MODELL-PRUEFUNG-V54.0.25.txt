@@ -1,0 +1,72 @@
+ZS-Modell – technische und inhaltliche Prüfung V54.0.25
+Datum: 08.09.2026
+
+1. FACHLICHE ZIELVARIABLE – HISTORISCH
+Der ZS-Gesamtwert ist ein historischer Wert. Deshalb muss auch der daraus abgeleitete Grundwert historisch bleiben:
+
+  ZS-Grundwert = ZS gesamt
+                 - Turnierbonus zum Zeitpunkt der ZS
+                 - Cupbonus zum Zeitpunkt der ZS
+
+Turnierbonus: 35 Punkte je 1. Platz, 25 je 2. Platz, 15 je 3. Platz, insgesamt maximal 500.
+Cupbonus: 100 Punkte je Cup-Stern, der zu diesem Zeitpunkt bereits vorhanden war.
+
+Spätere Turnierpunkte, Platzierungen oder Cup-Sterne dürfen den ZS-Grundwert nicht erneut verändern.
+
+2. HISTORISCHER SNAPSHOT
+Neue ZS-Einträge:
+- Beim ersten Speichern einer positiven ZS-Punktzahl wird der aktuelle Turnier-/Cupstand automatisch als breeding_show_snapshot gespeichert.
+- Gespeichert werden u.a. Snapshot-Datum, ZS-Gesamtwert, damaliger Turnierbonus, damaliger Cupbonus, Grundwert, Starts, Cupsterne und die damaligen strukturierten Turnierergebnisse.
+- Eine spätere Korrektur nur der ZS-Gesamtpunktzahl behält den historischen Bonusstand bei und korrigiert ausschließlich den Grundwert.
+
+Bestandsdaten:
+- Für bereits vorhandene positive ZS-Werte ohne Snapshot ist der frühere tatsächliche Turnierstand nicht rekonstruierbar.
+- Vereinbarung: Diese Datensätze werden einmalig mit dem am 08.09.2026 vorhandenen Turnier-/Cupstand eingefroren und entsprechend markiert.
+- Dadurch bleibt der Wert ab diesem Stichtag stabil. Er ist für Altdaten nicht zwingend identisch mit dem echten historischen Bonusstand bei der damaligen ZS.
+
+3. EINGANGSMERKMALE
+Pflicht: GP, Ext, Ext%, Int.
+Fehlende Werte bleiben fehlend und werden nicht durch Number(null) als 0 interpretiert.
+
+Optional: EKH/Erbkrankheitsstatus.
+Er wird nur als eigener Koeffizient zugeschaltet, wenn mindestens 3 eindeutig betroffene und 3 eindeutig unauffällige Lerndatensätze vorhanden sind und in der Modellstichprobe kein EKH-Status unbekannt ist. Unbekannt wird nicht als gesund behandelt.
+
+4. LERNDATEN-SCHUTZ
+- Nur positive echte ZS-Punkte sind Lerndaten. Leer/0 ist „kein echter ZS-Wert“.
+- Der historische ZS-Snapshot muss vorhanden sein.
+- Echte ZS-Datensätze mit 0 Turnierplatzierungen sind gültig, wenn der Snapshot den historischen Turnierbonus 0 enthält. Eine Platzierung ist keine Modellvoraussetzung mehr.
+- Unvollständige GP/Ext/Ext%/Int-Daten werden ausgeschlossen.
+- Negative/unplausible Grundwerte werden ausgeschlossen.
+- Fohlenprognosen werden nie als echte ZS-Werte gespeichert und können sich nicht selbst in das Modell zurückfüttern.
+- Ein Fohlen braucht keine Turnierplatzierungen für die Prognose.
+
+5. MODELL
+Standardisierte Ridge-Regression.
+Lambda wird aus mehreren Kandidaten per Kreuzvalidierung gewählt. Ridge-Regularisierung ist bei korrelierten Leistungsmerkmalen sinnvoll, weil sie extreme/instabile Koeffizienten reduziert.
+
+6. QUALITÄTSPRÜFUNG
+Die Kreuzvalidierung berechnet:
+- MAE: mittlere absolute Abweichung
+- RMSE: stärkeres Gewicht auf große Fehler
+- R²
+
+Parallel wird je Fold eine einfache Durchschnitts-Baseline berechnet: Jeder Testdatensatz erhält den mittleren ZS-Grundwert seiner jeweiligen Trainingsmenge. Angezeigt werden Modell-MAE/RMSE, Baseline-MAE/RMSE und die relative RMSE-Verbesserung bzw. -Verschlechterung.
+
+Zusätzlich werden ungewöhnliche Koeffizientenrichtungen als Datenhinweis markiert. Das ist kein automatischer Beweis eines Fehlers, kann aber bei kleinen oder selektiven Stichproben auf Instabilität hinweisen.
+
+7. TECHNISCHER FUNKTIONSTEST
+Getesteter Fall:
+- ZS gesamt = 1000
+- Snapshot: 2 erste Plätze + 1 zweiter Platz = 95 Turnierbonus
+- Grundwert beim Snapshot = 905
+- Danach aktuelle Turniererfolge auf 10 erste + 4 zweite Plätze erhöht (aktueller Bonus = 450)
+- Ergebnis: gespeicherter/berechneter ZS-Grundwert bleibt 905.
+
+Damit ist geprüft, dass spätere Turniererfolge den historischen ZS-Grundwert nicht mehr verändern.
+
+8. INHALTLICHE BEWERTUNG / GRENZE
+Die Modellkonstruktion (historisches Ziel, Pflichtdatenprüfung, Standardisierung, Ridge, Kreuzvalidierung, Durchschnitts-Baseline) ist technisch schlüssig.
+
+Eine feste Aussage wie „die Prognose hat aktuell MAE X“ ist aus dem statischen GitHub-Projekt nicht möglich, weil die aktuellen Pferde- und ZS-Datensätze aus der angemeldeten Supabase-Datenbank geladen werden. Die echte Güte muss deshalb mit dem Live-Bestand gemessen werden; genau dafür zeigt der Turnierplaner die Kreuzvalidierungs- und Baselinewerte.
+
+Für die vor dem 08.09.2026 bestehenden ZS-Datensätze bleibt eine fachliche Unsicherheit: Der damalige Bonusstand ist unbekannt. Die vereinbarte Stichtags-Einfrierung verhindert neue Fehler ab jetzt, kann diese historische Information jedoch nicht rückwirkend herstellen. Künftige ZS-Einträge besitzen dagegen einen echten Snapshot des Eintragszeitpunkts.

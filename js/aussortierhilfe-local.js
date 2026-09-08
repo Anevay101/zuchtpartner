@@ -1,5 +1,6 @@
 
 let AH_HORSES = [];
+function ahOwnerKey(value){ return String(value || '').trim().toLocaleLowerCase('de'); }
 let AH_LAST_EVALUATED = [];
 let AH_VERDICT_FILTER = 'all';
 
@@ -45,7 +46,8 @@ function refreshAussortBreedFilter() {
   if (!el) return;
   const old=el.value;
   const owners=getCheckDropdownSelected('ah-owner-drop');
-  const rows=owners.length ? AH_HORSES.filter(h=>owners.includes(h.owner)) : AH_HORSES;
+  const ownerKeys=new Set(owners.map(ahOwnerKey));
+  const rows=ownerKeys.size ? AH_HORSES.filter(h=>ownerKeys.has(ahOwnerKey(h.owner))) : AH_HORSES;
   const breeds=[...new Set(rows.map(h=>normalizeBreed(h.breed)||'Rasselos').filter(Boolean))];
   fillFilter('ah-breed',breeds);
   if ([...el.options].some(o=>o.value===old)) el.value=old;
@@ -311,6 +313,7 @@ function renderAussortSummary(mode, hasManualTargets) {
 
 function runAussort() {
   const owners = getCheckDropdownSelected('ah-owner-drop');
+  const ownerKeys = new Set(owners.map(ahOwnerKey));
   const breed = document.getElementById('ah-breed').value;
   const gender = document.getElementById('ah-gender').value;
   const mode = document.getElementById('ah-mode').value;
@@ -332,7 +335,7 @@ function runAussort() {
   const hasManualTargets = relevantTargets.some(v => v != null);
 
   const rows = AH_HORSES.filter((h) => {
-    if (owners.length && !owners.includes(h.owner)) return false;
+    if (ownerKeys.size && !ownerKeys.has(ahOwnerKey(h.owner))) return false;
     if (breed && (normalizeBreed(h.breed) || 'Rasselos') !== breed) return false;
     if (gender && h.gender !== gender) return false;
     return true;

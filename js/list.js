@@ -32,6 +32,7 @@ let breedingOverviewContext = null;
 let breedingOverviewContextVersion = -1;
 const derivedHorseCache = new WeakMap();
 let filterOptionHorses = [];
+let databaseFilterChipsCommitted = false;
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -594,8 +595,15 @@ function replaceSelectOptions(selector, values, {allLabel='Alle', preferredOptio
   sel.value = [...sel.options].some(opt => opt.value === previous) ? previous : '';
 }
 
+function databaseOwnerKey(value) {
+  return String(value || '').trim().toLocaleLowerCase('de');
+}
+
 function databaseBreedRowsForOwner(owner) {
-  if (owner) return filterOptionHorses.filter(h => h.owner === owner);
+  if (owner) {
+    const wanted = databaseOwnerKey(owner);
+    return filterOptionHorses.filter(h => databaseOwnerKey(h.owner) === wanted);
+  }
   return typeof activeOwnedHorses === 'function'
     ? activeOwnedHorses(filterOptionHorses)
     : filterOptionHorses.filter(h => isActiveBreeder(h.owner));
@@ -611,7 +619,7 @@ function refreshDatabaseBreedOptions() {
 
 function refreshCompareBreedOptions() {
   const owner = document.querySelector('#cmp-owner')?.value || '';
-  const rows = owner ? filterOptionHorses.filter(h => h.owner === owner) : databaseBreedRowsForOwner('');
+  const rows = owner ? databaseBreedRowsForOwner(owner) : databaseBreedRowsForOwner('');
   const breeds = [...new Set(rows.map(h => normalizeBreed(h.breed) || 'Rasselos'))]
     .sort((a,b)=>a.localeCompare(b,'de'));
   replaceSelectOptions('#cmp-breed', breeds);
@@ -668,7 +676,7 @@ async function buildQuery() {
 
   data = data.filter((row) => {
     if (name && !(row.name || '').toLowerCase().includes(name)) return false;
-    if (owner && row.owner !== owner) return false;
+    if (owner && databaseOwnerKey(row.owner) !== databaseOwnerKey(owner)) return false;
     if (gender && row.gender !== gender) return false;
 
     const rowGameVersion = row.game_version || 'DE';
@@ -1201,6 +1209,7 @@ function clearDatabaseFilterChip(key) {
   if (key === 'tags') resetTriStateDropdown('f-tag-drop');
   if (key === 'genetik') resetTriStateDropdown('f-genetik-drop');
   if (key === 'ekh') resetTriStateDropdown('f-ekh-drop');
+  databaseFilterChipsCommitted = true;
   loadHorses();
 }
 
@@ -1208,6 +1217,11 @@ function updateActiveFilterChips() {
   const bar = document.getElementById('active-filter-bar');
   const root = document.getElementById('active-filter-chips');
   if (!bar || !root) return;
+  if (!databaseFilterChipsCommitted) {
+    bar.hidden = true;
+    root.innerHTML = '';
+    return;
+  }
   const chips = activeFilterChipDescriptors();
   bar.hidden = chips.length === 0;
   root.innerHTML = chips.map(({key,label}) => `<button type="button" class="active-filter-chip" data-filter-chip="${escapeHtml(key)}" title="Diesen Filter entfernen">${escapeHtml(label)} <span class="active-filter-chip-x" aria-hidden="true">×</span></button>`).join('');
@@ -1432,30 +1446,36 @@ function wireFilterForm() {
   const form = document.querySelector('#filter-form');
   form.addEventListener('submit', (e) => {
     e.preventDefault();
+    // Chips sind eine bewusste Zusammenfassung: erst der Klick auf „Filtern“
+    // bestätigt den aktuell vorbereiteten Filterzustand für die Chip-Leiste.
+    databaseFilterChipsCommitted = true;
     loadHorses();
   });
 
-  // Filter reagieren nun auch direkt. Das behebt sowohl Form-Restore-
-  // Effekte des Browsers als auch den Eindruck, einzelne Selects würden
-  // nichts tun. Texte/Zahlen werden kurz entprellt, Selects sofort.
+  // Die bewährte Direktreaktion der Ergebnisliste bleibt erhalten. Sobald
+  // danach ein Feld verändert wird, verschwindet eine vorherige Chip-Leiste
+  // wieder, bis der neue Zustand ausdrücklich mit „Filtern“ bestätigt wird.
   let filterTimer = null;
   form.addEventListener('change', (e) => {
     if (!e.target.matches('input,select,.checkdrop-tristate-item')) return;
+    databaseFilterChipsCommitted = false;
     clearTimeout(filterTimer);
     loadHorses();
   });
   form.addEventListener('input', (e) => {
     if (!e.target.matches('input[type="text"],input[type="number"]')) return;
+    databaseFilterChipsCommitted = false;
     clearTimeout(filterTimer);
     filterTimer = setTimeout(loadHorses, 180);
   });
 
+  // Abhängige Auswahlfelder werden sofort neu aufgebaut, damit z.B. nach
+  // „Wilder Wolf“ nur noch dessen tatsächlich vorhandene Rassen auswählbar sind.
   document.getElementById('f-owner')?.addEventListener('change', refreshDatabaseBreedOptions);
   document.getElementById('f-main-group')?.addEventListener('change', refreshTalentFilterOptions);
 
   document.querySelector('#reset-filters').addEventListener('click', resetDatabaseFilters);
   document.getElementById('clear-active-filters')?.addEventListener('click', resetDatabaseFilters);
-  document.querySelector('#f-data-quality').addEventListener('change', loadHorses);
 }
 
 function resetDatabaseFilters() {
@@ -1470,6 +1490,7 @@ function resetDatabaseFilters() {
   }
   refreshDatabaseBreedOptions();
   refreshTalentFilterOptions();
+  databaseFilterChipsCommitted = false;
   loadHorses();
 }
 
@@ -1502,6 +1523,7 @@ function wireBestFoalFilter() {
     const state = btn.dataset.state || 'off';
     btn.dataset.state = state === 'off' ? 'only' : state === 'only' ? 'exclude' : 'off';
     syncBestFoalToggleLabel();
+    databaseFilterChipsCommitted = false;
     loadHorses();
   });
   syncBestFoalToggleLabel();
@@ -1634,6 +1656,7 @@ async function applyFilterState(state) {
   compareBaseline = toggle.checked ? await computeCompareBaseline() : null;
   renderCompareAvgValues();
 
+  databaseFilterChipsCommitted = true;
   loadHorses();
 }
 

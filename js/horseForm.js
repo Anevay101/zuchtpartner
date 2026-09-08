@@ -1083,6 +1083,12 @@ async function runSaveFlow() {
   syncFlaxenCarrierRecord(mergedPayload);
   syncBreedingStationRecord(mergedPayload);
   if (typeof mdrLearningFileForSave === 'function') mdrLearningFileForSave(mergedPayload, beforeRecord);
+  // V54.0.25: Sobald erstmals echte ZS-Punkte gespeichert werden, wird der
+  // aktuelle Turnier-/Cupstand als historischer Snapshot mitgespeichert.
+  // Bereits vorhandene ZS-Snapshots bleiben bei späteren Turniererfolgen unverändert.
+  if (typeof plannerApplyBreedingShowSnapshotForSave === 'function') {
+    plannerApplyBreedingShowSnapshotForSave(mergedPayload, beforeRecord);
+  }
 
   const warnings = missingDataWarnings(mergedPayload);
   if (warnings.length) {
@@ -1234,6 +1240,7 @@ const CHANGE_FIELD_LABELS = {
   stud_fee: 'Decktaxe',
   tournament_starts_total: 'Turnierstarts',
   breeding_show_points: 'Zuchtschau-Punkte',
+  breeding_show_snapshot: 'ZS-Snapshot',
   tournament_results: 'Turniererfolge/Cup',
 };
 

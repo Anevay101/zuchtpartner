@@ -1,6 +1,8 @@
 const durchschnittDerivedCache = new WeakMap();
 let DASHBOARD_FILTER_HORSES = [];
 
+function dashboardOwnerKey(value) { return String(value || '').trim().toLocaleLowerCase('de'); }
+
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
@@ -35,7 +37,10 @@ function refreshDashboardBreedOptions() {
   if (!sel) return;
   const previous = sel.value;
   const owners = getCheckDropdownSelected('d-owner-drop');
-  const rows = DASHBOARD_FILTER_HORSES.filter(h => isActiveBreeder(h.owner) && (!owners.length || owners.includes(h.owner)));
+  const ownerKeys = new Set(owners.map(dashboardOwnerKey));
+  const rows = DASHBOARD_FILTER_HORSES.filter(h =>
+    isActiveBreeder(h.owner) && (!ownerKeys.size || ownerKeys.has(dashboardOwnerKey(h.owner)))
+  );
   const breedCounts = new Map();
   for (const h of rows) {
     const breed = normalizeBreed(h.breed) || 'Rasselos';
@@ -120,13 +125,14 @@ function renderBreedingDashboard(rows) {
 
 function localAverageFilter(rows) {
   const owners = getCheckDropdownSelected('d-owner-drop');
+  const ownerKeys = new Set(owners.map(dashboardOwnerKey));
   const gender = document.querySelector('#d-gender').value;
   const breed = document.querySelector('#d-breed').value;
   const zzl = document.querySelector('#d-zzl').value;
   const tagSelected = getCheckDropdownSelected('d-tag-drop');
 
   return rows.filter((h) => {
-    if (owners.length && !owners.includes(h.owner)) return false;
+    if (ownerKeys.size && !ownerKeys.has(dashboardOwnerKey(h.owner))) return false;
     if (gender && h.gender !== gender) return false;
 
     const normalizedBreed = normalizeBreed(h.breed) || 'Rasselos';
@@ -201,6 +207,7 @@ function wireForm() {
     form.reset();
     resetCheckDropdown('d-owner-drop');
     resetCheckDropdown('d-tag-drop');
+    refreshDashboardBreedOptions();
     calculate();
   });
 }

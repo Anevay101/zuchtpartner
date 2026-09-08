@@ -442,7 +442,7 @@ async function localUpdate(storeName, key, changes) {
   return updated;
 }
 
-console.log('MDR V54.0.21 Supabase-Datenbank mit optimiertem Lesecache wurde geladen.');
+console.log('MDR V54.0.25 Supabase-Datenbank mit optimiertem Lesecache wurde geladen.');
 
 // Für vollständige JSON-Importe: Datensätze in kleinen Paketen übertragen,
 // damit ein Erstimport nicht hunderte einzelne HTTP-Anfragen erzeugt.

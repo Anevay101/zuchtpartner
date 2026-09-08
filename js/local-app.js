@@ -120,6 +120,14 @@ async function requireSession() {
     // In V54 ist Supabase der führende Datenbestand. Eine leere Cloud-Datenbank
     // wird NICHT automatisch aus einem lokalen Browser-Backup überschrieben.
     await ensureMdrStartupReady();
+    // V54.0.25: Historische ZS-Werte werden mit ihrem damaligen Turnier-/Cupstand
+    // eingefroren. Bestandsdatensätze ohne Snapshot erhalten einmalig den
+    // vereinbarten Stichtag 08.09.2026. Die Funktion ist nur auf Seiten geladen,
+    // die planer-common.js verwenden; auf anderen Seiten ist sie absichtlich optional.
+    if (typeof plannerEnsureBreedingShowSnapshots === 'function') {
+      try { await plannerEnsureBreedingShowSnapshots(); }
+      catch (error) { console.warn('ZS-Snapshots konnten nicht vollständig ergänzt werden:', error); }
+    }
     if (typeof mdrEnsureLearningFileRules === 'function') {
       try { await mdrEnsureLearningFileRules(); }
       catch (error) { console.warn('Lerndatei-Regeln konnten nicht angewendet werden:', error); }

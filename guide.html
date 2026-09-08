@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Guide – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5424" />
+  <link rel="stylesheet" href="css/style.css?v=5425" />
 </head>
 <body class="guide-page">
 <header class="topbar">
@@ -125,7 +125,8 @@
     <details class="card guide-faq-item">
       <summary>Wie funktioniert die ZS-Prognose für Fohlen?</summary>
       <div class="guide-faq-body"><div class="guide-answer-card">
-        <p>Das Lernmodell nutzt ausschließlich <strong>echte positive ZS-Punkte</strong>. Aus dem Gesamtwert werden gespeicherte Turnier- und Cup-Boni herausgerechnet, damit ein geschätzter ZS-Grundwert gelernt werden kann.</p>
+        <p>Das Lernmodell nutzt ausschließlich <strong>echte positive ZS-Punkte</strong>. Für neue ZS-Einträge speichert die Datenbank automatisch den Turnier- und Cupstand dieses Moments als historischen Snapshot. Aus dem ZS-Gesamtwert werden nur diese damaligen Boni herausgerechnet; spätere Turniererfolge verändern den Grundwert nicht.</p>
+        <p><strong>Bestandsdaten:</strong> Bereits vor dieser Funktion vorhandene ZS-Werte werden mit dem am <strong>08.09.2026</strong> in der Datenbank vorhandenen Turnier-/Cupstand eingefroren. Das verhindert künftige Verschiebungen, kann aber einen früheren tatsächlichen Bonusstand der alten ZS nicht nachträglich rekonstruieren.</p>
         <p>Für eine Fohlenprognose müssen GP, Ext, Ext% und Int vorhanden sein. Das Fohlen selbst braucht keine Turnierplatzierung und keinen echten ZS-Wert. Prognosen werden niemals wieder als echte Lerndaten verwendet.</p>
         <p>Unter „Zuchtschau“ zeigt die Modellprüfung MAE, RMSE und R² sowie einen Vergleich mit einer einfachen Durchschnitts-Prognose. So ist sichtbar, ob das Modell mit dem aktuellen Datenbestand tatsächlich mehr leistet als nur den Mittelwert zu schätzen.</p>
       </div></div>
@@ -143,9 +144,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5424"></script>
-<script src="js/database-local.js?v=5424"></script>
-<script src="js/local-app.js?v=5424"></script>
-<script src="js/guide.js?v=5424"></script>
+<script src="js/supabase-config.js?v=5425"></script>
+<script src="js/database-local.js?v=5425"></script>
+<script src="js/local-app.js?v=5425"></script>
+<script src="js/guide.js?v=5425"></script>
 </body>
 </html>

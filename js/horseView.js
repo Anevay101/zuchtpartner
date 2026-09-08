@@ -133,7 +133,13 @@ function renderHorseBreedingShowSummary(horse, allHorses) {
     : null;
   if (actual != null) {
     field.value = String(Math.round(actual));
-    if (note) note.textContent = 'Echter eingetragener ZS-Gesamtwert.';
+    if (note) {
+      const snapshotDate = typeof plannerBreedingShowSnapshotDate === 'function' ? plannerBreedingShowSnapshotDate(horse) : null;
+      const base = typeof plannerBreedingShowBase === 'function' ? plannerBreedingShowBase(horse) : null;
+      const dateText = snapshotDate ? ` · Bonusstand vom ${snapshotDate.split('-').reverse().join('.')}` : '';
+      const baseText = base != null && Number.isFinite(Number(base)) ? ` · Grundwert ${Math.round(base)}` : '';
+      note.textContent = `Echter eingetragener ZS-Gesamtwert${dateText}${baseText}.`;
+    }
     return;
   }
 

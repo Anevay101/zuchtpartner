@@ -5,6 +5,7 @@ let TP_SELECTED = null;
 let TP_TOURNAMENT_REFERENCES = {};
 let TP_ZS_MODEL = null;
 let TP_LK_REFERENCE_MODEL = null;
+function tpOwnerKey(value){ return String(value || '').trim().toLocaleLowerCase('de'); }
 
 document.addEventListener('DOMContentLoaded', () => {
   initTurnierplaner().catch(error => {
@@ -120,7 +121,7 @@ function setTournamentBreedOptions(id, breeds, allLabel='Alle') {
 
 function refreshTournamentBreedFilters() {
   const owner=document.getElementById('tp-owner')?.value || '';
-  const rows=owner ? TP_HORSES.filter(h=>String(h.owner||'')===owner) : TP_HORSES;
+  const rows=owner ? TP_HORSES.filter(h=>tpOwnerKey(h.owner)===tpOwnerKey(owner)) : TP_HORSES;
   const breeds=[...new Set(rows.map(h=>normalizeBreed(h.breed)||'Rasselos'))]
     .sort((a,b)=>a.localeCompare(b,'de'));
   setTournamentBreedOptions('tp-breed',breeds);
@@ -129,9 +130,10 @@ function refreshTournamentBreedFilters() {
 
 function refreshZsBreedFilter() {
   const selectedOwners=[...document.querySelectorAll('#tp-zs-owners input[type="checkbox"]:checked')].map(cb=>cb.value);
+  const ownerKeys=new Set(selectedOwners.map(tpOwnerKey));
   const rows=TP_ALL_HORSES.filter(h=>
     !(typeof mdrIsLearningHorse==='function' && mdrIsLearningHorse(h)) &&
-    selectedOwners.includes(String(h.owner||'').trim())
+    ownerKeys.has(tpOwnerKey(h.owner))
   );
   const breeds=[...new Set(rows.map(h=>normalizeBreed(h.breed)||'Rasselos'))]
     .sort((a,b)=>a.localeCompare(b,'de'));
@@ -1151,15 +1153,13 @@ function zsFeatureObject(horse) {
 }
 
 function zsTrainingStatus(horse) {
+  if (typeof plannerBreedingShowTrainingStatus === 'function') {
+    return plannerBreedingShowTrainingStatus(horse);
+  }
   const total=plannerBreedingShowPoints(horse);
   if (total==null) return {eligible:false,reason:'no-zs'};
   const x=zsFeatureObject(horse);
   if (!x) return {eligible:false,reason:'missing-features'};
-  // ZS-Anmeldung setzt mindestens eine Platzierung voraus. Sind im lokalen
-  // Datensatz trotz ZS-Punkten keine Platzierungen vorhanden, ist der
-  // abziehbare Turnierbonus offensichtlich unvollständig und darf das
-  // Lernmodell nicht verfälschen.
-  if (plannerTournamentPlacements(horse)<1) return {eligible:false,reason:'missing-tournament'};
   const y=plannerBreedingShowBase(horse);
   if (y==null || !Number.isFinite(y) || y<0) return {eligible:false,reason:'invalid-base'};
   return {eligible:true,y,x};
@@ -1249,13 +1249,13 @@ function zsCrossValidate(rows, featureKeys, lambda) {
 
 function zsTrainingRowsAndExclusions() {
   const rows=[];
-  const exclusions={noZs:0,missingFeatures:0,missingTournament:0,invalidBase:0};
+  const exclusions={noZs:0,missingFeatures:0,missingSnapshot:0,invalidBase:0};
   for (const horse of TP_ALL_HORSES) {
     const st=zsTrainingStatus(horse);
     if (st.eligible) rows.push({horse,y:st.y,x:st.x});
     else if (st.reason==='no-zs') exclusions.noZs++;
     else if (st.reason==='missing-features') exclusions.missingFeatures++;
-    else if (st.reason==='missing-tournament') exclusions.missingTournament++;
+    else if (st.reason==='missing-snapshot') exclusions.missingSnapshot++;
     else if (st.reason==='invalid-base') exclusions.invalidBase++;
   }
   return {rows,exclusions};
@@ -1326,7 +1326,7 @@ function renderBreedingShowOverview() {
   if (info) {
     const ex=model.exclusions || {};
     const waiting=[];
-    if (ex.missingTournament) waiting.push(`${ex.missingTournament} ZS-Datensätze mit fehlenden Turnierplatzierungen`);
+    if (ex.missingSnapshot) waiting.push(`${ex.missingSnapshot} ZS-Datensätze ohne historischen Bonus-Snapshot`);
     if (ex.missingFeatures) waiting.push(`${ex.missingFeatures} ZS-Datensätze mit unvollständigen GP/Ext/Ext%/Int-Daten`);
     if (model.n<8) {
       info.innerHTML=`Lernmodell: <strong>n=${model.n}</strong> verwertbare echte Zuchtschau-Grundwerte. Ab n=8 startet eine vorsichtige Prognose.${waiting.length?` Noch nicht im Lernmodell: ${waiting.join(' · ')}.`:''}`;
@@ -1357,6 +1357,7 @@ function renderBreedingShowOverview() {
 
   const nameQ=(document.getElementById('tp-zs-name')?.value || '').trim().toLowerCase();
   const selectedOwners=[...document.querySelectorAll('#tp-zs-owners input[type="checkbox"]:checked')].map(cb=>cb.value);
+  const selectedOwnerKeys=new Set(selectedOwners.map(tpOwnerKey));
   const breed=document.getElementById('tp-zs-breed')?.value || '';
   const only=document.getElementById('tp-zs-only')?.value || 'with';
   const breeding=document.getElementById('tp-zs-breeding')?.value || '';
@@ -1376,7 +1377,7 @@ function renderBreedingShowOverview() {
       // gedacht. Erwachsene Pferde ohne ZS-Wert gehören nicht in diese Liste.
       if (!(typeof plannerIsFoal === 'function' && plannerIsFoal(h))) return false;
     }
-    if (!selectedOwners.includes(String(h.owner||'').trim())) return false;
+    if (!selectedOwnerKeys.has(tpOwnerKey(h.owner))) return false;
     if (nameQ && !(h.name||'').toLowerCase().includes(nameQ)) return false;
     if (breed && (normalizeBreed(h.breed)||'Rasselos')!==breed) return false;
     if (breeding==='yes' && h.breeding_allowed!==true) return false;
@@ -1385,15 +1386,9 @@ function renderBreedingShowOverview() {
     return true;
   });
 
-  // Echte ZS-Werte brauchen Turnierdaten, damit der Grundwert korrekt
-  // zurückgerechnet werden kann. Für Fohlen-Prognosen ist das ausdrücklich
-  // keine Voraussetzung – Fohlen haben noch keine Turnierplatzierungen.
-  const missingTournamentCount=only==='with'
-    ? candidates.filter(h=>plannerTournamentPlacements(h)<1).length
-    : 0;
-  let rows=only==='with'
-    ? candidates.filter(h=>plannerTournamentPlacements(h)>=1)
-    : candidates;
+  // Der ZS-Grundwert verwendet den beim ZS-Eintrag eingefrorenen historischen
+  // Turnier-/Cup-Snapshot. Spätere Turniererfolge verändern ihn nicht mehr.
+  let rows=candidates;
   if (only==='forecast') {
     rows.sort((a,b)=>{
       const ap=model.predict(a), bp=model.predict(b);
@@ -1409,17 +1404,18 @@ function renderBreedingShowOverview() {
   const count=document.getElementById('tp-zs-count');
   if (count) count.textContent=only==='forecast'
     ? `${rows.length} Fohlen ohne echte ZS-Punkte`
-    : `${rows.length} ZS-Datensätze angezeigt · ${missingTournamentCount} ZS-Datensätze wegen fehlender Turnierdaten ausgeblendet`;
+    : `${rows.length} ZS-Datensätze angezeigt`;
   if (!rows.length) {
     body.innerHTML=only==='forecast'
       ? '<tr><td colspan="7" class="muted">Keine passenden Fohlen ohne echten ZS-Wert gefunden.</td></tr>'
-      : '<tr><td colspan="7" class="muted">Keine passenden auswertbaren ZS-Datensätze. Für die ZS-Auswertung zählen nur positive ZS-Punktangaben mit eingelesenen Turnierplatzierungen.</td></tr>';
+      : '<tr><td colspan="7" class="muted">Keine passenden auswertbaren ZS-Datensätze. Für die ZS-Auswertung zählen nur positive echte ZS-Punktangaben.</td></tr>';
     return;
   }
   body.innerHTML=rows.map(h=>{
     const total=plannerBreedingShowPoints(h);
-    const turnier=plannerTournamentShowBonus(h);
-    const cup=plannerCupShowBonus(h);
+    const snapshot=typeof plannerBreedingShowSnapshot === 'function' ? plannerBreedingShowSnapshot(h) : null;
+    const turnier=snapshot ? Number(snapshot.tournament_bonus || 0) : plannerTournamentShowBonus(h);
+    const cup=snapshot ? Number(snapshot.cup_bonus || 0) : plannerCupShowBonus(h);
     const base=plannerBreedingShowBase(h);
     const pred=model.predict(h);
     const diff=base==null || pred==null ? null : base-pred;
@@ -1435,9 +1431,13 @@ function renderBreedingShowOverview() {
     } else if (only!=='forecast' && !st.eligible) {
       const map={
         'missing-features':'Grundwerte unvollständig – nicht im Lernmodell',
+        'missing-snapshot':'Historischer ZS-Bonusstand fehlt – bitte Datensatz einmal speichern',
         'invalid-base':'ZS-Grundwert unplausibel – bitte prüfen',
       };
       if (map[st.reason]) dataNote=`<br><span class="tiny warning-text">${plannerEscape(map[st.reason])}</span>`;
+    } else if (only!=='forecast' && snapshot) {
+      const snapshotDate=String(snapshot.snapshot_date || snapshot.captured_at || '').slice(0,10);
+      if (snapshotDate) dataNote=`<br><span class="tiny muted">Bonusstand: ${plannerEscape(snapshotDate.split('-').reverse().join('.'))}</span>`;
     }
     return `<tr>
       <td><a href="view.html?id=${encodeURIComponent(h.id)}"><strong>${plannerEscape(h.name || '(ohne Name)')}</strong></a><br><span class="tiny muted">${plannerEscape(h.owner || '')}</span>${dataNote}</td>

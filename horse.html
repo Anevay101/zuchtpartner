@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Pferd – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5424" />
+  <link rel="stylesheet" href="css/style.css?v=5425" />
 </head>
 <body>
   <header class="topbar">
@@ -209,7 +209,7 @@
             <div>
               <label for="breeding_show_points">ZS-Punkte (manuell)</label>
               <input id="breeding_show_points" type="number" min="1" step="1" placeholder="Gesamtpunktzahl der Zuchtschau" />
-              <div class="tiny muted">Dieser Wert steht nicht dauerhaft auf der MDR-Pferdeseite und wird deshalb bewusst manuell eingetragen. Wenn der ZS-Wert unbekannt oder nicht mehr abrufbar ist, das Feld leer lassen. Eine ältere 0-Angabe wird wie „kein ZS-Wert vorhanden“ behandelt. Turnier- und Cup-Zusatzpunkte zieht die Datenbank für den ZS-Grundwert selbst ab.</div>
+              <div class="tiny muted">Dieser Wert steht nicht dauerhaft auf der MDR-Pferdeseite und wird deshalb bewusst manuell eingetragen. Wenn der ZS-Wert unbekannt oder nicht mehr abrufbar ist, das Feld leer lassen. Eine ältere 0-Angabe wird wie „kein ZS-Wert vorhanden“ behandelt. Beim ersten Speichern eines neuen ZS-Werts hält die Datenbank den aktuellen Turnier- und Cupstand als historischen ZS-Snapshot fest; spätere Erfolge ändern den daraus berechneten Grundwert nicht mehr.</div>
             </div>
           </div>
         </div>
@@ -226,7 +226,7 @@
             </div>
           </div>
           <p class="small muted">
-            Je Disziplin 1., 2. und 3. Plätze. Für die Zuchtschau zählen: <strong>35 / 25 / 15 Punkte</strong>, zusammen maximal <strong>500 Turnier-Zusatzpunkte</strong>. Ein Cupstern zählt <strong>100 Punkte</strong>.
+            Je Disziplin 1., 2. und 3. Plätze. Für die Zuchtschau zählen zum <strong>Zeitpunkt der ZS</strong>: <strong>35 / 25 / 15 Punkte</strong>, zusammen maximal <strong>500 Turnier-Zusatzpunkte</strong>. Ein damaliger Cupstern zählt <strong>100 Punkte</strong>. Der historische Bonusstand wird beim ZS-Eintrag gespeichert.
           </p>
           <p class="small muted">
             Cupstern automatisch ab 50 Gesamtstarts und 15 Siegen je Disziplin. Vorhandene Cup-LK wird übernommen; mehrere Cupsterne sind möglich.
@@ -287,19 +287,19 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5424"></script>
-<script src="js/database-local.js?v=5424"></script>
-  <script src="js/local-app.js?v=5424"></script>
-  <script src="js/learning-file.js?v=5424"></script>
-  <script src="js/parser.js?v=5424"></script>
-  <script src="js/data-quality.js?v=5424"></script>
-  <script src="js/planer-common.js?v=5424"></script>
-  <script src="js/zuchtplaner-engine-helpers.js?v=5424"></script>
-  <script src="js/breeding-original.js?v=5424"></script>
-  <script src="js/verpaarungsratgeber-engine.js?v=5424"></script>
-  <script src="js/foal-prediction.js?v=5424"></script>
-  <script src="js/pregnancy-sync.js?v=5424"></script>
-  <script src="js/breeding-progress.js?v=5424"></script>
-  <script src="js/horseForm.js?v=5424"></script>
+<script src="js/supabase-config.js?v=5425"></script>
+<script src="js/database-local.js?v=5425"></script>
+  <script src="js/local-app.js?v=5425"></script>
+  <script src="js/learning-file.js?v=5425"></script>
+  <script src="js/parser.js?v=5425"></script>
+  <script src="js/data-quality.js?v=5425"></script>
+  <script src="js/planer-common.js?v=5425"></script>
+  <script src="js/zuchtplaner-engine-helpers.js?v=5425"></script>
+  <script src="js/breeding-original.js?v=5425"></script>
+  <script src="js/verpaarungsratgeber-engine.js?v=5425"></script>
+  <script src="js/foal-prediction.js?v=5425"></script>
+  <script src="js/pregnancy-sync.js?v=5425"></script>
+  <script src="js/breeding-progress.js?v=5425"></script>
+  <script src="js/horseForm.js?v=5425"></script>
 </body>
 </html>

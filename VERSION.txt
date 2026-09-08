@@ -1,0 +1,8 @@
+MDR-Datenbank V54.0.25
+Stand: 08.09.2026
+Kennzeichen dieser Version:
+- Datenbankfilter in 4 Bereichen
+- aktive Filter-Chips erst nach „Filtern“
+- abhängige Besitzer→Rasse-Filter
+- historische ZS-Snapshots
+- Asset-Cache 5425

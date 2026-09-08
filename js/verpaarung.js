@@ -15,6 +15,8 @@ const PAIRING_BREEDER_FILTER_SETTING = 'pairing_log_breeders_v54';
 const PAIRING_BREEDER_FILTER_STORAGE = 'pairing-log-breeders-v54';
 let pairingFilterOwners = [];
 
+function pairingOwnerKey(value) { return String(value || '').trim().toLocaleLowerCase('de'); }
+
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -114,10 +116,11 @@ async function populateHorseNames() {
 async function populateBreedFilter() {
   const data = await localGetAll(LOCAL_STORES.horses);
   const selectedOwners = selectedPairingBreeders();
-  const ownerSet = new Set(selectedOwners.map(owner => String(owner).trim().toLocaleLowerCase('de')));
+  const ownerSet = new Set(selectedOwners.map(pairingOwnerKey));
   const rows = (data || []).filter(h =>
     !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)) &&
-    (!ownerSet.size || ownerSet.has(String(h.owner || '').trim().toLocaleLowerCase('de')))
+    isActiveBreeder(h.owner) &&
+    (!ownerSet.size || ownerSet.has(pairingOwnerKey(h.owner)))
   );
   // DE/EN-Rassen bleiben bewusst getrennt; normalizeBreed löst nur bekannte
   // Kürzel wie APH/QH auf und übersetzt keine Rassenbezeichnungen.
@@ -168,13 +171,8 @@ async function populateOwnerFilter() {
 
   const activeSet=new Set(activeOwners);
   let selected=(savedOwners || []).filter(owner=>activeSet.has(owner));
-  if (savedOwners == null) {
-    const personal=typeof mdrPersonalOwnerNames === 'function' ? mdrPersonalOwnerNames() : [];
-    selected=personal.filter(owner=>activeSet.has(owner));
-    if (!selected.length) selected=activeOwners.slice();
-  } else if (!selected.length && activeOwners.length) {
-    selected=activeOwners.slice();
-  }
+  if (savedOwners == null) selected=[]; // keine Auswahl = alle aktiven Züchter
+  if (selected.length === activeOwners.length) selected=[];
   pairingFilterOwners=selected;
 
   const root=document.querySelector('#f-owner');
@@ -183,7 +181,7 @@ async function populateOwnerFilter() {
     : '<span class="tiny muted">Keine aktiven Züchter.</span>';
   const status=document.getElementById('f-owner-status');
   if (status) status.textContent=activeOwners.length
-    ? `${selected.length} von ${activeOwners.length} aktiv · pro Login gespeichert`
+    ? (selected.length ? `${selected.length} von ${activeOwners.length} ausgewählt · pro Login gespeichert` : `Alle ${activeOwners.length} aktiven Züchter`)
     : 'Keine aktiven Züchter in den Einstellungen.';
 
   // Neue Verpaarung: bekannte echte Züchter bleiben vollständig auswählbar.
@@ -211,11 +209,7 @@ function selectedPairingBreeders() {
 async function onPairingBreederFilterChange() {
   const root=document.querySelector('#f-owner');
   const options=[...root.querySelectorAll('input[type="checkbox"]')];
-  let owners=selectedPairingBreeders();
-  if (!owners.length && options.length) {
-    options[0].checked=true;
-    owners=selectedPairingBreeders();
-  }
+  const owners=selectedPairingBreeders();
   pairingFilterOwners=owners;
   const dbKey=typeof mdrPersonalSettingKey === 'function'
     ? mdrPersonalSettingKey(PAIRING_BREEDER_FILTER_SETTING)
@@ -226,7 +220,7 @@ async function onPairingBreederFilterChange() {
   await localPut(LOCAL_STORES.userSettings,{key:dbKey,owners,updated_at:new Date().toISOString()});
   localStorage.setItem(storageKey,JSON.stringify(owners));
   const status=document.getElementById('f-owner-status');
-  if (status) status.textContent=`${owners.length} Züchter ausgewählt · gespeichert`;
+  if (status) status.textContent=owners.length ? `${owners.length} Züchter ausgewählt · gespeichert` : `Alle ${options.length} aktiven Züchter`;
   await populateBreedFilter();
   await loadPairings();
 }
@@ -451,7 +445,6 @@ function pairingPredictionDetailsHtml(pairing) {
               <th>Worst Case</th>
               <th>Tatsächlich</th>
               <th>Abweichung zur Schätzung</th>
-              <th>Theoretische Spanne?</th>
               <th>DB-Bereich getroffen?</th>
             </tr>
           </thead>
@@ -473,13 +466,8 @@ function pairingPredictionDetailsHtml(pairing) {
                 <td>${predictionFormat(row, row.actual)}</td>
                 <td>${predictionDiffFormat(row, row.diff)}</td>
                 <td>${
-                  row.withinRange === true ? '<span class="prediction-ok">✓ innerhalb</span>'
-                  : row.withinRange === false ? '<span class="prediction-out">⚠ außerhalb</span>'
-                  : '–'
-                }</td>
-                <td>${
-                  row.withinDatabaseRange === true ? '<span class="prediction-ok">✓ getroffen</span>'
-                  : row.withinDatabaseRange === false ? '<span class="prediction-out">⚠ außerhalb</span>'
+                  row.withinDatabaseRange === true ? '<span class="prediction-ok" title="Typischer DB-Bereich getroffen">✓</span>'
+                  : row.withinDatabaseRange === false ? '<span class="prediction-out" title="Typischer DB-Bereich nicht getroffen">✗</span>'
                   : '–'
                 }</td>
               </tr>`).join('')}
@@ -488,11 +476,7 @@ function pairingPredictionDetailsHtml(pairing) {
         <p class="tiny muted">${escapeHtml(sourceNote)}</p>
         <p class="tiny muted">${escapeHtml(rangeSourceNote)}</p>
         <p class="tiny muted">„damals n“ gehört zum gespeicherten Prognose-Snapshot; „heute n“ zeigt die aktuelle Lernbasis. Die historische Prognose wird nicht rückwirkend verändert.</p>
-        <p class="tiny muted">
-          <strong>Best/Worst</strong> ist die theoretische Prognosespanne.
-          Der <strong>typische DB-Bereich</strong> ist etwas anderes: Er umfasst den zentralen 80%-Bereich
-          der bisher beobachteten Fehler der Datenbank-Schätzung (10.–90. Perzentil echter Eltern–Fohlen-Vergleiche).
-        </p>
+        <p class="tiny muted">Der typische DB-Bereich umfasst den zentralen 80%-Bereich der bisher beobachteten Fehler der Datenbank-Schätzung.</p>
         ${actualRecord
           ? `<p class="small"><strong>Vergleich vorhanden.</strong> Bei behaltenen Fohlen werden die tatsächlichen Werte aus dem aktuell verknüpften Pferdedatensatz gelesen – spätere Ergänzungen am Pferd erscheinen also auch hier.</p>`
           : `<p class="small muted">Sobald das Fohlen über „Fohlen eintragen“ erfasst wurde, erscheint hier automatisch der Soll-Ist-Vergleich.</p>`
@@ -512,8 +496,6 @@ function predictionAccuracySummaryHtml(pairings) {
   const metricStats = {};
   for (const metric of FOAL_PREDICTION_METRICS) {
     const diffs = [];
-    let theoreticalInside = 0;
-    let theoreticalN = 0;
     let databaseInside = 0;
     let databaseN = 0;
 
@@ -524,10 +506,6 @@ function predictionAccuracySummaryHtml(pairings) {
       if (!row) continue;
 
       if (row.absDiff != null) diffs.push(row.absDiff);
-      if (row.withinRange != null) {
-        theoreticalN++;
-        if (row.withinRange) theoreticalInside++;
-      }
       if (row.withinDatabaseRange != null) {
         databaseN++;
         if (row.withinDatabaseRange) databaseInside++;
@@ -537,7 +515,7 @@ function predictionAccuracySummaryHtml(pairings) {
     metricStats[metric.key] = {
       n:diffs.length,
       mae:diffs.length ? diffs.reduce((a,b)=>a+b,0)/diffs.length : null,
-      theoreticalInside,theoreticalN,databaseInside,databaseN,
+      databaseInside,databaseN,
     };
   }
 
@@ -545,18 +523,14 @@ function predictionAccuracySummaryHtml(pairings) {
     const s=metricStats[metric.key];
     if (!s?.n) return null;
     const mae=predictionFormat(metric,s.mae);
-    const db=s.databaseN ? ` · DB-Bereich ${s.databaseInside}/${s.databaseN}` : '';
-    const theoretical=s.theoreticalN ? ` · theoretisch ${s.theoreticalInside}/${s.theoreticalN}` : '';
-    return `<strong>${escapeHtml(metric.label)}</strong>: Ø-Abweichung ${mae}${db}${theoretical}`;
+    const db=s.databaseN ? ` · DB ${s.databaseInside}/${s.databaseN}` : '';
+    return `<strong>${escapeHtml(metric.label)}</strong>: Ø-Abweichung ${mae}${db}`;
   }).filter(Boolean);
 
   return `
     <strong>📏 Prognose-Genauigkeit · ${completed.length} Fohlenvergleich${completed.length === 1 ? '' : 'e'}</strong><br>
     <span class="small">${bits.join(' &nbsp;|&nbsp; ') || 'Noch zu wenige vollständige Werte.'}</span><br>
-    <span class="tiny muted">
-      „DB-Bereich“ = zentraler empirischer 80%-Bereich um die Datenbank-Schätzung.
-      „theoretisch“ = Best-/Worst-Extremspanne.
-    </span>`;
+    <span class="tiny muted">DB = zentraler empirischer 80%-Bereich um die Datenbank-Schätzung.</span>`;
 }
 
 
@@ -801,8 +775,10 @@ async function loadPairings() {
   }
 
   if (document.querySelectorAll('#f-owner input[type="checkbox"]').length) {
-    const selectedSet=new Set(selectedOwners.map(owner=>owner.toLocaleLowerCase('de')));
-    data=data.filter(p=>selectedSet.has(String(p.owner || '').trim().toLocaleLowerCase('de')));
+    const selectedSet=new Set(selectedOwners.map(pairingOwnerKey));
+    data=data.filter(p=>selectedSet.size
+      ? selectedSet.has(pairingOwnerKey(p.owner))
+      : isActiveBreeder(p.owner));
   }
 
   const breed = document.querySelector('#f-breed').value;
@@ -963,21 +939,6 @@ function compactPastDeviationHtml(pairing) {
   return `<div class="past-prediction-compact">${rows.map((row) =>
     `<span><strong>${escapeHtml(row.label)}:</strong> ${predictionDiffFormat(row, row.diff)}</span>`
   ).join('')}</div>`;
-}
-
-function pastTheoreticalRangeHtml(pairing) {
-  const rows = completedPredictionRows(pairing).filter((row) => row.withinRange != null);
-  if (!rows.length) return '<span class="muted">–</span>';
-
-  const inside = rows.filter((row) => row.withinRange === true).length;
-  const total = rows.length;
-  if (inside === total) {
-    return `<span class="prediction-ok" title="Alle ${total} vorhandenen Werte liegen innerhalb der gespeicherten theoretischen Best-/Worst-Spanne.">✓ ${inside}/${total} innerhalb</span>`;
-  }
-  if (inside > 0) {
-    return `<span class="prediction-partial" title="${inside} von ${total} Werten liegen innerhalb der theoretischen Best-/Worst-Spanne.">◑ ${inside}/${total}</span>`;
-  }
-  return `<span class="prediction-out" title="Keiner der vorhandenen Werte liegt innerhalb der theoretischen Best-/Worst-Spanne.">⚠ 0/${total}</span>`;
 }
 
 function pastDatabaseRangeAccuracyHtml(pairing) {

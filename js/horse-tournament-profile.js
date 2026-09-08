@@ -46,9 +46,13 @@ function renderHorseCupStatus(horse) {
   const results = plannerTournamentResults(horse);
   const starts = plannerTournamentStarts(horse);
   const stars = plannerCupStarRows(horse);
-  const tournamentBonus = plannerTournamentShowBonus(horse);
-  const cupBonus = plannerCupShowBonus(horse);
+  const currentTournamentBonus = plannerTournamentShowBonus(horse);
+  const currentCupBonus = plannerCupShowBonus(horse);
   const zsTotal = plannerBreedingShowPoints(horse);
+  const zsSnapshot = typeof plannerBreedingShowSnapshot === 'function' ? plannerBreedingShowSnapshot(horse) : null;
+  const zsSnapshotDate = typeof plannerBreedingShowSnapshotDate === 'function' ? plannerBreedingShowSnapshotDate(horse) : null;
+  const zsTournamentBonus = zsSnapshot ? Number(zsSnapshot.tournament_bonus || 0) : currentTournamentBonus;
+  const zsCupBonus = zsSnapshot ? Number(zsSnapshot.cup_bonus || 0) : currentCupBonus;
   const zsBase = plannerBreedingShowBase(horse);
 
   const rows = Object.entries(results)
@@ -60,13 +64,13 @@ function renderHorseCupStatus(horse) {
     <div class="cup-quick-summary">
       <span><strong>Starts:</strong> ${starts == null ? '–' : starts}</span>
       <span><strong>Platzierungen:</strong> ${plannerTournamentPlacements(horse)}</span>
-      <span><strong>ZS-Turnierbonus:</strong> ${tournamentBonus}/500</span>
-      <span><strong>Cupbonus:</strong> ${cupBonus}</span>
+      <span><strong>Aktueller Turnierbonus:</strong> ${currentTournamentBonus}/500</span>
+      <span><strong>Aktueller Cupbonus:</strong> ${currentCupBonus}</span>
     </div>`;
 
   const zs = zsTotal == null ? '' : `
     <div class="breeding-show-mini">
-      <strong>🌿 Zuchtschau:</strong> Gesamt ${Math.round(zsTotal)} · Turniere −${tournamentBonus} · Cup −${cupBonus} · <strong>Grundwert ${Math.round(zsBase)}</strong>
+      <strong>🌿 Zuchtschau:</strong> Gesamt ${Math.round(zsTotal)} · Bonusstand${zsSnapshotDate ? ` ${plannerEscape(new Date(`${zsSnapshotDate}T12:00:00`).toLocaleDateString('de-DE'))}` : ''}: Turniere −${zsTournamentBonus} · Cup −${zsCupBonus} · <strong>Grundwert ${Math.round(zsBase)}</strong>
     </div>`;
 
   if (!rows.length) {
