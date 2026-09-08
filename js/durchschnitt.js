@@ -516,10 +516,378 @@ function dashboardColorInheritance(filteredChildren, allRows) {
   return [...crosses.values()].filter(x=>x.n>=2).sort((a,b)=>b.n-a.n).slice(0,10);
 }
 
+
+// --- V54.0.31 Snowflake-Detektiv --------------------------------------
+// Explorative Spurensuche nach einem verborgenen Appaloosa-Modifier. Die
+// Auswertung kombiniert reguläre Pferde und Lerndatei-Pferde, zählt identische
+// MDR-IDs aber nur einmal. PATN2 wird ausdrücklich NICHT als beobachteter
+// Genotyp behauptet, weil MDR diesen Zustand nicht als separaten Gentest zeigt.
+
+function dashboardSnowflakeStableKey(horse, fallbackIndex = 0) {
+  const external = String(horse?.external_id || '').trim();
+  if (external) return `mdr:${String(horse?.game_version || 'DE').toUpperCase()}:${external}`;
+  if (horse?.id != null && horse?.id !== '') return `local:${String(horse.id)}`;
+  return `fallback:${dashboardOwnerKey(horse?.name)}:${fallbackIndex}`;
+}
+
+function dashboardSnowflakeSource(horse) {
+  return typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(horse)
+    ? 'Lerndatei'
+    : 'Datenbank';
+}
+
+function dashboardSnowflakeDedupedRows(allRows) {
+  const map = new Map();
+  (allRows || []).forEach((horse,index) => {
+    if (!horse || typeof horse !== 'object') return;
+    const key = dashboardSnowflakeStableKey(horse,index);
+    const current = map.get(key);
+    if (!current) { map.set(key,horse); return; }
+    // Falls trotz Schutzmechanismen dieselbe MDR-ID mehrfach vorhanden ist,
+    // bevorzugen wir den regulären Datensatz vor einer Lerndatei-Kopie.
+    const currentLearning = dashboardSnowflakeSource(current) === 'Lerndatei';
+    const incomingLearning = dashboardSnowflakeSource(horse) === 'Lerndatei';
+    if (currentLearning && !incomingLearning) map.set(key,horse);
+  });
+  return [...map.values()];
+}
+
+function dashboardSnowflakePattern(horse) {
+  const pattern = typeof cgPatternHint === 'function'
+    ? cgPatternHint(horse)
+    : String(horse?.appaloosa_pattern || '').trim();
+  return String(pattern || '').trim();
+}
+
+function dashboardSnowflakeIsSnowflake(horse) {
+  return /^snowflake$/i.test(dashboardSnowflakePattern(horse));
+}
+
+function dashboardSnowflakeParents(horse) {
+  if (typeof bpParentNames === 'function') return bpParentNames(horse);
+  return {fatherName:null,motherName:null};
+}
+
+function dashboardSnowflakePedigreeNames(horse) {
+  const pedigree = horse?.pedigree;
+  const raw = Array.isArray(pedigree)
+    ? pedigree.slice(1)
+    : Array.isArray(pedigree?.ancestors) ? pedigree.ancestors : [];
+  return raw.map(x => typeof x === 'string' ? x : x?.name).map(x => String(x || '').trim()).filter(Boolean);
+}
+
+function dashboardSnowflakeNameIndex(rows) {
+  const byVersionName = new Map();
+  const byName = new Map();
+  const push = (map,key,horse) => {
+    if (!key) return;
+    if (!map.has(key)) map.set(key,[]);
+    map.get(key).push(horse);
+  };
+  for (const horse of rows || []) {
+    const nameKey = dashboardOwnerKey(horse?.name);
+    if (!nameKey) continue;
+    push(byName,nameKey,horse);
+    push(byVersionName,`${String(horse?.game_version || 'DE').toUpperCase()}|${nameKey}`,horse);
+  }
+  return {byVersionName,byName};
+}
+
+function dashboardSnowflakeResolveByName(name, child, index) {
+  const key = dashboardOwnerKey(name);
+  if (!key) return null;
+  const versionKey = `${String(child?.game_version || 'DE').toUpperCase()}|${key}`;
+  const sameVersion = index.byVersionName.get(versionKey) || [];
+  if (sameVersion.length === 1) return sameVersion[0];
+  const global = index.byName.get(key) || [];
+  return global.length === 1 ? global[0] : null;
+}
+
+function dashboardSnowflakeGenotype(horse) {
+  const tested = typeof cgTestedAppaloosaCategories === 'function'
+    ? cgTestedAppaloosaCategories(horse)
+    : {lp:null,p1:null};
+  return {
+    lp: tested?.lp || '–',
+    p1: tested?.p1 || '–',
+  };
+}
+
+function dashboardSnowflakeHorseLink(horse, fallbackName = '–') {
+  const name = horse?.name || fallbackName || '–';
+  if (horse?.id == null || horse?.id === '') return escapeHtml(name);
+  return `<a href="view.html?id=${encodeURIComponent(horse.id)}"><strong>${escapeHtml(name)}</strong></a>`;
+}
+
+function dashboardSnowflakePatternCounts(horses) {
+  const counts = new Map();
+  for (const horse of horses || []) {
+    const pattern = dashboardSnowflakePattern(horse);
+    if (!pattern) continue;
+    counts.set(pattern,(counts.get(pattern)||0)+1);
+  }
+  return counts;
+}
+
+function dashboardSnowflakePatternSummary(horses, limit = 4) {
+  const entries=dashboardSortedCounts(dashboardSnowflakePatternCounts(horses));
+  if (!entries.length) return 'keine Muster erfasst';
+  const shown=entries.slice(0,limit).map(([pattern,n])=>`${escapeHtml(pattern)} ${n}`).join(' · ');
+  return entries.length>limit ? `${shown} · +${entries.length-limit}` : shown;
+}
+
+function dashboardSnowflakeFamilyAnalysis(rows, snowflakes) {
+  const nameIndex = dashboardSnowflakeNameIndex(rows);
+  const childLinks = [];
+  for (const child of rows) {
+    const {fatherName,motherName} = dashboardSnowflakeParents(child);
+    childLinks.push({
+      child,
+      fatherName:String(fatherName || '').trim(),
+      motherName:String(motherName || '').trim(),
+      fatherKey:dashboardOwnerKey(fatherName),
+      motherKey:dashboardOwnerKey(motherName),
+    });
+  }
+
+  const snowflakeKeys = new Set(snowflakes.map((h,i)=>dashboardSnowflakeStableKey(h,i)));
+  const snowflakeNameKeys = new Set(snowflakes.map(h=>dashboardOwnerKey(h?.name)).filter(Boolean));
+  const parentCandidates = new Map();
+  const snowflakeRows = [];
+  let nonSnowflakeParentPairCases = 0;
+
+  const addParentCandidate = (parentName, mateName, child, parentHorse) => {
+    const key = dashboardOwnerKey(parentName);
+    if (!key) return;
+    if (!parentCandidates.has(key)) parentCandidates.set(key,{
+      name:parentName,
+      horse:parentHorse || null,
+      snowflakeChildren:[],
+      snowflakeMates:new Set(),
+      allKnownChildren:[],
+    });
+    const row=parentCandidates.get(key);
+    if (!row.horse && parentHorse) row.horse=parentHorse;
+    row.snowflakeChildren.push(child);
+    if (mateName) row.snowflakeMates.add(dashboardOwnerKey(mateName));
+  };
+
+  // Alle bekannten Nachkommen pro Elternname sammeln.
+  for (const link of childLinks) {
+    for (const [parentName,parentKey] of [[link.fatherName,link.fatherKey],[link.motherName,link.motherKey]]) {
+      if (!parentKey) continue;
+      if (!parentCandidates.has(parentKey)) continue;
+      parentCandidates.get(parentKey).allKnownChildren.push(link.child);
+    }
+  }
+
+  for (const snowflake of snowflakes) {
+    const {fatherName,motherName}=dashboardSnowflakeParents(snowflake);
+    const father=dashboardSnowflakeResolveByName(fatherName,snowflake,nameIndex);
+    const mother=dashboardSnowflakeResolveByName(motherName,snowflake,nameIndex);
+    addParentCandidate(fatherName,motherName,snowflake,father);
+    addParentCandidate(motherName,fatherName,snowflake,mother);
+
+    const fatherPattern=dashboardSnowflakePattern(father);
+    const motherPattern=dashboardSnowflakePattern(mother);
+    if (father && mother && fatherPattern && motherPattern && !/^snowflake$/i.test(fatherPattern) && !/^snowflake$/i.test(motherPattern)) {
+      nonSnowflakeParentPairCases++;
+    }
+
+    const fk=dashboardOwnerKey(fatherName), mk=dashboardOwnerKey(motherName);
+    const siblings = childLinks.filter(link => {
+      if (link.child === snowflake) return false;
+      return (fk && link.fatherKey===fk) || (mk && link.motherKey===mk);
+    }).map(x=>x.child);
+    const fullSiblings = childLinks.filter(link => {
+      if (link.child === snowflake) return false;
+      return fk && mk && link.fatherKey===fk && link.motherKey===mk;
+    }).map(x=>x.child);
+    const halfSiblings = siblings.filter(h => !fullSiblings.includes(h));
+    const childRows = childLinks.filter(link => link.fatherKey===dashboardOwnerKey(snowflake?.name) || link.motherKey===dashboardOwnerKey(snowflake?.name)).map(x=>x.child);
+    const sfChildren = childRows.filter(dashboardSnowflakeIsSnowflake);
+    const sfSiblings = siblings.filter(dashboardSnowflakeIsSnowflake);
+
+    snowflakeRows.push({
+      horse:snowflake,
+      fatherName,motherName,father,mother,
+      fullSiblings,halfSiblings,sfSiblings,
+      children:childRows,sfChildren,
+    });
+  }
+
+  // Jetzt, nachdem Kandidaten bekannt sind, deren komplette Nachzucht ergänzen.
+  for (const row of parentCandidates.values()) {
+    const key=dashboardOwnerKey(row.name);
+    row.allKnownChildren = childLinks.filter(link => link.fatherKey===key || link.motherKey===key).map(x=>x.child);
+  }
+
+  const candidates=[...parentCandidates.values()].map(row => {
+    const knownPatternChildren=row.allKnownChildren.filter(h=>dashboardSnowflakePattern(h));
+    const sfCount=row.snowflakeChildren.length;
+    const mateCount=row.snowflakeMates.size;
+    const parentPattern=dashboardSnowflakePattern(row.horse);
+    const snowflakeRate=knownPatternChildren.length ? sfCount/knownPatternChildren.length : null;
+    // Transparenter Evidenzscore, KEINE Genwahrscheinlichkeit.
+    let score=Math.min(75,sfCount*25);
+    if (mateCount>=2) score+=15;
+    if (row.horse && parentPattern && !/^snowflake$/i.test(parentPattern)) score+=5;
+    if (knownPatternChildren.length>=4 && snowflakeRate!=null && snowflakeRate>=0.25) score+=5;
+    score=Math.min(100,score);
+    let note='ein Snowflake-Nachkomme';
+    if (sfCount>=2 && mateCount>=2) note='mehrere Snowflakes mit verschiedenen Partnern';
+    else if (sfCount>=2) note='mehrere Snowflake-Nachkommen';
+    else if (row.horse && parentPattern && !/^snowflake$/i.test(parentPattern)) note='nicht selbst Snowflake, aber Snowflake-Nachkomme';
+    return {...row,knownPatternChildren,sfCount,mateCount,snowflakeRate,score,note};
+  }).sort((a,b)=>b.score-a.score || b.sfCount-a.sfCount || a.name.localeCompare(b.name,'de'));
+
+  const ancestorCounts=new Map();
+  for (const horse of snowflakes) {
+    const unique=new Set(dashboardSnowflakePedigreeNames(horse).map(dashboardOwnerKey).filter(Boolean));
+    const display=new Map(dashboardSnowflakePedigreeNames(horse).map(name=>[dashboardOwnerKey(name),name]));
+    for (const key of unique) {
+      if (!ancestorCounts.has(key)) ancestorCounts.set(key,{name:display.get(key)||key,count:0});
+      ancestorCounts.get(key).count++;
+    }
+  }
+  const commonAncestors=[...ancestorCounts.values()].filter(x=>x.count>=2).sort((a,b)=>b.count-a.count || a.name.localeCompare(b.name,'de')).slice(0,12);
+
+  return {nameIndex,snowflakeRows,candidates,commonAncestors,nonSnowflakeParentPairCases};
+}
+
+function dashboardSnowflakeHypotheses(rows, snowflakes, family) {
+  const messages=[];
+  const testedCombos=new Map();
+  let testedN=0;
+  for (const horse of snowflakes) {
+    const g=dashboardSnowflakeGenotype(horse);
+    if (g.lp==='–' || g.p1==='–') continue;
+    testedN++;
+    const key=`${g.lp} + ${g.p1}`;
+    testedCombos.set(key,(testedCombos.get(key)||0)+1);
+  }
+  if (testedN) {
+    if (testedCombos.size===1) {
+      const [[combo,n]]=[...testedCombos.entries()];
+      messages.push(`<strong>LP/PATN1-Spur:</strong> Alle ${n} genetisch vollständig getesteten Snowflakes teilen aktuell <strong>${escapeHtml(combo)}</strong>. Das ist ein Hinweis, noch keine bewiesene Regel.`);
+    } else {
+      messages.push(`<strong>LP/PATN1-Spur:</strong> Snowflake tritt aktuell in ${testedCombos.size} verschiedenen getesteten LP/PATN1-Kombinationen auf. LP + PATN1 allein erklären das Muster damit wahrscheinlich nicht eindeutig.`);
+    }
+  } else {
+    messages.push('<strong>LP/PATN1-Spur:</strong> Für die vorhandenen Snowflakes fehlen noch ausreichend vollständige LP/PATN1-Tests.');
+  }
+
+  if (family.nonSnowflakeParentPairCases>0) {
+    messages.push(`<strong>Rezessive-Modifier-Hypothese:</strong> ${family.nonSnowflakeParentPairCases} Snowflake-Fall/Fälle stammen aus zwei in der Datenbank sichtbaren Nicht-Snowflake-Eltern. Das ist mit einem verdeckt getragenen/recessiven Modifier vereinbar, beweist PATN2 aber nicht.`);
+  }
+  const strong=family.candidates.filter(x=>x.sfCount>=2 && x.mateCount>=2);
+  if (strong.length) {
+    messages.push(`<strong>Linien-Hinweis:</strong> ${strong.slice(0,3).map(x=>escapeHtml(x.name)).join(', ')} ${strong.length===1?'taucht':'tauchen'} mit mehreren Snowflake-Nachkommen aus verschiedenen Partnern auf. Diese Linien sind besonders interessant für weitere Beobachtungen.`);
+  }
+  if (!family.candidates.length) {
+    messages.push('<strong>Familien-Spur:</strong> Noch keine auswertbaren Elternverknüpfungen. Für die Trägersuche sind Mutter/Vater bzw. Stammbaumdaten besonders wertvoll.');
+  }
+  return messages;
+}
+
+function renderSnowflakeDetective(allRows) {
+  const rows=dashboardSnowflakeDedupedRows(allRows || []);
+  const snowflakes=rows.filter(dashboardSnowflakeIsSnowflake);
+  const regularSnowflakes=snowflakes.filter(h=>dashboardSnowflakeSource(h)==='Datenbank');
+  const learningSnowflakes=snowflakes.filter(h=>dashboardSnowflakeSource(h)==='Lerndatei');
+  const appaloosaRefs=rows.filter(h=>dashboardSnowflakePattern(h) || dashboardSnowflakeGenotype(h).lp!=='–');
+
+  if (!snowflakes.length) return `
+    <details class="snowflake-detective">
+      <summary><strong>❄️ Snowflake-Detektiv</strong></summary>
+      <p class="small muted">Noch kein Snowflake in Datenbank oder Lerndatei gefunden. Sobald Snowflakes erfasst werden, vergleicht der Detektiv LP/PATN1, Familien und Nachkommen automatisch.</p>
+    </details>`;
+
+  const family=dashboardSnowflakeFamilyAnalysis(rows,snowflakes);
+  const hypotheses=dashboardSnowflakeHypotheses(rows,snowflakes,family);
+  const genotypeCounts=new Map();
+  for (const horse of snowflakes) {
+    const g=dashboardSnowflakeGenotype(horse);
+    const key=`${g.lp}|${g.p1}`;
+    if (!genotypeCounts.has(key)) genotypeCounts.set(key,{lp:g.lp,p1:g.p1,n:0});
+    genotypeCounts.get(key).n++;
+  }
+  const genotypeTable=[...genotypeCounts.values()].sort((a,b)=>b.n-a.n).map(row=>`<tr><td>${escapeHtml(row.lp)}</td><td>${escapeHtml(row.p1)}</td><td>${row.n}</td><td>${Math.round(row.n/snowflakes.length*100)}%</td></tr>`).join('');
+
+  const snowflakeTable=family.snowflakeRows.map(row=>{
+    const h=row.horse, g=dashboardSnowflakeGenotype(h);
+    const fatherG=dashboardSnowflakeGenotype(row.father), motherG=dashboardSnowflakeGenotype(row.mother);
+    const father= row.father ? `${dashboardSnowflakeHorseLink(row.father,row.fatherName)}<br><span class="tiny muted">${escapeHtml(dashboardSnowflakePattern(row.father)||'Muster offen')} · ${escapeHtml(fatherG.lp)}/${escapeHtml(fatherG.p1)}</span>` : escapeHtml(row.fatherName || '–');
+    const mother= row.mother ? `${dashboardSnowflakeHorseLink(row.mother,row.motherName)}<br><span class="tiny muted">${escapeHtml(dashboardSnowflakePattern(row.mother)||'Muster offen')} · ${escapeHtml(motherG.lp)}/${escapeHtml(motherG.p1)}</span>` : escapeHtml(row.motherName || '–');
+    return `<tr>
+      <td>${dashboardSnowflakeHorseLink(h)}<br><span class="tiny muted">${escapeHtml(h?.breed||'–')} · ${escapeHtml(dashboardSnowflakeSource(h))}</span></td>
+      <td>${escapeHtml(g.lp)}</td><td>${escapeHtml(g.p1)}</td>
+      <td>${father}</td><td>${mother}</td>
+      <td>${row.fullSiblings.length} voll / ${row.halfSiblings.length} halb${row.sfSiblings.length?` · <strong>${row.sfSiblings.length} Snowflake</strong>`:''}<br><span class="tiny muted">${dashboardSnowflakePatternSummary([...row.fullSiblings,...row.halfSiblings])}</span></td>
+      <td>${row.children.length}${row.sfChildren.length?` · <strong>${row.sfChildren.length} Snowflake</strong>`:''}<br><span class="tiny muted">${dashboardSnowflakePatternSummary(row.children)}</span></td>
+    </tr>`;
+  }).join('');
+
+  const candidateTable=family.candidates.length ? family.candidates.slice(0,15).map(row=>{
+    const g=dashboardSnowflakeGenotype(row.horse);
+    const pattern=dashboardSnowflakePattern(row.horse) || 'Muster offen';
+    const rate=row.snowflakeRate==null?'–':`${Math.round(row.snowflakeRate*100)}%`;
+    return `<tr>
+      <td>${row.horse?dashboardSnowflakeHorseLink(row.horse,row.name):escapeHtml(row.name)}<br><span class="tiny muted">${escapeHtml(pattern)} · ${escapeHtml(g.lp)}/${escapeHtml(g.p1)}</span></td>
+      <td>${row.sfCount}</td><td>${row.mateCount}</td><td>${row.knownPatternChildren.length}</td><td>${rate}</td>
+      <td><span class="snowflake-score" title="Explorativer Evidenzscore, keine Genwahrscheinlichkeit">${row.score}</span></td>
+      <td>${escapeHtml(row.note)}</td>
+    </tr>`;
+  }).join('') : '';
+
+  const commonAncestors=family.commonAncestors.length
+    ? `<div class="snowflake-ancestor-pills">${family.commonAncestors.map(x=>`<span>${escapeHtml(x.name)} <strong>${x.count}/${snowflakes.length}</strong></span>`).join('')}</div>`
+    : '<p class="muted small">Noch keine gemeinsamen Ahnen in mindestens zwei Snowflake-Stammbäumen erkennbar.</p>';
+
+  return `
+    <details class="snowflake-detective" open>
+      <summary><strong>❄️ Snowflake-Detektiv</strong></summary>
+      <p class="small muted">Explorative Spurensuche nach dem seltenen Snowflake-Muster. Der Detektiv kombiniert die gesamte Pferdedatenbank mit der Lerndatei, unabhängig vom aktuellen Dashboard-Filter. Identische MDR-IDs zählen nur einmal. PATN2 wird als mögliche verborgene Erklärung untersucht, aber niemals als getesteter Genotyp behauptet.</p>
+      <div class="snowflake-stat-grid">
+        <div><strong>${snowflakes.length}</strong><span>Snowflakes gesamt</span></div>
+        <div><strong>${regularSnowflakes.length}</strong><span>Datenbank</span></div>
+        <div><strong>${learningSnowflakes.length}</strong><span>Lerndatei</span></div>
+        <div><strong>${appaloosaRefs.length}</strong><span>Appaloosa-Referenzen</span></div>
+      </div>
+
+      <section class="snowflake-hypotheses">
+        <h4>🕵️ Aktuelle Indizien</h4>
+        ${hypotheses.map(x=>`<p>${x}</p>`).join('')}
+      </section>
+
+      <details class="snowflake-subdetail" open>
+        <summary><strong>Musteranalyse · Snowflake ↔ LP/PATN1</strong></summary>
+        <div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>LP</th><th>PATN1</th><th>Snowflakes</th><th>Anteil</th></tr></thead><tbody>${genotypeTable}</tbody></table></div>
+        <p class="tiny muted">„–“ bedeutet nicht getestet/unbekannt. Ein gemeinsamer Genotyp ist ein Hinweis; ein verborgener MDR-interner Modifier kann trotzdem zusätzlich nötig sein.</p>
+      </details>
+
+      <details class="snowflake-subdetail">
+        <summary><strong>Snowflake-Fälle &amp; Familien</strong></summary>
+        <div class="table-wrap"><table class="detail-table color-genetics-table snowflake-family-table"><thead><tr><th>Snowflake</th><th>LP</th><th>PATN1</th><th>Vater</th><th>Mutter</th><th>Geschwister</th><th>Nachkommen</th></tr></thead><tbody>${snowflakeTable}</tbody></table></div>
+      </details>
+
+      <details class="snowflake-subdetail">
+        <summary><strong>🔎 Mögliche Träger-/Linienkandidaten</strong></summary>
+        <p class="small muted">Der Verdachtsindex ist nur ein transparenter Evidenzscore: mehrere Snowflake-Nachkommen und verschiedene Partner erhöhen ihn. Er ist <strong>keine</strong> PATN2-Wahrscheinlichkeit.</p>
+        ${candidateTable ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>Linie / Elternteil</th><th>Snowflake-Nachkommen</th><th>Partner</th><th>Nachkommen mit Muster</th><th>Snowflake-Anteil</th><th>Index</th><th>Hinweis</th></tr></thead><tbody>${candidateTable}</tbody></table></div>` : '<p class="muted small">Noch keine Elternkandidaten aus den gespeicherten Stammbäumen ableitbar.</p>'}
+        <h4>Gemeinsame Ahnen</h4>
+        ${commonAncestors}
+      </details>
+    </details>`;
+}
+
 function renderColorGeneticsDashboard(rows, allRows) {
   const root=document.getElementById('color-genetics-dashboard');
   if (!root) return;
-  if (!rows?.length) { root.innerHTML='<p class="muted">Keine Pferde im aktuellen Filter.</p>'; return; }
+  if (!rows?.length) {
+    root.innerHTML=`<p class="muted">Keine Pferde im aktuellen Filter.</p>${renderSnowflakeDetective(allRows || [])}`;
+    return;
+  }
 
   const baseCounts = new Map(DASHBOARD_COLOR_BASE_ORDER.map(x=>[x,0]));
   let baseUnknown=0, coatKnown=0;
@@ -577,6 +945,7 @@ function renderColorGeneticsDashboard(rows, allRows) {
       ${dashboardColorPills(app.patterns,app.patterns.reduce((s,x)=>s+x[1],0),'Keine Appaloosa-Muster im aktuellen Filter.')}
       <h4>Getestete Genetik → beobachtetes Muster</h4>
       ${appComboTable}
+      ${renderSnowflakeDetective(allRows || rows)}
     </details>
 
     <details class="color-genetics-detail">
