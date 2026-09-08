@@ -2130,6 +2130,9 @@ async function openImportModeDialog(payload, fileName) {
 }
 
 async function importBackupReplace(payload) {
+  // Ein vollständiger Backup-Ersatz ist selbst eine Wiederherstellungsaktion.
+  // Ein älterer Pferde-Undo-Punkt wäre danach fachlich nicht mehr gültig.
+  if (typeof mdrClearHorseUndoPoint === 'function') await mdrClearHorseUndoPoint();
   const backupHandleRow = await getBackupDirectoryRecord();
   window.MDR_AUTO_BACKUP_SUSPENDED = true;
   try {
@@ -2154,6 +2157,8 @@ async function importBackupMerge(payload, possibleSelections) {
   const importedHorses = payload.stores?.[LOCAL_STORES.horses] || [];
   const working = await localGetAll(LOCAL_STORES.horses);
   const result = { newHorses: 0, updated: 0, unchanged: 0, skippedConflicts: 0, possibleMerged: 0, addedFields: 0, keptConflicts: 0 };
+  const undoBefore = [];
+  const undoCreated = [];
 
   window.MDR_AUTO_BACKUP_SUSPENDED = true;
   try {
@@ -2182,7 +2187,9 @@ async function importBackupMerge(payload, possibleSelections) {
         result.keptConflicts += merged.conflicts;
         if (match.possibleConfirmed) result.possibleMerged += 1;
         if (merged.changed) {
+          const beforeSnapshot = mdrImportClone(match.existing);
           await localPut(LOCAL_STORES.horses, merged.result);
+          undoBefore.push(beforeSnapshot);
           const wi = working.findIndex(h => h.id === match.existing.id);
           if (wi >= 0) working[wi] = merged.result;
           result.updated += 1;
@@ -2196,12 +2203,20 @@ async function importBackupMerge(payload, possibleSelections) {
       const fresh = mdrImportClone(imported) || {};
       delete fresh.id;
       const newId = await localAdd(LOCAL_STORES.horses, fresh);
+      undoCreated.push(newId);
       const added = { ...fresh, id: newId };
       working.push(added);
       result.newHorses += 1;
     }
   } finally {
     window.MDR_AUTO_BACKUP_SUSPENDED = false;
+  }
+  if ((undoBefore.length || undoCreated.length) && typeof mdrStoreHorseUndoPoint === 'function') {
+    await mdrStoreHorseUndoPoint({
+      label: `Backup-Ergänzung rückgängig (${undoBefore.length + undoCreated.length} Pferde)`,
+      beforeRows: undoBefore,
+      createdIds: undoCreated,
+    }).catch(error => console.warn('Undo-Punkt für Backup-Ergänzung konnte nicht gespeichert werden:', error));
   }
   return result;
 }

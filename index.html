@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Pferde – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5428" />
+  <link rel="stylesheet" href="css/style.css?v=5429" />
 </head>
 <body class="list-page">
   <header class="topbar">
@@ -245,12 +245,18 @@
     </div>
     </details>
 
+    <div id="undo-action-bar" class="undo-action-bar" hidden>
+      <span id="undo-action-label"></span>
+      <button type="button" id="undo-action-btn" class="secondary small">↶ Rückgängig</button>
+    </div>
+
     <div id="bulk-actions" class="selected-horses-popup" hidden>
       <div class="selected-horses-popup-head">
         <strong>✓ Ausgewählte Pferde</strong>
         <span id="selected-count" class="selected-horses-count"></span>
       </div>
       <div class="selected-horses-primary-actions">
+        <button type="button" id="bulk-edit-btn">✏️ Mehrfach bearbeiten</button>
         <button type="button" id="bulk-export-btn" class="secondary">📦 Exportieren</button>
         <button type="button" id="bulk-delete-btn" class="danger">🗑️ Löschen</button>
       </div>
@@ -369,6 +375,61 @@
       </div>
     </div>
 
+    <div id="bulk-edit-modal" class="modal-overlay" hidden>
+      <div class="modal-box" style="max-width: 720px;">
+        <h2>✏️ Mehrfach bearbeiten</h2>
+        <p id="bulk-edit-count" class="small muted"></p>
+        <div class="bulk-edit-grid">
+          <div class="field">
+            <label for="bulk-edit-owner">Besitzer</label>
+            <select id="bulk-edit-owner">
+              <option value="__KEEP__">Keine Änderung</option>
+              <option value="__CLEAR__">Besitzer leeren</option>
+              <option value="__CUSTOM__">Anderen Besitzer eingeben…</option>
+            </select>
+            <input id="bulk-edit-owner-custom" type="text" placeholder="Besitzername" hidden />
+          </div>
+          <div class="field">
+            <label for="bulk-edit-station">Zuchtstation</label>
+            <select id="bulk-edit-station">
+              <option value="keep">Keine Änderung</option>
+              <option value="true">Ja</option>
+              <option value="false">Nein</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="bulk-edit-zzl">Zuchtzulassung</label>
+            <select id="bulk-edit-zzl">
+              <option value="keep">Keine Änderung</option>
+              <option value="true">Ja</option>
+              <option value="false">Nein</option>
+              <option value="null">Nicht erfasst</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="bulk-edit-tag-mode">Schlagwörter</label>
+            <select id="bulk-edit-tag-mode">
+              <option value="keep">Keine Änderung</option>
+              <option value="add">Hinzufügen</option>
+              <option value="remove">Entfernen</option>
+              <option value="replace">Alle ersetzen</option>
+            </select>
+          </div>
+        </div>
+        <div id="bulk-edit-tag-options" hidden>
+          <p class="small muted">Schlagwörter auswählen:</p>
+          <div id="bulk-edit-tag-checkboxes" class="tag-checkbox-list"></div>
+        </div>
+        <div id="bulk-edit-preview" class="notice small" hidden></div>
+        <p class="small muted">Nicht ausgewählte Felder bleiben garantiert unverändert. Vor dem Anwenden wird eine Vorschau berechnet.</p>
+        <div class="modal-actions">
+          <button type="button" id="bulk-edit-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="bulk-edit-preview-btn" class="secondary">Änderungen prüfen</button>
+          <button type="button" id="bulk-edit-apply-btn" hidden>Anwenden</button>
+        </div>
+      </div>
+    </div>
+
     <div id="bulk-tag-modal" class="modal-overlay" hidden>
       <div class="modal-box">
         <h2 id="bulk-tag-modal-title">Schlagwort zuweisen</h2>
@@ -386,14 +447,14 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5428"></script>
-<script src="js/database-local.js?v=5428"></script>
-  <script src="js/local-app.js?v=5428"></script>
-  <script src="js/learning-file.js?v=5428"></script>
-  <script src="js/parser.js?v=5428"></script>
-  <script src="js/data-quality.js?v=5428"></script>
-  <script src="js/breeding-progress.js?v=5428"></script>
-  <script src="js/planer-common.js?v=5428"></script>
-  <script src="js/list.js?v=5428"></script>
+<script src="js/supabase-config.js?v=5429"></script>
+<script src="js/database-local.js?v=5429"></script>
+  <script src="js/local-app.js?v=5429"></script>
+  <script src="js/learning-file.js?v=5429"></script>
+  <script src="js/parser.js?v=5429"></script>
+  <script src="js/data-quality.js?v=5429"></script>
+  <script src="js/breeding-progress.js?v=5429"></script>
+  <script src="js/planer-common.js?v=5429"></script>
+  <script src="js/list.js?v=5429"></script>
 </body>
 </html>

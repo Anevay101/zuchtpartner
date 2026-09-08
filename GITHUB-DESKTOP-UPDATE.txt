@@ -1,18 +1,19 @@
-MDR-Datenbank V54.0.27 – Update mit GitHub Desktop
+MDR-Datenbank V54.0.29 – Update mit GitHub Desktop
 
-1. zuchtpartner-main-V54.0.27-clean.zip entpacken.
+1. zuchtpartner-main-V54.0.29-clean.zip entpacken.
 2. GitHub Desktop öffnen und das bestehende zuchtpartner-Repository auswählen.
 3. Repository → Show in Explorer.
 4. Den versteckten Ordner .git NICHT löschen.
 5. Im Repository alle übrigen bisherigen Projektdateien/-ordner löschen.
-6. Den INHALT des entpackten Ordners zuchtpartner-main-V54.0.27-clean direkt in den Repository-Ordner kopieren.
+6. Den INHALT des entpackten Ordners zuchtpartner-main-V54.0.29-clean direkt in den Repository-Ordner kopieren.
 7. In GitHub Desktop unter Changes kurz kontrollieren, dass keine private JSON-Datensicherung enthalten ist.
-8. Empfohlene Commit-Nachricht: „MDR V54.0.27 ZS-Modellwahl + Ausreißerdiagnostik“.
+8. Empfohlene Commit-Nachricht: „MDR V54.0.29 Sicheres Bearbeiten + Duplikatschutz“.
 9. Commit to main und anschließend Push origin.
 10. GitHub Pages kurz deployen lassen und die Seite danach mit Strg+F5 neu laden.
-11. In VERSION.txt muss „MDR-Datenbank V54.0.27“ stehen.
+11. In VERSION.txt muss „MDR-Datenbank V54.0.29“ stehen.
 
-ZS in dieser Version:
-- Modelle innerhalb von 1% des besten CV-RMSE gelten als praktisch gleichwertig.
-- In dieser Gruppe bevorzugt die Datenbank fachlich gerichtete und einfachere Modelle.
-- Im Turnierplaner zeigt ein neuer Diagnoseblock die 10 größten echten Kreuzvalidierungsfehler.
+Neu in dieser Version:
+- Mehrfachbearbeitung für Besitzer, Zuchtstation, Zuchtzulassung und Schlagwörter.
+- Exakte MDR-ID-Duplikate werden blockiert.
+- Import-Vorschau vor dem Speichern automatisch ausgelesener Pferdedaten.
+- Ein-Schritt-Rückgängig für kritische Pferdeaktionen, auch nach Seiten-Reload.

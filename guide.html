@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Guide – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5428" />
+  <link rel="stylesheet" href="css/style.css?v=5429" />
 </head>
 <body class="guide-page">
 <header class="topbar">
@@ -47,6 +47,16 @@
         <p>Auf der MDR-Pferdeseite möglichst alle relevanten Bereiche öffnen: Gentest, Rasseanteile und sämtliche Disziplinen. Danach die komplette Seite kopieren und über „Pferd hinzufügen“ einlesen.</p>
         <p>Automatisch erkannte Werte anschließend kurz prüfen. Manuelle Angaben wie Besitzer, Schlagwörter, ZS-Wert oder besondere Verwaltungsdaten können ergänzt werden, ohne die ausgelesenen Rohdaten zu verlieren.</p>
         <p><strong>Wichtig:</strong> Fehlende Werte bleiben bewusst fehlend. Sie werden in Prognosemodellen nicht als Null interpretiert.</p>
+      </div></div>
+    </details>
+
+    <details class="card guide-faq-item">
+      <summary>Wie funktionieren sichere Importe, Mehrfachbearbeitung und Rückgängig?</summary>
+      <div class="guide-faq-body"><div class="guide-answer-card">
+        <p><strong>MDR-ID:</strong> Eine bereits vorhandene MDR-ID kann nicht als zweites Pferd gespeichert werden. Stattdessen lässt sich der bestehende Datensatz öffnen oder gezielt aktualisieren. Gleiche Namen bzw. identische GP/Ext/Ext%/Int-Werte bleiben nur Hinweise, weil sie nicht eindeutig sind.</p>
+        <p><strong>Import-Vorschau:</strong> Nach dem automatischen Auslesen zeigt die Datenbank vor dem Speichern, wie viele Datenbereiche geändert, ergänzt oder unverändert bleiben. Erst nach Bestätigung wird gespeichert.</p>
+        <p><strong>Mehrfachbearbeitung:</strong> In der Übersicht mehrere Pferde markieren und Besitzer, Zuchtstation, Zuchtzulassung oder Schlagwörter gemeinsam ändern. Alle Felder starten auf „Keine Änderung“. Bei Schlagwörtern stehen Hinzufügen, Entfernen und Ersetzen getrennt zur Verfügung.</p>
+        <p><strong>Rückgängig:</strong> Die letzte kritische Pferdeaktion – Import, Löschung oder Mehrfachänderung – wird lokal als Sicherheits-Snapshot gespeichert und kann auch nach einem Seiten-Reload über „Rückgängig“ wiederhergestellt werden. Eine neue kritische Aktion ersetzt den vorherigen Undo-Punkt.</p>
       </div></div>
     </details>
 
@@ -144,9 +154,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5428"></script>
-<script src="js/database-local.js?v=5428"></script>
-<script src="js/local-app.js?v=5428"></script>
-<script src="js/guide.js?v=5428"></script>
+<script src="js/supabase-config.js?v=5429"></script>
+<script src="js/database-local.js?v=5429"></script>
+<script src="js/local-app.js?v=5429"></script>
+<script src="js/guide.js?v=5429"></script>
 </body>
 </html>

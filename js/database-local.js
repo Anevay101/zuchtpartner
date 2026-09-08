@@ -17,7 +17,8 @@ const LOCAL_STORES = {
 const MDR_CLOUD_BUILD = true;
 const MDR_CLOUD_TABLE = 'mdr_records';
 const MDR_CLOUD_PAGE_SIZE = 1000;
-const MDR_LOCAL_ONLY_SETTINGS = new Set(['backup_directory_handle']);
+const MDR_LAST_UNDO_KEY = 'last_undo_action';
+const MDR_LOCAL_ONLY_SETTINGS = new Set(['backup_directory_handle', MDR_LAST_UNDO_KEY]);
 
 // V54.0.18 Performance: pro Seitenaufruf wird jeder Store nur einmal
 // blockierend aus Supabase geladen. Weitere Leser verwenden den gemeinsamen
@@ -231,20 +232,28 @@ async function mdrCloudGetAll(storeName) {
   return out;
 }
 
+async function mdrReadLocalOnlySettings() {
+  const rows = [];
+  for (const key of MDR_LOCAL_ONLY_SETTINGS) {
+    const row = await idbGet(LOCAL_STORES.userSettings, key).catch(()=>null);
+    if (row) rows.push(row);
+  }
+  return rows;
+}
+
 async function mdrSyncCacheStore(storeName, rows) {
-  const keepLocal = storeName === LOCAL_STORES.userSettings
-    ? await idbGet(storeName,'backup_directory_handle').catch(()=>null)
-    : null;
-  await idbReplaceAll(storeName,rows,keepLocal);
+  const keepLocal = storeName === LOCAL_STORES.userSettings ? await mdrReadLocalOnlySettings() : [];
+  await idbReplaceAll(storeName,rows,null);
+  if (keepLocal.length) await idbPutMany(storeName,keepLocal).catch(()=>{});
   return keepLocal;
 }
 
 async function mdrMergeLocalOnlyRows(storeName, rows, knownLocalOnly=null) {
   if (storeName !== LOCAL_STORES.userSettings) return rows;
-  const localOnly=knownLocalOnly || await idbGet(storeName,'backup_directory_handle').catch(()=>null);
-  return localOnly
-    ? [...rows.filter(r=>r?.key!=='backup_directory_handle'), localOnly]
-    : rows;
+  const localOnly = Array.isArray(knownLocalOnly) ? knownLocalOnly : await mdrReadLocalOnlySettings();
+  if (!localOnly.length) return rows;
+  const localKeys = new Set(localOnly.map(r => String(r?.key || '')));
+  return [...rows.filter(r => !localKeys.has(String(r?.key || ''))), ...localOnly];
 }
 
 async function mdrRefreshStore(storeName) {
@@ -342,8 +351,31 @@ async function mdrNextNumericId() {
   return id;
 }
 
+
+function mdrHorseExternalIdToken(horse) {
+  const externalId = String(horse?.external_id ?? '').trim();
+  if (!externalId) return '';
+  return `${String(horse?.game_version || 'DE').toUpperCase()}|${externalId}`;
+}
+
+async function mdrAssertHorseExternalIdUnique(horse) {
+  if (!horse || typeof horse !== 'object') return;
+  const token = mdrHorseExternalIdToken(horse);
+  if (!token) return;
+  const rows = mdrMemoryRows(LOCAL_STORES.horses) || await localGetAll(LOCAL_STORES.horses);
+  const duplicate = rows.find(row =>
+    mdrHorseExternalIdToken(row) === token && String(row?.id) !== String(horse?.id ?? '')
+  );
+  if (!duplicate) return;
+  const error = new Error(`MDR-ID ${horse.external_id} ist bereits bei „${duplicate.name || 'anderes Pferd'}“ gespeichert.`);
+  error.code = 'MDR_DUPLICATE_EXTERNAL_ID';
+  error.duplicateHorse = duplicate;
+  throw error;
+}
+
 async function mdrCloudUpsert(storeName, value) {
   const payload = await mdrPreparePayload(storeName,value);
+  if (storeName === LOCAL_STORES.horses) await mdrAssertHorseExternalIdUnique(payload);
   const recordKey = mdrRecordKey(storeName,payload);
   if (recordKey == null) throw new Error(`Datensatz in ${storeName} besitzt keinen Schlüssel.`);
   const user = await mdrCurrentUser();
@@ -366,6 +398,7 @@ async function localAdd(storeName, value) {
     return result;
   }
   let payload = await mdrPreparePayload(storeName,value);
+  if (storeName === LOCAL_STORES.horses) await mdrAssertHorseExternalIdUnique(payload);
   if (storeName === LOCAL_STORES.userSettings) {
     if (!payload?.key) throw new Error('Einstellung besitzt keinen Schlüssel.');
   } else if (payload?.id == null) {
@@ -418,12 +451,12 @@ async function localDelete(storeName, key) {
 
 async function localClear(storeName) {
   mdrBumpStoreEpoch(storeName);
-  const localHandle = storeName === LOCAL_STORES.userSettings ? await idbGet(storeName,'backup_directory_handle').catch(()=>null) : null;
+  const localOnlyRows = storeName === LOCAL_STORES.userSettings ? await mdrReadLocalOnlySettings() : [];
   const { error } = await mdrCloudClient().from(MDR_CLOUD_TABLE).delete().eq('store_name',storeName);
   if (error) throw error;
   await idbClear(storeName);
-  if (localHandle?.handle) await idbPut(storeName,localHandle).catch(()=>{});
-  mdrSetMemoryCache(storeName,localHandle?.handle?[localHandle]:[],Date.now());
+  if (localOnlyRows.length) await idbPutMany(storeName,localOnlyRows).catch(()=>{});
+  mdrSetMemoryCache(storeName,[...localOnlyRows],Date.now());
   localNotifyDataChanged(storeName);
 }
 
@@ -442,13 +475,106 @@ async function localUpdate(storeName, key, changes) {
   return updated;
 }
 
-console.log('MDR V54.0.25 Supabase-Datenbank mit optimiertem Lesecache wurde geladen.');
+
+function mdrUndoClone(value) {
+  if (value == null) return value;
+  try { return structuredClone(value); } catch { return JSON.parse(JSON.stringify(value)); }
+}
+
+// Ein bewusst kleiner Ein-Schritt-Undo für kritische Pferdeaktionen. Der
+// Snapshot bleibt nur auf diesem Gerät in IndexedDB und wird bei der nächsten
+// kritischen Aktion ersetzt. Dadurch gibt es Sicherheit ohne vollständiges
+// Änderungsprotokoll in der gemeinsamen Supabase-Datenbank.
+async function mdrStoreHorseUndoPoint({ label, beforeRows = [], createdIds = [] } = {}) {
+  const uniqueBefore = [];
+  const seen = new Set();
+  for (const row of (beforeRows || [])) {
+    if (!row || row.id == null) continue;
+    const key = String(row.id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniqueBefore.push(mdrUndoClone(row));
+  }
+  const uniqueCreated = [...new Set((createdIds || []).filter(id => id != null).map(id => String(id)))];
+  if (!uniqueBefore.length && !uniqueCreated.length) return null;
+  const user = await mdrCurrentUser().catch(() => null);
+  const point = {
+    key: MDR_LAST_UNDO_KEY,
+    kind: 'horses',
+    user_id: user?.id || null,
+    label: String(label || 'Letzte Änderung'),
+    created_at: new Date().toISOString(),
+    before_rows: uniqueBefore,
+    created_ids: uniqueCreated,
+  };
+  await idbPut(LOCAL_STORES.userSettings, point);
+  return point;
+}
+
+async function mdrGetHorseUndoPoint() {
+  const point = await idbGet(LOCAL_STORES.userSettings, MDR_LAST_UNDO_KEY).catch(() => null);
+  if (!point) return null;
+  const user = await mdrCurrentUser().catch(() => null);
+  if (point.user_id && user?.id && point.user_id !== user.id) return null;
+  return point;
+}
+
+async function mdrClearHorseUndoPoint() {
+  await idbDelete(LOCAL_STORES.userSettings, MDR_LAST_UNDO_KEY).catch(() => {});
+}
+
+async function mdrUndoLastHorseAction() {
+  const point = await mdrGetHorseUndoPoint();
+  if (!point) return { restored: 0, removed: 0, label: '' };
+  let restored = 0;
+  let removed = 0;
+  window.MDR_AUTO_BACKUP_SUSPENDED = true;
+  try {
+    for (const id of (point.created_ids || [])) {
+      const current = await localGet(LOCAL_STORES.horses, id).catch(() => null);
+      if (!current) continue;
+      await localDelete(LOCAL_STORES.horses, current.id);
+      removed++;
+    }
+    for (const row of (point.before_rows || [])) {
+      await localPut(LOCAL_STORES.horses, mdrUndoClone(row));
+      restored++;
+    }
+  } finally {
+    window.MDR_AUTO_BACKUP_SUSPENDED = false;
+  }
+  await mdrClearHorseUndoPoint();
+  localNotifyDataChanged(LOCAL_STORES.horses);
+  return { restored, removed, label: point.label || 'Letzte Änderung' };
+}
+
+
+console.log('MDR V54.0.29 Supabase-Datenbank mit optimiertem Lesecache wurde geladen.');
 
 // Für vollständige JSON-Importe: Datensätze in kleinen Paketen übertragen,
 // damit ein Erstimport nicht hunderte einzelne HTTP-Anfragen erzeugt.
 async function localBulkPut(storeName, values, chunkSize=100) {
   const input=Array.isArray(values)?values:[];
   if (!input.length) return [];
+  if (storeName === LOCAL_STORES.horses) {
+    const existingRows = mdrMemoryRows(LOCAL_STORES.horses) || await localGetAll(LOCAL_STORES.horses);
+    const byToken = new Map();
+    for (const row of existingRows) {
+      const token = mdrHorseExternalIdToken(row);
+      if (token) byToken.set(token, String(row.id));
+    }
+    for (const row of input) {
+      const token = mdrHorseExternalIdToken(row);
+      if (!token) continue;
+      const existingId = byToken.get(token);
+      if (existingId != null && String(existingId) !== String(row?.id ?? '')) {
+        const error = new Error(`MDR-ID ${row.external_id} kommt im Import mehrfach bzw. bei einem anderen Pferd vor.`);
+        error.code = 'MDR_DUPLICATE_EXTERNAL_ID';
+        throw error;
+      }
+      byToken.set(token, String(row?.id ?? ''));
+    }
+  }
   mdrBumpStoreEpoch(storeName);
   const cloudPayloads=[];
   const localOnlyPayloads=[];
@@ -496,10 +622,8 @@ async function mdrClearCachedCloudData() {
   MDR_MEMORY_CACHE.clear();
   for (const storeName of Object.values(LOCAL_STORES)) {
     mdrBumpStoreEpoch(storeName);
-    const keepLocal = storeName === LOCAL_STORES.userSettings
-      ? await idbGet(storeName,'backup_directory_handle').catch(()=>null)
-      : null;
+    const keepLocal = storeName === LOCAL_STORES.userSettings ? await mdrReadLocalOnlySettings() : [];
     await idbClear(storeName).catch(()=>{});
-    if (keepLocal?.handle) await idbPut(storeName,keepLocal).catch(()=>{});
+    if (keepLocal.length) await idbPutMany(storeName,keepLocal).catch(()=>{});
   }
 }

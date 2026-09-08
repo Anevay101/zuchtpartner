@@ -82,6 +82,7 @@ async function init() {
   wireBestFoalFilter();
   wireSortableHeaders();
   wireSelection();
+  wireUndoActionBar();
   wireCheckDropdowns();
   wireDeleteModal();
   wireExportCsv();
@@ -89,6 +90,7 @@ async function init() {
   wireFilterPresets();
   wireScrollTop();
   showFlashBanner();
+  await renderUndoActionBar();
   await loadUserSettings(session);
   await showMissingDataNotice(session);
   await checkAgeNotices(session);
@@ -1406,8 +1408,8 @@ function openDeleteModal(rows) {
     multi ? 'Ausgewählte Pferde löschen?' : 'Pferd löschen?';
   document.querySelector('#delete-modal-count').textContent =
     multi
-      ? `Bist du sicher? ${rows.length} ausgewählte Pferde werden unwiderruflich aus der Datenbank gelöscht.`
-      : 'Bist du sicher? Dieses Pferd wird unwiderruflich aus der Datenbank gelöscht.';
+      ? `Bist du sicher? ${rows.length} ausgewählte Pferde werden aus der Datenbank gelöscht. Die letzte Löschaktion kann rückgängig gemacht werden.`
+      : 'Bist du sicher? Dieses Pferd wird aus der Datenbank gelöscht. Die letzte Löschaktion kann rückgängig gemacht werden.';
   document.querySelector('#delete-modal-confirm').textContent =
     multi ? `Ja, ${rows.length} Pferde löschen` : 'Ja, Pferd löschen';
   document.querySelector('#delete-modal').hidden = false;
@@ -1423,15 +1425,22 @@ async function confirmDelete() {
   closeDeleteModal();
   if (!ids.length) return;
 
-  // Bei Mehrfachlöschung wird – sofern der freigegebene Backup-Ordner
-  // erreichbar ist – unmittelbar vorher noch einmal der vollständige
-  // aktuelle Stand gesichert. Die Löschung selbst hängt aber nicht von
-  // der Ordnerberechtigung ab.
   if (ids.length > 1 && typeof writeExternalBackupNow === 'function') {
     await writeExternalBackupNow('vor Mehrfachlöschung');
   }
 
+  const beforeRows = [];
   try {
+    for (const id of ids) {
+      const current = await getLocalHorseById(id);
+      if (current) beforeRows.push(JSON.parse(JSON.stringify(current)));
+    }
+    if (beforeRows.length && typeof mdrStoreHorseUndoPoint === 'function') {
+      await mdrStoreHorseUndoPoint({
+        label: `${beforeRows.length} Pferd${beforeRows.length === 1 ? '' : 'e'} wiederherstellen`,
+        beforeRows,
+      });
+    }
     for (const id of ids) {
       await deleteLocalRecordById(LOCAL_STORES.horses, id);
     }
@@ -1440,6 +1449,7 @@ async function confirmDelete() {
     return;
   }
   await loadHorses();
+  await renderUndoActionBar();
 }
 
 function wireFilterForm() {
@@ -1727,12 +1737,14 @@ function wireSelection() {
     });
   });
   document.querySelector('#bulk-delete-btn').addEventListener('click', onBulkDelete);
+  document.querySelector('#bulk-edit-btn')?.addEventListener('click', openBulkEditModal);
   document.querySelector('#bulk-export-btn').addEventListener('click', exportSelectedHorses);
   document.querySelector('#bulk-tag-btn').addEventListener('click', () => onBulkTag('add'));
   document.querySelector('#bulk-tag-remove-btn').addEventListener('click', () => onBulkTag('remove'));
   document.querySelector('#bulk-learning-add-btn')?.addEventListener('click', () => onBulkLearningFile(true));
   document.querySelector('#bulk-learning-remove-btn')?.addEventListener('click', () => onBulkLearningFile(false));
   wireBulkTagModal();
+  wireBulkEditModal();
 }
 
 function onRowSelect(id, checked, refreshBar = true) {
@@ -1756,6 +1768,229 @@ function selectedHorseRows() {
   return lastRenderedRows.filter(
     (r) => selectedIds.has(String(r.id)) || selectedIds.has(r.id)
   );
+}
+
+function wireUndoActionBar() {
+  document.getElementById('undo-action-btn')?.addEventListener('click', async () => {
+    const point = typeof mdrGetHorseUndoPoint === 'function' ? await mdrGetHorseUndoPoint() : null;
+    if (!point) {
+      await renderUndoActionBar();
+      return;
+    }
+    if (!confirm(`„${point.label || 'Letzte Änderung'}“ wirklich rückgängig machen?`)) return;
+    const button = document.getElementById('undo-action-btn');
+    if (button) { button.disabled = true; button.textContent = '↶ Wird rückgängig gemacht…'; }
+    try {
+      const result = await mdrUndoLastHorseAction();
+      await loadHorses();
+      await renderUndoActionBar();
+      const changed = Number(result.restored || 0) + Number(result.removed || 0);
+      if (changed) alert(`${changed} Pferd${changed === 1 ? '' : 'e'} wiederhergestellt.`);
+    } catch (error) {
+      alert('Rückgängig fehlgeschlagen: ' + error.message);
+      await renderUndoActionBar();
+    }
+  });
+}
+
+async function renderUndoActionBar() {
+  const bar = document.getElementById('undo-action-bar');
+  const label = document.getElementById('undo-action-label');
+  const button = document.getElementById('undo-action-btn');
+  if (!bar || !label) return;
+  const point = typeof mdrGetHorseUndoPoint === 'function' ? await mdrGetHorseUndoPoint() : null;
+  if (!point) {
+    bar.hidden = true;
+    if (button) { button.disabled = false; button.textContent = '↶ Rückgängig'; }
+    return;
+  }
+  const when = point.created_at ? new Date(point.created_at).toLocaleString('de-DE') : '';
+  label.innerHTML = `<strong>Letzte sichere Aktion:</strong> ${escapeHtml(point.label || 'Änderung')}${when ? ` <span class="muted small">· ${escapeHtml(when)}</span>` : ''}`;
+  bar.hidden = false;
+  if (button) { button.disabled = false; button.textContent = '↶ Rückgängig'; }
+}
+
+let bulkEditPreviewState = null;
+
+function renderBulkEditTagCheckboxes() {
+  const container = document.getElementById('bulk-edit-tag-checkboxes');
+  if (!container) return;
+  container.innerHTML = getHorseTagOptions().map(({ label, color }) => `
+    <label class="tag-checkbox-row">
+      <input type="checkbox" data-bulk-edit-tag="${escapeHtml(label)}" />
+      <span class="tag-dot" style="background:${color}"></span>
+      ${escapeHtml(label)}
+    </label>`).join('');
+}
+
+function invalidateBulkEditPreview() {
+  bulkEditPreviewState = null;
+  const preview = document.getElementById('bulk-edit-preview');
+  const apply = document.getElementById('bulk-edit-apply-btn');
+  if (preview) { preview.hidden = true; preview.innerHTML = ''; }
+  if (apply) apply.hidden = true;
+}
+
+function wireBulkEditModal() {
+  renderBulkEditTagCheckboxes();
+  document.getElementById('bulk-edit-cancel')?.addEventListener('click', () => {
+    document.getElementById('bulk-edit-modal').hidden = true;
+    invalidateBulkEditPreview();
+  });
+  document.getElementById('bulk-edit-tag-mode')?.addEventListener('change', (e) => {
+    document.getElementById('bulk-edit-tag-options').hidden = e.target.value === 'keep';
+    invalidateBulkEditPreview();
+  });
+  document.getElementById('bulk-edit-owner')?.addEventListener('change', (e) => {
+    const custom = document.getElementById('bulk-edit-owner-custom');
+    if (custom) custom.hidden = e.target.value !== '__CUSTOM__';
+    invalidateBulkEditPreview();
+  });
+  document.getElementById('bulk-edit-owner-custom')?.addEventListener('input', invalidateBulkEditPreview);
+  document.querySelectorAll('#bulk-edit-modal select, #bulk-edit-modal input').forEach(el => {
+    el.addEventListener('change', invalidateBulkEditPreview);
+  });
+  document.getElementById('bulk-edit-preview-btn')?.addEventListener('click', previewBulkEdit);
+  document.getElementById('bulk-edit-apply-btn')?.addEventListener('click', applyBulkEdit);
+}
+
+async function populateBulkEditOwners() {
+  const select = document.getElementById('bulk-edit-owner');
+  if (!select) return;
+  const rows = filterOptionHorses.length ? filterOptionHorses : await localGetAll(LOCAL_STORES.horses);
+  const owners = [...new Set(rows.map(h => String(h.owner || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+  select.innerHTML = '<option value="__KEEP__">Keine Änderung</option><option value="__CLEAR__">Besitzer leeren</option><option value="__CUSTOM__">Anderen Besitzer eingeben…</option>' +
+    owners.map(owner => `<option value="${escapeHtml(owner)}">${escapeHtml(owner)}</option>`).join('');
+}
+
+async function openBulkEditModal() {
+  const rows = selectedHorseRows();
+  if (!rows.length) return;
+  await populateBulkEditOwners();
+  document.getElementById('bulk-edit-owner').value = '__KEEP__';
+  document.getElementById('bulk-edit-owner-custom').value = '';
+  document.getElementById('bulk-edit-owner-custom').hidden = true;
+  document.getElementById('bulk-edit-station').value = 'keep';
+  document.getElementById('bulk-edit-zzl').value = 'keep';
+  document.getElementById('bulk-edit-tag-mode').value = 'keep';
+  document.getElementById('bulk-edit-tag-options').hidden = true;
+  document.querySelectorAll('[data-bulk-edit-tag]').forEach(cb => { cb.checked = false; });
+  document.getElementById('bulk-edit-count').textContent = `${rows.length} Pferd${rows.length === 1 ? '' : 'e'} ausgewählt`;
+  invalidateBulkEditPreview();
+  document.getElementById('bulk-edit-modal').hidden = false;
+}
+
+function collectBulkEditSpec() {
+  const ownerChoice = document.getElementById('bulk-edit-owner')?.value || '__KEEP__';
+  const customOwner = String(document.getElementById('bulk-edit-owner-custom')?.value || '').trim();
+  return {
+    owner: ownerChoice === '__CUSTOM__' ? customOwner : ownerChoice,
+    ownerCustomMissing: ownerChoice === '__CUSTOM__' && !customOwner,
+    station: document.getElementById('bulk-edit-station')?.value || 'keep',
+    zzl: document.getElementById('bulk-edit-zzl')?.value || 'keep',
+    tagMode: document.getElementById('bulk-edit-tag-mode')?.value || 'keep',
+    tags: [...document.querySelectorAll('[data-bulk-edit-tag]:checked')].map(cb => cb.dataset.bulkEditTag),
+  };
+}
+
+function applyBulkEditSpecToHorse(row, spec) {
+  const updated = JSON.parse(JSON.stringify(row));
+  if (spec.owner !== '__KEEP__') updated.owner = spec.owner === '__CLEAR__' ? null : spec.owner;
+  if (spec.station !== 'keep') updated.in_breeding_station = spec.station === 'true';
+  if (spec.zzl !== 'keep') updated.breeding_allowed = spec.zzl === 'null' ? null : spec.zzl === 'true';
+  if (spec.tagMode !== 'keep') {
+    const current = Array.isArray(updated.tags) ? updated.tags : [];
+    const chosen = new Set(spec.tags || []);
+    if (spec.tagMode === 'add') {
+      const existing = new Set(current.map(t => t.label));
+      updated.tags = [...current, ...[...chosen].filter(label => !existing.has(label)).map(label => ({label}))];
+    } else if (spec.tagMode === 'remove') {
+      updated.tags = current.filter(t => !chosen.has(t.label));
+    } else if (spec.tagMode === 'replace') {
+      const byLabel = new Map(current.map(t => [t.label, t]));
+      updated.tags = [...chosen].map(label => byLabel.get(label) || {label});
+    }
+  }
+  if (typeof mdrSyncBreedingStationPayload === 'function') mdrSyncBreedingStationPayload(updated);
+  return updated;
+}
+
+function bulkEditSpecLabels(spec) {
+  const parts = [];
+  if (spec.owner !== '__KEEP__') parts.push(`Besitzer → ${spec.owner === '__CLEAR__' ? 'leer' : spec.owner}`);
+  if (spec.station !== 'keep') parts.push(`Zuchtstation → ${spec.station === 'true' ? 'Ja' : 'Nein'}`);
+  if (spec.zzl !== 'keep') parts.push(`ZZL → ${spec.zzl === 'null' ? 'nicht erfasst' : spec.zzl === 'true' ? 'Ja' : 'Nein'}`);
+  if (spec.tagMode !== 'keep') {
+    const mode = {add:'hinzufügen',remove:'entfernen',replace:'ersetzen'}[spec.tagMode] || spec.tagMode;
+    parts.push(`Schlagwörter ${mode}: ${(spec.tags || []).join(', ') || 'keine Auswahl'}`);
+  }
+  return parts;
+}
+
+async function previewBulkEdit() {
+  const spec = collectBulkEditSpec();
+  if (spec.ownerCustomMissing) {
+    alert('Bitte den neuen Besitzernamen eingeben.');
+    return;
+  }
+  if (spec.tagMode !== 'keep' && !spec.tags.length) {
+    alert('Bitte mindestens ein Schlagwort auswählen. Zum vollständigen Leeren der Schlagwörter bitte die Pferde einzeln prüfen.');
+    return;
+  }
+  const selected = selectedHorseRows();
+  const previewRows = [];
+  for (const row of selected) {
+    const current = await getLocalHorseById(row.id);
+    if (!current) continue;
+    const updated = applyBulkEditSpecToHorse(current, spec);
+    if (JSON.stringify(updated) !== JSON.stringify(current)) previewRows.push({ before: current, after: updated });
+  }
+  const labels = bulkEditSpecLabels(spec);
+  const preview = document.getElementById('bulk-edit-preview');
+  if (!labels.length) {
+    preview.innerHTML = '<strong>Keine Änderung ausgewählt.</strong>';
+    preview.hidden = false;
+    document.getElementById('bulk-edit-apply-btn').hidden = true;
+    return;
+  }
+  preview.innerHTML = `<strong>${previewRows.length} von ${selected.length} Pferden werden tatsächlich geändert.</strong><br>${labels.map(escapeHtml).join(' · ')}`;
+  preview.hidden = false;
+  bulkEditPreviewState = { spec, expectedCount: previewRows.length };
+  document.getElementById('bulk-edit-apply-btn').hidden = previewRows.length === 0;
+}
+
+async function applyBulkEdit() {
+  if (!bulkEditPreviewState) return;
+  const spec = bulkEditPreviewState.spec;
+  const rows = selectedHorseRows();
+  const succeededBefore = [];
+  const failed = [];
+  for (const row of rows) {
+    try {
+      const current = await getLocalHorseById(row.id);
+      if (!current) continue;
+      const updated = applyBulkEditSpecToHorse(current, spec);
+      if (JSON.stringify(updated) === JSON.stringify(current)) continue;
+      const beforeSnapshot = JSON.parse(JSON.stringify(current));
+      updated.updated_at = new Date().toISOString();
+      updated.last_change_source = 'manuell';
+      await localPut(LOCAL_STORES.horses, updated);
+      succeededBefore.push(beforeSnapshot);
+    } catch (error) {
+      failed.push(error);
+    }
+  }
+  if (succeededBefore.length && typeof mdrStoreHorseUndoPoint === 'function') {
+    await mdrStoreHorseUndoPoint({
+      label: `Mehrfachbearbeitung (${succeededBefore.length} Pferde)`,
+      beforeRows: succeededBefore,
+    });
+  }
+  document.getElementById('bulk-edit-modal').hidden = true;
+  invalidateBulkEditPreview();
+  if (failed.length) alert(`${failed.length} Pferd${failed.length === 1 ? '' : 'e'} konnte${failed.length === 1 ? '' : 'n'} nicht aktualisiert werden: ${failed[0].message}`);
+  await loadHorses();
+  await renderUndoActionBar();
 }
 
 async function exportSelectedHorses() {
@@ -1853,6 +2088,7 @@ async function confirmBulkTag() {
 
   const rows = selectedHorseRows();
   const failed = [];
+  const beforeRows = [];
   for (const row of rows) {
     try {
       let newTags;
@@ -1863,45 +2099,63 @@ async function confirmBulkTag() {
         newTags = [...(row.tags || []), ...chosen.filter((label) => !existingLabels.has(label)).map((label) => ({ label }))];
       }
       const stored = await getLocalHorseById(row.id);
-      if (stored) {
-        await localPut(LOCAL_STORES.horses, { ...stored, tags: newTags, updated_at: new Date().toISOString() });
+      if (stored && JSON.stringify(stored.tags || []) !== JSON.stringify(newTags)) {
+        const beforeSnapshot = JSON.parse(JSON.stringify(stored));
+        await localPut(LOCAL_STORES.horses, { ...stored, tags: newTags, updated_at: new Date().toISOString(), last_change_source:'manuell' });
+        beforeRows.push(beforeSnapshot);
       }
     } catch (error) {
       failed.push(error);
     }
   }
+  if (beforeRows.length && typeof mdrStoreHorseUndoPoint === 'function') {
+    await mdrStoreHorseUndoPoint({ label: `Schlagwörter ${bulkTagMode === 'remove' ? 'entfernt' : 'zugewiesen'} (${beforeRows.length} Pferde)`, beforeRows });
+  }
   if (failed.length) alert(`${failed.length} von ${rows.length} Pferden konnten nicht aktualisiert werden: ${failed[0].message}`);
   await loadHorses();
+  await renderUndoActionBar();
 }
 
 async function onBulkLearningFile(value) {
   const rows = selectedHorseRows();
   if (!rows.length) return;
   let gbhLocked = 0;
-  let changed = 0;
+  const beforeRows = [];
+  const failed = [];
   for (const row of rows) {
-    const stored = await getLocalHorseById(row.id);
-    if (!stored) continue;
-    let desired = Boolean(value);
-    const forcedGbhLearning = (typeof mdrHasGbhTag === 'function' && mdrHasGbhTag(stored))
-      || (typeof mdrOwnerHasLearningMarker === 'function' && mdrOwnerHasLearningMarker(stored))
-      || (typeof mdrOwnerHasGbhMarker === 'function' && mdrOwnerHasGbhMarker(stored));
-    if (!desired && forcedGbhLearning) {
-      desired = true;
-      gbhLocked++;
+    try {
+      const stored = await getLocalHorseById(row.id);
+      if (!stored) continue;
+      let desired = Boolean(value);
+      const forcedGbhLearning = (typeof mdrHasGbhTag === 'function' && mdrHasGbhTag(stored))
+        || (typeof mdrOwnerHasLearningMarker === 'function' && mdrOwnerHasLearningMarker(stored))
+        || (typeof mdrOwnerHasGbhMarker === 'function' && mdrOwnerHasGbhMarker(stored));
+      if (!desired && forcedGbhLearning) {
+        desired = true;
+        gbhLocked++;
+      }
+      const updated = { ...stored, learning_file: desired };
+      if (typeof mdrLearningFileForSave === 'function') mdrLearningFileForSave(updated, stored);
+      const differs = JSON.stringify(updated) !== JSON.stringify(stored);
+      if (!differs) continue;
+      const beforeSnapshot = JSON.parse(JSON.stringify(stored));
+      updated.updated_at = new Date().toISOString();
+      updated.last_change_source = 'manuell';
+      await localPut(LOCAL_STORES.horses, updated);
+      beforeRows.push(beforeSnapshot);
+    } catch (error) {
+      failed.push(error);
     }
-    const updated = { ...stored, learning_file: desired };
-    if (typeof mdrLearningFileForSave === 'function') mdrLearningFileForSave(updated, stored);
-    const differs = JSON.stringify(updated) !== JSON.stringify(stored);
-    if (!differs) continue;
-    updated.updated_at = new Date().toISOString();
-    await localPut(LOCAL_STORES.horses, updated);
-    changed++;
+  }
+  if (beforeRows.length && typeof mdrStoreHorseUndoPoint === 'function') {
+    await mdrStoreHorseUndoPoint({ label: `Lerndatei geändert (${beforeRows.length} Pferde)`, beforeRows });
   }
   if (gbhLocked) {
     alert(`${gbhLocked} Pferd${gbhLocked===1?'':'e'} ${gbhLocked===1?'bleibt':'bleiben'} automatisch Lerndatei (GBH-Schlagwort oder Besitzer mit „(GBH)“/„(Friedhof)“).`);
   }
+  if (failed.length) alert(`${failed.length} Pferd${failed.length === 1 ? '' : 'e'} konnte${failed.length === 1 ? '' : 'n'} nicht aktualisiert werden: ${failed[0].message}`);
   await loadHorses();
+  await renderUndoActionBar();
 }
 
 // --- CSV-Export ---

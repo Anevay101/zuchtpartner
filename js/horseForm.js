@@ -267,6 +267,8 @@ async function init() {
   updateBreedCompositionVisibility();
   wireSaveWarningModal();
   wireDuplicateCheckModal();
+  wireHardDuplicateModal();
+  wireImportPreviewModal();
   wireTabs();
   renderTagCheckboxes();
 
@@ -1141,6 +1143,11 @@ async function runSaveFlow() {
     plannerApplyBreedingShowSnapshotForSave(mergedPayload, beforeRecord);
   }
 
+  if (currentChangeSource === 'importiert') {
+    const previewConfirmed = await showImportPreviewModal(beforeRecord, mergedPayload, targetId);
+    if (!previewConfirmed) return;
+  }
+
   const warnings = missingDataWarnings(mergedPayload);
   if (warnings.length) {
     pendingSave = { formData, payload: mergedPayload, session, targetId, beforeRecord };
@@ -1382,6 +1389,127 @@ function askIsDuplicateHorse(reasonParts, neu, alt) {
   return new Promise((resolve) => { duplicateCheckResolve = resolve; });
 }
 
+
+let hardDuplicateResolve = null;
+let hardDuplicateAllowUpdate = true;
+function wireHardDuplicateModal() {
+  document.getElementById('hard-duplicate-cancel')?.addEventListener('click', () => {
+    document.getElementById('hard-duplicate-modal').hidden = true;
+    hardDuplicateResolve?.('cancel');
+    hardDuplicateResolve = null;
+  });
+  document.getElementById('hard-duplicate-open')?.addEventListener('click', () => {
+    document.getElementById('hard-duplicate-modal').hidden = true;
+    hardDuplicateResolve?.('open');
+    hardDuplicateResolve = null;
+  });
+  document.getElementById('hard-duplicate-update')?.addEventListener('click', () => {
+    if (!hardDuplicateAllowUpdate) return;
+    document.getElementById('hard-duplicate-modal').hidden = true;
+    hardDuplicateResolve?.('update');
+    hardDuplicateResolve = null;
+  });
+}
+
+function askHardDuplicateHorse(existing, incoming, allowUpdate = true) {
+  hardDuplicateAllowUpdate = allowUpdate;
+  const updateBtn = document.getElementById('hard-duplicate-update');
+  if (updateBtn) updateBtn.hidden = !allowUpdate;
+  document.getElementById('hard-duplicate-message').textContent =
+    `Die MDR-ID ${incoming?.external_id || existing?.external_id || '–'} gehört bereits zu „${existing?.name || 'Pferd ohne Name'}“.`;
+  document.getElementById('hard-duplicate-details').innerHTML =
+    `<strong>${escapeHtml(existing?.name || '(ohne Name)')}</strong><br>` +
+    `Besitzer: ${escapeHtml(existing?.owner || '–')} · Rasse: ${escapeHtml(existing?.breed || '–')} · ID: ${escapeHtml(existing?.external_id || '–')}`;
+  document.getElementById('hard-duplicate-modal').hidden = false;
+  return new Promise(resolve => { hardDuplicateResolve = resolve; });
+}
+
+let importPreviewResolve = null;
+function wireImportPreviewModal() {
+  document.getElementById('import-preview-cancel')?.addEventListener('click', () => {
+    document.getElementById('import-preview-modal').hidden = true;
+    importPreviewResolve?.(false);
+    importPreviewResolve = null;
+  });
+  document.getElementById('import-preview-confirm')?.addEventListener('click', () => {
+    document.getElementById('import-preview-modal').hidden = true;
+    importPreviewResolve?.(true);
+    importPreviewResolve = null;
+  });
+}
+
+const IMPORT_PREVIEW_SKIP_FIELDS = new Set([
+  'id','user_id','created_at','updated_at','last_change_source','raw_text'
+]);
+
+function importPreviewLabel(key) {
+  const extra = {
+    game_version:'Spielversion', purebred_pct:'Reinrassigkeit', breed_composition:'Rasseanteile', coat_color:'Fellfarbe',
+    birthdate:'Geburtsdatum', disease_free:'Erbkrankheiten', ico:'ICO', in_breeding_station:'Zuchtstation', stud_fee:'Decktaxe',
+    genetic_diseases:'Erbkrankheits-Details', colors:'Farbgenetik', exterior_genetics:'Exterieur-Genetik', exterior_descriptive:'Exterieur',
+    temperament:'Interieur', disciplines:'Disziplinen', traits:'Eigenschaften', tournament_potential:'Turnierpotenzial',
+    tournament_results:'Turnierergebnisse', tournament_starts_total:'Turnierstarts', pedigree:'Stammbaum', tags:'Schlagwörter',
+    breeding_show_points:'ZS-Wert', breeding_show_base_points:'ZS-Grundwert'
+  };
+  return CHANGE_FIELD_LABELS?.[key] || extra[key] || key;
+}
+
+function importPreviewComparable(value) {
+  try { return JSON.stringify(value ?? null); } catch { return String(value ?? ''); }
+}
+
+function importPreviewValue(value) {
+  if (value == null || value === '') return '–';
+  if (typeof value === 'boolean') return value ? 'Ja' : 'Nein';
+  if (Array.isArray(value)) return `${value.length} Eintr${value.length === 1 ? 'ag' : 'äge'}`;
+  if (typeof value === 'object') {
+    const count = Object.keys(value).length;
+    return count ? `${count} Datenbereich${count === 1 ? '' : 'e'}` : '–';
+  }
+  const text = String(value);
+  return text.length > 70 ? text.slice(0, 67) + '…' : text;
+}
+
+function buildImportPreview(beforeRecord, afterRecord) {
+  const keys = [...new Set([...Object.keys(beforeRecord || {}), ...Object.keys(afterRecord || {})])]
+    .filter(key => !IMPORT_PREVIEW_SKIP_FIELDS.has(key));
+  const added = [];
+  const changed = [];
+  const unchanged = [];
+  for (const key of keys) {
+    const oldValue = beforeRecord?.[key];
+    const newValue = afterRecord?.[key];
+    if (isEmptyValue(key, oldValue) && isEmptyValue(key, newValue)) continue;
+    if (importPreviewComparable(oldValue) === importPreviewComparable(newValue)) {
+      unchanged.push({ key, oldValue, newValue });
+    } else if (isEmptyValue(key, oldValue) && !isEmptyValue(key, newValue)) {
+      added.push({ key, oldValue, newValue });
+    } else {
+      changed.push({ key, oldValue, newValue });
+    }
+  }
+  return { added, changed, unchanged };
+}
+
+function showImportPreviewModal(beforeRecord, afterRecord, targetId) {
+  const diff = buildImportPreview(beforeRecord, afterRecord);
+  const summary = document.getElementById('import-preview-summary');
+  summary.textContent = targetId
+    ? `„${afterRecord?.name || beforeRecord?.name || 'Pferd'}“ ist bereits vorhanden. Bitte Änderungen vor dem Aktualisieren prüfen.`
+    : `„${afterRecord?.name || 'Neues Pferd'}“ wird neu angelegt. Bitte erkannte Daten vor dem Speichern prüfen.`;
+  document.getElementById('import-preview-stats').innerHTML = `
+    <span><strong>${diff.changed.length}</strong> geändert</span>
+    <span><strong>${diff.added.length}</strong> ergänzt</span>
+    <span><strong>${diff.unchanged.length}</strong> unverändert</span>`;
+  const rows = [...diff.changed.map(x => ({...x, kind:'Geändert'})), ...diff.added.map(x => ({...x, kind:'Neu'}))];
+  document.getElementById('import-preview-details').innerHTML = rows.length
+    ? `<div class="table-wrap"><table class="detail-table"><thead><tr><th>Feld</th><th>Bisher</th><th>Nach Import</th></tr></thead><tbody>${rows.slice(0, 32).map(row => `
+        <tr><th>${escapeHtml(importPreviewLabel(row.key))}</th><td>${escapeHtml(importPreviewValue(row.oldValue))}</td><td>${escapeHtml(importPreviewValue(row.newValue))}</td></tr>`).join('')}</tbody></table></div>${rows.length > 32 ? `<p class="small muted">+ ${rows.length - 32} weitere geänderte Datenbereiche</p>` : ''}`
+    : '<div class="notice small">Keine bestehenden Werte ändern sich. Der Import bestätigt nur bereits identische Daten.</div>';
+  document.getElementById('import-preview-modal').hidden = false;
+  return new Promise(resolve => { importPreviewResolve = resolve; });
+}
+
 // --- Automatische Flaxen-Trägerschaft bei den Eltern (Nutzerwunsch) ---
 //
 // Ist das gerade gespeicherte Pferd sichtbar Flaxen (reinerbig, "hom" -
@@ -1477,33 +1605,68 @@ async function resolveSaveTarget(formData, payload) {
   let targetId = editingId ? localHorseKey(editingId) : null;
 
   try {
-    if (!targetId) {
-      const horses = await localGetAll(LOCAL_STORES.horses);
+    const horses = await localGetAll(LOCAL_STORES.horses);
+    const version = payload.game_version || 'DE';
+    const normalizedExternalId = String(payload.external_id || '').trim();
 
-      const version = payload.game_version || 'DE';
-      const existing = horses.find(
-        (h) =>
-          (h.name || '').toLowerCase() === (formData.name || '').toLowerCase() &&
-          (h.game_version || 'DE') === version
+    // Auch beim Bearbeiten darf die MDR-ID niemals auf einen zweiten
+    // vorhandenen Datensatz zeigen. In diesem Fall wird nicht gespeichert.
+    if (targetId && normalizedExternalId) {
+      const collision = horses.find(h =>
+        String(h.id) !== String(targetId) &&
+        (h.game_version || 'DE') === version &&
+        String(h.external_id || '').trim() === normalizedExternalId
       ) || null;
+      if (collision) {
+        const choice = await askHardDuplicateHorse(collision, formData, false);
+        if (choice === 'open') window.location.href = `horse.html?id=${encodeURIComponent(collision.id)}`;
+        return null;
+      }
+    }
 
-      if (existing) {
-        targetId = existing.id;
-        beforeRecord = existing;
-        mergePayloadFromExisting(payload, existing);
-      } else if (payload.external_id) {
-        const idMatch = horses.find(
-          (h) =>
-            String(h.external_id || '') === String(payload.external_id) &&
-            (h.game_version || 'DE') === version
+    if (!targetId) {
+      // Eine identische MDR-ID ist ein harter Treffer. Es gibt bewusst keine
+      // Option „trotzdem neu anlegen“ – nur vorhandenes Pferd öffnen oder
+      // diesen Datensatz aktualisieren.
+      if (normalizedExternalId) {
+        const idMatch = horses.find(h =>
+          (h.game_version || 'DE') === version &&
+          String(h.external_id || '').trim() === normalizedExternalId
         ) || null;
         if (idMatch) {
+          const choice = await askHardDuplicateHorse(idMatch, formData, true);
+          if (choice === 'open') {
+            window.location.href = `horse.html?id=${encodeURIComponent(idMatch.id)}`;
+            return null;
+          }
+          if (choice !== 'update') return null;
           targetId = idMatch.id;
           beforeRecord = idMatch;
           mergePayloadFromExisting(payload, idMatch);
         }
       }
 
+      // Gleicher Name ist nur ein weicher Hinweis: Namen sind nicht eindeutig.
+      if (!targetId) {
+        const sameName = horses.find(h =>
+          (h.name || '').trim().toLowerCase() === (formData.name || '').trim().toLowerCase() &&
+          (h.game_version || 'DE') === version
+        ) || null;
+        if (sameName) {
+          const isSame = await askIsDuplicateHorse(
+            ['gleicher Name'],
+            { name: formData.name, owner: formData.owner, external_id: formData.external_id, ...quickStatsOf(payload) },
+            { name: sameName.name, owner: sameName.owner, external_id: sameName.external_id, ...quickStatsOf(sameName) },
+          );
+          if (isSame) {
+            targetId = sameName.id;
+            beforeRecord = sameName;
+            mergePayloadFromExisting(payload, sameName);
+          }
+        }
+      }
+
+      // Identische Leistungswerte bleiben ebenfalls nur ein weicher Hinweis.
       if (!targetId) {
         const newStats = quickStatsOf(payload);
         const candidate = horses.find(
@@ -1569,6 +1732,13 @@ async function performSave(formData, payload, session, targetId, beforeRecord) {
 
   let pregnancyPairingResult = { action: 'none' };
   const savedHorseId = targetId || insertedId;
+  if (currentChangeSource === 'importiert' && typeof mdrStoreHorseUndoPoint === 'function') {
+    await mdrStoreHorseUndoPoint({
+      label: targetId ? `Import von ${formData.name || 'Pferd'} rückgängig machen` : `Import von ${formData.name || 'Pferd'} rückgängig machen`,
+      beforeRows: beforeRecord ? [beforeRecord] : [],
+      createdIds: targetId ? [] : [savedHorseId],
+    }).catch(error => console.warn('Undo-Punkt für Import konnte nicht gespeichert werden:', error));
+  }
   if (
     currentParsedPregnancy?.detected_from_profile &&
     currentParsedPregnancy?.is_pregnant === true &&
@@ -1714,8 +1884,12 @@ function onBulkSessionFinish() {
 
 async function onDelete() {
   if (!editingId) return;
-  if (!confirm('Dieses Pferd wirklich unwiderruflich löschen?')) return;
+  if (!confirm('Dieses Pferd wirklich löschen? Die letzte Löschaktion kann anschließend rückgängig gemacht werden.')) return;
   try {
+    const existing = await localGet(LOCAL_STORES.horses, localHorseKey(editingId));
+    if (existing && typeof mdrStoreHorseUndoPoint === 'function') {
+      await mdrStoreHorseUndoPoint({ label: `${existing.name || 'Pferd'} wiederherstellen`, beforeRows: [existing] });
+    }
     await localDelete(LOCAL_STORES.horses, localHorseKey(editingId));
   } catch (error) {
     document.getElementById('form-error').textContent = 'Löschen fehlgeschlagen: ' + error.message;
