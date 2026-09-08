@@ -137,13 +137,6 @@ function renderHorseBreedingShowSummary(horse, allHorses) {
     return;
   }
 
-  const isFoal = typeof plannerIsFoal === 'function' && plannerIsFoal(horse);
-  if (!isFoal) {
-    field.value = '–';
-    if (note) note.textContent = 'Keine echten ZS-Punkte. Prognosen werden nur für Fohlen angezeigt.';
-    return;
-  }
-
   if (typeof plannerBuildBreedingShowModel !== 'function') {
     field.value = '–';
     if (note) note.textContent = 'ZS-Prognose derzeit nicht verfügbar.';
@@ -154,7 +147,7 @@ function renderHorseBreedingShowSummary(horse, allHorses) {
   const predicted = model.predict(horse);
   if (predicted != null && Number.isFinite(predicted)) {
     field.value = String(Math.round(predicted));
-    if (note) note.textContent = 'ZS-Prognose (Grundwert). Wird automatisch durch den echten ZS-Wert ersetzt, sobald dieser eingetragen ist.';
+    if (note) note.textContent = 'ZS-Prognose (Grundwert). Sie bleibt unabhängig vom Alter sichtbar und wird erst durch einen echten eingetragenen ZS-Wert ersetzt.';
     return;
   }
 
@@ -171,7 +164,7 @@ function renderHorseBreedingShowDetails(horse) {
   if (!root) return;
   const total=typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : null;
   if (total == null) {
-    root.innerHTML='<p class="muted">Noch kein echter ZS-Wert eingetragen. Eine mögliche Fohlenprognose wird weiterhin kompakt unter „Stammdaten“ angezeigt.</p>';
+    root.innerHTML='<p class="muted">Noch kein echter ZS-Wert eingetragen. Die ZS-Prognose bleibt unabhängig vom Alter kompakt unter „Stammdaten“ sichtbar, bis ein echter ZS-Wert eingetragen wird.</p>';
     return;
   }
   const snapshot=typeof plannerBreedingShowSnapshot === 'function' ? plannerBreedingShowSnapshot(horse) : null;

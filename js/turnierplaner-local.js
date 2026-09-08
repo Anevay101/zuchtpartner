@@ -1296,10 +1296,11 @@ function renderBreedingShowOverview() {
     const total=plannerBreedingShowPoints(h);
     if (only==='with' && total==null) return false;
     if (only==='forecast') {
+      // V54.0.28: Die ZS-Prognose bleibt bis zum manuellen Eintrag eines
+      // echten positiven ZS-Werts gültig. Alter und Fohlenstatus spielen
+      // dafür keine Rolle; auch 6-, 7- oder 8-jährige Pferde bleiben in
+      // der Prognoseliste, solange kein echter ZS-Wert vorliegt.
       if (total!=null) return false;
-      // V54.0.22: Prognosen sind für noch nicht zur ZS angetretene Fohlen
-      // gedacht. Erwachsene Pferde ohne ZS-Wert gehören nicht in diese Liste.
-      if (!(typeof plannerIsFoal === 'function' && plannerIsFoal(h))) return false;
     }
     if (!selectedOwnerKeys.has(tpOwnerKey(h.owner))) return false;
     if (nameQ && !(h.name||'').toLowerCase().includes(nameQ)) return false;
@@ -1327,11 +1328,11 @@ function renderBreedingShowOverview() {
 
   const count=document.getElementById('tp-zs-count');
   if (count) count.textContent=only==='forecast'
-    ? `${rows.length} Fohlen ohne echte ZS-Punkte`
+    ? `${rows.length} Pferde ohne echten ZS-Wert`
     : `${rows.length} ZS-Datensätze angezeigt`;
   if (!rows.length) {
     body.innerHTML=only==='forecast'
-      ? '<tr><td colspan="7" class="muted">Keine passenden Fohlen ohne echten ZS-Wert gefunden.</td></tr>'
+      ? '<tr><td colspan="7" class="muted">Keine passenden Pferde ohne echten ZS-Wert gefunden.</td></tr>'
       : '<tr><td colspan="7" class="muted">Keine passenden auswertbaren ZS-Datensätze. Für die ZS-Auswertung zählen nur positive echte ZS-Punktangaben.</td></tr>';
     return;
   }

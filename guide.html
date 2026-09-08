@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Guide – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5427" />
+  <link rel="stylesheet" href="css/style.css?v=5428" />
 </head>
 <body class="guide-page">
 <header class="topbar">
@@ -59,7 +59,7 @@
             <tr><th>Gentest vollständig</th><td>Pferd neu einlesen</td><td>Genetik, EKH, Farbe und Vererbung werden vollständiger.</td></tr>
             <tr><th>Leistungspotenziale bekannt</th><td>Alle Disziplinen öffnen und neu einlesen</td><td>GP, Ext, Ext%, Int, Hauptbegabung und Turnierprofil werden nutzbar.</td></tr>
             <tr><th>Turniere gelaufen</th><td>Neu einlesen</td><td>Platzierungen, Starts und Cup-Daten bleiben aktuell.</td></tr>
-            <tr><th>Zuchtschau gelaufen</th><td>ZS-Punkte zeitnah eintragen</td><td>Echte ZS-Werte sind Lernbasis für spätere Fohlenprognosen.</td></tr>
+            <tr><th>Zuchtschau gelaufen</th><td>ZS-Punkte zeitnah eintragen</td><td>Echte ZS-Werte sind Lernbasis für spätere ZS-Prognosen.</td></tr>
             <tr><th>Fohlen geboren</th><td>Fohlen anlegen und Eltern verknüpfen</td><td>Nachzuchtvergleich und Verpaarungsbewertung funktionieren sauber.</td></tr>
             <tr><th>Verkauft / Status geändert</th><td>Besitzer bzw. Schlagwort aktualisieren</td><td>Aktiver Bestand und Filter bleiben korrekt.</td></tr>
           </tbody>
@@ -126,7 +126,7 @@
       <summary>Wie funktioniert die ZS-Prognose für Fohlen?</summary>
       <div class="guide-faq-body"><div class="guide-answer-card">
         <p>Das Lernmodell nutzt ausschließlich <strong>echte positive ZS-Punkte</strong>. Für neue ZS-Einträge speichert die Datenbank automatisch den Turnier- und Cupstand dieses Moments als historischen Snapshot. Aus dem ZS-Gesamtwert werden nur diese damaligen Boni herausgerechnet; spätere Turniererfolge verändern den Grundwert nicht.</p>
-        <p>Für eine Fohlenprognose müssen GP, Ext, Ext% und Int vorhanden sein. Ext und Ext% werden bewusst als zwei getrennte Informationen behandelt. Das Fohlen selbst braucht keine Turnierplatzierung und keinen echten ZS-Wert. Prognosen werden niemals wieder als echte Lerndaten verwendet.</p>
+        <p>Für eine ZS-Prognose müssen GP, Ext, Ext% und Int vorhanden sein. Ext und Ext% werden bewusst als zwei getrennte Informationen behandelt. Das Pferd selbst braucht keine Turnierplatzierung und keinen echten ZS-Wert. Die Prognose bleibt unabhängig vom Alter sichtbar, bis ein echter positiver ZS-Wert eingetragen wird, und wird niemals selbst als Lerndatum verwendet.</p>
         <p>Die Datenbank testet mehrere Modellvarianten automatisch gegeneinander: linear, fachlich gerichtete Kernwerte, Ext×Ext%-Zusammenspiel und eine vorsichtig nichtlineare Variante. Verwendet wird die Variante mit der besten Kreuzvalidierungs-Prognoseleistung.</p>
         <p>Unter „Zuchtschau“ zeigt die Modellprüfung MAE, RMSE, R² und die Spearman-Rangkorrelation sowie einen Vergleich mit einer einfachen Durchschnitts-Prognose. Der aufklappbare Modellvergleich zeigt zusätzlich, welche Variante tatsächlich gewonnen hat.</p>
       </div></div>
@@ -144,9 +144,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5427"></script>
-<script src="js/database-local.js?v=5427"></script>
-<script src="js/local-app.js?v=5427"></script>
-<script src="js/guide.js?v=5427"></script>
+<script src="js/supabase-config.js?v=5428"></script>
+<script src="js/database-local.js?v=5428"></script>
+<script src="js/local-app.js?v=5428"></script>
+<script src="js/guide.js?v=5428"></script>
 </body>
 </html>
