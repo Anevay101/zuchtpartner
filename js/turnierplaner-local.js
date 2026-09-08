@@ -1139,146 +1139,21 @@ const ZS_FEATURES = [
   { key:'ext', label:'Ext' },
   { key:'extpct', label:'Ext%' },
   { key:'int', label:'Int' },
+  { key:'ext_x_extpct', label:'Ext×Ext%' },
+  { key:'gp_sq', label:'GP²' },
+  { key:'extpct_sq', label:'Ext%²' },
   { key:'disease', label:'Erbkrankheit' },
 ];
 
-function zsFeatureObject(horse) {
-  const s=plannerStats(horse);
-  const raw={gp:s.gp,ext:s.ext,extpct:s.extpct,int:s.int};
-  if (Object.values(raw).some(v=>v==null || v==='' || !Number.isFinite(Number(v)))) return null;
-  return {
-    gp:Number(raw.gp), ext:Number(raw.ext), extpct:Number(raw.extpct), int:Number(raw.int),
-    disease:plannerHasActiveDiseaseRisk(horse)?1:0,
-  };
-}
-
 function zsTrainingStatus(horse) {
-  if (typeof plannerBreedingShowTrainingStatus === 'function') {
-    return plannerBreedingShowTrainingStatus(horse);
-  }
-  const total=plannerBreedingShowPoints(horse);
-  if (total==null) return {eligible:false,reason:'no-zs'};
-  const x=zsFeatureObject(horse);
-  if (!x) return {eligible:false,reason:'missing-features'};
-  const y=plannerBreedingShowBase(horse);
-  if (y==null || !Number.isFinite(y) || y<0) return {eligible:false,reason:'invalid-base'};
-  return {eligible:true,y,x};
-}
-
-function zsSolveLinear(A,b) {
-  const n=A.length;
-  const M=A.map((row,i)=>[...row,b[i]]);
-  for (let col=0;col<n;col++) {
-    let pivot=col;
-    for (let r=col+1;r<n;r++) if (Math.abs(M[r][col])>Math.abs(M[pivot][col])) pivot=r;
-    if (Math.abs(M[pivot][col])<1e-10) return null;
-    [M[col],M[pivot]]=[M[pivot],M[col]];
-    const div=M[col][col];
-    for (let c=col;c<=n;c++) M[col][c]/=div;
-    for (let r=0;r<n;r++) {
-      if (r===col) continue;
-      const factor=M[r][col];
-      for (let c=col;c<=n;c++) M[r][c]-=factor*M[col][c];
-    }
-  }
-  return M.map(row=>row[n]);
-}
-
-function zsFitRidge(rows, featureKeys, lambda) {
-  if (!rows.length || !featureKeys.length) return null;
-  const means=featureKeys.map(key=>rows.reduce((sum,r)=>sum+r.x[key],0)/rows.length);
-  const stds=featureKeys.map((key,j)=>{
-    const variance=rows.reduce((sum,r)=>sum+(r.x[key]-means[j])**2,0)/rows.length;
-    return Math.sqrt(variance)||1;
-  });
-  const X=rows.map(r=>[1,...featureKeys.map((key,j)=>(r.x[key]-means[j])/stds[j])]);
-  const y=rows.map(r=>r.y);
-  const m=featureKeys.length+1;
-  const xtx=Array.from({length:m},()=>Array(m).fill(0));
-  const xty=Array(m).fill(0);
-  for (let r=0;r<X.length;r++) for (let i=0;i<m;i++) {
-    xty[i]+=X[r][i]*y[r];
-    for (let j=0;j<m;j++) xtx[i][j]+=X[r][i]*X[r][j];
-  }
-  for (let i=1;i<m;i++) xtx[i][i]+=lambda;
-  const beta=zsSolveLinear(xtx,xty);
-  if (!beta) return null;
-  const rawCoefficients=featureKeys.map((key,j)=>beta[j+1]/stds[j]);
-  const rawIntercept=beta[0]-rawCoefficients.reduce((sum,c,j)=>sum+c*means[j],0);
-  return {
-    lambda, featureKeys, means, stds, beta, rawIntercept, rawCoefficients,
-    predictX(x) {
-      if (!x) return null;
-      if (featureKeys.some(key=>!Number.isFinite(Number(x[key])))) return null;
-      return beta[0]+featureKeys.reduce((sum,key,j)=>sum+beta[j+1]*((x[key]-means[j])/stds[j]),0);
-    }
-  };
-}
-
-function zsMetrics(actual,predicted) {
-  if (!actual.length || actual.length!==predicted.length) return null;
-  const errors=actual.map((y,i)=>predicted[i]-y);
-  const mae=errors.reduce((s,e)=>s+Math.abs(e),0)/errors.length;
-  const rmse=Math.sqrt(errors.reduce((s,e)=>s+e*e,0)/errors.length);
-  const mean=actual.reduce((s,v)=>s+v,0)/actual.length;
-  const sst=actual.reduce((s,v)=>s+(v-mean)**2,0);
-  const sse=errors.reduce((s,e)=>s+e*e,0);
-  const r2=sst>0 ? 1-sse/sst : null;
-  return {mae,rmse,r2,n:actual.length};
-}
-
-function zsCrossValidate(rows, featureKeys, lambda) {
-  if (rows.length<8) return null;
-  const folds=Math.min(5, Math.max(2, Math.floor(rows.length/4)));
-  const actual=[], predicted=[];
-  // Sortierte, deterministische Fold-Zuordnung: bei jedem Reload identisch.
-  const ordered=[...rows].sort((a,b)=>String(a.horse.id||a.horse.name||'').localeCompare(String(b.horse.id||b.horse.name||''),'de'));
-  for (let fold=0;fold<folds;fold++) {
-    const train=ordered.filter((_,i)=>i%folds!==fold);
-    const test=ordered.filter((_,i)=>i%folds===fold);
-    const fit=zsFitRidge(train,featureKeys,lambda);
-    if (!fit) return null;
-    for (const row of test) {
-      const pred=fit.predictX(row.x);
-      if (pred==null || !Number.isFinite(pred)) continue;
-      actual.push(row.y); predicted.push(pred);
-    }
-  }
-  return zsMetrics(actual,predicted);
-}
-
-function zsTrainingRowsAndExclusions() {
-  const rows=[];
-  const exclusions={noZs:0,missingFeatures:0,missingSnapshot:0,invalidBase:0};
-  for (const horse of TP_ALL_HORSES) {
-    const st=zsTrainingStatus(horse);
-    if (st.eligible) rows.push({horse,y:st.y,x:st.x});
-    else if (st.reason==='no-zs') exclusions.noZs++;
-    else if (st.reason==='missing-features') exclusions.missingFeatures++;
-    else if (st.reason==='missing-snapshot') exclusions.missingSnapshot++;
-    else if (st.reason==='invalid-base') exclusions.invalidBase++;
-  }
-  return {rows,exclusions};
-}
-
-function zsActiveFeatureKeys(rows) {
-  const keys=['gp','ext','extpct','int'];
-  // Erbkrankheit nur lernen, wenn beide Gruppen ausreichend vertreten sind.
-  // Sonst würde ein einzelnes betroffenes Pferd einen scheinbar präzisen,
-  // aber statistisch wertlosen Krankheitskoeffizienten erzeugen.
-  const risky=rows.filter(r=>r.x.disease===1).length;
-  const clear=rows.length-risky;
-  if (risky>=3 && clear>=3) keys.push('disease');
-  return {keys,risky,clear};
+  if (typeof plannerBreedingShowTrainingStatus === 'function') return plannerBreedingShowTrainingStatus(horse);
+  return {eligible:false,reason:'model-unavailable'};
 }
 
 function buildBreedingShowModel() {
-  // V54.0.22: dieselbe Modellfunktion wird jetzt auch auf der
-  // Pferde-Ansichtsseite verwendet. So können Turnierplaner und Stammdaten
-  // bei identischem Datenbestand nicht unterschiedliche ZS-Prognosen zeigen.
   return typeof plannerBuildBreedingShowModel === 'function'
     ? plannerBuildBreedingShowModel(TP_ALL_HORSES)
-    : {n:0,training:[],exclusions:{},featureInfo:{keys:[],risky:0,clear:0},predict:()=>null,coefficients:null,diagnostics:null};
+    : {n:0,training:[],exclusions:{},featureInfo:{keys:[],risky:0,clear:0},predict:()=>null,coefficients:null,diagnostics:null,candidates:[],selectedCandidate:null};
 }
 
 function zsModelDataBand(n) {
@@ -1295,26 +1170,35 @@ function zsFormulaText(model) {
   model.fit.featureKeys.forEach((key,i)=>{
     const label=ZS_FEATURES.find(f=>f.key===key)?.label || key;
     const c=model.coefficients[i];
-    parts.push(`${c>=0?'+':'−'} ${Math.abs(c).toFixed(2)} × ${label}`);
+    parts.push(`${c>=0?'+':'−'} ${Math.abs(c).toFixed(4).replace(/0+$/,'').replace(/\.$/,'')} × ${label}`);
   });
   return parts.join(' ');
 }
 
 function zsCoefficientDirectionWarnings(model) {
   if (!model?.fit || !Array.isArray(model.coefficients)) return [];
-  // Inhaltlicher Plausibilitätscheck, kein harter Ausschluss: GP/Ext% sollten
-  // bei höherem Wert eher positiv, Ext/Int (niedriger = besser) eher negativ
-  // mit dem ZS-Grundwert zusammenhängen. Kleine Datensätze können abweichen.
   const expected={gp:1,ext:-1,extpct:1,int:-1,disease:-1};
   const warnings=[];
   model.fit.featureKeys.forEach((key,i)=>{
     const coefficient=Number(model.coefficients[i]);
-    if (!Number.isFinite(coefficient) || Math.abs(coefficient)<0.01 || !expected[key]) return;
-    if (Math.sign(coefficient)!==expected[key]) {
-      warnings.push(ZS_FEATURES.find(f=>f.key===key)?.label || key);
-    }
+    if (!Number.isFinite(coefficient) || Math.abs(coefficient)<0.0001 || !expected[key]) return;
+    if (Math.sign(coefficient)!==expected[key]) warnings.push(ZS_FEATURES.find(f=>f.key===key)?.label || key);
   });
   return warnings;
+}
+
+function zsModelComparisonHtml(model) {
+  const rows=Array.isArray(model?.candidates) ? model.candidates : [];
+  if (!rows.length) return '';
+  const selectedId=model.selectedCandidate?.id;
+  return `<details class="zs-model-comparison-details"><summary><strong>Getestete Modellvarianten vergleichen</strong></summary>
+    <div class="table-wrap"><table class="detail-table zs-model-comparison-table"><thead><tr><th>Modell</th><th>MAE</th><th>RMSE</th><th>R²</th><th>Spearman</th><th>λ</th></tr></thead><tbody>${rows.map(row=>{
+      const m=row.metrics || {};
+      const selected=row.candidate?.id===selectedId;
+      return `<tr${selected?' class="zs-model-selected"':''}><td>${selected?'✓ ':''}<strong>${plannerEscape(row.candidate?.label||'Modell')}</strong><br><span class="tiny muted">${plannerEscape(row.candidate?.description||'')}</span></td><td>${Number.isFinite(m.mae)?m.mae.toFixed(0):'–'}</td><td><strong>${Number.isFinite(m.rmse)?m.rmse.toFixed(0):'–'}</strong></td><td>${Number.isFinite(m.r2)?m.r2.toFixed(2):'–'}</td><td>${Number.isFinite(m.spearman)?m.spearman.toFixed(2):'–'}</td><td>${row.lambda??'–'}</td></tr>`;
+    }).join('')}</tbody></table></div>
+    <p class="tiny muted">Automatische Auswahl: niedrigster Kreuzvalidierungs-RMSE; bei praktisch gleichem RMSE entscheidet MAE. Ext und Ext% sind in jeder Variante separat enthalten.</p>
+  </details>`;
 }
 
 function renderBreedingShowOverview() {
@@ -1323,6 +1207,7 @@ function renderBreedingShowOverview() {
   const model=TP_ZS_MODEL || (TP_ZS_MODEL=buildBreedingShowModel());
   const info=document.getElementById('tp-zs-model-info');
   const formula=document.getElementById('tp-zs-model-formula');
+  const comparison=document.getElementById('tp-zs-model-comparison');
   if (info) {
     const ex=model.exclusions || {};
     const waiting=[];
@@ -1335,25 +1220,28 @@ function renderBreedingShowOverview() {
       const diseaseUnknown=model.featureInfo?.unknownDisease || 0;
       const diseaseNote=model.featureInfo?.keys?.includes('disease')
         ? `Erbkrankheit wird mitgelernt (${model.featureInfo.risky} betroffen / ${model.featureInfo.clear} sicher unauffällig).`
-        : `Erbkrankheit wird noch nicht als Koeffizient gelernt (${model.featureInfo?.risky||0} betroffen / ${model.featureInfo?.clear||0} sicher unauffällig / ${diseaseUnknown} unbekannt; mindestens 3 je Gruppe und kein unbekannter EKH-Status in der Modellstichprobe).`;
+        : `Erbkrankheit wird aktuell nicht als Koeffizient gelernt (${model.featureInfo?.risky||0} betroffen / ${model.featureInfo?.clear||0} sicher unauffällig / ${diseaseUnknown} unbekannt; mindestens 3 je Gruppe und kein unbekannter EKH-Status in der Modellstichprobe).`;
       const baseline=cv?.baseline;
       const improvement=Number(cv?.improvementRmsePct);
-      const comparison=cv && baseline
+      const comparisonText=cv && baseline
         ? ` · Ø-Baseline: MAE ${baseline.mae.toFixed(0)}, RMSE ${baseline.rmse.toFixed(0)}${Number.isFinite(improvement)?` · Modell ${improvement>=0?'<strong>'+Math.abs(improvement).toFixed(0)+'% besser</strong>':Math.abs(improvement).toFixed(0)+'% schlechter'} als Durchschnitt (RMSE)`:''}`
         : '';
-      const quality=cv ? ` · Kreuzvalidierung: MAE <strong>${cv.mae.toFixed(0)} Punkte</strong>, RMSE ${cv.rmse.toFixed(0)}${cv.r2==null?'':`, R² ${cv.r2.toFixed(2)}`}${comparison}` : '';
+      const rankText=Number.isFinite(cv?.spearman) ? `, Spearman <strong>${cv.spearman.toFixed(2)}</strong>` : '';
+      const quality=cv ? ` · Kreuzvalidierung: MAE <strong>${cv.mae.toFixed(0)} Punkte</strong>, RMSE <strong>${cv.rmse.toFixed(0)}</strong>${cv.r2==null?'':`, R² ${cv.r2.toFixed(2)}`}${rankText}${comparisonText}` : '';
+      const selected=model.selectedCandidate?.label || 'Modell';
       const directionWarnings=zsCoefficientDirectionWarnings(model);
       const directionNote=directionWarnings.length
-        ? ` Datencheck: ungewohnte Koeffizientenrichtung bei ${directionWarnings.join(', ')} – bei kleiner/selektiver Datenbasis vorsichtig interpretieren.`
-        : ' Datencheck: Koeffizientenrichtungen sind plausibel.';
-      info.innerHTML=`Lernmodell: <strong>n=${model.n}</strong> · <strong>${zsModelDataBand(model.n)}</strong>${quality} · Ridge-Stabilisierung λ=${model.lambda}.<br><span class="tiny">${diseaseNote}${directionNote}${waiting.length?` Nicht zum Lernen verwendet: ${waiting.join(' · ')}.`:''}</span>`;
+        ? ` Gewählte Variante zeigt bei ${directionWarnings.join(', ')} eine ungewohnte Teilkoeffizientenrichtung; wegen der Korrelation von Ext und Ext% ist das kein automatischer Ausschluss, die Kreuzvalidierung entscheidet.`
+        : ' Die Kernkoeffizientenrichtungen der gewählten Variante sind fachlich plausibel.';
+      info.innerHTML=`Lernmodell: <strong>n=${model.n}</strong> · <strong>${zsModelDataBand(model.n)}</strong> · ausgewählt: <strong>${plannerEscape(selected)}</strong>${quality} · λ=${model.lambda}.<br><span class="tiny">${diseaseNote}${directionNote}${waiting.length?` Nicht zum Lernen verwendet: ${waiting.join(' · ')}.`:''}</span>`;
     }
   }
   if (formula) {
     formula.innerHTML=model.fit
-      ? `<strong>Aktuell gelernte Formel:</strong> ${plannerEscape(zsFormulaText(model))}<br><span class="muted">Die Formel wird aus allen verwertbaren echten ZS-Daten der gesamten Datenbank berechnet. Sichtbare Züchter-/Rassefilter beeinflussen das Lernmodell nicht.</span>`
+      ? `<strong>Formel des automatisch gewählten Modells:</strong> ${plannerEscape(zsFormulaText(model))}<br><span class="muted">Ext und Ext% bleiben getrennte Eingangsgrößen. Zusatzterme werden nur verwendet, wenn sie in der Kreuzvalidierung besser prognostizieren.</span>`
       : 'Noch keine Formel – mindestens 8 verwertbare ZS-Datensätze nötig.';
   }
+  if (comparison) comparison.innerHTML=zsModelComparisonHtml(model);
 
   const nameQ=(document.getElementById('tp-zs-name')?.value || '').trim().toLowerCase();
   const selectedOwners=[...document.querySelectorAll('#tp-zs-owners input[type="checkbox"]:checked')].map(cb=>cb.value);
@@ -1435,9 +1323,6 @@ function renderBreedingShowOverview() {
         'invalid-base':'ZS-Grundwert unplausibel – bitte prüfen',
       };
       if (map[st.reason]) dataNote=`<br><span class="tiny warning-text">${plannerEscape(map[st.reason])}</span>`;
-    } else if (only!=='forecast' && snapshot) {
-      const snapshotDate=String(snapshot.snapshot_date || snapshot.captured_at || '').slice(0,10);
-      if (snapshotDate) dataNote=`<br><span class="tiny muted">Bonusstand: ${plannerEscape(snapshotDate.split('-').reverse().join('.'))}</span>`;
     }
     return `<tr>
       <td><a href="view.html?id=${encodeURIComponent(h.id)}"><strong>${plannerEscape(h.name || '(ohne Name)')}</strong></a><br><span class="tiny muted">${plannerEscape(h.owner || '')}</span>${dataNote}</td>

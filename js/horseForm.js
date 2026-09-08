@@ -407,7 +407,55 @@ function fillForm(data) {
   updateAppaloosaPatternVisibility();
   updateStudFeeVisibility();
   renderCupResultsEditor(data);
+  renderBreedingShowEditTab(data);
   updateImagePreview();
+}
+
+function renderBreedingShowEditTab(data = extraData) {
+  const baseEl = document.getElementById('zs_base_points_preview');
+  if (!baseEl) return;
+  const turnierEl = document.getElementById('zs_tournament_bonus_preview');
+  const cupEl = document.getElementById('zs_cup_bonus_preview');
+  const dateEl = document.getElementById('zs_snapshot_date_preview');
+  const note = document.getElementById('zs-snapshot-preview-note');
+  const input = document.getElementById('breeding_show_points');
+  const typed = input?.value === '' ? null : Number(input?.value);
+  const total = Number.isFinite(typed) && typed > 0
+    ? typed
+    : (typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(data) : null);
+  const snapshot = typeof plannerBreedingShowSnapshot === 'function' ? plannerBreedingShowSnapshot(data) : null;
+
+  if (snapshot) {
+    const tournamentBonus = Number(snapshot.tournament_bonus || 0);
+    const cupBonus = Number(snapshot.cup_bonus || 0);
+    const base = total == null ? null : total - tournamentBonus - cupBonus;
+    baseEl.value = base == null ? '–' : String(Math.round(base));
+    if (turnierEl) turnierEl.value = String(Math.round(tournamentBonus));
+    if (cupEl) cupEl.value = String(Math.round(cupBonus));
+    if (dateEl) {
+      const iso=String(snapshot.snapshot_date || snapshot.captured_at || '').slice(0,10);
+      dateEl.value = iso ? iso.split('-').reverse().join('.') : '–';
+    }
+    if (note) note.textContent = 'Gespeicherter ZS-Bonusstand. Spätere Turnier- oder Cup-Erfolge verändern diesen Grundwert nicht.';
+    return;
+  }
+
+  if (total != null) {
+    const tournamentBonus = typeof plannerTournamentShowBonus === 'function' ? plannerTournamentShowBonus(data || {}) : 0;
+    const cupBonus = typeof plannerCupShowBonus === 'function' ? plannerCupShowBonus(data || {}) : 0;
+    baseEl.value = String(Math.round(total - tournamentBonus - cupBonus));
+    if (turnierEl) turnierEl.value = String(Math.round(tournamentBonus));
+    if (cupEl) cupEl.value = String(Math.round(cupBonus));
+    if (dateEl) dateEl.value = 'beim Speichern';
+    if (note) note.textContent = 'Vorschau: Beim Speichern werden der aktuelle Turnier- und Cupbonus automatisch als ZS-Snapshot festgehalten.';
+    return;
+  }
+
+  baseEl.value = '–';
+  if (turnierEl) turnierEl.value = '–';
+  if (cupEl) cupEl.value = '–';
+  if (dateEl) dateEl.value = '–';
+  if (note) note.textContent = 'Noch kein echter ZS-Wert eingetragen.';
 }
 
 // Zeigt das Pferdebild (Bild-URL-Feld) direkt an statt nur den reinen
@@ -428,11 +476,13 @@ function updateImagePreview() {
   }
 }
 document.getElementById('image_url')?.addEventListener('input', updateImagePreview);
+document.getElementById('breeding_show_points')?.addEventListener('input', () => renderBreedingShowEditTab(extraData));
 document.getElementById('coat_color')?.addEventListener('input', () => { updateAppaloosaPatternVisibility(); updateAppaloosaPatternAssistant({applySuggestion:false}); });
 document.getElementById('gender')?.addEventListener('change', updateStudFeeVisibility);
 document.getElementById('tournament_starts_total')?.addEventListener('change', (e) => {
   extraData.tournament_starts_total = e.target.value === '' ? null : Math.max(0, Math.floor(Number(e.target.value) || 0));
   renderCupResultsEditor(extraData);
+  renderBreedingShowEditTab(extraData);
 });
 document.getElementById('in_breeding_station')?.addEventListener('change', (e) => {
   const container = document.getElementById('tag-checkboxes');
@@ -573,6 +623,7 @@ function syncTournamentResultsFromEditor() {
   extraData.tournament_results = results;
   extraData.cup_results = Object.fromEntries(Object.entries(results).filter(([,r])=>r.first>0).map(([name,r])=>[name,r.first]));
   renderCupResultsEditor(extraData);
+  renderBreedingShowEditTab(extraData);
 }
 
 document.addEventListener('change', (e) => {

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Turnier & Leistung – MDR Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5425" />
+  <link rel="stylesheet" href="css/style.css?v=5426" />
 </head>
 <body class="turnierplaner-page">
 <header class="topbar">
@@ -140,7 +140,7 @@
 
   <section id="tp-tab-show" class="tp-main-panel" hidden>
     <div class="notice small">
-      <strong>Zuchtschau:</strong> 1. Platz = 35, 2. Platz = 25, 3. Platz = 15 Zusatzpunkte; Turnierbonus maximal 500. Jeder Cupstern zählt 100 Punkte. Beim ersten Speichern eines neuen ZS-Werts werden Turnier- und Cupstand dieses Moments als historischer Snapshot festgehalten. Spätere Erfolge verändern den ZS-Grundwert nicht. Bereits vorhandene ZS-Daten werden mit dem Bestandsstand vom 08.09.2026 eingefroren.
+      <strong>Zuchtschau:</strong> 1. Platz = 35, 2. Platz = 25, 3. Platz = 15 Zusatzpunkte; Turnierbonus maximal 500. Jeder Cupstern zählt 100 Punkte. Beim ersten Speichern eines neuen ZS-Werts werden Turnier- und Cupstand dieses Moments als historischer Snapshot festgehalten. Spätere Erfolge verändern den ZS-Grundwert nicht.
     </div>
     <section class="card">
       <div id="tp-zs-model-info" class="tp-zs-model-status"></div>
@@ -149,11 +149,12 @@
         <div class="tp-zs-model-explanation small">
           <p><strong>Lerndaten:</strong> nur Pferde mit positiver ZS-Punktzahl und auswertbarem GP, Ext, Ext% und Int. EKH wird nur optional mitgelernt, wenn dafür genügend eindeutig bekannte Daten vorliegen. Leer oder 0 bleibt Prognose und wird nicht gelernt.</p>
           <p><strong>Grundwert:</strong> ZS gesamt minus <em>historischem</em> Turnierbonus zum ZS-Snapshot (35/25/15, max. 500) minus 100 je damaligem Cupstern. Der Snapshot wird danach nicht mehr aus heutigen Erfolgen neu berechnet.</p>
-          <p><strong>Modell:</strong> stabilisierte Regression aus allen geeigneten Datenbank- und Lerndatei-Pferden; sichtbare Filter ändern das Lernen nicht. EKH ab 3 betroffenen und 3 unauffälligen Pferden.</p>
-          <p><strong>Prognose:</strong> wird aus echten Lerndaten berechnet und nie selbst wieder zum Lerndatum.</p>
-          <p><strong>Prüfung:</strong> MAE = mittlere absolute Abweichung; RMSE gewichtet große Fehler stärker; R² näher an 1 ist besser. Zusätzlich wird das Modell in derselben Kreuzvalidierung mit einer einfachen Durchschnitts-Prognose verglichen.</p>
-          <p><strong>Datenmenge:</strong> n&lt;15 experimentell, 15–29 erste Tendenz, 30–49 brauchbar, 50–99 gut, ab 100 stabiler. ZS-Pferde ohne gespeicherte Turnierplatzierung werden nicht gelernt, weil der abzuziehende Bonus sonst nicht belastbar ist.</p>
+          <p><strong>Modellwahl:</strong> Ext und Ext% bleiben immer als getrennte Kernwerte erhalten. Mehrere Modellvarianten werden automatisch in derselben Kreuzvalidierung gegeneinander getestet. Verwendet wird die Variante mit dem niedrigsten RMSE; MAE dient als Gleichstandsentscheidung. Getestet werden lineare, fachlich gerichtete, Ext×Ext%- und vorsichtig nichtlineare Varianten.</p>
+          <p><strong>Prognose:</strong> wird ausschließlich aus echten Lerndaten berechnet und nie selbst wieder zum Lerndatum. Sichtbare Züchter-/Rassefilter verändern das Lernen nicht.</p>
+          <p><strong>Prüfung:</strong> MAE = mittlere absolute Abweichung; RMSE gewichtet große Fehler stärker; R² näher an 1 ist besser. Spearman misst, wie gut die Rangfolge der Pferde getroffen wird (1 = perfekte Reihenfolge). Zusätzlich wird mit einer einfachen Durchschnitts-Prognose verglichen.</p>
+          <p><strong>Datenmenge:</strong> n&lt;15 experimentell, 15–29 erste Tendenz, 30–49 brauchbar, 50–99 gut, ab 100 stabiler. Ein echter historischer ZS-Snapshot mit Bonusstand 0 ist ein gültiger Lerndatensatz; Turnierplatzierungen sind keine Pflicht.</p>
           <p id="tp-zs-model-formula" class="tp-zs-current-formula"></p>
+          <div id="tp-zs-model-comparison"></div>
         </div>
       </details>
       <div class="form-grid tp-zs-filter-grid">
@@ -204,14 +205,14 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5425"></script>
-<script src="js/database-local.js?v=5425"></script>
-<script src="js/local-app.js?v=5425"></script>
-<script src="js/learning-file.js?v=5425"></script>
-<script src="js/parser.js?v=5425"></script>
-<script src="js/data-quality.js?v=5425"></script>
-<script src="js/planer-common.js?v=5425"></script>
-<script src="js/tournament-recommendation.js?v=5425"></script>
-<script src="js/turnierplaner-local.js?v=5425"></script>
+<script src="js/supabase-config.js?v=5426"></script>
+<script src="js/database-local.js?v=5426"></script>
+<script src="js/local-app.js?v=5426"></script>
+<script src="js/learning-file.js?v=5426"></script>
+<script src="js/parser.js?v=5426"></script>
+<script src="js/data-quality.js?v=5426"></script>
+<script src="js/planer-common.js?v=5426"></script>
+<script src="js/tournament-recommendation.js?v=5426"></script>
+<script src="js/turnierplaner-local.js?v=5426"></script>
 </body>
 </html>

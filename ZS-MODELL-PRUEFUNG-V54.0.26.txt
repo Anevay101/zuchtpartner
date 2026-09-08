@@ -1,0 +1,35 @@
+ZS-Modell – technische und fachliche Leitplanken V54.0.26
+
+ZIEL
+Der zu prognostizierende ZS-Grundwert ist ein bei Generierung/Geburt festgelegter, danach unveränderlicher Pferdewert.
+ZS gesamt = Grundwert + Turnierbonus zum ZS-Zeitpunkt + Cupbonus zum ZS-Zeitpunkt.
+
+EINGANGSWERTE
+- GP: höher ist grundsätzlich günstig.
+- Ext: niedriger ist besser.
+- Ext%: höher ist besser; enthält zusätzliche feinere Information zum Exterieur und wird nicht mit Ext zusammengelegt.
+- Int: niedriger ist besser.
+- EKH wird nur bei ausreichender Variation optional gelernt.
+
+MODELLWAHL
+Ext und Ext% sind in jeder Kandidatenvariante separat enthalten. Getestet werden:
+1. lineare Ridge-Regression mit GP + Ext + Ext% + Int
+2. lineare Ridge-Regression mit fachlich gerichteten Kernkoeffizienten
+3. 4 Kernwerte + Ext×Ext%-Interaktion
+4. gerichtete Kernwerte + Ext×Ext%-Interaktion
+5. vorsichtig nichtlinear: 4 Kernwerte + Ext×Ext% + GP² + Ext%²
+
+Für jede Variante wird Lambda aus 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100 per deterministischer Kreuzvalidierung gewählt. Danach wird die Modellvariante mit dem niedrigsten Kreuzvalidierungs-RMSE verwendet; MAE ist Tie-Breaker.
+
+DIAGNOSTIK
+- MAE: mittlere absolute Abweichung
+- RMSE: gewichtet große Fehler stärker
+- R²: erklärte Streuung in der Kreuzvalidierung
+- Spearman: Rangkorrelation zwischen echtem und prognostiziertem Grundwert; wichtig für die praktische Sortierung von Fohlen
+- Durchschnitts-Baseline: Testpferd bekommt nur den Durchschnitt der jeweiligen Trainingsmenge
+
+DATENHYGIENE
+- Nur positive echte ZS-Gesamtwerte werden gelernt.
+- GP, Ext, Ext% und Int müssen vollständig sein.
+- Ein historischer Turnier-/Cup-Snapshot muss vorhanden sein. Ein Bonusstand 0 ist gültig.
+- Prognosen werden nie als Lerndaten zurückgespeist.

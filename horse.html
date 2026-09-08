@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Pferd – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5425" />
+  <link rel="stylesheet" href="css/style.css?v=5426" />
 </head>
 <body>
   <header class="topbar">
@@ -41,6 +41,7 @@
         <button type="button" class="tab-btn active" data-tab="stammdaten">Stammdaten</button>
         <button type="button" class="tab-btn" data-tab="genetik">Genetik</button>
         <button type="button" class="tab-btn" data-tab="turnier">Turnierwerte</button>
+        <button type="button" class="tab-btn" data-tab="zuchtschau">🌿 Zuchtschau</button>
         <button type="button" class="tab-btn" data-tab="zucht">Zucht &amp; Nachzucht</button>
         <button type="button" class="tab-btn" data-tab="stammbaum">Stammbaum</button>
       </div>
@@ -203,17 +204,6 @@
           nacheinander eingefügt werden; die Daten werden zusammengeführt. Zukünftige Turniernennungen werden ignoriert.
         </div>
 
-        <div class="card breeding-show-entry-card">
-          <div class="group-heading">🌿 Zuchtschau</div>
-          <div class="form-grid">
-            <div>
-              <label for="breeding_show_points">ZS-Punkte (manuell)</label>
-              <input id="breeding_show_points" type="number" min="1" step="1" placeholder="Gesamtpunktzahl der Zuchtschau" />
-              <div class="tiny muted">Dieser Wert steht nicht dauerhaft auf der MDR-Pferdeseite und wird deshalb bewusst manuell eingetragen. Wenn der ZS-Wert unbekannt oder nicht mehr abrufbar ist, das Feld leer lassen. Eine ältere 0-Angabe wird wie „kein ZS-Wert vorhanden“ behandelt. Beim ersten Speichern eines neuen ZS-Werts hält die Datenbank den aktuellen Turnier- und Cupstand als historischen ZS-Snapshot fest; spätere Erfolge ändern den daraus berechneten Grundwert nicht mehr.</div>
-            </div>
-          </div>
-        </div>
-
         <div id="detail-turnier"></div>
 
         <details class="card cup-editor-card">
@@ -226,13 +216,30 @@
             </div>
           </div>
           <p class="small muted">
-            Je Disziplin 1., 2. und 3. Plätze. Für die Zuchtschau zählen zum <strong>Zeitpunkt der ZS</strong>: <strong>35 / 25 / 15 Punkte</strong>, zusammen maximal <strong>500 Turnier-Zusatzpunkte</strong>. Ein damaliger Cupstern zählt <strong>100 Punkte</strong>. Der historische Bonusstand wird beim ZS-Eintrag gespeichert.
-          </p>
-          <p class="small muted">
             Cupstern automatisch ab 50 Gesamtstarts und 15 Siegen je Disziplin. Vorhandene Cup-LK wird übernommen; mehrere Cupsterne sind möglich.
           </p>
           <div id="cup-results-editor"></div>
         </details>
+      </div>
+
+      <div class="tab-panel" data-tab-panel="zuchtschau" hidden>
+        <section class="card horse-zs-card">
+          <div class="group-heading">🌿 Zuchtschau</div>
+          <p class="small muted">Der ZS-Grundwert ist ein fester Pferdewert. Beim ersten Speichern einer echten ZS-Gesamtpunktzahl werden Turnier- und Cupbonus dieses Moments automatisch eingefroren; spätere Erfolge verändern den Grundwert nicht.</p>
+          <p class="small muted">Turnierbonus bei ZS: 35 Punkte je 1. Platz, 25 je 2. Platz und 15 je 3. Platz, insgesamt maximal 500. Jeder zu diesem Zeitpunkt vorhandene Cupstern zählt zusätzlich 100 Punkte.</p>
+          <div class="form-grid horse-zs-grid">
+            <div>
+              <label for="breeding_show_points">ZS-Gesamtwert</label>
+              <input id="breeding_show_points" type="number" min="1" step="1" placeholder="Gesamtpunktzahl der Zuchtschau" />
+              <div class="tiny muted">Leer lassen, solange kein echter ZS-Wert vorliegt. 0 gilt als „kein ZS-Wert bekannt“.</div>
+            </div>
+            <div><label for="zs_base_points_preview">ZS-Grundwert</label><input id="zs_base_points_preview" readonly value="–" /></div>
+            <div><label for="zs_tournament_bonus_preview">Turnierbonus bei ZS</label><input id="zs_tournament_bonus_preview" readonly value="–" /></div>
+            <div><label for="zs_cup_bonus_preview">Cupbonus bei ZS</label><input id="zs_cup_bonus_preview" readonly value="–" /></div>
+            <div><label for="zs_snapshot_date_preview">Snapshot-Datum</label><input id="zs_snapshot_date_preview" readonly value="–" /></div>
+          </div>
+          <div id="zs-snapshot-preview-note" class="small muted"></div>
+        </section>
       </div>
 
       <div class="tab-panel" data-tab-panel="zucht" hidden>
@@ -287,19 +294,19 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5425"></script>
-<script src="js/database-local.js?v=5425"></script>
-  <script src="js/local-app.js?v=5425"></script>
-  <script src="js/learning-file.js?v=5425"></script>
-  <script src="js/parser.js?v=5425"></script>
-  <script src="js/data-quality.js?v=5425"></script>
-  <script src="js/planer-common.js?v=5425"></script>
-  <script src="js/zuchtplaner-engine-helpers.js?v=5425"></script>
-  <script src="js/breeding-original.js?v=5425"></script>
-  <script src="js/verpaarungsratgeber-engine.js?v=5425"></script>
-  <script src="js/foal-prediction.js?v=5425"></script>
-  <script src="js/pregnancy-sync.js?v=5425"></script>
-  <script src="js/breeding-progress.js?v=5425"></script>
-  <script src="js/horseForm.js?v=5425"></script>
+<script src="js/supabase-config.js?v=5426"></script>
+<script src="js/database-local.js?v=5426"></script>
+  <script src="js/local-app.js?v=5426"></script>
+  <script src="js/learning-file.js?v=5426"></script>
+  <script src="js/parser.js?v=5426"></script>
+  <script src="js/data-quality.js?v=5426"></script>
+  <script src="js/planer-common.js?v=5426"></script>
+  <script src="js/zuchtplaner-engine-helpers.js?v=5426"></script>
+  <script src="js/breeding-original.js?v=5426"></script>
+  <script src="js/verpaarungsratgeber-engine.js?v=5426"></script>
+  <script src="js/foal-prediction.js?v=5426"></script>
+  <script src="js/pregnancy-sync.js?v=5426"></script>
+  <script src="js/breeding-progress.js?v=5426"></script>
+  <script src="js/horseForm.js?v=5426"></script>
 </body>
 </html>

@@ -5124,3 +5124,27 @@ body.planner-high-contrast .filter-checkbox-label {
   .active-filter-bar { align-items: flex-start; flex-direction: column; }
   .guide-faq-item > summary { font-size: 1rem; }
 }
+
+/* V54.0.26 – eigener Zuchtschau-Reiter & transparente Modellwahl */
+.horse-zs-card { margin-top: .75rem; }
+.horse-zs-grid { align-items: end; }
+.zs-detail-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  gap: .65rem;
+  margin-top: .65rem;
+}
+.zs-detail-metrics > div {
+  border: 1px solid var(--border, #cfd8d3);
+  border-radius: .65rem;
+  padding: .75rem .85rem;
+  background: color-mix(in srgb, var(--card-bg, #fff) 92%, var(--accent, #477b62) 8%);
+}
+.zs-detail-metrics span { display:block; font-size:.78rem; color:var(--muted, #60706a); margin-bottom:.2rem; }
+.zs-detail-metrics strong { font-size:1.08rem; }
+.zs-detail-formula { margin-top:.75rem; }
+.zs-model-comparison-details { margin-top:.75rem; }
+.zs-model-comparison-details > summary { cursor:pointer; }
+.zs-model-comparison-table { min-width: 760px; }
+.zs-model-comparison-table tr.zs-model-selected td { font-weight: 600; }
+.zs-model-comparison-table tr.zs-model-selected td:first-child { border-left: 4px solid var(--accent, #477b62); }

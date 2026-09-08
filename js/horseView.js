@@ -133,13 +133,7 @@ function renderHorseBreedingShowSummary(horse, allHorses) {
     : null;
   if (actual != null) {
     field.value = String(Math.round(actual));
-    if (note) {
-      const snapshotDate = typeof plannerBreedingShowSnapshotDate === 'function' ? plannerBreedingShowSnapshotDate(horse) : null;
-      const base = typeof plannerBreedingShowBase === 'function' ? plannerBreedingShowBase(horse) : null;
-      const dateText = snapshotDate ? ` · Bonusstand vom ${snapshotDate.split('-').reverse().join('.')}` : '';
-      const baseText = base != null && Number.isFinite(Number(base)) ? ` · Grundwert ${Math.round(base)}` : '';
-      note.textContent = `Echter eingetragener ZS-Gesamtwert${dateText}${baseText}.`;
-    }
+    if (note) note.textContent = 'Echter eingetragener ZS-Gesamtwert. Details stehen im Reiter „Zuchtschau“.';
     return;
   }
 
@@ -170,6 +164,35 @@ function renderHorseBreedingShowSummary(horse, allHorses) {
     else if (typeof plannerBreedingShowFeatureObject === 'function' && !plannerBreedingShowFeatureObject(horse)) note.textContent = 'ZS-Prognose nicht berechenbar: GP, Ext, Ext% oder Int fehlen.';
     else note.textContent = 'ZS-Prognose derzeit nicht berechenbar.';
   }
+}
+
+function renderHorseBreedingShowDetails(horse) {
+  const root=document.getElementById('horse-zs-details');
+  if (!root) return;
+  const total=typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : null;
+  if (total == null) {
+    root.innerHTML='<p class="muted">Noch kein echter ZS-Wert eingetragen. Eine mögliche Fohlenprognose wird weiterhin kompakt unter „Stammdaten“ angezeigt.</p>';
+    return;
+  }
+  const snapshot=typeof plannerBreedingShowSnapshot === 'function' ? plannerBreedingShowSnapshot(horse) : null;
+  if (!snapshot) {
+    root.innerHTML=`<div class="notice notice-warning small"><strong>ZS-Gesamtwert:</strong> ${Math.round(total)} · Historischer Bonus-Snapshot fehlt noch.</div>`;
+    return;
+  }
+  const tournamentBonus=Number(snapshot.tournament_bonus || 0);
+  const cupBonus=Number(snapshot.cup_bonus || 0);
+  const base=typeof plannerBreedingShowBase === 'function' ? plannerBreedingShowBase(horse) : total-tournamentBonus-cupBonus;
+  const iso=String(snapshot.snapshot_date || snapshot.captured_at || '').slice(0,10);
+  const dateText=iso ? iso.split('-').reverse().join('.') : '–';
+  root.innerHTML=`
+    <div class="zs-detail-metrics">
+      <div><span>ZS-Gesamtwert</span><strong>${Math.round(total)}</strong></div>
+      <div><span>ZS-Grundwert</span><strong>${Number.isFinite(Number(base))?Math.round(base):'–'}</strong></div>
+      <div><span>Turnierbonus bei ZS</span><strong>${Math.round(tournamentBonus)}</strong></div>
+      <div><span>Cupbonus bei ZS</span><strong>${Math.round(cupBonus)}</strong></div>
+      <div><span>Snapshot-Datum</span><strong>${plannerEscape(dateText)}</strong></div>
+    </div>
+    <p class="small muted zs-detail-formula">Grundwert = ZS-Gesamtwert − damaliger Turnierbonus − damaliger Cupbonus. Der Grundwert bleibt danach unverändert.</p>`;
 }
 
 async function initView() {
@@ -205,6 +228,7 @@ async function initView() {
 
   renderHorseViewHeader(extraData);
   renderHorseBreedingShowSummary(extraData, viewHorseList);
+  renderHorseBreedingShowDetails(extraData);
   renderHorseTournamentProfile(extraData, viewHorseList);
   if (typeof bpRenderBreedingPanel === 'function') await bpRenderBreedingPanel(extraData, 'breeding-progress-panel');
 

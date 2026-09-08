@@ -849,11 +849,21 @@ function plannerBreedingShowFeatureObject(horse) {
   // Number(null) wäre 0 und würde fehlende Grundwerte fälschlich als echte
   // Nullwerte in Lernmodell/Prognose einschleusen. Erst auf Leerwerte prüfen.
   if (Object.values(raw).some(value => value == null || value === '' || !Number.isFinite(Number(value)))) return null;
+  const gp = Number(raw.gp);
+  const ext = Number(raw.ext);
+  const extpct = Number(raw.extpct);
+  const int = Number(raw.int);
   return {
-    gp: Number(raw.gp),
-    ext: Number(raw.ext),
-    extpct: Number(raw.extpct),
-    int: Number(raw.int),
+    gp,
+    ext,
+    extpct,
+    int,
+    // Kandidatenmerkmale für die automatische Modellwahl. Ext und Ext%
+    // bleiben immer als eigene Kernwerte erhalten; diese Terme testen nur,
+    // ob ihr Zusammenspiel bzw. sanfte Nichtlinearität zusätzlich hilft.
+    ext_x_extpct: ext * extpct,
+    gp_sq: gp * gp,
+    extpct_sq: extpct * extpct,
     disease: plannerBreedingShowDiseaseValue(horse),
   };
 }
@@ -914,13 +924,91 @@ function plannerBreedingShowFitRidge(rows, featureKeys, lambda) {
   const rawCoefficients = featureKeys.map((key,j) => beta[j+1] / stds[j]);
   const rawIntercept = beta[0] - rawCoefficients.reduce((sum,c,j) => sum + c * means[j], 0);
   return {
-    lambda, featureKeys, means, stds, beta, rawIntercept, rawCoefficients,
+    lambda, featureKeys, means, stds, beta, rawIntercept, rawCoefficients, fitType:'ridge',
     predictX(x) {
       if (!x) return null;
       if (featureKeys.some(key => !Number.isFinite(Number(x[key])))) return null;
       return beta[0] + featureKeys.reduce((sum,key,j) => sum + beta[j+1] * ((x[key] - means[j]) / stds[j]), 0);
     },
   };
+}
+
+function plannerBreedingShowFitConstrainedRidge(rows, featureKeys, lambda, constraints={}) {
+  if (!rows.length || !featureKeys.length) return null;
+  const means = featureKeys.map(key => rows.reduce((sum,row) => sum + row.x[key], 0) / rows.length);
+  const stds = featureKeys.map((key,j) => {
+    const variance = rows.reduce((sum,row) => sum + (row.x[key] - means[j]) ** 2, 0) / rows.length;
+    return Math.sqrt(variance) || 1;
+  });
+  const X = rows.map(row => featureKeys.map((key,j) => (row.x[key] - means[j]) / stds[j]));
+  const yMean = rows.reduce((sum,row) => sum + row.y, 0) / rows.length;
+  const yc = rows.map(row => row.y - yMean);
+  const beta = Array(featureKeys.length).fill(0);
+  const denom = featureKeys.map((_,j) => X.reduce((sum,row) => sum + row[j] * row[j], 0) + lambda);
+  const fitted = Array(rows.length).fill(0);
+
+  for (let iteration=0; iteration<5000; iteration++) {
+    let maxDelta = 0;
+    for (let j=0; j<featureKeys.length; j++) {
+      const old = beta[j];
+      let numerator = 0;
+      for (let i=0; i<rows.length; i++) {
+        const residualWithoutJ = yc[i] - fitted[i] + X[i][j] * old;
+        numerator += X[i][j] * residualWithoutJ;
+      }
+      let next = denom[j] > 0 ? numerator / denom[j] : 0;
+      const sign = constraints[featureKeys[j]] || 0;
+      if (sign > 0) next = Math.max(0, next);
+      if (sign < 0) next = Math.min(0, next);
+      const delta = next - old;
+      if (delta !== 0) {
+        beta[j] = next;
+        for (let i=0; i<rows.length; i++) fitted[i] += X[i][j] * delta;
+        maxDelta = Math.max(maxDelta, Math.abs(delta));
+      }
+    }
+    if (maxDelta < 1e-8) break;
+  }
+
+  const rawCoefficients = featureKeys.map((key,j) => beta[j] / stds[j]);
+  const rawIntercept = yMean - rawCoefficients.reduce((sum,c,j) => sum + c * means[j], 0);
+  return {
+    lambda, featureKeys, means, stds, beta:[yMean, ...beta], rawIntercept, rawCoefficients,
+    fitType:'constrained-ridge', constraints,
+    predictX(x) {
+      if (!x) return null;
+      if (featureKeys.some(key => !Number.isFinite(Number(x[key])))) return null;
+      return yMean + featureKeys.reduce((sum,key,j) => sum + beta[j] * ((x[key] - means[j]) / stds[j]), 0);
+    },
+  };
+}
+
+function plannerBreedingShowRanks(values) {
+  const indexed = values.map((value,index) => ({value:Number(value),index})).sort((a,b) => a.value-b.value || a.index-b.index);
+  const ranks = Array(values.length).fill(0);
+  let i = 0;
+  while (i < indexed.length) {
+    let j = i + 1;
+    while (j < indexed.length && indexed[j].value === indexed[i].value) j++;
+    const rank = (i + 1 + j) / 2;
+    for (let k=i; k<j; k++) ranks[indexed[k].index] = rank;
+    i = j;
+  }
+  return ranks;
+}
+
+function plannerBreedingShowSpearman(actual, predicted) {
+  if (!actual.length || actual.length !== predicted.length || actual.length < 2) return null;
+  const a = plannerBreedingShowRanks(actual);
+  const b = plannerBreedingShowRanks(predicted);
+  const am = a.reduce((s,v)=>s+v,0)/a.length;
+  const bm = b.reduce((s,v)=>s+v,0)/b.length;
+  let cov=0, av=0, bv=0;
+  for (let i=0; i<a.length; i++) {
+    const da=a[i]-am, db=b[i]-bm;
+    cov += da*db; av += da*da; bv += db*db;
+  }
+  return av>0 && bv>0 ? cov / Math.sqrt(av*bv) : null;
 }
 
 function plannerBreedingShowMetrics(actual, predicted) {
@@ -936,10 +1024,17 @@ function plannerBreedingShowMetrics(actual, predicted) {
   const sst = actual.reduce((sum,v) => sum + (v - mean) ** 2, 0);
   const sse = errors.reduce((sum,e) => sum + e * e, 0);
   const r2 = sst > 0 ? 1 - sse / sst : null;
-  return {mae, rmse, medianAe, r2, n:actual.length};
+  const spearman = plannerBreedingShowSpearman(actual, predicted);
+  return {mae, rmse, medianAe, r2, spearman, n:actual.length};
 }
 
-function plannerBreedingShowCrossValidate(rows, featureKeys, lambda) {
+function plannerBreedingShowFitCandidate(rows, candidate, lambda) {
+  return candidate.fitType === 'constrained-ridge'
+    ? plannerBreedingShowFitConstrainedRidge(rows, candidate.featureKeys, lambda, candidate.constraints || {})
+    : plannerBreedingShowFitRidge(rows, candidate.featureKeys, lambda);
+}
+
+function plannerBreedingShowCrossValidate(rows, candidate, lambda) {
   if (rows.length < 8) return null;
   const folds = Math.min(5, Math.max(2, Math.floor(rows.length / 4)));
   const actual = [], predicted = [], baselinePredicted = [];
@@ -947,7 +1042,7 @@ function plannerBreedingShowCrossValidate(rows, featureKeys, lambda) {
   for (let fold=0; fold<folds; fold++) {
     const train = ordered.filter((_,i) => i % folds !== fold);
     const test = ordered.filter((_,i) => i % folds === fold);
-    const fit = plannerBreedingShowFitRidge(train, featureKeys, lambda);
+    const fit = plannerBreedingShowFitCandidate(train, candidate, lambda);
     if (!fit) return null;
     const trainingMean = train.reduce((sum,row) => sum + row.y, 0) / Math.max(1, train.length);
     for (const row of test) {
@@ -966,6 +1061,19 @@ function plannerBreedingShowCrossValidate(rows, featureKeys, lambda) {
   return {...metrics, baseline, improvementRmsePct, improvementMaePct};
 }
 
+function plannerBreedingShowModelCandidates(includeDisease=false) {
+  const core = ['gp','ext','extpct','int'];
+  const disease = includeDisease ? ['disease'] : [];
+  const constraints = {gp:1, ext:-1, extpct:1, int:-1, disease:-1};
+  return [
+    {id:'linear', label:'Linear · 4 Kernwerte', shortLabel:'Linear', description:'GP + Ext + Ext% + Int', featureKeys:[...core,...disease], fitType:'ridge'},
+    {id:'linear-directed', label:'Linear · fachlich gerichtet', shortLabel:'Gerichtet', description:'4 Kernwerte; bekannte Wirkungsrichtungen begrenzt', featureKeys:[...core,...disease], fitType:'constrained-ridge', constraints},
+    {id:'ext-interaction', label:'Ext-Zusammenspiel', shortLabel:'Ext × Ext%', description:'4 Kernwerte + Wechselwirkung Ext × Ext%', featureKeys:[...core,'ext_x_extpct',...disease], fitType:'ridge'},
+    {id:'ext-interaction-directed', label:'Ext-Zusammenspiel · gerichtet', shortLabel:'Gerichtet + Ext × Ext%', description:'4 Kernwerte + Ext × Ext%; Kernrichtungen begrenzt', featureKeys:[...core,'ext_x_extpct',...disease], fitType:'constrained-ridge', constraints},
+    {id:'soft-nonlinear', label:'Sanft nichtlinear', shortLabel:'Nichtlinear', description:'4 Kernwerte + Ext × Ext% + GP² + Ext%²', featureKeys:[...core,'ext_x_extpct','gp_sq','extpct_sq',...disease], fitType:'ridge'},
+  ];
+}
+
 function plannerBuildBreedingShowModel(allHorses) {
   const training = [];
   const exclusions = {noZs:0, missingFeatures:0, missingSnapshot:0, invalidBase:0};
@@ -978,48 +1086,44 @@ function plannerBuildBreedingShowModel(allHorses) {
     else if (status.reason === 'invalid-base') exclusions.invalidBase++;
   }
 
-  const featureKeys = ['gp','ext','extpct','int'];
   const risky = training.filter(row => row.x.disease === 1).length;
   const clear = training.filter(row => row.x.disease === 0).length;
   const unknownDisease = training.length - risky - clear;
-  // EKH bleibt ein optionaler Koeffizient. Nur wenn der Status in der
-  // gesamten Modellstichprobe bekannt und beide Gruppen ausreichend gross
-  // sind, wird er zugeschaltet; sonst bleiben alle Kern-Lerndaten erhalten.
-  if (risky >= 3 && clear >= 3 && unknownDisease === 0) featureKeys.push('disease');
-  const featureInfo = {keys:featureKeys, risky, clear, unknownDisease};
-  const base = {
-    n: training.length,
-    training,
-    exclusions,
-    featureInfo,
-    predict: () => null,
-    coefficients: null,
-    diagnostics: null,
-  };
+  const includeDisease = risky >= 3 && clear >= 3 && unknownDisease === 0;
+  const featureInfo = {keys:['gp','ext','extpct','int', ...(includeDisease?['disease']:[])], risky, clear, unknownDisease};
+  const base = {n:training.length, training, exclusions, featureInfo, predict:()=>null, coefficients:null, diagnostics:null, candidates:[], selectedCandidate:null};
   if (training.length < 8) return base;
 
-  const lambdas = [0.03,0.1,0.3,1,3,10,30,100];
-  let best = null;
-  for (const lambda of lambdas) {
-    const metrics = plannerBreedingShowCrossValidate(training, featureKeys, lambda);
-    if (!metrics) continue;
-    const candidate = {lambda, metrics};
-    if (!best || metrics.rmse < best.metrics.rmse - 1e-9 || (Math.abs(metrics.rmse - best.metrics.rmse) < 1e-9 && lambda > best.lambda)) best = candidate;
+  const lambdas = [0.01,0.03,0.1,0.3,1,3,10,30,100];
+  const evaluated = [];
+  for (const candidate of plannerBreedingShowModelCandidates(includeDisease)) {
+    let bestForCandidate = null;
+    for (const lambda of lambdas) {
+      const metrics = plannerBreedingShowCrossValidate(training, candidate, lambda);
+      if (!metrics) continue;
+      const row = {candidate, lambda, metrics};
+      if (!bestForCandidate || metrics.rmse < bestForCandidate.metrics.rmse - 1e-9 || (Math.abs(metrics.rmse-bestForCandidate.metrics.rmse)<1e-9 && metrics.mae < bestForCandidate.metrics.mae - 1e-9) || (Math.abs(metrics.rmse-bestForCandidate.metrics.rmse)<1e-9 && Math.abs(metrics.mae-bestForCandidate.metrics.mae)<1e-9 && lambda > bestForCandidate.lambda)) bestForCandidate = row;
+    }
+    if (bestForCandidate) evaluated.push(bestForCandidate);
   }
-  const chosen = best?.lambda ?? 0.3;
-  const fit = plannerBreedingShowFitRidge(training, featureKeys, chosen);
-  if (!fit) return base;
+  evaluated.sort((a,b) => a.metrics.rmse-b.metrics.rmse || a.metrics.mae-b.metrics.mae || a.candidate.featureKeys.length-b.candidate.featureKeys.length || a.candidate.label.localeCompare(b.candidate.label,'de'));
+  const best = evaluated[0];
+  if (!best) return base;
+  const fit = plannerBreedingShowFitCandidate(training, best.candidate, best.lambda);
+  if (!fit) return {...base, candidates:evaluated};
   const trainActual = training.map(row => row.y);
   const trainPred = training.map(row => fit.predictX(row.x));
   const trainMetrics = plannerBreedingShowMetrics(trainActual, trainPred);
 
   return {
     ...base,
-    lambda: chosen,
+    lambda:best.lambda,
     fit,
-    coefficients: fit.rawCoefficients,
-    intercept: fit.rawIntercept,
-    diagnostics: {cv:best?.metrics || null, train:trainMetrics},
+    coefficients:fit.rawCoefficients,
+    intercept:fit.rawIntercept,
+    candidates:evaluated,
+    selectedCandidate:best.candidate,
+    diagnostics:{cv:best.metrics, train:trainMetrics},
     predict(horse) {
       const x = plannerBreedingShowFeatureObject(horse);
       if (!x) return null;
