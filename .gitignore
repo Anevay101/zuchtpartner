@@ -1,0 +1,9 @@
+# MDR-Projektstruktur: aktive Skripte liegen unter /js, Styles unter /css.
+# Dadurch landen versehentlich heruntergeladene Root-Kopien wie
+# "database-local.js" oder "database-local (5).js" nicht wieder im Repo.
+/*.js
+/*.css
+
+# Browser-Downloads ohne sinnvollen Projektnamen ebenfalls fernhalten.
+/download
+/download (*)

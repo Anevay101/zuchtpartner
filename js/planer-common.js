@@ -715,6 +715,16 @@ function plannerIsFoal(horse) {
   return /fohlen|foal|colt|filly/.test(gender);
 }
 
+function plannerBreedingShowDiseaseValue(horse) {
+  // Nicht getestete/unklare EKH-Daten dürfen nicht still als "unauffällig"
+  // in das Modell eingehen. Ein sicher betroffener Status hat Vorrang.
+  if (plannerHasActiveDiseaseRisk(horse)) return 1;
+  if (horse?.disease_free === true) return 0;
+  const states=plannerDiseaseCodes(horse).map(code=>plannerDiseaseState(horse,code));
+  if (states.length && states.every(state=>state !== 'unknown' && state !== 'affected')) return 0;
+  return null;
+}
+
 function plannerBreedingShowFeatureObject(horse) {
   const stats = plannerStats(horse);
   const raw = {gp:stats.gp, ext:stats.ext, extpct:stats.extpct, int:stats.int};
@@ -726,7 +736,7 @@ function plannerBreedingShowFeatureObject(horse) {
     ext: Number(raw.ext),
     extpct: Number(raw.extpct),
     int: Number(raw.int),
-    disease: plannerHasActiveDiseaseRisk(horse) ? 1 : 0,
+    disease: plannerBreedingShowDiseaseValue(horse),
   };
 }
 
@@ -796,33 +806,44 @@ function plannerBreedingShowFitRidge(rows, featureKeys, lambda) {
 function plannerBreedingShowMetrics(actual, predicted) {
   if (!actual.length || actual.length !== predicted.length) return null;
   const errors = actual.map((y,i) => predicted[i] - y);
-  const mae = errors.reduce((sum,e) => sum + Math.abs(e), 0) / errors.length;
+  const absoluteErrors = errors.map(e => Math.abs(e)).sort((a,b) => a-b);
+  const mae = absoluteErrors.reduce((sum,e) => sum + e, 0) / absoluteErrors.length;
   const rmse = Math.sqrt(errors.reduce((sum,e) => sum + e * e, 0) / errors.length);
+  const medianAe = absoluteErrors.length % 2
+    ? absoluteErrors[(absoluteErrors.length-1)/2]
+    : (absoluteErrors[absoluteErrors.length/2-1] + absoluteErrors[absoluteErrors.length/2]) / 2;
   const mean = actual.reduce((sum,v) => sum + v, 0) / actual.length;
   const sst = actual.reduce((sum,v) => sum + (v - mean) ** 2, 0);
   const sse = errors.reduce((sum,e) => sum + e * e, 0);
   const r2 = sst > 0 ? 1 - sse / sst : null;
-  return {mae, rmse, r2, n:actual.length};
+  return {mae, rmse, medianAe, r2, n:actual.length};
 }
 
 function plannerBreedingShowCrossValidate(rows, featureKeys, lambda) {
   if (rows.length < 8) return null;
   const folds = Math.min(5, Math.max(2, Math.floor(rows.length / 4)));
-  const actual = [], predicted = [];
+  const actual = [], predicted = [], baselinePredicted = [];
   const ordered = [...rows].sort((a,b) => String(a.horse.id || a.horse.name || '').localeCompare(String(b.horse.id || b.horse.name || ''), 'de'));
   for (let fold=0; fold<folds; fold++) {
     const train = ordered.filter((_,i) => i % folds !== fold);
     const test = ordered.filter((_,i) => i % folds === fold);
     const fit = plannerBreedingShowFitRidge(train, featureKeys, lambda);
     if (!fit) return null;
+    const trainingMean = train.reduce((sum,row) => sum + row.y, 0) / Math.max(1, train.length);
     for (const row of test) {
       const pred = fit.predictX(row.x);
       if (pred == null || !Number.isFinite(pred)) continue;
       actual.push(row.y);
       predicted.push(pred);
+      baselinePredicted.push(trainingMean);
     }
   }
-  return plannerBreedingShowMetrics(actual, predicted);
+  const metrics = plannerBreedingShowMetrics(actual, predicted);
+  const baseline = plannerBreedingShowMetrics(actual, baselinePredicted);
+  if (!metrics) return null;
+  const improvementRmsePct = baseline?.rmse > 0 ? ((baseline.rmse - metrics.rmse) / baseline.rmse) * 100 : null;
+  const improvementMaePct = baseline?.mae > 0 ? ((baseline.mae - metrics.mae) / baseline.mae) * 100 : null;
+  return {...metrics, baseline, improvementRmsePct, improvementMaePct};
 }
 
 function plannerBuildBreedingShowModel(allHorses) {
@@ -839,9 +860,13 @@ function plannerBuildBreedingShowModel(allHorses) {
 
   const featureKeys = ['gp','ext','extpct','int'];
   const risky = training.filter(row => row.x.disease === 1).length;
-  const clear = training.length - risky;
-  if (risky >= 3 && clear >= 3) featureKeys.push('disease');
-  const featureInfo = {keys:featureKeys, risky, clear};
+  const clear = training.filter(row => row.x.disease === 0).length;
+  const unknownDisease = training.length - risky - clear;
+  // EKH bleibt ein optionaler Koeffizient. Nur wenn der Status in der
+  // gesamten Modellstichprobe bekannt und beide Gruppen ausreichend gross
+  // sind, wird er zugeschaltet; sonst bleiben alle Kern-Lerndaten erhalten.
+  if (risky >= 3 && clear >= 3 && unknownDisease === 0) featureKeys.push('disease');
+  const featureInfo = {keys:featureKeys, risky, clear, unknownDisease};
   const base = {
     n: training.length,
     training,

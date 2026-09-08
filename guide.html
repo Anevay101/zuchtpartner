@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Guide – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5421" />
+  <link rel="stylesheet" href="css/style.css?v=5424" />
 </head>
 <body class="guide-page">
 <header class="topbar">
@@ -21,100 +21,131 @@
 </header>
 
 <main class="container guide-content">
-  <p class="small muted guide-intro">Kurzanleitung: Funktionen, Lebenszyklus und sinnvoller Aktualisierungszeitpunkt.</p>
+  <section class="guide-hero card">
+    <div>
+      <p class="guide-kicker">MDR Pferdedatenbank</p>
+      <h2>Schnell nachschlagen statt Funktionen suchen</h2>
+      <p>Der Guide erklärt nicht nur, wo etwas zu finden ist, sondern auch, welche Daten eine Auswertung braucht und wann ein Pferd sinnvoll aktualisiert werden sollte.</p>
+    </div>
+  </section>
 
   <div class="guide-faq">
-    <details class="card guide-faq-item">
-      <summary>Welche Funktionen gibt es?</summary>
-      <div class="guide-faq-body">
-        <div class="table-wrap">
-          <table class="detail-table guide-function-table">
-            <tbody>
-              <tr><th>Pferdedatenbank</th><td>Einlesen, bearbeiten, filtern, Stammbaum, Genetik, Turnier-, Zucht- und Nachzuchtdaten.</td></tr>
-              <tr><th>Dashboard</th><td>Bestand, Durchschnitte, Rassevergleich, Hauptgruppen und gespeicherte Kacheln.</td></tr>
-              <tr><th>Verpaarungs-Log</th><td>Geplante und vergangene Verpaarungen, Fohlenverknüpfung und Nachzuchtbewertung.</td></tr>
-              <tr><th>Zuchtplaner</th><td>Partnervergleich, Inzucht, Ausgleich, Farbe, Turnierzucht und gemerkte Kombinationen.</td></tr>
-              <tr><th>Turnier &amp; Leistung</th><td>28 Disziplinen, Bestandsrangliste, Cups, Zuchtschau und relative LK-Referenzen.</td></tr>
-              <tr><th>Aussortierhilfe</th><td>Bestand nach Zuchtziel und Qualitätswerten priorisieren.</td></tr>
-              <tr><th>Einstellungen</th><td>Backups, aktive Züchter, Filtervorlagen, Dashboard-Kacheln und Schlagwörter.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+    <details class="card guide-faq-item" open>
+      <summary>Wie ist die Datenbank aufgebaut?</summary>
+      <div class="guide-faq-body"><div class="guide-answer-card">
+        <p><strong>Pferdedatenbank:</strong> zentrale Übersicht für Stammdaten, Genetik, Leistungswerte, Zucht, Stammbaum und Turnierdaten.</p>
+        <p><strong>Dashboard:</strong> Bestandsauswertung mit Besitzer- und Rassefiltern. Wird ein Besitzer gewählt, stehen nur dessen tatsächlich vorhandene Rassen zur Auswahl.</p>
+        <p><strong>Verpaarungs-Log:</strong> dokumentiert aktuelle und vergangene Verpaarungen und verbindet geborene Fohlen mit der ursprünglichen Planung.</p>
+        <p><strong>Zuchtplaner:</strong> Inzuchtprüfung, Partnervergleich, genetischer Ausgleich, Farbe und Turnierzucht.</p>
+        <p><strong>Turnier &amp; Leistung:</strong> Disziplin-Ranglisten, Cups, Zuchtschau-Prognosen und LK-Referenzen.</p>
+      </div></div>
     </details>
 
     <details class="card guide-faq-item">
-      <summary>Wie nutze ich die Datenbank im Lebenszyklus eines Pferdes?</summary>
-      <div class="guide-faq-body">
-        <div class="table-wrap">
-          <table class="detail-table guide-lifecycle-table">
-            <thead><tr><th>Zeitpunkt</th><th>Aktion</th><th>Nutzen</th></tr></thead>
-            <tbody>
-              <tr><th>Neu im Bestand</th><td>MDR-Seite komplett einlesen.</td><td>Stammdaten, Stammbaum, Besitzer, Farbe.</td></tr>
-              <tr><th>Genetik bekannt</th><td>Neu einlesen; „Noch prüfen“ abarbeiten.</td><td>Farbvererbung, EKH, Appaloosa, Flaxen.</td></tr>
-              <tr><th>Leistungspotenziale bekannt</th><td>Neu einlesen.</td><td>Hauptbegabung, Turnierwerte, LK, Zuchtplanung.</td></tr>
-              <tr><th>Turniere gelaufen</th><td>Neu einlesen.</td><td>Platzierungen und Cupsterne aktualisieren.</td></tr>
-              <tr><th>Zuchtschau gelaufen</th><td><strong>Zeitnah aktualisieren.</strong></td><td>ZS-Wert sichern, bevor er im MDR nicht mehr abrufbar ist.</td></tr>
-              <tr><th>Zucht geplant</th><td>Zuchtplaner nutzen, Kombination merken oder eintragen.</td><td>Ausgleich, Inzucht, Farbe, Turnierzucht.</td></tr>
-              <tr><th>Fohlen geboren</th><td>Fohlen eintragen und Eltern verknüpfen.</td><td>Nachzucht, Bestes Fohlen, Lernhistorie.</td></tr>
-              <tr><th>Verkauft / GBH / Friedhof</th><td>Besitzer bzw. Status aktualisieren.</td><td>Bestand bleibt sauber; Lerndaten bleiben erhalten.</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="tiny muted">Keine Aktualisierung nötig, wenn sich seit dem letzten Einlesen keine relevanten MDR-Daten geändert haben.</p>
-      </div>
+      <summary>Wie trage ich ein Pferd möglichst vollständig ein?</summary>
+      <div class="guide-faq-body"><div class="guide-answer-card">
+        <p>Auf der MDR-Pferdeseite möglichst alle relevanten Bereiche öffnen: Gentest, Rasseanteile und sämtliche Disziplinen. Danach die komplette Seite kopieren und über „Pferd hinzufügen“ einlesen.</p>
+        <p>Automatisch erkannte Werte anschließend kurz prüfen. Manuelle Angaben wie Besitzer, Schlagwörter, ZS-Wert oder besondere Verwaltungsdaten können ergänzt werden, ohne die ausgelesenen Rohdaten zu verlieren.</p>
+        <p><strong>Wichtig:</strong> Fehlende Werte bleiben bewusst fehlend. Sie werden in Prognosemodellen nicht als Null interpretiert.</p>
+      </div></div>
     </details>
 
     <details class="card guide-faq-item">
-      <summary>Wie nutze ich das Dashboard?</summary>
-      <div class="guide-faq-body">
-        <p><strong>Bestand prüfen:</strong> Durchschnitt, Rassevergleich und Verteilung der Hauptgruppen. Filter gelten für die sichtbaren Auswertungen.</p>
-        <p><strong>Aktive Züchter:</strong> In den Einstellungen festlegen; die Auswahl ist pro Login getrennt. Rassefilter zeigen nur Rassen aus diesem aktiven Bestand.</p>
-        <p><strong>Kacheln:</strong> Häufige Filter als kompakte Kennzahlen speichern.</p>
-      </div>
+      <summary>Wann sollte ich ein Pferd neu einlesen?</summary>
+      <div class="guide-faq-body"><div class="guide-answer-card">
+        <div class="table-wrap"><table class="detail-table guide-lifecycle-table">
+          <thead><tr><th>Zeitpunkt</th><th>Was aktualisieren?</th><th>Warum?</th></tr></thead>
+          <tbody>
+            <tr><th>Gentest vollständig</th><td>Pferd neu einlesen</td><td>Genetik, EKH, Farbe und Vererbung werden vollständiger.</td></tr>
+            <tr><th>Leistungspotenziale bekannt</th><td>Alle Disziplinen öffnen und neu einlesen</td><td>GP, Ext, Ext%, Int, Hauptbegabung und Turnierprofil werden nutzbar.</td></tr>
+            <tr><th>Turniere gelaufen</th><td>Neu einlesen</td><td>Platzierungen, Starts und Cup-Daten bleiben aktuell.</td></tr>
+            <tr><th>Zuchtschau gelaufen</th><td>ZS-Punkte zeitnah eintragen</td><td>Echte ZS-Werte sind Lernbasis für spätere Fohlenprognosen.</td></tr>
+            <tr><th>Fohlen geboren</th><td>Fohlen anlegen und Eltern verknüpfen</td><td>Nachzuchtvergleich und Verpaarungsbewertung funktionieren sauber.</td></tr>
+            <tr><th>Verkauft / Status geändert</th><td>Besitzer bzw. Schlagwort aktualisieren</td><td>Aktiver Bestand und Filter bleiben korrekt.</td></tr>
+          </tbody>
+        </table></div>
+      </div></div>
     </details>
 
     <details class="card guide-faq-item">
-      <summary>Wie nutze ich das Verpaarungs-Log?</summary>
-      <div class="guide-faq-body">
-        <p>Verpaarung mit Hengst, Stute und Abfohldatum eintragen. Stutenvorschläge stammen nur von aktiven Züchtern; Hengste dürfen fremden Besitzern gehören, wenn ihre Rasse bei einer aktiven Stute vorkommt. Nach Geburt Fohlen neu anlegen oder vorhandenes Pferd verknüpfen.</p>
-        <p>Die Züchterauswahl zeigt nur aktive Züchter und wird <strong>pro Login</strong> gespeichert. Sie ändert keine Daten.</p>
-        <p>Vergangene Verpaarungen bleiben für Nachzucht und Prognosen erhalten.</p>
-      </div>
+      <summary>Wie funktionieren die Filter auf der Datenbankseite?</summary>
+      <div class="guide-faq-body"><div class="guide-answer-card">
+        <p>Die Filter sind in <strong>Suche</strong>, <strong>Zucht</strong>, <strong>Genetik &amp; Gesundheit</strong> und <strong>Leistungswerte</strong> gegliedert. Mehrere Filter wirken gleichzeitig.</p>
+        <p>Besitzer und Rasse sind abhängig: Nach der Besitzerwahl zeigt die Rassenauswahl nur Rassen, die bei diesem Besitzer tatsächlich vorhanden sind. Deutsche und englische Rassenbezeichnungen bleiben dabei bewusst getrennt.</p>
+        <p>Bei <strong>Hauptbegabung</strong> erscheint nach Auswahl einer Gruppe ein zweites Feld mit den zugehörigen Unterdisziplinen. Aktive Filter werden oberhalb der Ergebnisliste als Chips angezeigt und können dort einzeln entfernt werden.</p>
+        <p>Häufig benötigte Kombinationen lassen sich weiterhin als <strong>Filtervorlage</strong> speichern.</p>
+      </div></div>
+    </details>
+
+    <details class="card guide-faq-item">
+      <summary>Was bedeuten Datenqualität und Lerndatei?</summary>
+      <div class="guide-faq-body"><div class="guide-answer-card">
+        <p><strong>Vollständig:</strong> die für die allgemeine Auswertung erwarteten Kerninformationen sind vorhanden. <strong>Teilweise vollständig:</strong> ein Teil fehlt. <strong>Unvollständig:</strong> relevante Datenlücken bestehen.</p>
+        <p>Die <strong>Lerndatei</strong> ist für historische oder zusätzliche Vergleichsdaten gedacht. Solche Pferde können Prognosemodelle unterstützen, werden aber aus operativen Bestandslisten standardmäßig ausgeblendet.</p>
+        <p>Datenqualität ist keine Bewertung des Pferdes, sondern nur eine Aussage darüber, wie belastbar die gespeicherten Auswertungen sind.</p>
+      </div></div>
+    </details>
+
+    <details class="card guide-faq-item">
+      <summary>Wie nutze ich das Dashboard sinnvoll?</summary>
+      <div class="guide-faq-body"><div class="guide-answer-card">
+        <p>Das Dashboard eignet sich für Bestandsfragen: Welche Rassen besitzt ein Züchter? Wie liegen Durchschnittswerte? Wie verteilen sich Hauptbegabungen oder Zuchtwerte?</p>
+        <p>Besitzer zuerst einschränken und anschließend eine Rasse wählen. Die Rassenauswahl wird automatisch auf den ausgewählten Bestand reduziert. So entstehen keine scheinbaren Rassenoptionen, die beim gewählten Besitzer gar nicht vorkommen.</p>
+        <p>Häufige Auswertungen können als Dashboard-Kacheln bzw. gespeicherte Einstellungen wiederverwendet werden.</p>
+      </div></div>
+    </details>
+
+    <details class="card guide-faq-item">
+      <summary>Wie funktioniert das Verpaarungs-Log?</summary>
+      <div class="guide-faq-body"><div class="guide-answer-card">
+        <p>Eine Verpaarung wird mit Stute, Hengst und optionalem Abfohldatum gespeichert. Bei „Fohlen behalten?“ stehen <strong>✓</strong>, <strong>?</strong> und <strong>✗</strong> zur Verfügung. Mit <strong>?</strong> bleibt die Entscheidung offen; das Fohlen kann trotzdem eingetragen und ausgewertet werden.</p>
+        <p>Nach der Geburt kann ein vorhandenes Fohlen verknüpft oder direkt neu angelegt werden. Bei vergangenen Verpaarungen zeigt <strong>DB-Bereich getroffen?</strong> nur ✓ oder ✗; die Detailprognose bleibt separat aufklappbar.</p>
+        <p>Auch hier hängt die Rassenauswahl von den ausgewählten Züchtern ab.</p>
+      </div></div>
     </details>
 
     <details class="card guide-faq-item">
       <summary>Wie nutze ich den Zuchtplaner?</summary>
-      <div class="guide-faq-body">
-        <p>Stute oder Hengst wählen, Zuchtrichtung festlegen und Partner filtern. Stuten stammen nur von aktiven Züchtern; Hengste dürfen von allen Besitzern kommen, solange ihre Rasse bei einer aktiven Stute vorkommt. Der Planer bewertet Ausgleich, Inzucht und Zusatzmerkmale.</p>
-        <p>Farb- und Turnierwünsche nur aktivieren, wenn sie wichtig sind. Turnierzucht zeigt zusätzlich beobachtete Interieur-Vererbung aus echten Eltern–Fohlen-Trios. Gute Kombinationen können gemerkt werden.</p>
-      </div>
+      <div class="guide-faq-body"><div class="guide-answer-card">
+        <p>Stute oder Hengst als Ausgangspunkt wählen. Besitzer- und Rassefilter helfen, den Gegenpartner einzugrenzen; auch hier werden Rassen nach Besitzerwahl dynamisch reduziert.</p>
+        <p>Standardmäßig arbeitet der Verpaarungsratgeber mit <strong>Ext%</strong> als erstem Schwerpunkt und <strong>GP</strong> als zweitem Kriterium im kombinierten Ausgleich. Die Gewichtung startet bei <strong>80% Ext% / 20% GP</strong>, kann aber jederzeit verändert werden.</p>
+        <p>Zusatzwünsche wie Appaloosa-Muster, Farbe oder Turnierzucht nur aktivieren, wenn sie für die konkrete Verpaarung relevant sind. Die Inzuchtprüfung bleibt davon unabhängig.</p>
+      </div></div>
     </details>
 
     <details class="card guide-faq-item">
-      <summary>Wie nutze ich den Turnierplaner?</summary>
-      <div class="guide-faq-body">
-        <p><strong>Einzelpferd:</strong> alle 28 Disziplinen, Punkte, Int und LK vergleichen.</p>
-        <p><strong>Bestandsrangliste:</strong> pro Disziplin werden nur die oberen 50&nbsp;% angezeigt; Gleichstände am Schnitt bleiben sichtbar.</p>
-        <p><strong>Relative Stärke:</strong> P72 bedeutet, dass der Wert über etwa 72&nbsp;% der Hauptbegabungs-Referenz derselben LK liegt. Vorerst nur Vergleich, keine neue Empfehlung.</p>
-        <p><strong>Cups:</strong> Cupsterne werden automatisch aus Starts und Siegen erkannt. <strong>Zuchtschau:</strong> nur echte positive ZS-Werte lernen; 0 oder leer bleibt Prognose.</p>
-      </div>
+      <summary>Wie lese ich den Turnierplaner und die Cup-Liste?</summary>
+      <div class="guide-faq-body"><div class="guide-answer-card">
+        <p>Der Einzelpferd-Rechner bewertet alle vorhandenen Disziplinen aus Potenzial und relevantem Interieur. Die Bestandsrangliste vergleicht Pferde innerhalb einer ausgewählten Disziplin.</p>
+        <p>In <strong>Cups &amp; Erfolge</strong> werden Einträge ab <strong>7 Siegen</strong> in einer Disziplin angezeigt. Die Liste zeigt Siege, Starts, Cup-Stern, Cup-LK und Turnierwert; zweite und dritte Plätze sind dort bewusst ausgeblendet.</p>
+        <p>Ein Cup-Stern wird weiterhin automatisch erkannt, wenn die hinterlegte Regel erfüllt ist: mindestens 50 Gesamtstarts und 15 Siege in der jeweiligen Disziplin.</p>
+      </div></div>
+    </details>
+
+    <details class="card guide-faq-item">
+      <summary>Wie funktioniert die ZS-Prognose für Fohlen?</summary>
+      <div class="guide-faq-body"><div class="guide-answer-card">
+        <p>Das Lernmodell nutzt ausschließlich <strong>echte positive ZS-Punkte</strong>. Aus dem Gesamtwert werden gespeicherte Turnier- und Cup-Boni herausgerechnet, damit ein geschätzter ZS-Grundwert gelernt werden kann.</p>
+        <p>Für eine Fohlenprognose müssen GP, Ext, Ext% und Int vorhanden sein. Das Fohlen selbst braucht keine Turnierplatzierung und keinen echten ZS-Wert. Prognosen werden niemals wieder als echte Lerndaten verwendet.</p>
+        <p>Unter „Zuchtschau“ zeigt die Modellprüfung MAE, RMSE und R² sowie einen Vergleich mit einer einfachen Durchschnitts-Prognose. So ist sichtbar, ob das Modell mit dem aktuellen Datenbestand tatsächlich mehr leistet als nur den Mittelwert zu schätzen.</p>
+      </div></div>
     </details>
 
     <details class="card guide-faq-item">
       <summary>Wie nutze ich die Aussortierhilfe?</summary>
-      <div class="guide-faq-body">
-        <p>Schwerpunkt und optional eigene Zielwerte setzen. Die Hilfe priorisiert den aktiven Bestand; sie ersetzt keine Einzelfallentscheidung.</p>
-        <p>Vor Verkauf Stammbaum, Nachzucht, Turnierrolle und Zuchtziel prüfen.</p>
-      </div>
+      <div class="guide-faq-body"><div class="guide-answer-card">
+        <p>Die Aussortierhilfe ist eine Priorisierungshilfe, keine automatische Verkaufsentscheidung. Zuerst Besitzer/Rasse und anschließend den Schwerpunkt festlegen. Bei ausgewählten Besitzern werden nur deren vorhandene Rassen angeboten.</p>
+        <p>Ohne eigene Zielwerte vergleicht die Hilfe ein Pferd relativ mit dem aktuell gefilterten Bestand. Eigene Zielwerte können den Vergleich für den gewählten Schwerpunkt präzisieren.</p>
+        <p>Vor einer Entscheidung zusätzlich Stammbaum, Nachzucht, seltene Genetik, Turnierrolle und Zuchtziel prüfen.</p>
+      </div></div>
     </details>
   </div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5421"></script>
-<script src="js/database-local.js?v=5421"></script>
-<script src="js/local-app.js?v=5421"></script>
-<script src="js/guide.js?v=5421"></script>
+<script src="js/supabase-config.js?v=5424"></script>
+<script src="js/database-local.js?v=5424"></script>
+<script src="js/local-app.js?v=5424"></script>
+<script src="js/guide.js?v=5424"></script>
 </body>
 </html>

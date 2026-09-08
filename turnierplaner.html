@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Turnier & Leistung – MDR Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5421" />
+  <link rel="stylesheet" href="css/style.css?v=5424" />
 </head>
 <body class="turnierplaner-page">
 <header class="topbar">
@@ -112,7 +112,7 @@
   </section>
 
   <section id="tp-tab-cups" class="tp-main-panel" hidden>
-    <div class="notice small"><strong>Cupstern:</strong> automatisch ab 50 Gesamtstarts und 15 Siegen in der Disziplin. Vorhandene Cup-LK wird übernommen.</div>
+    <div class="notice small"><strong>Cup-Stern:</strong> automatisch ab 50 Gesamtstarts und 15 Siegen in der Disziplin. Vorhandene Cup-LK wird übernommen.</div>
     <details class="card tp-cup-calendar-card tp-collapsible-card">
       <summary>📅 Cup-Kalender</summary>
       <div class="tp-details-body">
@@ -127,12 +127,12 @@
         <div class="form-grid tp-cup-filters">
           <div><label for="tp-cup-search">Pferd / Besitzer</label><input id="tp-cup-search" type="text" placeholder="Name oder Besitzer" /></div>
           <div><label for="tp-cup-discipline">Disziplin</label><select id="tp-cup-discipline"><option value="">Alle Disziplinen</option></select></div>
-          <div><label for="tp-cup-status">Cupstatus</label><select id="tp-cup-status"><option value="">Alle</option><option value="star">⭐ Cupstern</option><option value="no-star">Ohne Cupstern</option><option value="near">10–14 Siege</option></select></div>
+          <div><label for="tp-cup-status">Cup-Stern</label><select id="tp-cup-status"><option value="">Alle</option><option value="star">⭐ Cup-Stern</option><option value="no-star">Ohne Cup-Stern</option><option value="near">7–14 Siege</option></select></div>
           <div><label for="tp-cup-group">Gruppe</label><select id="tp-cup-group"><option value="">Alle Gruppen</option></select></div>
         </div>
         <div class="actions"><button class="secondary" id="tp-cup-reset" type="button">Filter zurücksetzen</button></div>
         <div class="table-wrap tp-cup-table-wrap">
-          <table class="detail-table tp-cup-table"><thead><tr><th>Pferd</th><th>Begabung</th><th>Disziplin</th><th>1.</th><th>2.</th><th>3.</th><th>Starts</th><th>Cupstatus</th><th>Cup-LK</th><th>Turnierwert</th></tr></thead><tbody id="tp-cup-body"><tr><td colspan="10" class="muted">Lade…</td></tr></tbody></table>
+          <table class="detail-table tp-cup-table"><thead><tr><th>Pferd</th><th>Disziplin</th><th>Siege</th><th>Starts</th><th>Cup-Stern</th><th>Cup-LK</th><th>Turnierwert</th></tr></thead><tbody id="tp-cup-body"><tr><td colspan="7" class="muted">Lade…</td></tr></tbody></table>
         </div>
       </div>
     </details>
@@ -147,12 +147,12 @@
       <details class="tp-zs-model-details">
         <summary>ℹ️ Wie funktioniert das Lernmodell?</summary>
         <div class="tp-zs-model-explanation small">
-          <p><strong>Lerndaten:</strong> nur Pferde mit positiver ZS-Punktzahl und auswertbarem GP, Ext, Ext%, Int sowie EKH-Status. Leer oder 0 bleibt Prognose und wird nicht gelernt.</p>
+          <p><strong>Lerndaten:</strong> nur Pferde mit positiver ZS-Punktzahl und auswertbarem GP, Ext, Ext% und Int. EKH wird nur optional mitgelernt, wenn dafür genügend eindeutig bekannte Daten vorliegen. Leer oder 0 bleibt Prognose und wird nicht gelernt.</p>
           <p><strong>Grundwert:</strong> ZS gesamt minus Turnierbonus (35/25/15, max. 500) minus 100 je Cupstern.</p>
           <p><strong>Modell:</strong> stabilisierte Regression aus allen geeigneten Datenbank- und Lerndatei-Pferden; sichtbare Filter ändern das Lernen nicht. EKH ab 3 betroffenen und 3 unauffälligen Pferden.</p>
           <p><strong>Prognose:</strong> wird aus echten Lerndaten berechnet und nie selbst wieder zum Lerndatum.</p>
-          <p><strong>Prüfung:</strong> MAE = mittlere absolute Abweichung; RMSE gewichtet große Fehler stärker; R² näher an 1 ist besser.</p>
-          <p><strong>Datenmenge:</strong> n&lt;15 experimentell, 15–29 erste Tendenz, 30–49 brauchbar, 50–99 gut, ab 100 stabiler. ZS-Pferde ohne vollständige Turnierplatzierungen werden nicht gelernt.</p>
+          <p><strong>Prüfung:</strong> MAE = mittlere absolute Abweichung; RMSE gewichtet große Fehler stärker; R² näher an 1 ist besser. Zusätzlich wird das Modell in derselben Kreuzvalidierung mit einer einfachen Durchschnitts-Prognose verglichen.</p>
+          <p><strong>Datenmenge:</strong> n&lt;15 experimentell, 15–29 erste Tendenz, 30–49 brauchbar, 50–99 gut, ab 100 stabiler. ZS-Pferde ohne gespeicherte Turnierplatzierung werden nicht gelernt, weil der abzuziehende Bonus sonst nicht belastbar ist.</p>
           <p id="tp-zs-model-formula" class="tp-zs-current-formula"></p>
         </div>
       </details>
@@ -204,14 +204,14 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5421"></script>
-<script src="js/database-local.js?v=5421"></script>
-<script src="js/local-app.js?v=5421"></script>
-<script src="js/learning-file.js?v=5421"></script>
-<script src="js/parser.js?v=5421"></script>
-<script src="js/data-quality.js?v=5421"></script>
-<script src="js/planer-common.js?v=5423"></script>
-<script src="js/tournament-recommendation.js?v=5421"></script>
-<script src="js/turnierplaner-local.js?v=5422"></script>
+<script src="js/supabase-config.js?v=5424"></script>
+<script src="js/database-local.js?v=5424"></script>
+<script src="js/local-app.js?v=5424"></script>
+<script src="js/learning-file.js?v=5424"></script>
+<script src="js/parser.js?v=5424"></script>
+<script src="js/data-quality.js?v=5424"></script>
+<script src="js/planer-common.js?v=5424"></script>
+<script src="js/tournament-recommendation.js?v=5424"></script>
+<script src="js/turnierplaner-local.js?v=5424"></script>
 </body>
 </html>

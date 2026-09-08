@@ -113,20 +113,21 @@ async function populateHorseNames() {
 // normalisierte Altdaten vorkommen.
 async function populateBreedFilter() {
   const data = await localGetAll(LOCAL_STORES.horses);
-  const breeds = typeof activeBreedingBreeds === 'function'
-    ? activeBreedingBreeds(data)
-    : [...new Set((data || []).filter(h => isActiveBreeder(h.owner) && /stute|mare|female/i.test(String(h.gender || ''))).map((h) => normalizeBreed(h.breed) || 'Rasselos'))].sort((a,b)=>a.localeCompare(b,'de'));
+  const selectedOwners = selectedPairingBreeders();
+  const ownerSet = new Set(selectedOwners.map(owner => String(owner).trim().toLocaleLowerCase('de')));
+  const rows = (data || []).filter(h =>
+    !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)) &&
+    (!ownerSet.size || ownerSet.has(String(h.owner || '').trim().toLocaleLowerCase('de')))
+  );
+  // DE/EN-Rassen bleiben bewusst getrennt; normalizeBreed löst nur bekannte
+  // Kürzel wie APH/QH auf und übersetzt keine Rassenbezeichnungen.
+  const breeds = [...new Set(rows.map(h => normalizeBreed(h.breed) || 'Rasselos'))]
+    .sort((a,b)=>a.localeCompare(b,'de'));
 
   const sel = document.querySelector('#f-breed');
   const previous = sel.value;
-  sel.innerHTML = '<option value="">Alle</option>';
-  breeds.forEach((b) => {
-    const opt = document.createElement('option');
-    opt.value = b;
-    opt.textContent = b;
-    sel.appendChild(opt);
-  });
-  sel.value = [...sel.options].some(o => o.value === previous) ? previous : '';
+  sel.innerHTML = '<option value="">Alle</option>' + breeds.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+  sel.value = breeds.includes(previous) ? previous : '';
 }
 
 // Sichtbare Züchter: nur aktive Züchter, Auswahl pro Login gespeichert.
@@ -226,6 +227,7 @@ async function onPairingBreederFilterChange() {
   localStorage.setItem(storageKey,JSON.stringify(owners));
   const status=document.getElementById('f-owner-status');
   if (status) status.textContent=`${owners.length} Züchter ausgewählt · gespeichert`;
+  await populateBreedFilter();
   await loadPairings();
 }
 
@@ -666,7 +668,7 @@ function bindPairingActions(pairings) {
   document.querySelectorAll('[data-keepfoal]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const pairing = byId.get(String(btn.dataset.keepfoal));
-      if (pairing) onSetKeepFoal(pairing, btn.dataset.value === 'true');
+      if (pairing) onSetKeepFoal(pairing, btn.dataset.value === 'open' ? null : btn.dataset.value === 'true');
     });
   });
   document.querySelectorAll('[data-editdate]').forEach((btn) => {
@@ -718,7 +720,7 @@ async function onAddPairing(e) {
     stallion,
     mare,
     pairing_date: pairingDate,
-    keep_foal: keepFoalVal === '' ? null : keepFoalVal === 'true',
+    keep_foal: keepFoalVal === 'true' ? true : keepFoalVal === 'false' ? false : null,
     notes: document.querySelector('#p-notes').value.trim() || null,
   };
 
@@ -756,7 +758,7 @@ async function onAddPairing(e) {
   await populateOwnerFilter();
   await loadPairings();
 
-  if (!existingFoal && payload.keep_foal !== null) {
+  if (!existingFoal && (payload.keep_foal !== null || (keepFoalVal === 'open' && canDecideKeepFoal(inserted)))) {
     openFoalModal(inserted);
   }
 }
@@ -784,7 +786,7 @@ async function loadPairings() {
   const currentTbody = document.querySelector('#pairing-table tbody');
   const pastTbody = document.querySelector('#past-pairing-table tbody');
   currentTbody.innerHTML = '<tr><td colspan="8">Lade…</td></tr>';
-  pastTbody.innerHTML = '<tr><td colspan="13">Lade…</td></tr>';
+  pastTbody.innerHTML = '<tr><td colspan="12">Lade…</td></tr>';
 
   const selectedOwners = selectedPairingBreeders();
   let data;
@@ -794,7 +796,7 @@ async function loadPairings() {
   } catch (error) {
     const msg = `<tr><td colspan="8" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     currentTbody.innerHTML = msg;
-    pastTbody.innerHTML = `<tr><td colspan="13" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    pastTbody.innerHTML = `<tr><td colspan="12" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     return;
   }
 
@@ -842,7 +844,7 @@ async function loadPairings() {
   }
   pastTbody.innerHTML = pastPairings.length
     ? pastPairings.map(pastRowHtml).join('')
-    : '<tr><td colspan="13">Noch keine vergangenen Verpaarungen gefunden.</td></tr>';
+    : '<tr><td colspan="12">Noch keine vergangenen Verpaarungen gefunden.</td></tr>';
 
   const archiveControl = document.getElementById('past-pairings-archive-control');
   const archiveButton = document.getElementById('past-pairings-archive-toggle');
@@ -928,11 +930,10 @@ function canDecideKeepFoal(pairing) {
 function keepFoalButtonsHtml(pairing) {
   const enabled = canDecideKeepFoal(pairing);
   const disabled = enabled ? '' : ' disabled';
-  const titleSuffix = enabled
-    ? ''
-    : ' – erst ab dem Abfohldatum auswählbar';
+  const titleSuffix = enabled ? '' : ' – erst ab dem Abfohldatum auswählbar';
   return `
     <button type="button" class="keep-foal-btn keep-foal-yes${pairing.keep_foal === true ? ' active' : ''}" data-keepfoal="${pairing.id}" data-value="true" title="Fohlen behalten: Ja${titleSuffix}"${disabled}>✓</button>
+    <button type="button" class="keep-foal-btn keep-foal-open${pairing.keep_foal == null ? ' active' : ''}" data-keepfoal="${pairing.id}" data-value="open" title="Noch offen – Fohlen trotzdem eintragen und Zuchtempfehlung ansehen${titleSuffix}"${disabled}>?</button>
     <button type="button" class="keep-foal-btn keep-foal-no${pairing.keep_foal === false ? ' active' : ''}" data-keepfoal="${pairing.id}" data-value="false" title="Fohlen behalten: Nein${titleSuffix}"${disabled}>✗</button>
     ${enabled ? '' : '<span class="tiny muted keep-foal-wait">ab Abfohldatum</span>'}
   `;
@@ -982,16 +983,12 @@ function pastTheoreticalRangeHtml(pairing) {
 function pastDatabaseRangeAccuracyHtml(pairing) {
   const rows = completedPredictionRows(pairing).filter((row) => row.withinDatabaseRange != null);
   if (!rows.length) return '<span class="muted">–</span>';
-
   const inside = rows.filter((row) => row.withinDatabaseRange === true).length;
   const total = rows.length;
-  if (inside === total) {
-    return `<span class="prediction-ok" title="Alle ${total} vorhandenen Werte liegen im gespeicherten typischen 80%-Bereich der Datenbank-Schätzung.">✓ ${inside}/${total} getroffen</span>`;
-  }
-  if (inside > 0) {
-    return `<span class="prediction-partial" title="${inside} von ${total} Werten liegen im typischen 80%-Bereich der Datenbank-Schätzung.">◑ ${inside}/${total} teilweise</span>`;
-  }
-  return `<span class="prediction-out" title="Keiner der vorhandenen Werte liegt im typischen 80%-Bereich der Datenbank-Schätzung.">⚠ 0/${total}</span>`;
+  const allInside = inside === total;
+  return allInside
+    ? `<span class="prediction-ok pairing-db-hit" title="${inside}/${total} vorhandene Werte im typischen DB-Bereich">✓</span>`
+    : `<span class="prediction-out pairing-db-hit" title="${inside}/${total} vorhandene Werte im typischen DB-Bereich">✗</span>`;
 }
 
 function pastFoalHtml(pairing) {
@@ -1086,14 +1083,14 @@ function currentPairingRecommendationHtml(pairing) {
   return '<span class="foal-traffic-pill traffic-future-pill" title="Die Zuchtempfehlung kann erst ab dem Abfohldatum mit dem tatsächlichen Fohlen berechnet werden.">Bewertung ab Geburt</span>';
 }
 
-// "Fohlen behalten" wird per zwei Buttons (✓/✗) direkt in der Tabelle
-// gesetzt. Ab V44 sind diese Buttons erst ab dem Abfohldatum aktiv.
+// "Fohlen behalten" wird per drei Buttons (✓/?/✗) direkt in der Tabelle
+// gesetzt. Die Entscheidung ist erst ab dem Abfohldatum aktiv.
 function rowHtml(p) {
   const keepFoalCell = keepFoalButtonsHtml(p);
   const breedCell = [breedOf(p.stallion), breedOf(p.mare)].filter(Boolean).join(' / ') || '-';
   const actualRecord = actualRecordForPairing(p);
-  const foalBtn = p.keep_foal !== null
-    ? `<button type="button" class="secondary small" data-foal="${p.id}">${actualRecord ? 'Fohlen-Verknüpfung öffnen' : 'Fohlen verknüpfen / eintragen'}</button>`
+  const foalBtn = canDecideKeepFoal(p)
+    ? `<button type="button" class="secondary small" data-foal="${p.id}">${actualRecord ? 'Verknüpfung öffnen' : 'Fohlen eintragen'}</button>`
     : '';
   const actualBadge = actualRecord
     ? `<span class="pairing-foal-recorded" title="Fohlendaten sind mit dieser Verpaarung verknüpft">🐴 Fohlen erfasst</span>`
@@ -1132,7 +1129,6 @@ function pastRowHtml(p) {
     <td>${pastFoalHtml(p)} ${actualBadge}</td>
     <td>${compactPastPredictionHtml(p)}</td>
     <td>${compactPastDeviationHtml(p)}</td>
-    <td>${pastTheoreticalRangeHtml(p)}</td>
     <td>${pastDatabaseRangeAccuracyHtml(p)}</td>
     <td class="foal-recommendation-cell">${foalBreedingRecommendationHtml(p)}</td>
     <td class="keep-foal-cell">${keepFoalButtonsHtml(p)}</td>
@@ -1140,7 +1136,7 @@ function pastRowHtml(p) {
     <td class="actions-cell">${foalBtn}<button type="button" class="secondary small" data-editdate="${p.id}">Bearbeiten</button><button class="danger small" data-delete="${p.id}">Löschen</button></td>
   </tr>
   <tr class="pairing-prediction-row">
-    <td colspan="13">${pairingPredictionDetailsHtml(p)}</td>
+    <td colspan="12">${pairingPredictionDetailsHtml(p)}</td>
   </tr>`;
 }
 
@@ -1184,7 +1180,7 @@ async function onSetKeepFoal(pairing, value) {
     alert('„Fohlen behalten?“ kann erst am Abfohldatum oder danach festgelegt werden.');
     return;
   }
-  const wasUnset = pairing.keep_foal === null;
+  const wasUnset = pairing.keep_foal == null;
   let updated;
   try {
     updated = await localUpdate(LOCAL_STORES.pairings, pairing.id, {
@@ -1196,7 +1192,9 @@ async function onSetKeepFoal(pairing, value) {
     return;
   }
   await loadPairings();
-  if (wasUnset && !actualRecordForPairing(updated)) openFoalModal(updated);
+  // Das Fragezeichen ist eine echte Arbeitsoption: Entscheidung bleibt offen,
+  // das Fohlen kann aber sofort verknüpft/eingetragen und bewertet werden.
+  if ((value == null || wasUnset) && !actualRecordForPairing(updated)) openFoalModal(updated);
 }
 
 async function onDeletePairing(id) {

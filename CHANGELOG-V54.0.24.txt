@@ -1,0 +1,57 @@
+V54.0.24 – Handling, Filter, Cups, Verpaarungslog, Zuchtplaner und Guide
+
+DATENBANK / FILTER
+- Filter in vier Bereiche gegliedert: Suche, Zucht, Genetik & Gesundheit, Leistungswerte.
+- Spielversion in die letzte Suchzeile verschoben.
+- Datenqualitaet: redundante Auswahl "nicht vollstaendig" aus der sichtbaren Auswahl entfernt.
+- Hauptbegabung plus dynamische Unterkategorie aus den vorhandenen Turnierdisziplinen ergaenzt.
+- Cup-Stern in den Leistungsbereich verschoben.
+- Aktive Filter werden als einzeln loeschbare Chips ueber der Ergebnisliste angezeigt.
+- Sichtbarer Button "Alle Filter loeschen"; Filtervorlagen bleiben erhalten.
+- Besitzer -> Rasse ist jetzt abhaengig. DE/EN-Rassen bleiben absichtlich getrennt.
+
+ABHAENGIGE RASSENFILTER
+- Datenbank und Vergleichsbasis
+- Dashboard / Durchschnitt
+- Verpaarungslog
+- Zuchtplaner (Eltern- und Partnerfilter)
+- Turnierplaner (Bestandsrangliste und Zuchtschau)
+- Aussortierhilfe
+
+VERPAARUNGSLOG
+- Theoretische-Spanne-Spalte aus vergangenen Verpaarungen entfernt.
+- DB-Bereich getroffen zeigt nur noch Haken oder Kreuz.
+- Fohlen behalten hat drei Zustaende: Ja / offen (?) / Nein.
+- Bei offenem ? kann das Fohlen trotzdem eingetragen/verknuepft und bewertet werden.
+
+CUPS & ERFOLGE
+- Liste zeigt Pferde ab 7 Siegen in einer Disziplin.
+- Zweite und dritte Plaetze sowie Begabung aus der Uebersicht entfernt.
+- Cup-Stern-Spalte zeigt nur Stern bzw. Strich.
+- Kernregel fuer automatische Cup-Sterne bleibt: 50 Gesamtstarts + 15 Siege in der Disziplin.
+
+ZS-PROGNOSE / MODELLPRUEFUNG
+- Bestehende Ridge-Regression und Kreuzvalidierung technisch geprueft.
+- Kreuzvalidierung vergleicht das Modell jetzt zusaetzlich mit einer einfachen Durchschnitts-Baseline.
+- UI zeigt MAE/RMSE der Baseline und ob das Modell beim RMSE besser oder schlechter abschneidet.
+- Plausibilitaetscheck fuer Koeffizientenrichtungen ergaenzt.
+- Unbekannter EKH-Status wird nicht mehr still als unauffaellig fuer den optionalen Krankheitskoeffizienten behandelt.
+- Fehlende GP/Ext/Ext%/Int-Werte bleiben fehlend und werden nicht als 0 gelernt.
+- Fohlenprognosen bleiben von Turnierplatzierungen unabhaengig; echte ZS-Lerndaten benoetigen Turnierdaten fuer die Bonusrueckrechnung.
+
+ZUCHTPLANER
+- Veralteten Hinweis zur ausschliesslich lokalen Datenbank entfernt.
+- Standard-Schwerpunkt: Ext%.
+- Standard-Sortierung: Kombinierter Ausgleich (2 Kriterien).
+- Zweites Kriterium: GP.
+- Standard-Gewichtung: 80% Ext% / 20% GP.
+
+GUIDE
+- Guide deutlich erweitert und als groessere, helle FAQ-Cards im gruennen Corporate Design gestaltet.
+- Neue/erweiterte Erklaerungen zu Datenpflege, Filtern, Dashboard, Verpaarungslog, Zuchtplaner, Cups, ZS und Aussortierhilfe.
+
+TECHNIK
+- Asset-Cache-Version auf 5424 angehoben.
+- JavaScript-Syntax aller Dateien geprueft.
+- Alle lokalen HTML-Script-/CSS-Referenzen geprueft; keine fehlenden Dateien.
+- .gitignore ergaenzt: versehentliche JS/CSS-Downloads im Repository-Hauptordner werden kuenftig nicht neu aufgenommen; aktive Dateien bleiben unter /js und /css.

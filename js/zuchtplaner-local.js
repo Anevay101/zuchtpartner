@@ -8,11 +8,11 @@ let empiricalDeviations = null;
 let flaxenLookup = null;
 let flaxenChildrenByName = null;
 
-let schwerpunkt = 'gp';
-let sortMode = 'best';
+let schwerpunkt = 'extpct';
+let sortMode = 'combo';
 let richtung = 'stute';
-let comboSecond = 'extpct';
-let comboWeight = 50;
+let comboSecond = 'gp';
+let comboWeight = 80;
 let turnierzuchtMode = 'off';
 let turnierzuchtDiscipline = 'Reining';
 let appaloosaWish = 'any';
@@ -196,11 +196,18 @@ function fillSelect(id, values, allLabel='Alle') {
   if ([...el.options].some(o => o.value === old)) el.value = old;
 }
 
+function refreshOwnerDependentBreedSelect(pool, ownerId, breedId) {
+  const owner=document.getElementById(ownerId)?.value || '';
+  const rows=owner ? pool.filter(h=>ownerMatchesFilter(h,owner)) : pool;
+  const breeds=uniqueSorted(rows.map(h=>normalizeBreed(h.breed)||'Rasselos'));
+  fillSelect(breedId,breeds);
+}
+
 function buildFilters() {
   fillSelect('mare-owner-select', uniqueSorted(ZH_MARES.map(h => h.owner)));
   fillSelect('stallion-owner-select', uniqueSorted(ZH_STALLIONS.map(h => h.owner)));
-  fillSelect('mare-breed-select', ZH_ACTIVE_BREEDS);
-  fillSelect('stallion-breed-select', ZH_ACTIVE_BREEDS);
+  refreshOwnerDependentBreedSelect(ZH_MARES, 'mare-owner-select', 'mare-breed-select');
+  refreshOwnerDependentBreedSelect(ZH_STALLIONS, 'stallion-owner-select', 'stallion-breed-select');
 
   refreshHorseSelectors();
   refreshCandidateFilters();
@@ -278,8 +285,10 @@ function syncCandidateFiltersFromParentControls() {
   const ids = candidateParentFilterIds();
   const owner = document.getElementById(ids.owner)?.value || '';
   const breed = document.getElementById(ids.breed)?.value || '';
+  const pool = richtung === 'hengst' ? ZH_MARES : ZH_STALLIONS;
 
   setSelectValueIfAvailable('candidate-owner-select', owner);
+  refreshOwnerDependentBreedSelect(pool, 'candidate-owner-select', 'candidate-breed-select');
   setSelectValueIfAvailable('candidate-breed-select', breed);
 }
 
@@ -287,8 +296,10 @@ function syncParentControlsFromCandidateFilters() {
   const ids = candidateParentFilterIds();
   const owner = document.getElementById('candidate-owner-select')?.value || '';
   const breed = document.getElementById('candidate-breed-select')?.value || '';
+  const pool = richtung === 'hengst' ? ZH_MARES : ZH_STALLIONS;
 
   setSelectValueIfAvailable(ids.owner, owner);
+  refreshOwnerDependentBreedSelect(pool, ids.owner, ids.breed);
   setSelectValueIfAvailable(ids.breed, breed);
 }
 
@@ -319,7 +330,9 @@ function refreshHorseSelectors() {
 function refreshCandidateFilters() {
   const pool = richtung === 'hengst' ? ZH_MARES : ZH_STALLIONS;
   fillSelect('candidate-owner-select', uniqueSorted(pool.map(h => h.owner)));
-  fillSelect('candidate-breed-select', ZH_ACTIVE_BREEDS);
+  const parentIds=candidateParentFilterIds();
+  setSelectValueIfAvailable('candidate-owner-select', document.getElementById(parentIds.owner)?.value || '');
+  refreshOwnerDependentBreedSelect(pool, 'candidate-owner-select', 'candidate-breed-select');
   const stationWrap = document.getElementById('candidate-station-wrap');
   const stationSelect = document.getElementById('candidate-station-select');
   // Zuchtstation ist eine Hengst-Eigenschaft und daher nur sinnvoll, wenn
@@ -538,6 +551,8 @@ function wireControls() {
 
   ['mare-owner-select','mare-breed-select','stallion-owner-select','stallion-breed-select']
     .forEach(id => document.getElementById(id).addEventListener('change', () => {
+      if (id === 'mare-owner-select') refreshOwnerDependentBreedSelect(ZH_MARES, 'mare-owner-select', 'mare-breed-select');
+      if (id === 'stallion-owner-select') refreshOwnerDependentBreedSelect(ZH_STALLIONS, 'stallion-owner-select', 'stallion-breed-select');
       refreshHorseSelectors();
 
       const candidateIds = candidateParentFilterIds();
@@ -623,13 +638,17 @@ function wireControls() {
 
   document.getElementById('combo-weight-input').addEventListener('change', e => {
     const n = parseInt(e.target.value, 10);
-    comboWeight = Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 50;
+    comboWeight = Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 80;
     e.target.value = comboWeight;
     renderBestMatches();
   });
 
   ['candidate-owner-select','candidate-breed-select']
     .forEach(id => document.getElementById(id).addEventListener('change', () => {
+      if (id === 'candidate-owner-select') {
+        const pool=richtung === 'hengst' ? ZH_MARES : ZH_STALLIONS;
+        refreshOwnerDependentBreedSelect(pool, 'candidate-owner-select', 'candidate-breed-select');
+      }
       syncParentControlsFromCandidateFilters();
       refreshHorseSelectors();
       renderInzuchtResult();

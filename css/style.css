@@ -4939,3 +4939,188 @@ body.planner-high-contrast .filter-checkbox-label {
 .turnierzucht-empirical-list p {
   margin: .45rem 0;
 }
+
+/* ============================================================
+   V54.0.24 – strukturierte Filter, Guide und kompakte Statusfelder
+   ============================================================ */
+.database-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(390px, 1.45fr) minmax(235px, .82fr) minmax(290px, 1fr) minmax(370px, 1.3fr);
+  align-items: stretch;
+  gap: .75rem;
+}
+.database-filter-bar .filter-group {
+  min-width: 0;
+  margin: 0;
+}
+.database-filter-bar .filter-group-search .filter-group-grid {
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: .2rem .55rem;
+}
+.database-filter-bar .filter-group-breeding .filter-group-grid {
+  grid-template-columns: repeat(2, minmax(105px, 1fr));
+  gap: .2rem .55rem;
+}
+.database-filter-bar .filter-group-genetics .filter-group-grid {
+  grid-template-columns: 1fr;
+  gap: .2rem;
+}
+.database-filter-bar .filter-group-performance .filter-group-grid {
+  grid-template-columns: repeat(2, minmax(145px, 1fr));
+  gap: .2rem .55rem;
+}
+.database-filter-bar .filter-search-last-row { grid-column: 1; }
+.database-filter-bar .actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: .1rem;
+}
+.database-filter-bar .filter-checkbox-field {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.database-filter-bar .filter-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  min-height: 2.25rem;
+  margin: 0;
+}
+
+.active-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
+  padding: .55rem .7rem;
+  margin: 0 0 .65rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 91%, var(--accent) 9%);
+}
+.active-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .38rem;
+  min-width: 0;
+}
+.active-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 1.85rem;
+  padding: .18rem .52rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 48%, var(--border));
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.active-filter-chip:hover {
+  border-color: var(--accent-dark);
+  background: color-mix(in srgb, var(--surface) 87%, var(--accent) 13%);
+}
+.active-filter-chip .active-filter-chip-x {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.keep-foal-open:hover {
+  border-color: var(--warning);
+  background: color-mix(in srgb, var(--surface) 88%, var(--warning) 12%);
+}
+.keep-foal-open.active {
+  border-color: var(--warning);
+  background: color-mix(in srgb, var(--surface) 72%, var(--warning) 28%);
+  color: var(--text);
+  font-weight: 800;
+}
+.pairing-db-hit {
+  display: inline-block;
+  min-width: 1.35rem;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+.tp-cup-table { min-width: 790px; }
+
+/* Guide: jede Antwort liegt in einer hellen, klar abgegrenzten Fläche. */
+.guide-content { max-width: 1180px; }
+.guide-hero {
+  padding: 1.2rem 1.35rem;
+  margin-bottom: 1rem;
+  background: color-mix(in srgb, var(--surface) 90%, var(--accent) 10%);
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+}
+.guide-hero h2 {
+  margin: .1rem 0 .4rem;
+  font-size: 1.55rem;
+}
+.guide-hero p:last-child { margin-bottom: 0; }
+.guide-kicker {
+  margin: 0;
+  color: var(--accent-dark);
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.guide-faq { gap: .8rem; }
+.guide-faq-item {
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
+  background: color-mix(in srgb, var(--surface) 96%, var(--accent) 4%);
+}
+.guide-faq-item > summary {
+  padding: 1rem 1.15rem;
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: var(--accent-dark);
+  background: color-mix(in srgb, var(--surface) 91%, var(--accent) 9%);
+  border-radius: var(--radius);
+}
+.guide-faq-item[open] > summary {
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.guide-faq-body { padding: .8rem; }
+.guide-answer-card {
+  padding: .8rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  border-radius: .65rem;
+  background: color-mix(in srgb, var(--surface) 95%, var(--accent) 5%);
+}
+.guide-answer-card p { margin: .45rem 0; }
+.guide-answer-card p:first-child { margin-top: 0; }
+.guide-answer-card p:last-child { margin-bottom: 0; }
+.guide-answer-card .table-wrap { margin: 0; }
+
+@media (max-width: 1380px) {
+  .database-filter-bar {
+    grid-template-columns: minmax(360px, 1.35fr) minmax(250px, .9fr) minmax(300px, 1fr);
+  }
+  .database-filter-bar .filter-group-performance { grid-column: 1 / -1; }
+  .database-filter-bar .filter-group-performance .filter-group-grid {
+    grid-template-columns: repeat(4, minmax(135px, 1fr));
+  }
+}
+@media (max-width: 980px) {
+  .database-filter-bar { grid-template-columns: 1fr 1fr; }
+  .database-filter-bar .filter-group-performance { grid-column: auto; }
+  .database-filter-bar .filter-group-performance .filter-group-grid { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
+  .database-filter-bar .filter-group-search { grid-column: 1 / -1; }
+}
+@media (max-width: 680px) {
+  .database-filter-bar { grid-template-columns: 1fr; }
+  .database-filter-bar .filter-group-search { grid-column: auto; }
+  .database-filter-bar .filter-group-search .filter-group-grid,
+  .database-filter-bar .filter-group-breeding .filter-group-grid,
+  .database-filter-bar .filter-group-performance .filter-group-grid { grid-template-columns: 1fr; }
+  .database-filter-bar .filter-search-last-row { grid-column: auto; }
+  .active-filter-bar { align-items: flex-start; flex-direction: column; }
+  .guide-faq-item > summary { font-size: 1rem; }
+}

@@ -12,11 +12,12 @@ async function initAussort() {
 
   wireCheckDropdowns();
   populateCheckDropdown('ah-owner-drop', [...new Set(AH_HORSES.map(h => h.owner).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de')));
-  fillFilter('ah-breed', [...new Set(AH_HORSES.map(h => normalizeBreed(h.breed) || 'Rasselos').filter(Boolean))]);
+  refreshAussortBreedFilter();
   fillFilter('ah-gender', [...new Set(AH_HORSES.map(h => h.gender).filter(Boolean))]);
 
   document.getElementById('ah-run').addEventListener('click', runAussort);
   document.querySelector('#ah-owner-drop .checkdrop-panel').addEventListener('change', () => {
+    refreshAussortBreedFilter();
     if (!document.getElementById('ah-summary').hidden) runAussort();
   });
   document.getElementById('ah-mode').addEventListener('change', () => {
@@ -37,6 +38,17 @@ function fillFilter(id, vals) {
   vals.sort((a,b) => a.localeCompare(b,'de'));
   document.getElementById(id).innerHTML =
     '<option value="">Alle</option>' + vals.map((v) => `<option value="${plannerEscape(v)}">${plannerEscape(v)}</option>`).join('');
+}
+
+function refreshAussortBreedFilter() {
+  const el=document.getElementById('ah-breed');
+  if (!el) return;
+  const old=el.value;
+  const owners=getCheckDropdownSelected('ah-owner-drop');
+  const rows=owners.length ? AH_HORSES.filter(h=>owners.includes(h.owner)) : AH_HORSES;
+  const breeds=[...new Set(rows.map(h=>normalizeBreed(h.breed)||'Rasselos').filter(Boolean))];
+  fillFilter('ah-breed',breeds);
+  if ([...el.options].some(o=>o.value===old)) el.value=old;
 }
 
 function percentileRanks(rows, getter, higherBetter = true) {

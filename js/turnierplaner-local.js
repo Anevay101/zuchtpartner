@@ -99,18 +99,43 @@ function buildTournamentControls() {
     '<option value="">Alle</option>' +
     owners.map(o => `<option value="${plannerEscape(o)}">${plannerEscape(o)}</option>`).join('');
 
-  const breeds = typeof activeOwnedBreeds === 'function'
-    ? activeOwnedBreeds(TP_ALL_HORSES)
-    : [...new Set(TP_HORSES.map(h => normalizeBreed(h.breed) || 'Rasselos'))].sort((a,b) => a.localeCompare(b,'de'));
-  const breedOptions =
-    '<option value="">Alle</option>' +
-    breeds.map(b => `<option value="${plannerEscape(b)}">${plannerEscape(b)}</option>`).join('');
+  refreshTournamentBreedFilters();
 
-  document.getElementById('tp-breed').innerHTML = breedOptions;
-  document.getElementById('tp-table-breed').innerHTML = breedOptions;
-  document.getElementById('tp-horse-breed').innerHTML = breedOptions;
+  const allBreeds = [...new Set(TP_HORSES.map(h => normalizeBreed(h.breed) || 'Rasselos'))]
+    .sort((a,b) => a.localeCompare(b,'de'));
+  document.getElementById('tp-horse-breed').innerHTML = '<option value="">Alle</option>' +
+    allBreeds.map(b => `<option value="${plannerEscape(b)}">${plannerEscape(b)}</option>`).join('');
 
   refreshTournamentHorseSelect();
+}
+
+function setTournamentBreedOptions(id, breeds, allLabel='Alle') {
+  const el=document.getElementById(id);
+  if (!el) return;
+  const old=el.value;
+  el.innerHTML=`<option value="">${plannerEscape(allLabel)}</option>` +
+    breeds.map(b=>`<option value="${plannerEscape(b)}">${plannerEscape(b)}</option>`).join('');
+  el.value=[...el.options].some(o=>o.value===old) ? old : '';
+}
+
+function refreshTournamentBreedFilters() {
+  const owner=document.getElementById('tp-owner')?.value || '';
+  const rows=owner ? TP_HORSES.filter(h=>String(h.owner||'')===owner) : TP_HORSES;
+  const breeds=[...new Set(rows.map(h=>normalizeBreed(h.breed)||'Rasselos'))]
+    .sort((a,b)=>a.localeCompare(b,'de'));
+  setTournamentBreedOptions('tp-breed',breeds);
+  setTournamentBreedOptions('tp-table-breed',breeds);
+}
+
+function refreshZsBreedFilter() {
+  const selectedOwners=[...document.querySelectorAll('#tp-zs-owners input[type="checkbox"]:checked')].map(cb=>cb.value);
+  const rows=TP_ALL_HORSES.filter(h=>
+    !(typeof mdrIsLearningHorse==='function' && mdrIsLearningHorse(h)) &&
+    selectedOwners.includes(String(h.owner||'').trim())
+  );
+  const breeds=[...new Set(rows.map(h=>normalizeBreed(h.breed)||'Rasselos'))]
+    .sort((a,b)=>a.localeCompare(b,'de'));
+  setTournamentBreedOptions('tp-zs-breed',breeds,'Alle Rassen');
 }
 
 
@@ -137,9 +162,7 @@ function buildCupAndShowControls() {
   if (ownerRoot) ownerRoot.innerHTML=zsOwners.length
     ? zsOwners.map(v=>`<label class="tp-zs-owner-option"><input type="checkbox" value="${plannerEscape(v)}" checked> <span>${plannerEscape(v)}</span></label>`).join('')
     : '<span class="tiny muted">Keine aktiven Züchter konfiguriert.</span>';
-  const zsBreeds=[...new Set(zsVisibleHorses.filter(h=>zsOwners.includes(String(h.owner||'').trim())).map(h=>normalizeBreed(h.breed)||'Rasselos'))].sort((a,b)=>a.localeCompare(b,'de'));
-  const breedSel=document.getElementById('tp-zs-breed');
-  if (breedSel) breedSel.innerHTML='<option value="">Alle Rassen</option>' + zsBreeds.map(v=>`<option value="${plannerEscape(v)}">${plannerEscape(v)}</option>`).join('');
+  refreshZsBreedFilter();
 }
 
 function wireTurnierMainTabs() {
@@ -166,13 +189,17 @@ function wireTurnierMainTabs() {
 
   ['tp-zs-name'].forEach(id=>document.getElementById(id)?.addEventListener('input',renderBreedingShowOverview));
   ['tp-zs-breed','tp-zs-only','tp-zs-breeding'].forEach(id=>document.getElementById(id)?.addEventListener('change',renderBreedingShowOverview));
-  document.getElementById('tp-zs-owners')?.addEventListener('change',renderBreedingShowOverview);
+  document.getElementById('tp-zs-owners')?.addEventListener('change',()=>{
+    refreshZsBreedFilter();
+    renderBreedingShowOverview();
+  });
   document.getElementById('tp-zs-reset')?.addEventListener('click',()=>{
     const defaults={
       'tp-zs-name':'','tp-zs-breed':'','tp-zs-only':'with','tp-zs-breeding':''
     };
     Object.entries(defaults).forEach(([id,value])=>{ const el=document.getElementById(id); if(el) el.value=value; });
     document.querySelectorAll('#tp-zs-owners input[type="checkbox"]').forEach(cb=>{ cb.checked=true; });
+    refreshZsBreedFilter();
     renderBreedingShowOverview();
   });
 }
@@ -212,8 +239,12 @@ function wireTournamentControls() {
     renderHorseTournamentOptions();
   });
 
-  ['tp-discipline','tp-lk','tp-owner','tp-breed'].forEach(id => {
+  ['tp-discipline','tp-lk','tp-breed'].forEach(id => {
     document.getElementById(id).addEventListener('change', renderTournamentRanking);
+  });
+  document.getElementById('tp-owner').addEventListener('change', () => {
+    refreshTournamentBreedFilters();
+    renderTournamentRanking();
   });
 
   document.getElementById('tp-horse-breed').addEventListener('change', () => {
@@ -279,6 +310,7 @@ function resetTournamentFilters() {
   document.getElementById('tp-interior-max').value = '';
   document.getElementById('tp-lk').value = '';
   document.getElementById('tp-owner').value = '';
+  refreshTournamentBreedFilters();
   document.getElementById('tp-breed').value = '';
   renderTournamentRanking();
 }
@@ -1040,11 +1072,11 @@ function renderCupAchievements() {
 
     const hasStar=Boolean(row.result.cup_star);
     const wins=Number(row.result.first || 0);
-    if (!hasStar && wins < 10) return false;
+    if (!hasStar && wins < 7) return false;
 
     if (status==='star' && !hasStar) return false;
     if (status==='no-star' && hasStar) return false;
-    if (status==='near' && !(wins>=10 && wins<15 && !hasStar)) return false;
+    if (status==='near' && !(wins>=7 && wins<15 && !hasStar)) return false;
     return true;
   });
 
@@ -1069,32 +1101,28 @@ function renderCupAchievements() {
   if (count) count.textContent=`· ${rows.length} Einträge`;
 
   if (!rows.length) {
-    body.innerHTML='<tr><td colspan="10" class="muted">Keine passenden Cupdaten bzw. noch keine 10 Siege in der gewählten Disziplin.</td></tr>';
+    body.innerHTML='<tr><td colspan="7" class="muted">Keine passenden Cupdaten bzw. noch keine 7 Siege in der gewählten Disziplin.</td></tr>';
     return;
   }
 
   body.innerHTML=rows.map(({horse,discipline,result,progress,evaluation,tournamentValue})=>{
     const starts=plannerTournamentStarts(horse);
     const statusText=result.cup_star
-      ? '<strong>⭐ Cupstern · automatisch</strong>'
-      : result.first>=10 ? `${result.first}/15 Siege` : 'ohne Cupstern';
+      ? '<strong>⭐</strong>'
+      : '–';
     const nextCupDate=discipline ? cupNextDateForDiscipline(discipline) : null;
     const cupDistance=nextCupDate ? cupDayDistance(cupLocalDateOnly(new Date()),nextCupDate) : null;
     const upcomingClass=result.cup_star && cupDistance!=null
       ? (cupDistance<=3 ? 'cup-row-urgent' : cupDistance<=7 ? 'cup-row-soon' : '')
       : '';
-    const upcomingBadge=result.cup_star && cupDistance!=null && cupDistance<=7
-      ? `<br><span class="tiny cup-upcoming-badge">📅 ${cupDistance===0?'Cup heute':`Cup in ${cupDistance} Tag${cupDistance===1?'':'en'}`}</span>`
-      : '';
     const cupLk=result.cup_lk || progress.cup_lk || evaluation?.lk || '–';
     const tournamentValueText=tournamentValue == null ? '–' : String(Math.round(tournamentValue));
     return `<tr class="${upcomingClass}">
       <td><a href="view.html?id=${encodeURIComponent(horse.id)}"><strong>${plannerEscape(horse.name || '(ohne Name)')}</strong></a><br><span class="tiny muted">${plannerEscape(horse.owner || '')}</span></td>
-      <td>${plannerEscape(plannerHorseMainGroup(horse) || '–')} / ${plannerEscape(plannerHorseTalent(horse) || '–')}</td>
       <td>${plannerEscape(discipline || 'Disziplin noch ergänzen')}</td>
-      <td>${result.first || 0}</td><td>${result.second || 0}</td><td>${result.third || 0}</td>
+      <td><strong>${result.first || 0}</strong></td>
       <td>${starts == null ? '–' : starts}</td>
-      <td>${statusText}${upcomingBadge}</td>
+      <td>${statusText}</td>
       <td>${plannerEscape(cupLk)}</td>
       <td><strong>${plannerEscape(tournamentValueText)}</strong></td>
     </tr>`;
@@ -1272,6 +1300,23 @@ function zsFormulaText(model) {
   return parts.join(' ');
 }
 
+function zsCoefficientDirectionWarnings(model) {
+  if (!model?.fit || !Array.isArray(model.coefficients)) return [];
+  // Inhaltlicher Plausibilitätscheck, kein harter Ausschluss: GP/Ext% sollten
+  // bei höherem Wert eher positiv, Ext/Int (niedriger = besser) eher negativ
+  // mit dem ZS-Grundwert zusammenhängen. Kleine Datensätze können abweichen.
+  const expected={gp:1,ext:-1,extpct:1,int:-1,disease:-1};
+  const warnings=[];
+  model.fit.featureKeys.forEach((key,i)=>{
+    const coefficient=Number(model.coefficients[i]);
+    if (!Number.isFinite(coefficient) || Math.abs(coefficient)<0.01 || !expected[key]) return;
+    if (Math.sign(coefficient)!==expected[key]) {
+      warnings.push(ZS_FEATURES.find(f=>f.key===key)?.label || key);
+    }
+  });
+  return warnings;
+}
+
 function renderBreedingShowOverview() {
   const body=document.getElementById('tp-zs-body');
   if (!body) return;
@@ -1287,11 +1332,21 @@ function renderBreedingShowOverview() {
       info.innerHTML=`Lernmodell: <strong>n=${model.n}</strong> verwertbare echte Zuchtschau-Grundwerte. Ab n=8 startet eine vorsichtige Prognose.${waiting.length?` Noch nicht im Lernmodell: ${waiting.join(' · ')}.`:''}`;
     } else {
       const cv=model.diagnostics?.cv;
+      const diseaseUnknown=model.featureInfo?.unknownDisease || 0;
       const diseaseNote=model.featureInfo?.keys?.includes('disease')
-        ? `Erbkrankheit wird mitgelernt (${model.featureInfo.risky} betroffen / ${model.featureInfo.clear} unauffällig).`
-        : `Erbkrankheit wird noch nicht als Koeffizient gelernt (${model.featureInfo?.risky||0} betroffen / ${model.featureInfo?.clear||0} unauffällig; mindestens 3 je Gruppe nötig).`;
-      const quality=cv ? ` · Kreuzvalidierung: MAE <strong>${cv.mae.toFixed(0)} Punkte</strong>, RMSE ${cv.rmse.toFixed(0)}${cv.r2==null?'':`, R² ${cv.r2.toFixed(2)}`}` : '';
-      info.innerHTML=`Lernmodell: <strong>n=${model.n}</strong> · <strong>${zsModelDataBand(model.n)}</strong>${quality} · Ridge-Stabilisierung λ=${model.lambda}.<br><span class="tiny">${diseaseNote}${waiting.length?` Nicht zum Lernen verwendet: ${waiting.join(' · ')}.`:''}</span>`;
+        ? `Erbkrankheit wird mitgelernt (${model.featureInfo.risky} betroffen / ${model.featureInfo.clear} sicher unauffällig).`
+        : `Erbkrankheit wird noch nicht als Koeffizient gelernt (${model.featureInfo?.risky||0} betroffen / ${model.featureInfo?.clear||0} sicher unauffällig / ${diseaseUnknown} unbekannt; mindestens 3 je Gruppe und kein unbekannter EKH-Status in der Modellstichprobe).`;
+      const baseline=cv?.baseline;
+      const improvement=Number(cv?.improvementRmsePct);
+      const comparison=cv && baseline
+        ? ` · Ø-Baseline: MAE ${baseline.mae.toFixed(0)}, RMSE ${baseline.rmse.toFixed(0)}${Number.isFinite(improvement)?` · Modell ${improvement>=0?'<strong>'+Math.abs(improvement).toFixed(0)+'% besser</strong>':Math.abs(improvement).toFixed(0)+'% schlechter'} als Durchschnitt (RMSE)`:''}`
+        : '';
+      const quality=cv ? ` · Kreuzvalidierung: MAE <strong>${cv.mae.toFixed(0)} Punkte</strong>, RMSE ${cv.rmse.toFixed(0)}${cv.r2==null?'':`, R² ${cv.r2.toFixed(2)}`}${comparison}` : '';
+      const directionWarnings=zsCoefficientDirectionWarnings(model);
+      const directionNote=directionWarnings.length
+        ? ` Datencheck: ungewohnte Koeffizientenrichtung bei ${directionWarnings.join(', ')} – bei kleiner/selektiver Datenbasis vorsichtig interpretieren.`
+        : ' Datencheck: Koeffizientenrichtungen sind plausibel.';
+      info.innerHTML=`Lernmodell: <strong>n=${model.n}</strong> · <strong>${zsModelDataBand(model.n)}</strong>${quality} · Ridge-Stabilisierung λ=${model.lambda}.<br><span class="tiny">${diseaseNote}${directionNote}${waiting.length?` Nicht zum Lernen verwendet: ${waiting.join(' · ')}.`:''}</span>`;
     }
   }
   if (formula) {

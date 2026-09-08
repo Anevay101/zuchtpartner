@@ -31,6 +31,7 @@ let bestFoalOverviewEnabled = true;
 let breedingOverviewContext = null;
 let breedingOverviewContextVersion = -1;
 const derivedHorseCache = new WeakMap();
+let filterOptionHorses = [];
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -530,22 +531,20 @@ function showFlashBanner() {
 
 async function populateFilterOptions() {
   const data = await localGetAll(LOCAL_STORES.horses);
+  filterOptionHorses = data;
 
-  fillSelect('#f-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
-  fillSelect('#f-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort());
-  // Rasse-Auswahllisten sind persönlich: angeboten werden nur Rassen,
-  // die aktuell bei den aktiven Züchtern im Bestand vorkommen. Die
-  // Datenbank selbst bleibt vollständig; nur die Auswahl wird schlanker.
-  const breeds = typeof activeOwnedBreeds === 'function'
-    ? activeOwnedBreeds(data)
-    : [...new Set(data.filter(h => isActiveBreeder(h.owner)).map((d) => normalizeBreed(d.breed) || 'Rasselos'))].sort();
-  // 'Alle' bleibt bewusst uneingeschränkt; einzelne Rassen sind dagegen
-  // auf die persönliche aktive Zuchtbasis begrenzt.
-  fillSelect('#f-breed', breeds);
+  fillSelect('#f-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de')));
+  fillSelect('#f-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de')));
+  refreshDatabaseBreedOptions();
 
-  fillSelect('#cmp-breed', breeds);
-  fillSelect('#cmp-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
-  fillSelect('#cmp-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort());
+  fillSelect('#cmp-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de')));
+  fillSelect('#cmp-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de')));
+  refreshCompareBreedOptions();
+
+  if (typeof MDR_TOURNAMENT_GROUP_ORDER !== 'undefined') {
+    fillSelect('#f-main-group', MDR_TOURNAMENT_GROUP_ORDER);
+  }
+  refreshTalentFilterOptions();
 
   const diseaseLabels = new Set();
   const locusLabels = new Set();
@@ -580,6 +579,62 @@ function fillSelect(selector, values) {
   }
 }
 
+function replaceSelectOptions(selector, values, {allLabel='Alle', preferredOption=false} = {}) {
+  const sel = document.querySelector(selector);
+  if (!sel) return;
+  const previous = sel.value;
+  sel.innerHTML = `<option value="">${allLabel}</option>` +
+    (preferredOption ? '<option value="__preferred__">Meine Rassenauswahl</option>' : '');
+  for (const value of values) {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = value;
+    sel.appendChild(opt);
+  }
+  sel.value = [...sel.options].some(opt => opt.value === previous) ? previous : '';
+}
+
+function databaseBreedRowsForOwner(owner) {
+  if (owner) return filterOptionHorses.filter(h => h.owner === owner);
+  return typeof activeOwnedHorses === 'function'
+    ? activeOwnedHorses(filterOptionHorses)
+    : filterOptionHorses.filter(h => isActiveBreeder(h.owner));
+}
+
+function refreshDatabaseBreedOptions() {
+  const owner = document.querySelector('#f-owner')?.value || '';
+  const rows = databaseBreedRowsForOwner(owner);
+  const breeds = [...new Set(rows.map(h => normalizeBreed(h.breed) || 'Rasselos'))]
+    .sort((a,b)=>a.localeCompare(b,'de'));
+  replaceSelectOptions('#f-breed', breeds, {preferredOption:true});
+}
+
+function refreshCompareBreedOptions() {
+  const owner = document.querySelector('#cmp-owner')?.value || '';
+  const rows = owner ? filterOptionHorses.filter(h => h.owner === owner) : databaseBreedRowsForOwner('');
+  const breeds = [...new Set(rows.map(h => normalizeBreed(h.breed) || 'Rasselos'))]
+    .sort((a,b)=>a.localeCompare(b,'de'));
+  replaceSelectOptions('#cmp-breed', breeds);
+}
+
+function refreshTalentFilterOptions() {
+  const group = document.querySelector('#f-main-group')?.value || '';
+  const field = document.getElementById('f-talent-field');
+  const select = document.getElementById('f-talent');
+  if (!field || !select) return;
+  if (!group || typeof MDR_TOURNAMENT_GROUPS === 'undefined') {
+    field.hidden = true;
+    select.innerHTML = '<option value="">Alle</option>';
+    select.value = '';
+    return;
+  }
+  const values = MDR_TOURNAMENT_GROUPS[group] || [];
+  const previous = select.value;
+  select.innerHTML = '<option value="">Alle</option>' + values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+  select.value = values.includes(previous) ? previous : '';
+  field.hidden = false;
+}
+
 function databaseHorseHasConfirmedCupStar(row) {
   // V54.0.15: Neben ausdrücklich gespeicherten Cupsternen gilt die bekannte
   // MDR-Grundregel automatisch: mindestens 50 Gesamtstarts + mindestens
@@ -608,6 +663,8 @@ async function buildQuery() {
   const dataQuality = document.querySelector('#f-data-quality').value;
   const learningFile = document.querySelector('#f-learning-file')?.value || 'exclude';
   const cupStarOnly = Boolean(document.querySelector('#f-cupstar')?.checked);
+  const mainGroup = document.querySelector('#f-main-group')?.value || '';
+  const talent = document.querySelector('#f-talent')?.value || '';
 
   data = data.filter((row) => {
     if (name && !(row.name || '').toLowerCase().includes(name)) return false;
@@ -638,6 +695,9 @@ async function buildQuery() {
     if (learningFile === 'only' && !isLearning) return false;
 
     if (cupStarOnly && !databaseHorseHasConfirmedCupStar(row)) return false;
+
+    if (mainGroup && typeof plannerHorseMainGroup === 'function' && plannerHorseMainGroup(row) !== mainGroup) return false;
+    if (talent && typeof plannerHorseTalent === 'function' && plannerHorseTalent(row) !== talent) return false;
 
     if (dataQuality) {
       const quality = typeof analyzeHorseDataQuality === 'function'
@@ -702,6 +762,7 @@ function wireCompareAvg() {
     renderCompareAvgValues();
     await loadHorses();
   });
+  document.querySelector('#cmp-owner')?.addEventListener('change', refreshCompareBreedOptions);
   ['#cmp-breed', '#cmp-zzl', '#cmp-owner', '#cmp-gender'].forEach((sel) => {
     document.querySelector(sel).addEventListener('change', recompute);
   });
@@ -1062,15 +1123,14 @@ function applySort(rows) {
 function databaseFilterActiveCount() {
   const state = collectFilterState();
   let count = 0;
-  const filled = [state.name,state.owner,state.gender,state.breed,state.gameVersion,state.zzl,state.breedingStation,state.dataQuality,state.gpVal,state.extVal,state.extpctVal,state.intVal];
+  const filled = [state.name,state.owner,state.gender,state.breed,state.gameVersion,state.zzl,state.breedingStation,state.dataQuality,state.mainGroup,state.talent,state.gpVal,state.extVal,state.extpctVal,state.intVal];
   count += filled.filter(v => String(v ?? '').trim() !== '').length;
   count += [state.tags,state.genetik,state.ekh].filter(v => { const t = normalizeTriStateSavedState(v); return t.include.length || t.exclude.length; }).length;
-  // 'Alle' bedeutet keine Lerndatei-Einschränkung; sowohl Ausblenden als auch
-  // Nur Lerndatei sind echte Filter und werden deshalb im geschlossenen Kopf gezählt.
-  if (state.learningFile && state.learningFile !== 'all') count++;
+  // "Lerndatei ausblenden" ist die normale Ausgangsansicht und wird nicht
+  // als aktiv gesetzter Filter gezählt. "Nur Lerndatei" dagegen schon.
+  if (state.learningFile === 'only') count++;
   if (state.cupStarOnly) count++;
   if (state.bestFoalMode && state.bestFoalMode !== 'off') count++;
-  if (state.compareAvgEnabled) count++;
   return count;
 }
 
@@ -1080,6 +1140,80 @@ function updateDatabaseFilterSummary(resultCount = null) {
   const active = databaseFilterActiveCount();
   const countText = resultCount == null ? '– Pferde' : `${resultCount} Pferd${resultCount===1?'':'e'}`;
   el.textContent = `${active} aktiv · ${countText}`;
+  updateActiveFilterChips();
+}
+
+function databaseTriStateChip(label, state) {
+  const normalized = normalizeTriStateSavedState(state);
+  if (!normalized.include.length && !normalized.exclude.length) return null;
+  const pieces = [
+    ...normalized.include.map(value => `+${value}`),
+    ...normalized.exclude.map(value => `−${value}`),
+  ];
+  return `${label}: ${pieces.join(', ')}`;
+}
+
+function activeFilterChipDescriptors() {
+  const state = collectFilterState();
+  const chips = [];
+  const add = (key, label, active=true) => { if (active && label) chips.push({key,label}); };
+  add('name', `Name: ${state.name}`, Boolean(state.name));
+  add('owner', state.owner, Boolean(state.owner));
+  add('breed', state.breed === '__preferred__' ? 'Meine Rassenauswahl' : state.breed, Boolean(state.breed));
+  add('gender', `Geschlecht: ${state.gender}`, Boolean(state.gender));
+  add('gameVersion', `Spielversion: ${state.gameVersion}`, Boolean(state.gameVersion));
+  add('zzl', `Zuchtzulassung: ${state.zzl === 'true' ? 'Ja' : 'Nein'}`, Boolean(state.zzl));
+  add('breedingStation', `Zuchtstation: ${state.breedingStation === 'true' ? 'Ja' : 'Nein'}`, Boolean(state.breedingStation));
+  const qualityLabels = {green:'Vollständig',yellow:'Teilweise vollständig',red:'Unvollständig'};
+  add('dataQuality', `Datenqualität: ${qualityLabels[state.dataQuality] || state.dataQuality}`, Boolean(state.dataQuality));
+  add('learningFile', 'Nur Lerndatei', state.learningFile === 'only');
+  add('mainGroup', `Hauptbegabung: ${state.mainGroup}`, Boolean(state.mainGroup));
+  add('talent', `Unterkategorie: ${state.talent}`, Boolean(state.talent));
+  add('cupStarOnly', '⭐ Cup-Stern', state.cupStarOnly);
+  if (state.bestFoalMode === 'only') add('bestFoalMode', '★ Bestes Fohlen');
+  if (state.bestFoalMode === 'exclude') add('bestFoalMode', '★ Bestes Fohlen ausschließen');
+  add('tags', databaseTriStateChip('Schlagwörter', state.tags), Boolean(databaseTriStateChip('Schlagwörter', state.tags)));
+  add('genetik', databaseTriStateChip('Genetik', state.genetik), Boolean(databaseTriStateChip('Genetik', state.genetik)));
+  add('ekh', databaseTriStateChip('EKH', state.ekh), Boolean(databaseTriStateChip('EKH', state.ekh)));
+  const op = value => value === 'lt' ? '<' : '>';
+  add('gpVal', `GP ${op(state.gpOp)} ${state.gpVal}`, state.gpVal !== '');
+  add('extVal', `Ext ${op(state.extOp)} ${state.extVal}`, state.extVal !== '');
+  add('extpctVal', `Ext% ${op(state.extpctOp)} ${state.extpctVal}`, state.extpctVal !== '');
+  add('intVal', `Int ${op(state.intOp)} ${state.intVal}`, state.intVal !== '');
+  return chips;
+}
+
+function clearDatabaseFilterChip(key) {
+  const direct = {
+    name:'#f-name', owner:'#f-owner', breed:'#f-breed', gender:'#f-gender', gameVersion:'#f-game-version',
+    zzl:'#f-zzl', breedingStation:'#f-breeding-station', dataQuality:'#f-data-quality', mainGroup:'#f-main-group', talent:'#f-talent',
+    gpVal:'#f-gp-val', extVal:'#f-ext-val', extpctVal:'#f-extpct-val', intVal:'#f-int-val',
+  };
+  if (direct[key]) document.querySelector(direct[key]).value = '';
+  if (key === 'owner') refreshDatabaseBreedOptions();
+  if (key === 'mainGroup') refreshTalentFilterOptions();
+  if (key === 'learningFile') document.querySelector('#f-learning-file').value = 'exclude';
+  if (key === 'cupStarOnly') document.querySelector('#f-cupstar').checked = false;
+  if (key === 'bestFoalMode') {
+    document.querySelector('#f-best-foal-toggle').dataset.state = 'off';
+    syncBestFoalToggleLabel();
+  }
+  if (key === 'tags') resetTriStateDropdown('f-tag-drop');
+  if (key === 'genetik') resetTriStateDropdown('f-genetik-drop');
+  if (key === 'ekh') resetTriStateDropdown('f-ekh-drop');
+  loadHorses();
+}
+
+function updateActiveFilterChips() {
+  const bar = document.getElementById('active-filter-bar');
+  const root = document.getElementById('active-filter-chips');
+  if (!bar || !root) return;
+  const chips = activeFilterChipDescriptors();
+  bar.hidden = chips.length === 0;
+  root.innerHTML = chips.map(({key,label}) => `<button type="button" class="active-filter-chip" data-filter-chip="${escapeHtml(key)}" title="Diesen Filter entfernen">${escapeHtml(label)} <span class="active-filter-chip-x" aria-hidden="true">×</span></button>`).join('');
+  root.querySelectorAll('[data-filter-chip]').forEach(button => {
+    button.addEventListener('click', () => clearDatabaseFilterChip(button.dataset.filterChip));
+  });
 }
 
 async function loadHorses() {
@@ -1316,19 +1450,27 @@ function wireFilterForm() {
     filterTimer = setTimeout(loadHorses, 180);
   });
 
-  document.querySelector('#reset-filters').addEventListener('click', () => {
-    document.querySelector('#filter-form').reset();
-    resetTriStateDropdown('f-ekh-drop');
-    resetTriStateDropdown('f-genetik-drop');
-    resetTriStateDropdown('f-tag-drop');
-    if (document.querySelector('#f-learning-file')) document.querySelector('#f-learning-file').value = 'exclude';
-    if (document.querySelector('#f-best-foal-toggle')) {
-      document.querySelector('#f-best-foal-toggle').dataset.state = 'off';
-      syncBestFoalToggleLabel();
-    }
-    loadHorses();
-  });
+  document.getElementById('f-owner')?.addEventListener('change', refreshDatabaseBreedOptions);
+  document.getElementById('f-main-group')?.addEventListener('change', refreshTalentFilterOptions);
+
+  document.querySelector('#reset-filters').addEventListener('click', resetDatabaseFilters);
+  document.getElementById('clear-active-filters')?.addEventListener('click', resetDatabaseFilters);
   document.querySelector('#f-data-quality').addEventListener('change', loadHorses);
+}
+
+function resetDatabaseFilters() {
+  document.querySelector('#filter-form').reset();
+  resetTriStateDropdown('f-ekh-drop');
+  resetTriStateDropdown('f-genetik-drop');
+  resetTriStateDropdown('f-tag-drop');
+  if (document.querySelector('#f-learning-file')) document.querySelector('#f-learning-file').value = 'exclude';
+  if (document.querySelector('#f-best-foal-toggle')) {
+    document.querySelector('#f-best-foal-toggle').dataset.state = 'off';
+    syncBestFoalToggleLabel();
+  }
+  refreshDatabaseBreedOptions();
+  refreshTalentFilterOptions();
+  loadHorses();
 }
 
 function bestFoalModeLabel(state) {
@@ -1416,6 +1558,8 @@ function collectFilterState() {
     dataQuality: document.querySelector('#f-data-quality').value,
     learningFile: document.querySelector('#f-learning-file')?.value || 'exclude',
     cupStarOnly: Boolean(document.querySelector('#f-cupstar')?.checked),
+    mainGroup: document.querySelector('#f-main-group')?.value || '',
+    talent: document.querySelector('#f-talent')?.value || '',
     bestFoalMode: document.querySelector('#f-best-foal-toggle')?.dataset.state || 'off',
     tags: getTriStateDropdownState('f-tag-drop'),
     genetik: getTriStateDropdownState('f-genetik-drop'),
@@ -1445,14 +1589,18 @@ function collectFilterState() {
 async function applyFilterState(state) {
   document.querySelector('#f-name').value = state.name || '';
   document.querySelector('#f-owner').value = state.owner || '';
+  refreshDatabaseBreedOptions();
   document.querySelector('#f-gender').value = state.gender || '';
-  document.querySelector('#f-breed').value = state.breed || '';
+  document.querySelector('#f-breed').value = [...document.querySelector('#f-breed').options].some(o=>o.value===(state.breed||'')) ? (state.breed||'') : '';
   document.querySelector('#f-game-version').value = state.gameVersion || '';
   document.querySelector('#f-zzl').value = state.zzl || '';
   if (document.querySelector('#f-breeding-station')) document.querySelector('#f-breeding-station').value = state.breedingStation || '';
   document.querySelector('#f-data-quality').value = state.dataQuality || '';
   if (document.querySelector('#f-learning-file')) document.querySelector('#f-learning-file').value = state.learningFile || 'exclude';
   if (document.querySelector('#f-cupstar')) document.querySelector('#f-cupstar').checked = Boolean(state.cupStarOnly);
+  if (document.querySelector('#f-main-group')) document.querySelector('#f-main-group').value = state.mainGroup || '';
+  refreshTalentFilterOptions();
+  if (document.querySelector('#f-talent')) document.querySelector('#f-talent').value = [...document.querySelector('#f-talent').options].some(o=>o.value===(state.talent||'')) ? (state.talent||'') : '';
   if (document.querySelector('#f-best-foal-toggle')) {
     document.querySelector('#f-best-foal-toggle').dataset.state = bestFoalOverviewEnabled ? (state.bestFoalMode || 'off') : 'off';
     syncBestFoalToggleLabel();
@@ -1478,9 +1626,10 @@ async function applyFilterState(state) {
   const toggle = document.querySelector('#compare-avg-toggle');
   toggle.checked = Boolean(state.compareAvgEnabled);
   document.querySelector('#compare-avg-panel').hidden = !toggle.checked;
-  document.querySelector('#cmp-breed').value = state.cmpBreed || '';
   document.querySelector('#cmp-zzl').value = state.cmpZzl || '';
   document.querySelector('#cmp-owner').value = state.cmpOwner || '';
+  refreshCompareBreedOptions();
+  document.querySelector('#cmp-breed').value = [...document.querySelector('#cmp-breed').options].some(o=>o.value===(state.cmpBreed||'')) ? (state.cmpBreed||'') : '';
   document.querySelector('#cmp-gender').value = state.cmpGender || '';
   compareBaseline = toggle.checked ? await computeCompareBaseline() : null;
   renderCompareAvgValues();

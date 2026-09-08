@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Lokal – Verpaarungs-Log – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5421" />
+  <link rel="stylesheet" href="css/style.css?v=5424" />
 </head>
 <body>
   <header class="topbar">
@@ -31,9 +31,9 @@
           <div><label for="p-date">Abfohldatum</label><input id="p-date" type="text" inputmode="numeric" placeholder="TT.MM.JJJJ" autocomplete="off" /></div>
           <div><label for="p-keep-foal">Fohlen behalten?</label>
             <select id="p-keep-foal">
-              <option value="">unbekannt</option>
-              <option value="true">Ja</option>
-              <option value="false">Nein</option>
+              <option value="open">? Offen</option>
+              <option value="true">✓ Ja</option>
+              <option value="false">✗ Nein</option>
             </select>
           </div>
           <div><label for="p-owner">Besitzer</label>
@@ -122,15 +122,14 @@
               <th>Fohlen</th>
               <th>Prognose ↔ tatsächlich</th>
               <th>Abweichung zur Datenbank-Schätzung</th>
-              <th title="Prüft nur, ob der tatsächliche Wert zwischen gespeichertem Best Case und Worst Case liegt. Das ist eine theoretische Extremspanne, keine statistische Treffergenauigkeit.">Innerhalb theoretischer Spanne?</th>
-              <th title="Prüft, ob der tatsächliche Wert im gespeicherten typischen 80%-Bereich der Datenbank-Schätzung liegt, abgeleitet aus echten Eltern–Fohlen-Vergleichen.">DB-Schätzung getroffen?</th>
+              <th title="Prüft, ob die vorhandenen tatsächlichen Werte im gespeicherten typischen 80%-Bereich der Datenbank-Schätzung liegen.">DB-Bereich getroffen?</th>
               <th title="Unverbindliche Zuchtempfehlung aus dem Vergleich des tatsächlichen Fohlens mit dem Mittelwert seiner beiden Eltern.">Zuchtempfehlung</th>
               <th>Fohlen behalten?</th>
               <th>Besitzer</th>
               <th>Aktionen</th>
             </tr>
           </thead>
-          <tbody><tr><td colspan="13">Lade…</td></tr></tbody>
+          <tbody><tr><td colspan="12">Lade…</td></tr></tbody>
         </table>
       </div>
       <div id="past-pairings-archive-control" class="pairing-archive-control" hidden>
@@ -139,8 +138,8 @@
       </div>
     </details>
 
-    <!-- Popup nach dem Eintragen einer Verpaarung mit gesetztem "Fohlen
-         behalten" (Ja oder Nein) - nutzt dieselben Feld-IDs wie das
+    <!-- Popup nach dem Eintragen einer Verpaarung ab erreichtem Abfohldatum;
+         auch bei offenem ? kann das Fohlen eingetragen werden. Nutzt dieselben Feld-IDs wie das
          "Neues Pferd"-Formular in horse.html, damit horseForm.js dessen
          Funktionen (Textauslesen, Detail-Vorschau, Feld sammeln) hier
          ohne Duplizierung wiederverwenden kann. Das eigentliche
@@ -283,17 +282,17 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5421"></script>
-<script src="js/database-local.js?v=5421"></script>
-  <script src="js/local-app.js?v=5421"></script>
-  <script src="js/learning-file.js?v=5421"></script>
-  <script src="js/parser.js?v=5421"></script>
-  <script src="js/zuchtplaner-engine-helpers.js?v=5421"></script>
-  <script src="js/breeding-original.js?v=5421"></script>
-  <script src="js/verpaarungsratgeber-engine.js?v=5421"></script>
-  <script src="js/foal-prediction.js?v=5421"></script>
-  <script src="js/breeding-progress.js?v=5421"></script>
-  <script src="js/horseForm.js?v=5421"></script>
-  <script src="js/verpaarung.js?v=5421"></script>
+<script src="js/supabase-config.js?v=5424"></script>
+<script src="js/database-local.js?v=5424"></script>
+  <script src="js/local-app.js?v=5424"></script>
+  <script src="js/learning-file.js?v=5424"></script>
+  <script src="js/parser.js?v=5424"></script>
+  <script src="js/zuchtplaner-engine-helpers.js?v=5424"></script>
+  <script src="js/breeding-original.js?v=5424"></script>
+  <script src="js/verpaarungsratgeber-engine.js?v=5424"></script>
+  <script src="js/foal-prediction.js?v=5424"></script>
+  <script src="js/breeding-progress.js?v=5424"></script>
+  <script src="js/horseForm.js?v=5424"></script>
+  <script src="js/verpaarung.js?v=5424"></script>
 </body>
 </html>

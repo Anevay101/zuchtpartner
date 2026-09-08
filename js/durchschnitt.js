@@ -1,4 +1,5 @@
 const durchschnittDerivedCache = new WeakMap();
+let DASHBOARD_FILTER_HORSES = [];
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -10,7 +11,10 @@ async function init() {
   wireCheckDropdowns();
   populateCheckDropdown('d-tag-drop', getHorseTagOptions().map((t) => t.label), { noneOption: 'Kein Schlagwort' });
   await populateFilterOptions();
-  document.querySelector('#d-owner-drop .checkdrop-panel').addEventListener('change', calculate);
+  document.querySelector('#d-owner-drop .checkdrop-panel').addEventListener('change', async () => {
+    refreshDashboardBreedOptions();
+    await calculate();
+  });
   document.querySelector('#d-tag-drop .checkdrop-panel').addEventListener('change', calculate);
   await populateCompareHorseOptions();
   await renderSavedDashboardTiles();
@@ -19,25 +23,28 @@ async function init() {
 
 async function populateFilterOptions() {
   const data = (await localGetAll(LOCAL_STORES.horses)).filter(h => !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
+  DASHBOARD_FILTER_HORSES = data;
 
   populateCheckDropdown('d-owner-drop', activeBreederOptions(data.map((d) => d.owner)));
-  fillSelect('#d-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort());
+  fillSelect('#d-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de')));
+  refreshDashboardBreedOptions();
+}
 
-  // Nur Rassen anbieten, die tatsächlich in der lokalen Datenbank vorkommen.
-  // Die Anzahl steht direkt dabei, damit sofort sichtbar ist, welche Basis
-  // der Durchschnitt bei Auswahl dieser Rasse verwendet.
+function refreshDashboardBreedOptions() {
+  const sel = document.querySelector('#d-breed');
+  if (!sel) return;
+  const previous = sel.value;
+  const owners = getCheckDropdownSelected('d-owner-drop');
+  const rows = DASHBOARD_FILTER_HORSES.filter(h => isActiveBreeder(h.owner) && (!owners.length || owners.includes(h.owner)));
   const breedCounts = new Map();
-  const ownedRows = typeof activeOwnedHorses === 'function'
-    ? activeOwnedHorses(data)
-    : data.filter(h => isActiveBreeder(h.owner));
-  for (const h of ownedRows) {
+  for (const h of rows) {
     const breed = normalizeBreed(h.breed) || 'Rasselos';
     breedCounts.set(breed, (breedCounts.get(breed) || 0) + 1);
   }
-  const breedOptions = [...breedCounts.entries()]
-    .sort(([a], [b]) => a.localeCompare(b, 'de'))
-    .map(([value, count]) => ({ value, label: `${value} (${count})` }));
-  fillSelect('#d-breed', breedOptions);
+  const options = [...breedCounts.entries()]
+    .sort(([a],[b]) => a.localeCompare(b,'de'));
+  sel.innerHTML = '<option value="">Alle</option>' + options.map(([value,count]) => `<option value="${escapeHtml(value)}">${escapeHtml(value)} (${count})</option>`).join('');
+  sel.value = options.some(([value]) => value === previous) ? previous : '';
 }
 
 function fillSelect(selector, values) {

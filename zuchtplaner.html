@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Zuchtplaner – MDR Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5421" />
+  <link rel="stylesheet" href="css/style.css?v=5424" />
 </head>
 <body class="planner-high-contrast">
 <header class="topbar">
@@ -21,11 +21,6 @@
 </header>
 
 <main class="container zuchtplaner-v46">
-  <div class="notice zp-intro">
-    Der Planer arbeitet ausschließlich mit deiner lokalen MDR-Pferdedatenbank.
-    Für den Verpaarungsratgeber werden nur zuchtfähige Pferde mit ZZL verwendet.
-  </div>
-
   <section class="card zp-parent-card">
     <div class="zp-parent-grid">
       <div class="zp-parent-panel">
@@ -135,7 +130,7 @@
             <select id="schwerpunkt-select">
               <option value="gp">GP (Gesamtpotenzial)</option>
               <option value="ext">Ext (Körperbau)</option>
-              <option value="extpct">Ext% (genetisch)</option>
+              <option value="extpct" selected>Ext% (genetisch)</option>
               <option value="int">Int (Interieur)</option>
             </select>
           </div>
@@ -146,26 +141,26 @@
               <option value="best">Bester Best Case</option>
               <option value="worst">Bester Worst Case</option>
               <option value="complement" id="complement-sort-option">Bester Ausgleich der Schwächen</option>
-              <option value="combo">Kombinierter Ausgleich (2 Kriterien)</option>
+              <option value="combo" selected>Kombinierter Ausgleich (2 Kriterien)</option>
               <option value="empirical">Beste Datenbank-Schätzung</option>
               <option value="diff-asc">Kleinste Differenz (verlässlich)</option>
               <option value="diff-desc">Größte Differenz (Risiko/Chance)</option>
             </select>
           </div>
 
-          <div id="combo-second-wrap" hidden>
+          <div id="combo-second-wrap">
             <label for="combo-second-select">2. Kriterium</label>
             <select id="combo-second-select">
-              <option value="gp">GP</option>
+              <option value="gp" selected>GP</option>
               <option value="ext">Ext</option>
-              <option value="extpct" selected>Ext%</option>
+              <option value="extpct">Ext%</option>
               <option value="int">Int</option>
             </select>
           </div>
 
-          <div id="combo-weight-wrap" hidden>
+          <div id="combo-weight-wrap">
             <label for="combo-weight-input">Gewichtung 1. Kriterium (%)</label>
-            <input id="combo-weight-input" type="number" min="0" max="100" value="50" />
+            <input id="combo-weight-input" type="number" min="0" max="100" value="80" />
           </div>
 
           <div>
@@ -260,19 +255,19 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5421"></script>
-<script src="js/database-local.js?v=5421"></script>
-<script src="js/local-app.js?v=5421"></script>
-<script src="js/learning-file.js?v=5421"></script>
-<script src="js/parser.js?v=5421"></script>
-<script src="js/data-quality.js?v=5421"></script>
-<script src="js/planer-common.js?v=5421"></script>
-<script src="js/zuchtplaner-engine-helpers.js?v=5421"></script>
-<script src="js/breeding-original.js?v=5421"></script>
-<script src="js/verpaarungsratgeber-engine.js?v=5421"></script>
-<script src="js/foal-prediction.js?v=5421"></script>
-<script src="js/color-guide.js?v=5421"></script>
-<script src="js/turnierzucht.js?v=5421"></script>
-<script src="js/zuchtplaner-local.js?v=5421"></script>
+<script src="js/supabase-config.js?v=5424"></script>
+<script src="js/database-local.js?v=5424"></script>
+<script src="js/local-app.js?v=5424"></script>
+<script src="js/learning-file.js?v=5424"></script>
+<script src="js/parser.js?v=5424"></script>
+<script src="js/data-quality.js?v=5424"></script>
+<script src="js/planer-common.js?v=5424"></script>
+<script src="js/zuchtplaner-engine-helpers.js?v=5424"></script>
+<script src="js/breeding-original.js?v=5424"></script>
+<script src="js/verpaarungsratgeber-engine.js?v=5424"></script>
+<script src="js/foal-prediction.js?v=5424"></script>
+<script src="js/color-guide.js?v=5424"></script>
+<script src="js/turnierzucht.js?v=5424"></script>
+<script src="js/zuchtplaner-local.js?v=5424"></script>
 </body>
 </html>

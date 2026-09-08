@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Pferde – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5421" />
+  <link rel="stylesheet" href="css/style.css?v=5424" />
 </head>
 <body class="list-page">
   <header class="topbar">
@@ -39,8 +39,8 @@
 
     <details id="database-filter-details" class="database-filter-details">
       <summary>🔎 Filter · <span id="database-filter-summary">0 aktiv · – Pferde</span></summary>
-    <form id="filter-form" class="filter-bar">
-      <div class="filter-group">
+    <form id="filter-form" class="filter-bar database-filter-bar">
+      <div class="filter-group filter-group-search">
         <div class="filter-group-title">Suche</div>
         <div class="filter-group-grid">
           <div class="field">
@@ -52,10 +52,6 @@
             <select id="f-owner"><option value="">Alle</option></select>
           </div>
           <div class="field">
-            <label for="f-gender">Geschlecht</label>
-            <select id="f-gender"><option value="">Alle</option></select>
-          </div>
-          <div class="field">
             <label for="f-breed">Rasse</label>
             <select id="f-breed">
               <option value="">Alle</option>
@@ -63,6 +59,31 @@
             </select>
           </div>
           <div class="field">
+            <label for="f-data-quality">Datenqualität</label>
+            <select id="f-data-quality" title="Verwendet dieselbe Datenqualitätsprüfung wie die grünen, gelben und roten Badges an den Pferden.">
+              <option value="">Alle</option>
+              <option value="green">🟢 Vollständig</option>
+              <option value="yellow">🟡 Teilweise vollständig</option>
+              <option value="red">🔴 Unvollständig</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-learning-file">🧠 Lerndatei</label>
+            <select id="f-learning-file">
+              <option value="exclude">Ausblenden</option>
+              <option value="only">Nur Lerndatei</option>
+              <option value="all">Alle</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Schlagwörter</label>
+            <div class="checkdrop" id="f-tag-drop">
+              <button type="button" class="checkdrop-toggle">Alle</button>
+              <div class="checkdrop-panel" hidden></div>
+            </div>
+            <span class="tiny muted">1× einschließen · 2× ausschließen · 3× neutral</span>
+          </div>
+          <div class="field filter-search-last-row">
             <label for="f-game-version">Spielversion</label>
             <select id="f-game-version">
               <option value="">Alle</option>
@@ -70,8 +91,18 @@
               <option value="EN">EN</option>
             </select>
           </div>
+        </div>
+      </div>
+
+      <div class="filter-group filter-group-breeding">
+        <div class="filter-group-title">Zucht</div>
+        <div class="filter-group-grid">
           <div class="field">
-            <label for="f-zzl">ZZL</label>
+            <label for="f-gender">Geschlecht</label>
+            <select id="f-gender"><option value="">Alle</option></select>
+          </div>
+          <div class="field">
+            <label for="f-zzl">Zuchtzulassung</label>
             <select id="f-zzl">
               <option value="">Alle</option>
               <option value="true">Ja</option>
@@ -86,49 +117,16 @@
               <option value="false">Nein</option>
             </select>
           </div>
-          <div class="field">
-            <label for="f-data-quality">Datenqualität</label>
-            <select id="f-data-quality" title="Verwendet dieselbe Datenqualitätsprüfung wie die grünen, gelben und roten Badges an den Pferden.">
-              <option value="">Alle</option>
-              <option value="not-complete">⚠️ Nicht vollständig</option>
-              <option value="green">🟢 Vollständig</option>
-              <option value="yellow">🟡 Teilweise vollständig</option>
-              <option value="red">🔴 Unvollständig</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="f-learning-file">🧠 Lerndatei</label>
-            <select id="f-learning-file">
-              <option value="exclude">Ausblenden</option>
-              <option value="only">Nur Lerndatei</option>
-              <option value="all">Alle</option>
-            </select>
-          </div>
-          <div class="field filter-checkbox-field">
-            <label class="filter-checkbox-label" for="f-cupstar">
-              <input type="checkbox" id="f-cupstar" />
-              <span>⭐ Cupstern</span>
-            </label>
-            <span class="tiny muted">Nur Pferde mit bestätigtem Cupstern</span>
-          </div>
           <div class="field" id="best-foal-filter-field">
             <label>Bestes Fohlen</label>
             <button type="button" id="f-best-foal-toggle" class="secondary best-foal-filter-toggle" data-state="off">★ Bestes Fohlen: Aus</button>
             <span class="tiny muted">Klick: Aus → nur anzeigen → ausschließen</span>
             <span class="tiny muted bp-filter-legend"><span class="bp-parent-dot bp-parent-better"></span> besser · <span class="bp-parent-dot bp-parent-equal"></span> gleich · <span class="bp-parent-dot bp-parent-worse"></span> schlechter</span>
           </div>
-          <div class="field">
-            <label>Schlagwörter</label>
-            <div class="checkdrop" id="f-tag-drop">
-              <button type="button" class="checkdrop-toggle">Alle</button>
-              <div class="checkdrop-panel" hidden></div>
-            </div>
-            <span class="tiny muted">1× einschließen · 2× ausschließen · 3× neutral</span>
-          </div>
         </div>
       </div>
 
-      <div class="filter-group">
+      <div class="filter-group filter-group-genetics">
         <div class="filter-group-title">Genetik &amp; Gesundheit</div>
         <div class="filter-group-grid">
           <div class="field">
@@ -150,48 +148,51 @@
         </div>
       </div>
 
-      <div class="filter-group">
+      <div class="filter-group filter-group-performance">
         <div class="filter-group-title">Leistungswerte</div>
         <div class="filter-group-grid">
           <div class="field">
             <label for="f-gp-op">GP</label>
             <div class="compare-field">
-              <select id="f-gp-op">
-                <option value="gt">größer als</option>
-                <option value="lt">kleiner als</option>
-              </select>
+              <select id="f-gp-op"><option value="gt">größer als</option><option value="lt">kleiner als</option></select>
               <input type="number" id="f-gp-val" step="0.01" />
             </div>
           </div>
           <div class="field">
             <label for="f-ext-op">Ext</label>
             <div class="compare-field">
-              <select id="f-ext-op">
-                <option value="gt">größer als</option>
-                <option value="lt">kleiner als</option>
-              </select>
+              <select id="f-ext-op"><option value="gt">größer als</option><option value="lt">kleiner als</option></select>
               <input type="number" id="f-ext-val" step="0.01" />
             </div>
           </div>
           <div class="field">
             <label for="f-extpct-op">Ext%</label>
             <div class="compare-field">
-              <select id="f-extpct-op">
-                <option value="gt">größer als</option>
-                <option value="lt">kleiner als</option>
-              </select>
+              <select id="f-extpct-op"><option value="gt">größer als</option><option value="lt">kleiner als</option></select>
               <input type="number" id="f-extpct-val" step="0.01" />
             </div>
           </div>
           <div class="field">
             <label for="f-int-op">Int</label>
             <div class="compare-field">
-              <select id="f-int-op">
-                <option value="gt">größer als</option>
-                <option value="lt">kleiner als</option>
-              </select>
+              <select id="f-int-op"><option value="gt">größer als</option><option value="lt">kleiner als</option></select>
               <input type="number" id="f-int-val" step="0.01" />
             </div>
+          </div>
+          <div class="field">
+            <label for="f-main-group">Hauptbegabung</label>
+            <select id="f-main-group"><option value="">Alle</option></select>
+          </div>
+          <div class="field" id="f-talent-field" hidden>
+            <label for="f-talent">Unterkategorie</label>
+            <select id="f-talent"><option value="">Alle</option></select>
+          </div>
+          <div class="field filter-checkbox-field">
+            <label class="filter-checkbox-label" for="f-cupstar">
+              <input type="checkbox" id="f-cupstar" />
+              <span>⭐ Cup-Stern</span>
+            </label>
+            <span class="tiny muted">Nur Pferde mit bestätigtem Cup-Stern</span>
           </div>
         </div>
       </div>
@@ -201,7 +202,7 @@
           <option value="">Vorlage laden…</option>
         </select>
         <button type="button" id="save-filter-preset-btn" class="secondary">💾 Als Vorlage speichern</button>
-        <button type="button" id="reset-filters" class="secondary">Zurücksetzen</button>
+        <button type="button" id="reset-filters" class="secondary">Alle Filter löschen</button>
         <button type="submit">Filtern</button>
       </div>
     </form>
@@ -260,6 +261,11 @@
         <button type="button" id="bulk-learning-add-btn" class="secondary small">🧠 Lerndatei zuweisen</button>
         <button type="button" id="bulk-learning-remove-btn" class="secondary small">🧠 Lerndatei lösen</button>
       </div>
+    </div>
+
+    <div id="active-filter-bar" class="active-filter-bar" hidden>
+      <div id="active-filter-chips" class="active-filter-chips" aria-label="Aktive Filter"></div>
+      <button type="button" id="clear-active-filters" class="secondary small">Alle Filter löschen</button>
     </div>
 
     <div class="list-header">
@@ -380,13 +386,14 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5421"></script>
-<script src="js/database-local.js?v=5421"></script>
-  <script src="js/local-app.js?v=5421"></script>
-  <script src="js/learning-file.js?v=5421"></script>
-  <script src="js/parser.js?v=5421"></script>
-  <script src="js/data-quality.js?v=5421"></script>
-  <script src="js/breeding-progress.js?v=5421"></script>
-  <script src="js/list.js?v=5421"></script>
+<script src="js/supabase-config.js?v=5424"></script>
+<script src="js/database-local.js?v=5424"></script>
+  <script src="js/local-app.js?v=5424"></script>
+  <script src="js/learning-file.js?v=5424"></script>
+  <script src="js/parser.js?v=5424"></script>
+  <script src="js/data-quality.js?v=5424"></script>
+  <script src="js/breeding-progress.js?v=5424"></script>
+  <script src="js/planer-common.js?v=5424"></script>
+  <script src="js/list.js?v=5424"></script>
 </body>
 </html>
