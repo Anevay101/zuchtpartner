@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Guide – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5432" />
+  <link rel="stylesheet" href="css/style.css?v=5433" />
 </head>
 <body class="guide-page">
 <header class="topbar">
@@ -102,7 +102,7 @@
         <p>Das Dashboard eignet sich für Bestandsfragen: Welche Rassen besitzt ein Züchter? Wie liegen Durchschnittswerte? Wie verteilen sich Hauptbegabungen oder Zuchtwerte?</p>
         <p>Besitzer zuerst einschränken und anschließend eine Rasse wählen. Die Rassenauswahl wird automatisch auf den ausgewählten Bestand reduziert. So entstehen keine scheinbaren Rassenoptionen, die beim gewählten Besitzer gar nicht vorkommen.</p>
         <p>Häufige Auswertungen können als Dashboard-Kacheln bzw. gespeicherte Einstellungen wiederverwendet werden.</p>
-        <p><strong>🎨 Farbgenetik:</strong> Der zusätzliche Dashboard-Bereich zeigt Grundfarben, exakte Fellfarbenbezeichnungen, Schattierungen, Appaloosa-Muster und beobachtete Eltern-Fohlen-Farbvererbung. Die Schattierungsanalyse vergleicht nur tatsächlich gespeicherte Gentests; statistische Auffälligkeiten werden bewusst als Hinweise und nicht automatisch als MDR-Spielregel behandelt. Der <strong>❄️ Snowflake-Detektiv</strong> kombiniert dafür Datenbank und Lerndatei, untersucht LP/PATN1, Eltern, Geschwister, Nachkommen und gemeinsame Ahnen und markiert mögliche Träger-/Linienkandidaten. Ein Verdachtsindex ist nur ein Evidenzscore und keine behauptete PATN2-Genwahrscheinlichkeit.</p>
+        <p><strong>🎨 Farbgenetik:</strong> Der zusätzliche Dashboard-Bereich zeigt Grundfarben, exakte Fellfarbenbezeichnungen, Schattierungen, LP-Scheckungsmuster und beobachtete Eltern-Fohlen-Farbvererbung. Die Schattierungsanalyse vergleicht nur tatsächlich gespeicherte Gentests; statistische Auffälligkeiten werden bewusst als Hinweise und nicht automatisch als MDR-Spielregel behandelt. Der <strong>❄️ Snowflake-Detektiv</strong> kombiniert dafür Datenbank und Lerndatei rasseübergreifend für LP-Schecken, untersucht LP/PATN1, Eltern, Geschwister, Nachkommen und gemeinsame Ahnen und markiert mögliche Träger-/Linienkandidaten. Für auffällige Linien wird zusätzlich geprüft, wie viele genetisch passend getestete Nachkommen (LP vorhanden + p1p1) Snowflake zeigen. Ein Verdachtsindex bzw. eine Snowflake-Quote ist nur explorative Evidenz und kein gespeichertes Pferdemerkmal oder behaupteter PATN2-Genotyp.</p>
       </div></div>
     </details>
 
@@ -155,9 +155,9 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=5432"></script>
-<script src="js/database-local.js?v=5432"></script>
-<script src="js/local-app.js?v=5432"></script>
-<script src="js/guide.js?v=5432"></script>
+<script src="js/supabase-config.js?v=5433"></script>
+<script src="js/database-local.js?v=5433"></script>
+<script src="js/local-app.js?v=5433"></script>
+<script src="js/guide.js?v=5433"></script>
 </body>
 </html>

@@ -613,6 +613,14 @@ function dashboardSnowflakeGenotype(horse) {
   };
 }
 
+function dashboardSnowflakeGeneticallyEligible(horse) {
+  const g=dashboardSnowflakeGenotype(horse);
+  // Aktuelle Arbeitshypothese: Snowflake wurde bislang nur bei vorhandenem LP
+  // und p1p1 beobachtet. Das ist ein Forschungsfilter, keine behauptete MDR-Regel.
+  const hasLp=String(g.lp || '').includes('Lp');
+  return hasLp && g.p1 === 'p1p1';
+}
+
 function dashboardSnowflakeHorseLink(horse, fallbackName = '–') {
   const name = horse?.name || fallbackName || '–';
   if (horse?.id == null || horse?.id === '') return escapeHtml(name);
@@ -724,21 +732,31 @@ function dashboardSnowflakeFamilyAnalysis(rows, snowflakes) {
 
   const candidates=[...parentCandidates.values()].map(row => {
     const knownPatternChildren=row.allKnownChildren.filter(h=>dashboardSnowflakePattern(h));
+    const eligibleChildren=row.allKnownChildren.filter(dashboardSnowflakeGeneticallyEligible);
+    const eligiblePatternChildren=eligibleChildren.filter(h=>dashboardSnowflakePattern(h));
+    const eligibleSnowflakes=eligiblePatternChildren.filter(dashboardSnowflakeIsSnowflake);
+    const eligibleUnknownPattern=Math.max(0,eligibleChildren.length-eligiblePatternChildren.length);
     const sfCount=row.snowflakeChildren.length;
     const mateCount=row.snowflakeMates.size;
     const parentPattern=dashboardSnowflakePattern(row.horse);
     const snowflakeRate=knownPatternChildren.length ? sfCount/knownPatternChildren.length : null;
-    // Transparenter Evidenzscore, KEINE Genwahrscheinlichkeit.
-    let score=Math.min(75,sfCount*25);
+    const eligibleSnowflakeRate=eligiblePatternChildren.length ? eligibleSnowflakes.length/eligiblePatternChildren.length : null;
+    // Transparenter Evidenzscore, KEINE Genwahrscheinlichkeit. Die genetisch
+    // passende Teilstichprobe darf den Score nur vorsichtig ergänzen.
+    let score=Math.min(70,sfCount*25);
     if (mateCount>=2) score+=15;
     if (row.horse && parentPattern && !/^snowflake$/i.test(parentPattern)) score+=5;
-    if (knownPatternChildren.length>=4 && snowflakeRate!=null && snowflakeRate>=0.25) score+=5;
+    if (eligiblePatternChildren.length>=3 && eligibleSnowflakeRate!=null && eligibleSnowflakeRate>=0.25) score+=10;
     score=Math.min(100,score);
     let note='ein Snowflake-Nachkomme';
     if (sfCount>=2 && mateCount>=2) note='mehrere Snowflakes mit verschiedenen Partnern';
     else if (sfCount>=2) note='mehrere Snowflake-Nachkommen';
     else if (row.horse && parentPattern && !/^snowflake$/i.test(parentPattern)) note='nicht selbst Snowflake, aber Snowflake-Nachkomme';
-    return {...row,knownPatternChildren,sfCount,mateCount,snowflakeRate,score,note};
+    return {
+      ...row,knownPatternChildren,sfCount,mateCount,snowflakeRate,score,note,
+      eligibleChildren,eligiblePatternChildren,eligibleSnowflakes,
+      eligibleUnknownPattern,eligibleSnowflakeRate,
+    };
   }).sort((a,b)=>b.score-a.score || b.sfCount-a.sfCount || a.name.localeCompare(b.name,'de'));
 
   const ancestorCounts=new Map();
@@ -784,6 +802,13 @@ function dashboardSnowflakeHypotheses(rows, snowflakes, family) {
   if (strong.length) {
     messages.push(`<strong>Linien-Hinweis:</strong> ${strong.slice(0,3).map(x=>escapeHtml(x.name)).join(', ')} ${strong.length===1?'taucht':'tauchen'} mit mehreren Snowflake-Nachkommen aus verschiedenen Partnern auf. Diese Linien sind besonders interessant für weitere Beobachtungen.`);
   }
+  const eligibleEvidence=family.candidates
+    .filter(x=>x.eligiblePatternChildren?.length>=2)
+    .sort((a,b)=>(b.eligiblePatternChildren?.length||0)-(a.eligiblePatternChildren?.length||0) || (b.eligibleSnowflakeRate||0)-(a.eligibleSnowflakeRate||0))
+    .slice(0,3);
+  if (eligibleEvidence.length) {
+    messages.push(`<strong>LP+p1p1-Nachzucht:</strong> ${eligibleEvidence.map(x=>`${escapeHtml(x.name)} ${x.eligibleSnowflakes.length}/${x.eligiblePatternChildren.length} Snowflake`).join(' · ')}. Gezählt werden nur Nachkommen mit vorhandenem LP, p1p1 und bekanntem sichtbaren Muster; das ist ein Test der aktuellen Arbeitshypothese, keine festgelegte MDR-Regel.`);
+  }
   if (!family.candidates.length) {
     messages.push('<strong>Familien-Spur:</strong> Noch keine auswertbaren Elternverknüpfungen. Für die Trägersuche sind Mutter/Vater bzw. Stammbaumdaten besonders wertvoll.');
   }
@@ -795,7 +820,7 @@ function renderSnowflakeDetective(allRows) {
   const snowflakes=rows.filter(dashboardSnowflakeIsSnowflake);
   const regularSnowflakes=snowflakes.filter(h=>dashboardSnowflakeSource(h)==='Datenbank');
   const learningSnowflakes=snowflakes.filter(h=>dashboardSnowflakeSource(h)==='Lerndatei');
-  const appaloosaRefs=rows.filter(h=>dashboardSnowflakePattern(h) || dashboardSnowflakeGenotype(h).lp!=='–');
+  const lpPatternRefs=rows.filter(h=>dashboardSnowflakePattern(h) || dashboardSnowflakeGenotype(h).lp!=='–');
 
   if (!snowflakes.length) return `
     <details class="snowflake-detective">
@@ -831,10 +856,13 @@ function renderSnowflakeDetective(allRows) {
   const candidateTable=family.candidates.length ? family.candidates.slice(0,15).map(row=>{
     const g=dashboardSnowflakeGenotype(row.horse);
     const pattern=dashboardSnowflakePattern(row.horse) || 'Muster offen';
-    const rate=row.snowflakeRate==null?'–':`${Math.round(row.snowflakeRate*100)}%`;
+    const eligibleRate=row.eligibleSnowflakeRate==null?'–':`${Math.round(row.eligibleSnowflakeRate*100)}%`;
+    const eligibleN=row.eligiblePatternChildren.length;
+    const eligibleExtra=row.eligibleUnknownPattern ? `<br><span class="tiny muted">+${row.eligibleUnknownPattern} ohne Musterangabe</span>` : '';
     return `<tr>
       <td>${row.horse?dashboardSnowflakeHorseLink(row.horse,row.name):escapeHtml(row.name)}<br><span class="tiny muted">${escapeHtml(pattern)} · ${escapeHtml(g.lp)}/${escapeHtml(g.p1)}</span></td>
-      <td>${row.sfCount}</td><td>${row.mateCount}</td><td>${row.knownPatternChildren.length}</td><td>${rate}</td>
+      <td>${row.sfCount}</td><td>${row.mateCount}</td>
+      <td>${eligibleN}${eligibleExtra}</td><td>${row.eligibleSnowflakes.length}</td><td><strong>${eligibleRate}</strong></td>
       <td><span class="snowflake-score" title="Explorativer Evidenzscore, keine Genwahrscheinlichkeit">${row.score}</span></td>
       <td>${escapeHtml(row.note)}</td>
     </tr>`;
@@ -847,12 +875,12 @@ function renderSnowflakeDetective(allRows) {
   return `
     <details class="snowflake-detective" open>
       <summary><strong>❄️ Snowflake-Detektiv</strong></summary>
-      <p class="small muted">Explorative Spurensuche nach dem seltenen Snowflake-Muster. Der Detektiv kombiniert die gesamte Pferdedatenbank mit der Lerndatei, unabhängig vom aktuellen Dashboard-Filter. Identische MDR-IDs zählen nur einmal. PATN2 wird als mögliche verborgene Erklärung untersucht, aber niemals als getesteter Genotyp behauptet.</p>
+      <p class="small muted">Explorative Spurensuche nach dem seltenen Snowflake-Muster. Der Detektiv kombiniert die gesamte Pferdedatenbank mit der Lerndatei und berücksichtigt dabei alle LP-Scheckenrassen, unabhängig vom aktuellen Dashboard-Filter. Identische MDR-IDs zählen nur einmal. PATN2 bzw. ein zusätzlicher Modifier wird nur als Arbeitshypothese untersucht und niemals als getesteter Genotyp oder Pferdemerkmal behauptet.</p>
       <div class="snowflake-stat-grid">
         <div><strong>${snowflakes.length}</strong><span>Snowflakes gesamt</span></div>
         <div><strong>${regularSnowflakes.length}</strong><span>Datenbank</span></div>
         <div><strong>${learningSnowflakes.length}</strong><span>Lerndatei</span></div>
-        <div><strong>${appaloosaRefs.length}</strong><span>Appaloosa-Referenzen</span></div>
+        <div><strong>${lpPatternRefs.length}</strong><span>LP-Schecken-Referenzen</span></div>
       </div>
 
       <section class="snowflake-hypotheses">
@@ -873,8 +901,8 @@ function renderSnowflakeDetective(allRows) {
 
       <details class="snowflake-subdetail">
         <summary><strong>🔎 Mögliche Träger-/Linienkandidaten</strong></summary>
-        <p class="small muted">Der Verdachtsindex ist nur ein transparenter Evidenzscore: mehrere Snowflake-Nachkommen und verschiedene Partner erhöhen ihn. Er ist <strong>keine</strong> PATN2-Wahrscheinlichkeit.</p>
-        ${candidateTable ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>Linie / Elternteil</th><th>Snowflake-Nachkommen</th><th>Partner</th><th>Nachkommen mit Muster</th><th>Snowflake-Anteil</th><th>Index</th><th>Hinweis</th></tr></thead><tbody>${candidateTable}</tbody></table></div>` : '<p class="muted small">Noch keine Elternkandidaten aus den gespeicherten Stammbäumen ableitbar.</p>'}
+        <p class="small muted">Der Verdachtsindex ist nur ein transparenter Evidenzscore und <strong>keine</strong> PATN2-Wahrscheinlichkeit. Zusätzlich prüft der Detektiv die aktuelle Arbeitshypothese <strong>LP vorhanden + p1p1</strong>: Für die Snowflake-Quote zählen nur genetisch passend getestete Nachkommen, bei denen auch das sichtbare Muster bekannt ist. Ein unbekanntes Zusatzgen wird daraus nicht als Pferdemerkmal gespeichert.</p>
+        ${candidateTable ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>Linie / Elternteil</th><th>Snowflake-Nachkommen</th><th>Partner</th><th>LP+p1p1 + Muster</th><th>davon Snowflake</th><th>Snowflake-Quote</th><th>Index</th><th>Hinweis</th></tr></thead><tbody>${candidateTable}</tbody></table></div>` : '<p class="muted small">Noch keine Elternkandidaten aus den gespeicherten Stammbäumen ableitbar.</p>'}
         <h4>Gemeinsame Ahnen</h4>
         ${commonAncestors}
       </details>
@@ -912,7 +940,7 @@ function renderColorGeneticsDashboard(rows, allRows) {
 
   const shadeTable = shadeRows.length ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>Grundfarbe</th><th>Schattierung / Variante</th><th>n</th><th>auffällige getestete Marker</th></tr></thead><tbody>${shadeRows.map(row=>`<tr><td>${escapeHtml(row.base)}</td><td><strong>${escapeHtml(row.shade)}</strong></td><td>${row.horses.length}</td><td>${row.markers.length ? row.markers.map(escapeHtml).join('<br>') : '<span class="muted">noch kein unterscheidbarer getesteter Marker</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Noch keine eindeutig erkannten Grundfarben-Schattierungen.</p>';
 
-  const appComboTable = app.combos.length ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>LP</th><th>PATN1</th><th>n</th><th>beobachtete sichtbare Muster</th></tr></thead><tbody>${app.combos.map(row=>`<tr><td>${escapeHtml(row.lp)}</td><td>${escapeHtml(row.p1)}</td><td>${row.n}</td><td>${dashboardSortedCounts(row.patterns).map(([pattern,n])=>`${escapeHtml(pattern)} <strong>${n}</strong> (${Math.round(n/row.n*100)}%)`).join(' · ')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Noch keine Pferde mit gleichzeitig getestetem LP, getestetem PATN1 und sichtbarem Appaloosa-Muster im aktuellen Filter.</p>';
+  const appComboTable = app.combos.length ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>LP</th><th>PATN1</th><th>n</th><th>beobachtete sichtbare Muster</th></tr></thead><tbody>${app.combos.map(row=>`<tr><td>${escapeHtml(row.lp)}</td><td>${escapeHtml(row.p1)}</td><td>${row.n}</td><td>${dashboardSortedCounts(row.patterns).map(([pattern,n])=>`${escapeHtml(pattern)} <strong>${n}</strong> (${Math.round(n/row.n*100)}%)`).join(' · ')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Noch keine Pferde mit gleichzeitig getestetem LP, getestetem PATN1 und sichtbarem LP-Scheckungsmuster im aktuellen Filter.</p>';
 
   const inheritanceTable = inheritance.length ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>Mutter</th><th>Vater</th><th>verknüpfte Fohlen</th><th>beobachtete Grundfarben</th></tr></thead><tbody>${inheritance.map(row=>`<tr><td>${escapeHtml(row.mother)}</td><td>${escapeHtml(row.father)}</td><td>${row.n}</td><td>${dashboardSortedCounts(row.children).map(([color,n])=>`${escapeHtml(color)} <strong>${n}</strong> (${Math.round(n/row.n*100)}%)`).join(' · ')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Noch zu wenige verknüpfte Eltern-Fohlen-Paare mit auswertbarer Grundfarbe (mindestens 2 je Kombination).</p>';
 
@@ -939,10 +967,10 @@ function renderColorGeneticsDashboard(rows, allRows) {
     </details>
 
     <details class="color-genetics-detail">
-      <summary><strong>Appaloosa · LP, PATN1 &amp; sichtbares Muster</strong></summary>
-      <p class="small muted">Appaloosa-Muster werden separat betrachtet. PATN2 wird nicht angenommen oder erfunden, solange kein echter entsprechender Gentest im Datenbestand existiert.</p>
+      <summary><strong>LP-Scheckung · LP, PATN1 &amp; sichtbares Muster</strong></summary>
+      <p class="small muted">LP-basierte Scheckungsmuster werden rasseübergreifend betrachtet. PATN2 bzw. ein weiterer Modifier wird nicht angenommen oder erfunden, solange er im MDR nicht als eigener Gentest beobachtbar ist.</p>
       <h4>Sichtbare Muster</h4>
-      ${dashboardColorPills(app.patterns,app.patterns.reduce((s,x)=>s+x[1],0),'Keine Appaloosa-Muster im aktuellen Filter.')}
+      ${dashboardColorPills(app.patterns,app.patterns.reduce((s,x)=>s+x[1],0),'Keine LP-Scheckungsmuster im aktuellen Filter.')}
       <h4>Getestete Genetik → beobachtetes Muster</h4>
       ${appComboTable}
       ${renderSnowflakeDetective(allRows || rows)}
