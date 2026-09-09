@@ -613,20 +613,23 @@ function cgLpKnowledge(horse, allHorses = null) {
   if (tested) return tested;
 
   const pattern = cgPatternHint(horse);
-  const observed = cgObservedGenotypeStatesForPattern(pattern,allHorses,'lp');
-  if (observed.length) {
-    return {
-      states:observed,
-      tested:false,
-      source:`${pattern}: aus bisher beobachteten LP-Genotypen abgeleitet`,
-    };
+  // MDR-Patterntafel: Leopard/Blanket sind Lplp, Few Spot/Snowcap LpLp.
+  // Varnish Roan und Snowflake können in beiden LP-Dosen vorkommen.
+  if (pattern === 'Leopard' || pattern === 'Spotted Blanket') {
+    return { states:[['Lp','lp']], tested:false, source:`${pattern}: Lplp aus Patterntafel abgeleitet` };
+  }
+  if (pattern === 'Few Spot' || pattern === 'Snowcap') {
+    return { states:[['Lp','Lp']], tested:false, source:`${pattern}: LpLp aus Patterntafel abgeleitet` };
+  }
+  if (pattern === 'Varnish Roan' || pattern === 'Snowflake') {
+    return { states:[['Lp','Lp'],['Lp','lp']], tested:false, source:`${pattern}: mindestens 1× Lp, Dosis nicht eindeutig` };
   }
 
   if (pattern || /\bappaloosa\b/i.test(String(horse?.coat_color||''))) {
     return {
       states:[['Lp','Lp'],['Lp','lp']],
       tested:false,
-      source:'sichtbare Appaloosa-Scheckung: mindestens 1× Lp',
+      source:'sichtbare LP-Scheckung: mindestens 1× Lp',
     };
   }
   return null;
@@ -637,23 +640,54 @@ function cgPatn1Knowledge(horse, allHorses = null) {
   if (tested) return tested;
 
   const pattern = cgPatternHint(horse);
-  const observed = cgObservedGenotypeStatesForPattern(pattern,allHorses,'p1');
-  if (observed.length) {
+  if (!pattern) return null;
+  if (pattern === 'Leopard' || pattern === 'Few Spot') {
     return {
-      states:observed,
+      states:[['P1','P1'],['P1','p1']],
       tested:false,
-      source:`${pattern}: aus bisher beobachteten PATN1-Genotypen abgeleitet`,
+      source:`${pattern}: P1 vorhanden, Zygosität verdeckt`,
     };
   }
-
-  if (pattern) {
+  if (['Spotted Blanket','Snowcap','Varnish Roan','Snowflake'].includes(pattern)) {
     return {
-      states:[['P1','P1'],['P1','p1'],['p1','p1']],
+      states:[['p1','p1']],
       tested:false,
-      source:`${pattern}: PATN1-Zustand noch nicht ausreichend beobachtet`,
+      source:`${pattern}: p1p1 aus Patterntafel abgeleitet`,
     };
   }
   return null;
+}
+
+function cgPattern23Knowledge(horse, locus) {
+  const pattern = cgPatternHint(horse);
+  if (!pattern) return null;
+  const isP2 = locus === 'P2';
+  const dom = isP2 ? 'P2' : 'P3';
+  const rec = isP2 ? 'p2' : 'p3';
+
+  let state = 'unknown';
+  if (typeof appaloosaPatternStateForHorse === 'function') {
+    state = appaloosaPatternStateForHorse(horse)?.states?.[locus] || 'unknown';
+  } else if (isP2) {
+    if (['Spotted Blanket','Snowcap'].includes(pattern)) state='yes';
+    else if (['Varnish Roan','Snowflake'].includes(pattern)) state='no';
+  } else {
+    if (pattern === 'Varnish Roan') state='yes';
+    else if (pattern === 'Snowflake') state='no';
+  }
+
+  if (state === 'yes') return {
+    states:[[dom,dom],[dom,rec]], tested:false,
+    source:`${pattern}: ${locus} vorhanden, Zygosität verdeckt`,
+  };
+  if (state === 'no') return {
+    states:[[rec,rec]], tested:false,
+    source:`${pattern}: ${rec}${rec} aus Patterntafel abgeleitet`,
+  };
+  return {
+    states:[[dom,dom],[dom,rec],[rec,rec]], tested:false,
+    source:`${pattern}: ${locus} durch höheres Pattern verdeckt`,
+  };
 }
 
 function cgLpChildCategory(pair) {
@@ -725,103 +759,108 @@ function cgAppaloosaEmpiricalDistribution(model, lpCategory, p1Category) {
   };
 }
 
-function cgAppaloosaGenotypeScenarioMap(lpA,lpB,p1A,p1B,model) {
-  const lpCross=cgCrossPair(lpA,lpB);
-  const p1Cross=cgCrossPair(p1A,p1B);
-  const patterns=new Map();
-  const genotypeKeys=new Map();
+function cgPatternPresenceRows(knowledgeA, knowledgeB, dominant, labelPresent, labelAbsent) {
+  const crosses=cgAllCrosses(knowledgeA,knowledgeB);
+  if (!crosses.length) return [];
+  const present=cgProbabilityRange(crosses,pair=>pair.includes(dominant));
+  const rows=[];
+  if (present?.max > .00001) rows.push({label:labelPresent,min:present.min,max:present.max});
+  if (present && 1-present.min > .00001) rows.push({label:labelAbsent,min:1-present.max,max:1-present.min});
+  return rows;
+}
 
-  for(const [lk,lpProb] of lpCross) {
-    const lpCategory=cgLpChildCategory(cgPair(lk));
-    for(const [pk,p1Prob] of p1Cross) {
-      const p1Category=cgPatn1ChildCategory(cgPair(pk));
-      const genotypeProb=lpProb*p1Prob;
-      const key=`${lpCategory}|${p1Category}`;
-      genotypeKeys.set(key,(genotypeKeys.get(key)||0)+genotypeProb);
+function cgAppaloosaPatternFromPairs(lpPair,p1Pair,p2Pair,p3Pair) {
+  const lpCount=cgCount(lpPair,'Lp');
+  if (!lpCount) return 'Keine Appaloosa-Scheckung';
+  const lpHom=lpCount===2;
+  if (p1Pair.includes('P1')) return lpHom ? 'Few Spot' : 'Leopard';
+  if (p2Pair.includes('P2')) return lpHom ? 'Snowcap' : 'Spotted Blanket';
+  if (p3Pair.includes('P3')) return 'Varnish Roan';
+  return 'Snowflake';
+}
 
-      const dist=cgAppaloosaEmpiricalDistribution(model,lpCategory,p1Category);
-      for(const [pattern,patternProb] of dist.probabilities) {
-        patterns.set(pattern,(patterns.get(pattern)||0)+genotypeProb*patternProb);
-      }
-    }
+function cgAppaloosaPatternScenarioMap(lpA,lpB,p1A,p1B,p2A,p2B,p3A,p3B) {
+  const crosses=[
+    cgCrossPair(lpA,lpB), cgCrossPair(p1A,p1B),
+    cgCrossPair(p2A,p2B), cgCrossPair(p3A,p3B),
+  ];
+  if (crosses.some(x=>!x)) return new Map();
+  const out=new Map();
+  for(const [lk,lpProb] of crosses[0])
+  for(const [p1k,p1Prob] of crosses[1])
+  for(const [p2k,p2Prob] of crosses[2])
+  for(const [p3k,p3Prob] of crosses[3]) {
+    const pattern=cgAppaloosaPatternFromPairs(cgPair(lk),cgPair(p1k),cgPair(p2k),cgPair(p3k));
+    const prob=lpProb*p1Prob*p2Prob*p3Prob;
+    out.set(pattern,(out.get(pattern)||0)+prob);
   }
-
-  return {patterns,genotypeKeys};
+  return out;
 }
 
 function cgAppaloosa(mare,stallion,allHorses = null) {
   const referenceHorses=cgAppaloosaReferenceHorses(allHorses);
-  const model=cgAppaloosaEmpiricalModel(referenceHorses);
+  const empiricalModel=cgAppaloosaEmpiricalModel(referenceHorses);
 
   const ml=cgLpKnowledge(mare,referenceHorses);
   const sl=cgLpKnowledge(stallion,referenceHorses);
-  const mp=cgPatn1Knowledge(mare,referenceHorses);
-  const sp=cgPatn1Knowledge(stallion,referenceHorses);
+  const mp1=cgPatn1Knowledge(mare,referenceHorses);
+  const sp1=cgPatn1Knowledge(stallion,referenceHorses);
+  const mp2=cgPattern23Knowledge(mare,'P2');
+  const sp2=cgPattern23Knowledge(stallion,'P2');
+  const mp3=cgPattern23Knowledge(mare,'P3');
+  const sp3=cgPattern23Knowledge(stallion,'P3');
 
   if (!ml && !sl) {
     return {
-      rows:null,lpRows:null,patternRows:null,exact:false,
-      reason:'Bei keinem Elternteil ist Lp getestet oder aus sichtbarem Appaloosa-Phänotyp ableitbar.',
+      rows:null,lpRows:null,patternRows:null,p2Rows:null,p3Rows:null,exact:false,
+      reason:'Bei keinem Elternteil ist Lp getestet oder aus sichtbarem LP-Schecken-Phänotyp ableitbar.',
       empiricalBasis:[],
     };
   }
 
-  // Unbekannt bleibt wirklich unbekannt. Das führt zu einer Spanne statt
-  // zu einer stillen Annahme "Gen nicht vorhanden".
+  // Unbekannt bleibt als vollständige Zustandsmenge erhalten. Dadurch
+  // entstehen ehrliche Min–Max-Spannen statt erfundener P2/P3-Genotypen.
   const lpUnknown={states:[['lp','lp'],['Lp','lp'],['Lp','Lp']],source:'unbekannt'};
   const p1Unknown={states:[['p1','p1'],['P1','p1'],['P1','P1']],source:'unbekannt'};
-  const L1=ml||lpUnknown,L2=sl||lpUnknown,P1=mp||p1Unknown,P2=sp||p1Unknown;
+  const p2Unknown={states:[['p2','p2'],['P2','p2'],['P2','P2']],source:'unbekannt'};
+  const p3Unknown={states:[['p3','p3'],['P3','p3'],['P3','P3']],source:'unbekannt'};
+  const L1=ml||lpUnknown,L2=sl||lpUnknown;
+  const P1A=mp1||p1Unknown,P1B=sp1||p1Unknown;
+  const P2A=mp2||p2Unknown,P2B=sp2||p2Unknown;
+  const P3A=mp3||p3Unknown,P3B=sp3||p3Unknown;
 
-  const lpMaps=[];
-  for(const a of L1.states) for(const b of L2.states) lpMaps.push(cgCrossPair(a,b));
+  const lpMaps=cgAllCrosses(L1,L2);
   const lpDefs=[
     {label:'LpLp',pred:p=>cgLpChildCategory(p)==='LpLp'},
     {label:'Lplp',pred:p=>cgLpChildCategory(p)==='Lplp'},
     {label:'lplp',pred:p=>cgLpChildCategory(p)==='lplp'},
   ];
   const lpRows=lpDefs.map(x=>{
-    const vals=lpMaps.map(map=>{
-      let q=0; for(const [k,p] of map) if(x.pred(cgPair(k))) q+=p; return q;
-    });
+    const vals=lpMaps.map(map=>{ let q=0; for(const [k,p] of map) if(x.pred(cgPair(k))) q+=p; return q; });
     return {label:x.label,min:Math.min(...vals),max:Math.max(...vals)};
   }).filter(r=>r.max>.00001);
 
-  const p1Maps=[];
-  for(const a of P1.states) for(const b of P2.states) p1Maps.push(cgCrossPair(a,b));
-  const p1Defs=[
-    {label:'P1_',pred:p=>p.includes('P1')},
-    {label:'p1p1',pred:p=>!p.includes('P1')},
-  ];
-  const patternRows=p1Defs.map(x=>{
-    const vals=p1Maps.map(map=>{
-      let q=0; for(const [k,p] of map) if(x.pred(cgPair(k))) q+=p; return q;
-    });
-    return {label:x.label,min:Math.min(...vals),max:Math.max(...vals)};
-  }).filter(r=>r.max>.00001);
+  const patternRows=cgPatternPresenceRows(P1A,P1B,'P1','P1 vorhanden','p1p1');
+  const p2Rows=cgPatternPresenceRows(P2A,P2B,'P2','P2 vorhanden','p2p2');
+  const p3Rows=cgPatternPresenceRows(P3A,P3B,'P3','P3 vorhanden','p3p3');
 
   const scenarioMaps=[];
-  for(const a of L1.states) for(const b of L2.states)
-  for(const c of P1.states) for(const d of P2.states) {
-    scenarioMaps.push(cgAppaloosaGenotypeScenarioMap(a,b,c,d,model));
+  for(const la of L1.states) for(const lb of L2.states)
+  for(const a1 of P1A.states) for(const b1 of P1B.states)
+  for(const a2 of P2A.states) for(const b2 of P2B.states)
+  for(const a3 of P3A.states) for(const b3 of P3B.states) {
+    scenarioMaps.push(cgAppaloosaPatternScenarioMap(la,lb,a1,b1,a2,b2,a3,b3));
   }
 
-  const labels=[...new Set(scenarioMaps.flatMap(x=>[...x.patterns.keys()]))];
+  const labels=['Leopard','Few Spot','Spotted Blanket','Snowcap','Varnish Roan','Snowflake','Keine Appaloosa-Scheckung'];
   const rows=labels.map(label=>{
-    const vals=scenarioMaps.map(x=>x.patterns.get(label)||0);
+    const vals=scenarioMaps.map(x=>x.get(label)||0);
     return {label,min:Math.min(...vals),max:Math.max(...vals)};
-  })
-  .filter(r=>r.max>.00001)
-  .sort((a,b)=>
-    (b.max-a.max) ||
-    (b.min-a.min) ||
-    (((b.min+b.max)/2)-((a.min+a.max)/2)) ||
-    a.label.localeCompare(b.label,'de')
-  );
+  }).filter(r=>r.max>.00001);
 
-  const empiricalBasis=[...model.entries()]
+  const empiricalBasis=[...empiricalModel.entries()]
     .map(([key,row])=>({
-      key,
-      n:row.n,
+      key,n:row.n,
       patterns:[...row.patterns.entries()]
         .sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0],'de'))
         .map(([label,count])=>({label,count,p:count/row.n})),
@@ -830,28 +869,38 @@ function cgAppaloosa(mare,stallion,allHorses = null) {
     .sort((a,b)=>a.key.localeCompare(b.key,'de'));
 
   return {
-    rows,lpRows,patternRows,
+    rows,lpRows,patternRows,p2Rows,p3Rows,
     exact:rows.every(r=>Math.abs(r.max-r.min)<1e-9),
     empiricalBasis,
     sources:{
-      mareLp:cgSourceLabel(ml),
-      stallionLp:cgSourceLabel(sl),
-      marePat:cgSourceLabel(mp),
-      stallionPat:cgSourceLabel(sp),
+      mareLp:cgSourceLabel(ml), stallionLp:cgSourceLabel(sl),
+      mareP1:cgSourceLabel(mp1), stallionP1:cgSourceLabel(sp1),
+      mareP2:mp2?.source||'unbekannt', stallionP2:sp2?.source||'unbekannt',
+      mareP3:mp3?.source||'unbekannt', stallionP3:sp3?.source||'unbekannt',
     }
   };
 }
 
-function cgAppaloosaWishScore(mare,stallion,wish,allHorses = null) {
+function cgAppaloosaWishRange(mare,stallion,wish,allHorses = null) {
   if (!wish || wish === 'any') return null;
   const normalized = wish === 'Blanket' ? 'Spotted Blanket' : wish === 'snowflake' ? 'Snowflake' : wish;
   const app=cgAppaloosa(mare,stallion,allHorses);
   if (!app.rows) return null;
   const row=app.rows.find(r=>r.label===normalized);
-  // Ranking bleibt konservativ: Mindestwahrscheinlichkeit.
-  return row ? row.min : 0;
+  return row ? {min:row.min,max:row.max} : {min:0,max:0};
 }
 
+function cgAppaloosaWishScore(mare,stallion,wish,allHorses = null) {
+  const range=cgAppaloosaWishRange(mare,stallion,wish,allHorses);
+  return range ? range.min : null;
+}
+
+function cgAppaloosaWishRangeText(range) {
+  if (!range) return 'nicht berechenbar';
+  return Math.abs(range.max-range.min)<1e-9
+    ? cgPct(range.min)
+    : `${cgPct(range.min)}–${cgPct(range.max)}`;
+}
 
 
 // -------- Empirische Farbvererbung ------------------------------------
@@ -1439,6 +1488,13 @@ function cgHorseGeneticsSummary(horse) {
 
   const pattern=cgPatternHint(horse);
   if (pattern) bits.push(`Muster: ${pattern} (sichtbar/abgeleitet)`);
+  if (typeof appaloosaPatternStateForHorse === 'function') {
+    const ps=appaloosaPatternStateForHorse(horse);
+    if (ps?.relevant) {
+      const sym={yes:'✓',no:'✗',unknown:'?'};
+      bits.push(`Pattern: P1 ${sym[ps.states.P1]||'?'} · P2 ${sym[ps.states.P2]||'?'} · P3 ${sym[ps.states.P3]||'?'}`);
+    }
+  }
 
   // Übrige Gene (Tobiano, Sabino, Roan, Overo, Flaxen...) weiterhin aus
   // der gemeinsamen MDR-Genetik-Zusammenfassung ergänzen.
@@ -1479,16 +1535,18 @@ function colorGuideHtml(mare,stallion,allHorses = null) {
   if(app.rows) {
     appHtml=`
       <h5>1. LP</h5>${cgRows(app.lpRows)}
-      <h5>2. PATN1</h5>${cgRows(app.patternRows)}
-      <h5>3. Muster</h5>${cgRows(app.rows)}
+      <h5>2. P1</h5>${cgRows(app.patternRows)}
+      <h5>3. P2</h5>${cgRows(app.p2Rows)}
+      <h5>4. P3</h5>${cgRows(app.p3Rows)}
+      <h5>5. sichtbares Muster</h5>${cgRows(app.rows)}
       <p class="tiny muted">
-        LP und PATN1 werden genetisch vererbt. Das sichtbare Muster wird anschließend aus Pferden
-        mit <strong>getestetem LP + getestetem PATN1 + eingetragenem sichtbaren Muster</strong> geschätzt.
-        Pattern 2 und Pattern 3 sind in der MDR-Patterntafel intern beschrieben, werden hier aber nicht als getestete Zustände angenommen, weil dafür keine individuellen Gentests im Datenbestand vorliegen.
+        Die Berechnung folgt der MDR-Patterntafel: P1 überdeckt P2/P3, P2 überdeckt P3.
+        P1 nutzt den echten PATN1-Test, wenn vorhanden. P2/P3 werden ausschließlich aus dem sichtbaren Muster abgeleitet;
+        verdeckte Zustände bleiben unbekannt und erzeugen deshalb eine Min–Max-Spanne statt eines erfundenen Genotyps.
       </p>
       ${app.empiricalBasis?.length ? `
         <details class="appaloosa-empirical-basis">
-          <summary>Aktuelle Appaloosa-Datenbasis</summary>
+          <summary>Beobachtete LP/PATN1-Datenbasis zum Gegencheck</summary>
           <div class="small">
             ${app.empiricalBasis.map(row=>`
               <div><strong>${cgEsc(row.key.replace('|',' + '))}</strong> · n=${row.n}:
@@ -1497,8 +1555,8 @@ function colorGuideHtml(mare,stallion,allHorses = null) {
           </div>
         </details>` : ''}
       <p class="tiny muted">
-        Stute LP: ${cgEsc(app.sources?.mareLp||'unbekannt')} · PATN1: ${cgEsc(app.sources?.marePat||'unbekannt')}<br>
-        Hengst LP: ${cgEsc(app.sources?.stallionLp||'unbekannt')} · PATN1: ${cgEsc(app.sources?.stallionPat||'unbekannt')}
+        Stute: LP ${cgEsc(app.sources?.mareLp||'unbekannt')} · P1 ${cgEsc(app.sources?.mareP1||'unbekannt')} · P2 ${cgEsc(app.sources?.mareP2||'unbekannt')} · P3 ${cgEsc(app.sources?.mareP3||'unbekannt')}<br>
+        Hengst: LP ${cgEsc(app.sources?.stallionLp||'unbekannt')} · P1 ${cgEsc(app.sources?.stallionP1||'unbekannt')} · P2 ${cgEsc(app.sources?.stallionP2||'unbekannt')} · P3 ${cgEsc(app.sources?.stallionP3||'unbekannt')}
       </p>`;
   } else {
     appHtml=`<p class="small muted">Appaloosa: nicht vorhersehbar. ${cgEsc(app.reason||'')}</p>`;

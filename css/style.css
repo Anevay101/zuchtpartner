@@ -5372,3 +5372,34 @@ body.planner-high-contrast .filter-checkbox-label {
   white-space: nowrap;
 }
 .snowflake-subdetail h4 { margin: .8rem 0 .35rem; }
+
+/* V54.0.37 – kompakte P1/P2/P3-Anzeige bei LP-Schecken */
+.app-pattern-compact {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin: .35rem 0 .55rem;
+  padding: .45rem .55rem;
+  border: 1px solid var(--border);
+  border-radius: .55rem;
+  background: var(--card-bg, rgba(255,255,255,.35));
+}
+.app-pattern-label { font-weight: 700; margin-right: .1rem; }
+.app-pattern-state {
+  display: inline-flex;
+  align-items: center;
+  gap: .22rem;
+  min-width: 3.05rem;
+  justify-content: center;
+  padding: .12rem .38rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  line-height: 1.35;
+  font-size: .88rem;
+}
+.app-pattern-yes { border-color: var(--accent); }
+.app-pattern-no { border-color: var(--danger); }
+.app-pattern-unknown { opacity: .78; }
+.app-pattern-legend { margin-left: .1rem; }
+.app-pattern-warning { width: 100%; color: var(--danger); }

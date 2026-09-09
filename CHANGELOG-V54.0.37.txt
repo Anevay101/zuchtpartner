@@ -1,0 +1,11 @@
+MDR-Datenbank V54.0.37
+
+- LP-Schecken-Pferdeseiten: kompakte Pattern-Anzeige P1/P2/P3 mit ✓ / ✗ / ? im Genetik-Reiter.
+- P1 nutzt einen echten PATN1-Test, sofern vorhanden; sonst wird nur der durch das sichtbare Muster zwingende Zustand abgeleitet.
+- P2/P3 werden niemals als Gentest/Genotyp gespeichert. Sie werden nur aus dem sichtbaren MDR-Muster logisch abgeleitet; verdeckte Zustände bleiben ?.
+- Widerspricht ein PATN1-Test dem sichtbaren Muster, wird dies kompakt gewarnt statt still korrigiert.
+- Zuchtplaner/Appaloosa-Farbwünsche folgen jetzt der MDR-Patterntafel LP + P1 + P2 + P3 statt nur dem bisherigen LP/PATN1-Lernmodell.
+- Pattern-Hierarchie: P1 -> Leopard/Few Spot; p1p1 + P2 -> Spotted Blanket/Snowcap; p1p1+p2p2+P3 -> Varnish Roan; p1p1+p2p2+p3p3 -> Snowflake.
+- Verdeckte P2/P3-Zustände erzeugen Min-Max-Spannen. Beim Ranking zählt zuerst die sichere Mindestchance, danach die mögliche Maximalchance als Tie-Breaker.
+- Die beobachtete LP/PATN1-Datenbasis bleibt im Farbguide als Gegencheck sichtbar.
+- Cache: 5437.

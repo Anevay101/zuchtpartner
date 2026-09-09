@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Guide – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5436" />
+  <link rel="stylesheet" href="css/style.css?v=5437" />
 </head>
 <body class="guide-page">
 <header class="topbar">
@@ -102,7 +102,7 @@
         <p>Das Dashboard eignet sich für Bestandsfragen: Welche Rassen besitzt ein Züchter? Wie liegen Durchschnittswerte? Wie verteilen sich Hauptbegabungen oder Zuchtwerte?</p>
         <p>Besitzer zuerst einschränken und anschließend eine Rasse wählen. Die Rassenauswahl wird automatisch auf den ausgewählten Bestand reduziert. So entstehen keine scheinbaren Rassenoptionen, die beim gewählten Besitzer gar nicht vorkommen.</p>
         <p>Häufige Auswertungen können als Dashboard-Kacheln bzw. gespeicherte Einstellungen wiederverwendet werden.</p>
-        <p><strong>🎨 Farbgenetik:</strong> Der zusätzliche Dashboard-Bereich zeigt Grundfarben, exakte Fellfarbenbezeichnungen, die offiziellen MDR-Schattierungsskalen in der Reihenfolge hell → dunkel, LP-Scheckungsmuster und beobachtete Eltern-Fohlen-Farbvererbung. Die Schattierungsanalyse vergleicht nur tatsächlich gespeicherte Gentests; statistische Auffälligkeiten werden bewusst als Hinweise und nicht automatisch als MDR-Spielregel behandelt. Der <strong>❄️ Snowflake-Detektiv</strong> kombiniert Datenbank und Lerndatei rasseübergreifend für LP-Schecken, vergleicht Snowflakes mit einer Nicht-Snowflake-Kontrollgruppe, berechnet Fisher-Test/Odds Ratio für PATN1 und LP-Dosis, priorisiert informative Paarungen und prüft Ahnen auf Anreicherung gegenüber der Kontrollgruppe. Die ergänzte MDR-Patterntafel zeigt zusätzlich die interne Hierarchie aus Pattern 1, Pattern 2 und Pattern 3: P1p1 → Leopard/Few Spot neu, P1P1 → Leopard/Few Spot alt, p1p1 + P2_ → Spotted Blanket/Snowcap, p1p1 + p2p2 + P3_ → Varnish Roan und p1p1 + p2p2 + p3p3 → Snowflake. P2/P3 sind nicht als individuelle Gentests verfügbar; der Detektiv nutzt sie deshalb ausschließlich als Forschungsmodell und speichert daraus keine Pferdemerkmale auf den Pferdeseiten.</p>
+        <p><strong>🎨 Farbgenetik:</strong> Der zusätzliche Dashboard-Bereich zeigt Grundfarben, exakte Fellfarbenbezeichnungen, die offiziellen MDR-Schattierungsskalen in der Reihenfolge hell → dunkel, LP-Scheckungsmuster und beobachtete Eltern-Fohlen-Farbvererbung. Die Schattierungsanalyse vergleicht nur tatsächlich gespeicherte Gentests; statistische Auffälligkeiten werden bewusst als Hinweise und nicht automatisch als MDR-Spielregel behandelt. Der <strong>❄️ Snowflake-Detektiv</strong> kombiniert Datenbank und Lerndatei rasseübergreifend für LP-Schecken, vergleicht Snowflakes mit einer Nicht-Snowflake-Kontrollgruppe, berechnet Fisher-Test/Odds Ratio für PATN1 und LP-Dosis, priorisiert informative Paarungen und prüft Ahnen auf Anreicherung gegenüber der Kontrollgruppe. Die ergänzte MDR-Patterntafel zeigt zusätzlich die interne Hierarchie aus Pattern 1, Pattern 2 und Pattern 3: P1p1 → Leopard/Few Spot neu, P1P1 → Leopard/Few Spot alt, p1p1 + P2_ → Spotted Blanket/Snowcap, p1p1 + p2p2 + P3_ → Varnish Roan und p1p1 + p2p2 + p3p3 → Snowflake. P2/P3 sind nicht als individuelle Gentests verfügbar. Auf LP-Schecken-Pferdeseiten wird deshalb nur kompakt P1/P2/P3 mit ✓, ✗ oder ? angezeigt: P1 nutzt den echten PATN1-Test, P2/P3 werden ausschließlich aus dem sichtbaren Muster abgeleitet und nicht als Gentest oder erfundener Genotyp gespeichert. Der Zuchtplaner berücksichtigt dieselbe Hierarchie bei Appaloosa-Farbwünschen und zeigt bei verdeckten Zuständen eine Wahrscheinlichkeitsspanne.</p>
       </div></div>
     </details>
 
@@ -154,10 +154,10 @@
   </div>
 </main>
 
-<script src="js/supabase-loader.js?v=5436"></script>
-<script src="js/supabase-config.js?v=5436"></script>
-<script src="js/database-local.js?v=5436"></script>
-<script src="js/local-app.js?v=5436"></script>
-<script src="js/guide.js?v=5436"></script>
+<script src="js/supabase-loader.js?v=5437"></script>
+<script src="js/supabase-config.js?v=5437"></script>
+<script src="js/database-local.js?v=5437"></script>
+<script src="js/local-app.js?v=5437"></script>
+<script src="js/guide.js?v=5437"></script>
 </body>
 </html>

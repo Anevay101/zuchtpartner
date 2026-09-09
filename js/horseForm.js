@@ -1898,6 +1898,39 @@ async function onDelete() {
   window.location.href = 'index.html';
 }
 
+// V54.0.37: kompakte P1/P2/P3-Anzeige für LP-Schecken. P2/P3 werden
+// ausschließlich aus dem sichtbaren MDR-Muster abgeleitet und nie als
+// individueller Gentest gespeichert. ✓ = vorhanden, ✗ = nicht vorhanden,
+// ? = durch ein höheres Pattern verdeckt bzw. nicht bestimmbar.
+function appaloosaPatternStatusHtml(data) {
+  if (typeof appaloosaPatternStateForHorse !== 'function') return '';
+  const info = appaloosaPatternStateForHorse(data);
+  if (!info?.relevant) return '';
+
+  const symbol = { yes: '✓', no: '✗', unknown: '?' };
+  const cls = { yes: 'yes', no: 'no', unknown: 'unknown' };
+  const p1Title = info.testedP1
+    ? `P1: ${info.testedP1} (Gentest)`
+    : info.states.P1 === 'unknown'
+      ? 'P1: unbekannt / nicht ableitbar'
+      : `P1: aus sichtbarem Muster ${info.pattern || 'abgeleitet'}`;
+  const titleFor = (key) => key === 'P1'
+    ? p1Title
+    : info.states[key] === 'unknown'
+      ? `${key}: durch höheres Pattern verdeckt / unbekannt`
+      : `${key}: aus sichtbarem Muster ${info.pattern || 'abgeleitet'} abgeleitet`;
+  const chips = ['P1','P2','P3'].map((key) => {
+    const state = info.states[key] || 'unknown';
+    return `<span class="app-pattern-state app-pattern-${cls[state]}" title="${escapeHtml(titleFor(key))}"><strong>${key}</strong> ${symbol[state]}</span>`;
+  }).join('');
+
+  return `<div class="app-pattern-compact">
+    <span class="app-pattern-label">Pattern</span>${chips}
+    <span class="tiny muted app-pattern-legend">✓ vorhanden · ✗ nicht vorhanden · ? verdeckt/unbekannt</span>
+    ${info.contradiction ? '<span class="tiny app-pattern-warning">⚠ PATN1-Test und sichtbares Muster widersprechen sich</span>' : ''}
+  </div>`;
+}
+
 // --- Detail-Tabellen (nur Anzeige) ---
 
 // Verteilt die erkannten Detaildaten auf die 4 Reiter (Stammdaten/
@@ -1917,6 +1950,8 @@ async function renderDetailTables(data) {
   if (data.genetic_diseases?.length || data.colors?.length) {
     genetikParts.push(diseaseTableHtml(data.genetic_diseases, data.disease_gene_overrides));
   }
+  const appPatternStatus = appaloosaPatternStatusHtml(data);
+  if (appPatternStatus) genetikParts.push(appPatternStatus);
   if (data.colors?.length) {
     const notes = document.getElementById('notes').value;
     const horseName = document.getElementById('name').value;

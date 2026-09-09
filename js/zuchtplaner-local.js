@@ -671,7 +671,7 @@ function wireControls() {
     appaloosaWish = e.target.value;
     const info = document.getElementById('appaloosa-wish-info');
     if (appaloosaWish === 'snowflake') {
-      info.innerHTML = '❄️ Snowflake wird im lernenden Appaloosa-Modell wie die übrigen sichtbaren Muster berücksichtigt.';
+      info.innerHTML = '❄️ Snowflake wird nach der MDR-Patterntafel als P1 ✗ · P2 ✗ · P3 ✗ berechnet. Verdeckte P2/P3-Zustände der Eltern bleiben als Spanne unbekannt.';
     } else if (appaloosaWish === 'any') {
       info.textContent = 'Kein Appaloosa-Muster wird bevorzugt.';
     } else {
@@ -1129,7 +1129,10 @@ function renderBestMatches() {
       const candidate = c.stallion;
       const mareForColor = richtung === 'hengst' ? candidate : primary;
       const stallionForColor = richtung === 'hengst' ? primary : candidate;
-      c.appaloosaWishScore = cgAppaloosaWishScore(mareForColor,stallionForColor,appaloosaWish,globalThis.MDR_COLOR_EMPIRICAL_HORSES || ZH_HORSES);
+      c.appaloosaWishRange = typeof cgAppaloosaWishRange === 'function'
+        ? cgAppaloosaWishRange(mareForColor,stallionForColor,appaloosaWish,globalThis.MDR_COLOR_EMPIRICAL_HORSES || ZH_HORSES)
+        : null;
+      c.appaloosaWishScore = c.appaloosaWishRange?.min ?? cgAppaloosaWishScore(mareForColor,stallionForColor,appaloosaWish,globalThis.MDR_COLOR_EMPIRICAL_HORSES || ZH_HORSES);
       c._beforeColorRank = index;
     });
     rankingPool.sort((a,b) => {
@@ -1140,7 +1143,13 @@ function renderBestMatches() {
       if (a.appaloosaWishScore == null && b.appaloosaWishScore == null) return a._beforeColorRank-b._beforeColorRank;
       if (a.appaloosaWishScore == null) return 1;
       if (b.appaloosaWishScore == null) return -1;
+      // Erst sichere Mindestchance, dann mögliche Maximalchance. So werden
+      // verdeckte P2/P3-Zustände nicht als sicher angenommen, aber bei
+      // gleicher Mindestchance trotzdem sinnvoll als Potenzial-Tie-Breaker genutzt.
       if (Math.abs(b.appaloosaWishScore-a.appaloosaWishScore) > 1e-9) return b.appaloosaWishScore-a.appaloosaWishScore;
+      const aMax = a.appaloosaWishRange?.max ?? a.appaloosaWishScore;
+      const bMax = b.appaloosaWishRange?.max ?? b.appaloosaWishScore;
+      if (Math.abs(bMax-aMax) > 1e-9) return bMax-aMax;
       return a._beforeColorRank-b._beforeColorRank;
     });
   }
@@ -1249,7 +1258,7 @@ function renderBestMatches() {
         ${empiricalHtml(mare, stallion)}
         ${sortMode === 'combo' ? comboRow(c) : complementRow(c, primaryLabel)}
         ${appaloosaWish !== 'any' && c.appaloosaWishScore != null
-          ? `<p class="small"><strong>🐆 ${esc(appaloosaWish === 'snowflake' ? 'Snowflake' : appaloosaWish)}:</strong> ${cgPct(c.appaloosaWishScore)} konservative Mindestchance aus aktuellem Genetik-/Datenbankmodell</p>`
+          ? `<p class="small"><strong>🐆 ${esc(appaloosaWish === 'snowflake' ? 'Snowflake' : appaloosaWish)}:</strong> ${typeof cgAppaloosaWishRangeText === 'function' ? cgAppaloosaWishRangeText(c.appaloosaWishRange || {min:c.appaloosaWishScore,max:c.appaloosaWishScore}) : cgPct(c.appaloosaWishScore)} nach LP/P1/P2/P3-Modell${c.appaloosaWishRange && Math.abs(c.appaloosaWishRange.max-c.appaloosaWishRange.min)>1e-9 ? ' · Spanne wegen verdeckter Pattern-Zustände' : ''}</p>`
           : ''}
         ${talentWish && c.talentWishProjection ? (() => {
           const p=c.talentWishProjection;

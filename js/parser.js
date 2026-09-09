@@ -361,6 +361,65 @@ function detectAppaloosaPatternFromCoatColor(value) {
   return null;
 }
 
+// V54.0.37: kompakte P1/P2/P3-Logik aus der MDR-Patterntafel.
+// P1 ist als PATN1 testbar. P2/P3 werden NICHT als Gentest gespeichert,
+// sondern nur aus dem sichtbaren Muster logisch abgeleitet. Ein höheres
+// Pattern kann darunterliegende Pattern verdecken; deshalb bleibt dort
+// bewusst "?" statt einen Genotyp zu erfinden.
+function normalizePatn1Genotype(value) {
+  const s = String(value || '').replace(/\s+/g, '');
+  if (s === 'P1P1') return 'P1P1';
+  if (s === 'P1p1' || s === 'p1P1') return 'P1p1';
+  if (s === 'p1p1') return 'p1p1';
+  return null;
+}
+
+function appaloosaPatternState(patternValue, patn1Value) {
+  const pattern = APPALOOSA_PATTERN_OPTIONS.includes(String(patternValue || '').trim())
+    ? String(patternValue || '').trim()
+    : detectAppaloosaPatternFromCoatColor(patternValue);
+
+  const states = { P1: 'unknown', P2: 'unknown', P3: 'unknown' };
+  if (pattern === 'Leopard' || pattern === 'Few Spot') {
+    states.P1 = 'yes';
+  } else if (pattern === 'Spotted Blanket' || pattern === 'Snowcap') {
+    states.P1 = 'no';
+    states.P2 = 'yes';
+  } else if (pattern === 'Varnish Roan') {
+    states.P1 = 'no';
+    states.P2 = 'no';
+    states.P3 = 'yes';
+  } else if (pattern === 'Snowflake') {
+    states.P1 = 'no';
+    states.P2 = 'no';
+    states.P3 = 'no';
+  }
+
+  const testedP1 = normalizePatn1Genotype(patn1Value);
+  let contradiction = false;
+  if (testedP1) {
+    const testedState = testedP1 === 'p1p1' ? 'no' : 'yes';
+    if (states.P1 !== 'unknown' && states.P1 !== testedState) contradiction = true;
+    states.P1 = testedState;
+  }
+
+  return { pattern, states, testedP1, contradiction };
+}
+
+function appaloosaPatternStateForHorse(horse) {
+  const pattern = String(horse?.appaloosa_pattern || '').trim()
+    || detectAppaloosaPatternFromCoatColor(horse?.coat_color);
+  const patn1 = (horse?.colors || []).find((r) => r?.label === 'PATN1')?.value;
+  const lp = (horse?.colors || []).find((r) => r?.label === 'Appaloosa')?.value;
+  const result = appaloosaPatternState(pattern, patn1);
+  const relevant = Boolean(
+    result.pattern || normalizePatn1Genotype(patn1) ||
+    /Lp/i.test(String(lp || '')) ||
+    /appaloosa|leopard|few\s*spot|blanket|snowcap|varnish|snowflake/i.test(String(horse?.coat_color || ''))
+  );
+  return { ...result, relevant };
+}
+
 // V43: Aktuelle Trächtigkeit aus dem Zuchtbereich auslesen.
 // Nach der EN-Normalisierung sehen beide Spielversionen gleich aus:
 //   Tragend?: Ja, von <Hengst>
@@ -2175,5 +2234,5 @@ function setTriStateDropdownState(rootId, value) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseHorseText, HORSE_TAG_OPTIONS, HORSE_TAG_DEFAULT_OPTIONS, getHorseTagOptions, tagColor, effectiveHorseTags, tagsBadgesHtml, formatTimestamp, formatAge, formatAgeShort, gameAgeYears, gameAgeYearsMonths, matchesTags, normalizeTriStateSavedState };
+  module.exports = { parseHorseText, HORSE_TAG_OPTIONS, HORSE_TAG_DEFAULT_OPTIONS, getHorseTagOptions, tagColor, effectiveHorseTags, tagsBadgesHtml, formatTimestamp, formatAge, formatAgeShort, gameAgeYears, gameAgeYearsMonths, matchesTags, normalizeTriStateSavedState, detectAppaloosaPatternFromCoatColor, normalizePatn1Genotype, appaloosaPatternState, appaloosaPatternStateForHorse };
 }
