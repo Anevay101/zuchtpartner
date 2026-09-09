@@ -5358,3 +5358,17 @@ body.planner-high-contrast .filter-checkbox-label {
   .bp-sibling-controls { display: grid; grid-template-columns: 1fr; }
   .bp-sibling-controls select { min-width: 0; width: 100%; }
 }
+
+
+/* --- V54.0.34 Snowflake-Kontrollgruppe & Hypothesencheck ------------ */
+.snowflake-model-status {
+  display: inline-block;
+  padding: .12rem .42rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2, rgba(255,255,255,.55));
+  font-size: .78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.snowflake-subdetail h4 { margin: .8rem 0 .35rem; }
