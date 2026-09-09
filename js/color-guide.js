@@ -536,8 +536,9 @@ function cgKitAlleleRange(mare,stallion,allele) {
 // -------- Appaloosa ---------------------------------------------------
 // V51/V54.0.34: LP und PATN1 werden mendelnd vererbt. Die sichtbare
 // Musterverteilung wird danach aus den TATSÄCHLICH eingetragenen Pferden gelernt.
-// PATN2 ist laut MDR-Farbguide ein internes Pattern (u.a. Blanket/Snowcap), aber
-// nicht separat testbar. Darum wird hier kein individueller PATN2-Genotyp erzeugt.
+// P2/P3 existieren in der ergänzten MDR-Patterntafel als interne Pattern-Stufen,
+// sind aber nicht als individuelle Gentests verfügbar. Darum werden hier keine
+// P2-/P3-Genotypen erzeugt oder gespeichert.
 
 function cgPatternHint(horse) {
   const manual = String(horse?.appaloosa_pattern || '').trim();
@@ -1483,7 +1484,7 @@ function colorGuideHtml(mare,stallion,allHorses = null) {
       <p class="tiny muted">
         LP und PATN1 werden genetisch vererbt. Das sichtbare Muster wird anschließend aus Pferden
         mit <strong>getestetem LP + getestetem PATN1 + eingetragenem sichtbaren Muster</strong> geschätzt.
-        PATN2 ist laut MDR-Farbguide ein internes Pattern, wird hier aber nicht als getesteter Zustand angenommen, weil kein separater PATN2-Gentest vorliegt.
+        Pattern 2 und Pattern 3 sind in der MDR-Patterntafel intern beschrieben, werden hier aber nicht als getestete Zustände angenommen, weil dafür keine individuellen Gentests im Datenbestand vorliegen.
       </p>
       ${app.empiricalBasis?.length ? `
         <details class="appaloosa-empirical-basis">

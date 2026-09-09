@@ -524,12 +524,13 @@ function dashboardColorInheritance(filteredChildren, allRows) {
 }
 
 
-// --- V54.0.31–V54.0.34 Snowflake-Detektiv ------------------------------
+// --- V54.0.31–V54.0.36 Snowflake-Detektiv ------------------------------
 // Explorative Spurensuche zum seltenen Snowflake-Muster. Die Auswertung kombiniert
 // reguläre Pferde und Lerndatei-Pferde, zählt identische MDR-IDs aber nur einmal.
-// PATN2 ist laut MDR-Farbguide ein internes, nicht separat testbares Pattern.
-// Deshalb werden weder PATN2 noch ein möglicher zusätzlicher Faktor X als
-// individuelles Pferdemerkmal gespeichert oder behauptet.
+// V54.0.36: Die vom Nutzer bereitgestellte MDR-Patterntafel zeigt neben P1/P2 auch
+// einen dritten Pattern-Locus P3. P2/P3 sind nicht als individuelle Gentests
+// verfügbar; daraus abgeleitete Zustände bleiben ausschließlich Forschungsmodell
+// im Dashboard und werden niemals auf Pferdeseiten gespeichert oder behauptet.
 
 function dashboardSnowflakeStableKey(horse, fallbackIndex = 0) {
   const external = String(horse?.external_id || '').trim();
@@ -627,6 +628,44 @@ function dashboardSnowflakeGeneticallyEligible(horse) {
   // und p1p1 beobachtet. Das ist ein Forschungsfilter, keine behauptete MDR-Regel.
   const hasLp=String(g.lp || '').includes('Lp');
   return hasLp && g.p1 === 'p1p1';
+}
+
+// Forschungsmodell aus der MDR-Patterntafel (nicht als Pferdegenotyp speichern):
+// P1_ -> Leopard/Few Spot; p1p1 + P2_ -> Blanket/Snowcap;
+// p1p1 + p2p2 + P3_ -> Varnish Roan; p1p1 + p2p2 + p3p3 -> Snowflake.
+function dashboardSnowflakePatternModel(patternOrHorse) {
+  const raw = typeof patternOrHorse === 'string' ? patternOrHorse : dashboardSnowflakePattern(patternOrHorse);
+  const pattern=String(raw||'').trim().toLowerCase();
+  if (pattern==='snowflake') return {label:'p1p1 · p2p2 · p3p3',p1:'p1p1',p2:'p2p2',p3:'p3p3',certainty:'Musterzuordnung'};
+  if (pattern==='varnish roan') return {label:'p1p1 · p2p2 · P3_',p1:'p1p1',p2:'p2p2',p3:'P3_',certainty:'Musterzuordnung'};
+  if (pattern==='spotted blanket' || pattern==='blanket' || pattern==='snowcap') return {label:'p1p1 · P2_ · P3 offen',p1:'p1p1',p2:'P2_',p3:'offen',certainty:'Musterzuordnung'};
+  if (pattern==='leopard' || pattern==='few spot' || pattern==='fewspot') return {label:'P1_ · P2/P3 maskiert',p1:'P1_',p2:'maskiert',p3:'maskiert',certainty:'Musterzuordnung'};
+  return {label:'–',p1:'–',p2:'–',p3:'–',certainty:'offen'};
+}
+
+function dashboardSnowflakePatternModelAudit(rows,snowflakes) {
+  const index=dashboardSnowflakeNameIndex(rows||[]);
+  const contradictions=[];
+  let snowflakeTested=0, snowflakeP1Consistent=0, parentP1Checked=0;
+  for (const horse of snowflakes||[]) {
+    const g=dashboardSnowflakeGenotype(horse);
+    if (g.p1!=='–') {
+      snowflakeTested++;
+      if (g.p1==='p1p1') snowflakeP1Consistent++;
+      else contradictions.push(`${horse?.name||'Snowflake'}: sichtbares Snowflake, aber PATN1-Test ${g.p1}`);
+    }
+    const {fatherName,motherName}=dashboardSnowflakeParents(horse);
+    for (const parentName of [fatherName,motherName]) {
+      const parent=dashboardSnowflakeResolveByName(parentName,horse,index);
+      if (!parent) continue;
+      const pg=dashboardSnowflakeGenotype(parent);
+      if (pg.p1==='P1P1') {
+        parentP1Checked++;
+        contradictions.push(`${parent?.name||parentName}: P1P1 kann unter dem einfachen P1/P2/P3-Modell kein p1 an ein Snowflake-Fohlen geben`);
+      } else if (pg.p1==='P1p1' || pg.p1==='p1p1') parentP1Checked++;
+    }
+  }
+  return {contradictions,snowflakeTested,snowflakeP1Consistent,parentP1Checked};
 }
 
 
@@ -803,43 +842,41 @@ function dashboardSnowflakeInformativePairings(rows) {
   return out.sort((a,b)=>b.rank-a.rank || b.n-a.n || b.sf-a.sf || a.fatherName.localeCompare(b.fatherName,'de')).slice(0,20);
 }
 
-function dashboardSnowflakeHypothesisChecks(control,pairings) {
+function dashboardSnowflakeHypothesisChecks(control,pairings,audit) {
   const nonNon=(pairings||[]).filter(x=>x.type==='Nicht-Snowflake × Nicht-Snowflake → Snowflake');
   const sfSf=(pairings||[]).filter(x=>x.type==='Snowflake × Snowflake');
-  const sfNon=(pairings||[]).filter(x=>x.type==='Snowflake × Nicht-Snowflake');
-  const p=control?.patn;
   const lp=control?.lpDose;
   const checks=[];
   const overlap=control?.comboOverlap || [];
   checks.push({
     model:'LP + PATN1 allein',
-    status:overlap.length?'eher nicht ausreichend':'offen',
+    status:overlap.length?'nicht ausreichend':'offen',
     reason:overlap.length
-      ? `Dieselben vollständig getesteten LP/PATN1-Kombinationen (${overlap.map(x=>x.replace('|',' + ')).join(', ')}) kommen auch bei Nicht-Snowflakes vor; LP + PATN1 erklären Snowflake daher nicht allein.`
+      ? `Dieselben getesteten LP/PATN1-Kombinationen (${overlap.map(x=>x.replace('|',' + ')).join(', ')}) kommen auch bei Nicht-Snowflakes vor.`
       : 'Noch keine ausreichend getestete Kontrollgruppe mit derselben LP/PATN1-Kombination.'
   });
   checks.push({
-    model:'zusätzlicher vollständig dominanter Faktor X',
-    status:nonNon.length?'Gegenindiz':'offen',
-    reason:nonNon.length
-      ? `${nonNon.length} auswertbare Nicht-Snowflake × Nicht-Snowflake-Paarung(en) erzeugen Snowflake.`
-      : `${sfNon.length} Snowflake × Nicht-Snowflake-Paarung(en) sind vorhanden; mehr Nachkommen würden dieses Modell besser prüfen.`
+    model:'MDR-Patterntafel · P1/P2/P3',
+    status:audit?.contradictions?.length?'Widerspruch prüfen':'sehr gut vereinbar',
+    reason:audit?.contradictions?.length
+      ? `${audit.contradictions.length} Datensatz-/Modellwiderspruch/widersprüche gefunden; Details stehen direkt unter der Patterntafel.`
+      : `Snowflake = p1p1 + p2p2 + p3p3 passt zu allen ${audit?.snowflakeTested||0} bislang PATN1-getesteten Snowflakes. P2/P3 bleiben mangels Gentest verborgen.`
   });
   checks.push({
-    model:'zusätzlicher rezessiver Faktor X',
-    status:nonNon.length?'vereinbar':'offen',
-    reason:nonNon.length
-      ? 'Snowflake aus zwei sichtbaren Nicht-Snowflakes ist mit verdecktem Tragen vereinbar, aber noch kein Beweis.'
-      : 'Bislang fehlt eine ausreichend dokumentierte Nicht-Snowflake × Nicht-Snowflake-Paarung mit Snowflake-Nachkommen.'
-  });
-  checks.push({
-    model:'komplexer / dosisabhängiger Modifier',
-    status:'offen',
+    model:'LP-Dosis als Snowflake-Schalter',
+    status:(lp?.a||0)>0 && (lp?.b||0)>0?'eher nein':'offen',
     reason:(lp?.a||0)>0 && (lp?.b||0)>0
-      ? 'Snowflake kommt sowohl bei LpLp als auch Lplp vor; die LP-Dosis allein scheint daher nicht der Schalter zu sein.'
+      ? 'Snowflake kommt sowohl bei LpLp als auch Lplp vor; LP steuert nach der Patterntafel vor allem die jeweilige Ausprägungsvariante.'
       : 'Noch zu wenig vollständig getestete Snowflakes für eine Aussage zur LP-Dosis.'
   });
-  if (sfSf.length) checks.push({model:'Snowflake × Snowflake',status:'besonders informativ',reason:`${sfSf.length} solche Paarung(en) sind dokumentiert und sollten bei weiterer Nachzucht besonders beobachtet werden.`});
+  checks.push({
+    model:'verdecktes Tragen von p2 / p3',
+    status:nonNon.length?'stark interessant':'offen',
+    reason:nonNon.length
+      ? `${nonNon.length} dokumentierte Nicht-Snowflake × Nicht-Snowflake-Paarung(en) erzeugen Snowflake. Das ist mit verdecktem p2/p3-Tragen sehr gut vereinbar.`
+      : 'Nicht-Snowflake-Eltern können nach der Patterntafel p2 und/oder p3 verdeckt tragen; dafür sind mehr dokumentierte Nachkommen nötig.'
+  });
+  if (sfSf.length) checks.push({model:'Snowflake × Snowflake',status:'Schlüsseltest',reason:`${sfSf.length} solche Paarung(en) sind dokumentiert. Unter dem einfachen P1/P2/P3-Modell sollten LP-positive Fohlen besonders häufig bzw. vollständig Snowflake sein.`});
   return checks;
 }
 
@@ -1024,7 +1061,7 @@ function dashboardSnowflakeHypotheses(rows, snowflakes, family, control, pairing
   }
 
   if (family.nonSnowflakeParentPairCases>0) {
-    messages.push(`<strong>Rezessive-Modifier-Hypothese:</strong> ${family.nonSnowflakeParentPairCases} Snowflake-Fall/Fälle stammen aus zwei in der Datenbank sichtbaren Nicht-Snowflake-Eltern. Das ist mit einem verdeckt getragenen/rezessiven Faktor X vereinbar, beweist aber noch keinen zusätzlichen Genort.`);
+    messages.push(`<strong>P2/P3-Träger-Spur:</strong> ${family.nonSnowflakeParentPairCases} Snowflake-Fall/Fälle stammen aus zwei sichtbaren Nicht-Snowflake-Eltern. Das ist mit verdecktem p2/p3-Tragen nach der MDR-Patterntafel vereinbar.`);
   }
   const strong=family.candidates.filter(x=>x.sfCount>=2 && x.mateCount>=2);
   if (strong.length) {
@@ -1039,7 +1076,7 @@ function dashboardSnowflakeHypotheses(rows, snowflakes, family, control, pairing
   }
   const informativeNonNon=(pairings||[]).filter(x=>x.type==='Nicht-Snowflake × Nicht-Snowflake → Snowflake');
   if (informativeNonNon.length) {
-    messages.push(`<strong>Schlüssel-Paarungen:</strong> ${informativeNonNon.length} dokumentierte Nicht-Snowflake × Nicht-Snowflake-Paarung(en) haben Snowflake-Nachkommen. Das ist besonders wichtig für die Prüfung eines möglichen rezessiven oder komplexen Faktors X.`);
+    messages.push(`<strong>Schlüssel-Paarungen:</strong> ${informativeNonNon.length} dokumentierte Nicht-Snowflake × Nicht-Snowflake-Paarung(en) haben Snowflake-Nachkommen. Das ist besonders wichtig, um verdecktes p2/p3-Tragen in den Elternlinien einzugrenzen.`);
   }
   if (!family.candidates.length) {
     messages.push('<strong>Familien-Spur:</strong> Noch keine auswertbaren Elternverknüpfungen. Für die Trägersuche sind Mutter/Vater bzw. Stammbaumdaten besonders wertvoll.');
@@ -1064,8 +1101,9 @@ function renderSnowflakeDetective(allRows) {
   const control=dashboardSnowflakeControlAnalysis(rows,snowflakes);
   const pairings=dashboardSnowflakeInformativePairings(rows);
   const ancestorEnrichment=dashboardSnowflakeAncestorEnrichment(snowflakes,control.controls);
+  const audit=dashboardSnowflakePatternModelAudit(rows,snowflakes);
   const hypotheses=dashboardSnowflakeHypotheses(rows,snowflakes,family,control,pairings);
-  const modelChecks=dashboardSnowflakeHypothesisChecks(control,pairings);
+  const modelChecks=dashboardSnowflakeHypothesisChecks(control,pairings,audit);
   const genotypeCounts=new Map();
   for (const horse of snowflakes) {
     const g=dashboardSnowflakeGenotype(horse);
@@ -1112,6 +1150,16 @@ function renderSnowflakeDetective(allRows) {
     <tr><td><strong>p1p1</strong> vs. P1 vorhanden</td><td>${metricPct(patn.a,patn.a+patn.b)}</td><td>${metricPct(patn.c,patn.c+patn.d)}</td><td>${metricOr(patn.odds)}</td><td>${dashboardSnowflakeFormatP(patn.p)}</td></tr>
     <tr><td><strong>LpLp</strong> vs. Lplp <span class="tiny muted">(nur p1p1)</span></td><td>${metricPct(lpDose.a,lpDose.a+lpDose.b)}</td><td>${metricPct(lpDose.c,lpDose.c+lpDose.d)}</td><td>${metricOr(lpDose.odds)}</td><td>${dashboardSnowflakeFormatP(lpDose.p)}</td></tr>`;
 
+  const patternModelTable=`
+    <tr><td><strong>P1p1</strong> · P2 beliebig</td><td>Lplp → Leopard<br>LpLp → Few Spot neu</td><td>P1 überlagert P2/P3</td></tr>
+    <tr><td><strong>P1P1</strong> · P2 beliebig</td><td>Lplp → Leopard<br>LpLp → Few Spot alt</td><td>P1 überlagert P2/P3</td></tr>
+    <tr><td><strong>p1p1 + P2_</strong></td><td>Lplp → Spotted Blanket<br>LpLp → Snowcap</td><td>Pattern 2 sichtbar</td></tr>
+    <tr><td><strong>p1p1 + p2p2 + P3_</strong></td><td>Varnish Roan</td><td>Pattern 3 vorhanden</td></tr>
+    <tr><td><strong>p1p1 + p2p2 + p3p3</strong></td><td>Snowflake</td><td>rezessive Endstufe der drei Pattern-Loci</td></tr>`;
+  const auditText=audit.contradictions.length
+    ? `<p class="error small"><strong>${audit.contradictions.length} Modellwiderspruch/widersprüche:</strong><br>${audit.contradictions.slice(0,8).map(escapeHtml).join('<br>')}</p>`
+    : `<p class="small"><strong>Aktuell kein Widerspruch:</strong> ${audit.snowflakeP1Consistent}/${audit.snowflakeTested || 0} PATN1-getestete Snowflakes passen bei P1 zu <strong>p1p1</strong>. P2/P3 können mangels Gentest nicht direkt bestätigt werden.</p>`;
+
   const modelTable=modelChecks.map(row=>`<tr><td><strong>${escapeHtml(row.model)}</strong></td><td><span class="snowflake-model-status">${escapeHtml(row.status)}</span></td><td>${escapeHtml(row.reason)}</td></tr>`).join('');
 
   const pairingTable=pairings.length ? pairings.map(row=>{
@@ -1131,7 +1179,7 @@ function renderSnowflakeDetective(allRows) {
   return `
     <details class="snowflake-detective" open>
       <summary><strong>❄️ Snowflake-Detektiv</strong></summary>
-      <p class="small muted">Explorative Spurensuche nach dem seltenen Snowflake-Muster. Der Detektiv kombiniert die gesamte Pferdedatenbank mit der Lerndatei und berücksichtigt dabei alle LP-Scheckenrassen, unabhängig vom aktuellen Dashboard-Filter. Identische MDR-IDs zählen nur einmal. PATN2 ist laut MDR-Farbguide ein internes Pattern, aber nicht separat testbar; der Guide ordnet PATN2 Blanket/Snowcap zu. Snowflake wird dort nicht erklärt. Deshalb weist der Detektiv keinem Pferd PATN2 oder einen möglichen zusätzlichen Faktor X zu, sondern untersucht nur statistische und genealogische Spuren.</p>
+      <p class="small muted">Explorative Spurensuche nach dem seltenen Snowflake-Muster. Der Detektiv kombiniert die gesamte Pferdedatenbank mit der Lerndatei und berücksichtigt dabei alle LP-Scheckenrassen, unabhängig vom aktuellen Dashboard-Filter. Identische MDR-IDs zählen nur einmal. Die ergänzte MDR-Patterntafel zeigt eine Hierarchie aus Pattern 1, Pattern 2 und einem dritten Pattern-Locus P3. P2/P3 sind im Datenbestand nicht als individuelle Gentests verfügbar. Der Detektiv nutzt diese Tafel deshalb ausschließlich als Forschungsmodell und speichert keine daraus abgeleiteten P2/P3-Zustände auf Pferdeseiten.</p>
       <div class="snowflake-stat-grid">
         <div><strong>${snowflakes.length}</strong><span>Snowflakes gesamt</span></div>
         <div><strong>${regularSnowflakes.length}</strong><span>Datenbank</span></div>
@@ -1147,7 +1195,15 @@ function renderSnowflakeDetective(allRows) {
       <details class="snowflake-subdetail" open>
         <summary><strong>Musteranalyse · Snowflake ↔ LP/PATN1</strong></summary>
         <div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>LP</th><th>PATN1</th><th>Snowflakes</th><th>Anteil</th></tr></thead><tbody>${genotypeTable}</tbody></table></div>
-        <p class="tiny muted">„–“ bedeutet nicht getestet/unbekannt. PATN2 kann im MDR intern vorhanden sein, wird hier aber nicht individuell abgeleitet. Snowflake wird als separates Forschungsproblem behandelt.</p>
+        <p class="tiny muted">„–“ bedeutet nicht getestet/unbekannt. Die sichtbare Patterntafel legt für Snowflake p1p1 + p2p2 + p3p3 nahe; P2/P3 werden aber nicht als individuelle Gentests erfunden oder gespeichert.</p>
+      </details>
+
+      <details class="snowflake-subdetail" open>
+        <summary><strong>🧩 MDR-Patterntafel · P1/P2/P3</strong></summary>
+        <p class="small muted">Arbeitsmodell aus der von dir hinterlegten MDR-Patterntafel. Entscheidend ist die Hierarchie: P1 überlagert P2/P3; ohne P1 entscheidet P2; erst bei p1p1 + p2p2 wird Pattern 3 sichtbar. Die abgeleiteten P2/P3-Zustände bleiben ausschließlich hier im Forschungsbereich.</p>
+        <div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>Pattern-Konstellation</th><th>sichtbares Muster</th><th>Interpretation</th></tr></thead><tbody>${patternModelTable}</tbody></table></div>
+        ${auditText}
+        <p class="tiny muted"><strong>Snowflake-Arbeitshypothese:</strong> LP vorhanden + p1p1 + p2p2 + p3p3. Damit wäre Snowflake kein zusätzlicher „Flaxen-artiger“ Faktor X, sondern die sichtbare Endstufe der drei Pattern-Loci. Das wird weiterhin nur gegen echte MDR-Daten geprüft.</p>
       </details>
 
       <details class="snowflake-subdetail" open>
@@ -1161,7 +1217,7 @@ function renderSnowflakeDetective(allRows) {
 
       <details class="snowflake-subdetail">
         <summary><strong>🧬 Informative Paarungen</strong></summary>
-        <p class="small muted">Priorisiert werden Paarungen, die dominant vs. rezessiv/komplex besonders gut unterscheiden können. „Nicht-Snowflake“ wird nur verwendet, wenn das sichtbare Elternmuster tatsächlich erfasst ist.</p>
+        <p class="small muted">Priorisiert werden Paarungen, mit denen sich verdecktes p2/p3-Tragen und die P1/P2/P3-Hierarchie besonders gut prüfen lassen. „Nicht-Snowflake“ wird nur verwendet, wenn das sichtbare Elternmuster tatsächlich erfasst ist.</p>
         ${pairingTable ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>Typ</th><th>Vater</th><th>Mutter</th><th>Snowflake / bekannte Muster</th><th>LP+p1p1-Teilmenge</th><th>Bedeutung</th></tr></thead><tbody>${pairingTable}</tbody></table></div>` : '<p class="muted small">Noch keine ausreichend dokumentierte informative Paarung.</p>'}
       </details>
 
@@ -1178,7 +1234,7 @@ function renderSnowflakeDetective(allRows) {
 
       <details class="snowflake-subdetail">
         <summary><strong>🔎 Mögliche Träger-/Linienkandidaten</strong></summary>
-        <p class="small muted">Der Verdachtsindex ist nur ein transparenter Evidenzscore und <strong>keine</strong> PATN2- oder Faktor-X-Wahrscheinlichkeit. Zusätzlich prüft der Detektiv die aktuelle Arbeitshypothese <strong>LP vorhanden + p1p1</strong>: Für die Snowflake-Quote zählen nur genetisch passend getestete Nachkommen mit bekanntem sichtbaren Muster. Weder PATN2 noch ein möglicher zusätzlicher Faktor X werden daraus als Pferdemerkmal gespeichert.</p>
+        <p class="small muted">Der Verdachtsindex ist nur ein transparenter Evidenzscore und <strong>keine</strong> P2-/P3-Trägerwahrscheinlichkeit. Die direkt testbare Vorbedingung <strong>LP vorhanden + p1p1</strong> wird separat gezählt; P2/P3 lassen sich derzeit nur über Muster und Familien indirekt untersuchen. Daraus wird kein Pferdemerkmal gespeichert.</p>
         ${candidateTable ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>Linie / Elternteil</th><th>Snowflake-Nachkommen</th><th>Partner</th><th>LP+p1p1 + Muster</th><th>davon Snowflake</th><th>Snowflake-Quote</th><th>Index</th><th>Hinweis</th></tr></thead><tbody>${candidateTable}</tbody></table></div>` : '<p class="muted small">Noch keine Elternkandidaten aus den gespeicherten Stammbäumen ableitbar.</p>'}
         <h4>Gemeinsame Ahnen</h4>
         ${commonAncestors}
@@ -1245,7 +1301,7 @@ function renderColorGeneticsDashboard(rows, allRows) {
 
     <details class="color-genetics-detail">
       <summary><strong>LP-Scheckung · LP, PATN1 &amp; sichtbares Muster</strong></summary>
-      <p class="small muted">LP-basierte Scheckungsmuster werden rasseübergreifend betrachtet. Laut MDR-Farbguide existiert PATN2 intern und ist PATN1 untergeordnet; ein separater PATN2-Gentest steht jedoch nicht zur Verfügung. Der Guide ordnet PATN2 Blanket/Snowcap zu, während Snowflake dort nicht erklärt wird. Deshalb bleibt ein möglicher zusätzlicher Snowflake-Faktor X reine Forschungshypothese.</p>
+      <p class="small muted">LP-basierte Scheckungsmuster werden rasseübergreifend betrachtet. Die ergänzte MDR-Patterntafel zeigt Pattern 1, Pattern 2 und Pattern 3: P1_ führt zu Leopard/Few Spot, p1p1 + P2_ zu Spotted Blanket/Snowcap, p1p1 + p2p2 + P3_ zu Varnish Roan und p1p1 + p2p2 + p3p3 zu Snowflake. P2/P3 sind nicht als individuelle Gentests im Datenbestand vorhanden und werden daher nur im Snowflake-Detektiv als Forschungsmodell verwendet.</p>
       <h4>Sichtbare Muster</h4>
       ${dashboardColorPills(app.patterns,app.patterns.reduce((s,x)=>s+x[1],0),'Keine LP-Scheckungsmuster im aktuellen Filter.')}
       <h4>Getestete Genetik → beobachtetes Muster</h4>

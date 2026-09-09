@@ -81,6 +81,19 @@ function showFileProtocolBlocker() {
   document.body.appendChild(overlay);
 }
 
+
+function mdrIsConfiguredMemberEmail(email) {
+  const normalized=String(email||'').trim().toLowerCase();
+  return Object.values(typeof MDR_LOGIN_USERS==='object' && MDR_LOGIN_USERS ? MDR_LOGIN_USERS : {})
+    .map(x=>String(x||'').trim().toLowerCase())
+    .includes(normalized);
+}
+
+async function mdrAwaitOnline(promiseLike,label='Online-Abfrage') {
+  if (typeof mdrWithTimeout==='function') return mdrWithTimeout(promiseLike,6500,label);
+  return promiseLike;
+}
+
 async function requireSession() {
   if (location.protocol === 'file:') {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showFileProtocolBlocker, { once:true });
@@ -91,25 +104,53 @@ async function requireSession() {
   if (mdrSessionPromise) return mdrSessionPromise;
   mdrSessionPromise = (async () => {
     let client;
-    try { client = mdrCreateSupabaseClient(); }
+    try { client = typeof mdrGetSupabaseClient==='function' ? await mdrGetSupabaseClient() : mdrCreateSupabaseClient(); }
     catch (error) {
       showOnlineConnectionBlocker(error.message);
-      return new Promise(() => {});
+      throw error;
     }
 
-    const { data, error } = await client.auth.getSession();
-    if (error) console.warn('Supabase-Sitzung konnte nicht gelesen werden:', error);
-    const session = data?.session || null;
+    let session=null;
+    try {
+      const { data, error } = await mdrAwaitOnline(client.auth.getSession(),'Supabase-Sitzung');
+      if (error) console.warn('Supabase-Sitzung konnte nicht gelesen werden:', error);
+      session = data?.session || null;
+    } catch (error) {
+      console.error('Supabase-Sitzung antwortet nicht:',error);
+      showOnlineConnectionBlocker('Die Anmeldung konnte nicht rechtzeitig geprüft werden. Bitte Seite neu laden; deine lokalen Pferdedaten bleiben erhalten.');
+      throw error;
+    }
     if (!session?.user) {
       redirectToLogin();
       return new Promise(() => {});
     }
 
-    const memberCheck = await client.rpc('is_mdr_member');
-    if (memberCheck.error || memberCheck.data !== true) {
-      await client.auth.signOut().catch(()=>{});
-      redirectToLogin('Zugriff auf die MDR-Datenbank nicht freigeschaltet.');
-      return new Promise(() => {});
+    // Mitgliedschaft regulär serverseitig prüfen. Bei einem reinen Timeout/
+    // Netzfehler darf ein bereits gültiger, fest konfigurierter MDR-Account
+    // jedoch mit seinem lokalen Lesecache starten. Eine explizite Antwort
+    // „nicht freigeschaltet“ bleibt weiterhin ein harter Logout.
+    try {
+      const memberCheck = await mdrAwaitOnline(client.rpc('is_mdr_member'),'MDR-Mitgliedschaft');
+      if (!memberCheck.error && memberCheck.data === true) {
+        // alles regulär
+      } else if (!memberCheck.error && memberCheck.data === false) {
+        await client.auth.signOut().catch(()=>{});
+        redirectToLogin('Zugriff auf die MDR-Datenbank nicht freigeschaltet.');
+        return new Promise(() => {});
+      } else if (mdrIsConfiguredMemberEmail(session.user.email)) {
+        console.warn('MDR-Mitgliedschaft konnte online nicht bestätigt werden; lokaler Lesestart für bekannten MDR-Account.',memberCheck.error);
+        window.MDR_DEGRADED_ONLINE_START = true;
+      } else {
+        throw memberCheck.error || new Error('MDR-Mitgliedschaft konnte nicht bestätigt werden.');
+      }
+    } catch (error) {
+      if (mdrIsConfiguredMemberEmail(session.user.email)) {
+        console.warn('MDR-Mitgliedsprüfung timeout/offline; lokaler Lesestart für bekannten MDR-Account.',error);
+        window.MDR_DEGRADED_ONLINE_START = true;
+      } else {
+        showOnlineConnectionBlocker('Die MDR-Mitgliedschaft konnte nicht geprüft werden.');
+        throw error;
+      }
     }
 
     LOCAL_SESSION.user = {
@@ -117,13 +158,9 @@ async function requireSession() {
       email: session.user.email || '',
     };
 
-    // In V54 ist Supabase der führende Datenbestand. Eine leere Cloud-Datenbank
-    // wird NICHT automatisch aus einem lokalen Browser-Backup überschrieben.
+    // Startkonfiguration darf die eigentliche Pferdeanzeige nicht endlos
+    // blockieren; lokale Einstellungen werden seit V54.0.36 sofort gelesen.
     await ensureMdrStartupReady();
-    // V54.0.25: Historische ZS-Werte werden mit ihrem damaligen Turnier-/Cupstand
-    // eingefroren. Bestandsdatensätze ohne Snapshot erhalten einmalig den
-    // vereinbarten Stichtag 08.09.2026. Die Funktion ist nur auf Seiten geladen,
-    // die planer-common.js verwenden; auf anderen Seiten ist sie absichtlich optional.
     if (typeof plannerEnsureBreedingShowSnapshots === 'function') {
       try { await plannerEnsureBreedingShowSnapshots(); }
       catch (error) { console.warn('ZS-Snapshots konnten nicht vollständig ergänzt werden:', error); }

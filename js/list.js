@@ -65,7 +65,8 @@ async function init() {
   if (!session) return;
   currentSession = session;
   currentIdentity = session.user.email.split('@')[0];
-  await renderSharedNav(session);
+  // Navigation/Datensicherheits-UI darf die Pferdetabelle nicht blockieren.
+  Promise.resolve(renderSharedNav(session)).catch(error=>console.warn('Navigation konnte nicht vollständig initialisiert werden:',error));
 
   // Die zuletzt in Übersicht oder Pferdeseite gewählte Reihenfolge bleibt
   // erhalten und wird auch für das Vor-/Zurück-Blättern verwendet.
@@ -91,27 +92,45 @@ async function init() {
   wireScrollTop();
   showFlashBanner();
   await renderUndoActionBar();
-  await loadUserSettings(session);
-  await showMissingDataNotice(session);
-  await checkAgeNotices(session);
-  // Diese drei Bereiche sind voneinander unabhängig. Nach dem einmaligen
-  // Pferde-Ladevorgang dürfen ihre restlichen Stores parallel aus Supabase
-  // kommen statt drei Warteketten nacheinander zu bilden.
+  try { await loadUserSettings(session); } catch (error) { console.warn('Benutzereinstellungen konnten nicht sofort geladen werden:',error); }
+
+  // V54.0.36: Pferde zuerst rendern. Hinweise, Filteroptionen und Vorlagen sind
+  // nützlich, dürfen aber niemals wieder den sichtbaren Datenbestand hinter
+  // „Lade…“ festhalten.
   try {
-    await Promise.all([
-      loadTagSuggestions(),
-      populateFilterOptions(),
-      loadFilterPresets(),
-    ]);
     await loadHorses();
   } catch (error) {
-    console.error('Pferdedatenbank konnte nicht vollständig initialisiert werden:', error);
+    console.error('Pferdedatenbank konnte nicht geladen werden:', error);
     const tbody=document.querySelector('#horse-table tbody');
     const countEl=document.querySelector('#result-count');
     if (tbody) tbody.innerHTML=`<tr><td colspan="21" class="error">Fehler beim Laden: ${escapeHtml(error?.message || String(error))}</td></tr>`;
     if (countEl) countEl.textContent='';
   }
+
+  Promise.allSettled([
+    showMissingDataNotice(session),
+    checkAgeNotices(session),
+    loadTagSuggestions(),
+    populateFilterOptions(),
+    loadFilterPresets(),
+  ]).then(results=>{
+    const failed=results.filter(x=>x.status==='rejected');
+    if (failed.length) console.warn('Einige Nebenbereiche der Pferdedatenbank konnten nicht vollständig nachgeladen werden:',failed.map(x=>x.reason));
+  });
 }
+
+// Falls der Browser noch keinen lokalen Pferdecache hatte, zeigt localGetAll()
+// zunächst sofort den lokalen (ggf. leeren) Stand. Sobald Supabase erfolgreich
+// im Hintergrund nachgezogen wurde, rendert die Übersicht automatisch neu.
+let mdrHorseRefreshRenderTimer=null;
+window.addEventListener('mdr:store-refreshed',event=>{
+  if (event?.detail?.storeName !== LOCAL_STORES.horses) return;
+  if (!document.querySelector('#horse-table tbody')) return;
+  clearTimeout(mdrHorseRefreshRenderTimer);
+  mdrHorseRefreshRenderTimer=setTimeout(()=>{
+    loadHorses().catch(error=>console.warn('Pferdetabelle konnte nach Cloud-Refresh nicht neu gerendert werden:',error));
+  },80);
+});
 
 // Lädt die in einstellungen.html gewählten persönlichen Einstellungen für
 // das eingeloggte Konto (siehe migration_017/018) und wendet die

@@ -32,3 +32,10 @@ function mdrCreateSupabaseClient() {
   }
   return globalThis.mdrSupabase;
 }
+
+async function mdrGetSupabaseClient() {
+  if (!globalThis.supabase?.createClient) {
+    if (globalThis.mdrSupabaseLibraryPromise) await globalThis.mdrSupabaseLibraryPromise;
+  }
+  return mdrCreateSupabaseClient();
+}

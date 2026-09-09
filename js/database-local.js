@@ -26,6 +26,28 @@ const MDR_LOCAL_ONLY_SETTINGS = new Set(['backup_directory_handle', MDR_LAST_UND
 // Dadurch bleiben Filter/Ansichten sofort reaktionsfähig, ohne Supabase als
 // maßgeblichen gemeinsamen Datenbestand abzulösen.
 const MDR_MEMORY_CACHE_STALE_MS = 20_000;
+const MDR_CLOUD_READ_TIMEOUT_MS = 6_500;
+
+function mdrWithTimeout(promiseLike, timeoutMs=MDR_CLOUD_READ_TIMEOUT_MS, label='Cloud-Abfrage') {
+  return new Promise((resolve,reject)=>{
+    let settled=false;
+    const timer=setTimeout(()=>{
+      if (settled) return;
+      settled=true;
+      const error=new Error(`${label} hat nach ${Math.round(timeoutMs/1000)} s nicht geantwortet.`);
+      error.code='MDR_TIMEOUT';
+      reject(error);
+    },Math.max(250,Number(timeoutMs)||MDR_CLOUD_READ_TIMEOUT_MS));
+    Promise.resolve(promiseLike).then(value=>{
+      if (settled) return;
+      settled=true; clearTimeout(timer); resolve(value);
+    },error=>{
+      if (settled) return;
+      settled=true; clearTimeout(timer); reject(error);
+    });
+  });
+}
+
 const MDR_MEMORY_CACHE = new Map();
 const MDR_GET_ALL_INFLIGHT = new Map();
 const MDR_STORE_EPOCH = new Map();
@@ -218,12 +240,16 @@ async function mdrCloudGetAll(storeName) {
   const out = [];
   for (let from = 0;; from += MDR_CLOUD_PAGE_SIZE) {
     const to = from + MDR_CLOUD_PAGE_SIZE - 1;
-    const { data, error } = await client
-      .from(MDR_CLOUD_TABLE)
-      .select('record_key,payload')
-      .eq('store_name', storeName)
-      .order('record_key', { ascending: true })
-      .range(from, to);
+    const { data, error } = await mdrWithTimeout(
+      client
+        .from(MDR_CLOUD_TABLE)
+        .select('record_key,payload')
+        .eq('store_name', storeName)
+        .order('record_key', { ascending: true })
+        .range(from, to),
+      MDR_CLOUD_READ_TIMEOUT_MS,
+      `Supabase-Lesen (${storeName})`
+    );
     if (error) throw error;
     const rows = Array.isArray(data) ? data : [];
     out.push(...rows.map(row => row.payload));
@@ -276,6 +302,7 @@ async function mdrRefreshStore(storeName) {
     }
     const merged=await mdrMergeLocalOnlyRows(storeName,cloudRows,keepLocal);
     mdrSetMemoryCache(storeName,merged,Date.now());
+    try { window.dispatchEvent(new CustomEvent('mdr:store-refreshed',{detail:{storeName,rows:merged.length}})); } catch {}
     return merged;
   })();
   MDR_GET_ALL_INFLIGHT.set(storeName,promise);
@@ -289,46 +316,36 @@ async function mdrRefreshStore(storeName) {
 async function localGetAll(storeName) {
   const cached=MDR_MEMORY_CACHE.get(storeName);
   if (cached) {
-    // Stale-while-revalidate: Anzeige/Filter bleiben sofort, eine ältere
-    // Seiteninstanz prüft Supabase im Hintergrund und aktualisiert den
-    // gemeinsamen Arbeitsspeicher für den nächsten Renderdurchlauf.
     if (Date.now()-cached.fetchedAt>MDR_MEMORY_CACHE_STALE_MS && !MDR_GET_ALL_INFLIGHT.has(storeName)) {
       mdrRefreshStore(storeName).catch(error=>console.warn(`Supabase-Hintergrundaktualisierung fehlgeschlagen (${storeName}):`,error));
     }
     return [...cached.rows];
   }
 
-  // V54.0.35 Hotfix: Beim ersten Lesen einer Seite war der Arbeitsspeicher-
-  // Cache noch leer und die App wartete deshalb blockierend auf Supabase,
-  // obwohl bereits ein vollständiger IndexedDB-Lesecache im Browser lag.
-  // Hängt/stockt die Netzwerkabfrage, blieb die Oberfläche bei „Lade…“.
-  // Vorhandene lokale Cache-Daten werden jetzt sofort angezeigt; Supabase
-  // bleibt die Quelle der Wahrheit und aktualisiert den Cache im Hintergrund.
+  // V54.0.36: IndexedDB ist der sofortige Lesestand – auch wenn der Store
+  // tatsächlich leer ist. Ein leerer lokaler Hilfs-Store (z.B. Filtervorlagen)
+  // darf den kompletten Seitenstart nicht mehr blockieren. Supabase wird immer
+  // parallel nachgezogen und meldet einen erfolgreichen Refresh per Event.
   try {
     const localRows=await idbGetAll(storeName);
-    if (localRows.length) {
-      // fetchedAt=0 markiert den Stand absichtlich als alt. Dadurch wird die
-      // Cloud-Aktualisierung sofort angestoßen, ohne die Anzeige zu blockieren.
-      mdrSetMemoryCache(storeName,localRows,0);
-      if (!MDR_GET_ALL_INFLIGHT.has(storeName)) {
-        mdrRefreshStore(storeName).catch(error=>console.warn(`Supabase-Hintergrundaktualisierung fehlgeschlagen (${storeName}):`,error));
-      }
-      return [...localRows];
+    mdrSetMemoryCache(storeName,localRows,0);
+    if (!MDR_GET_ALL_INFLIGHT.has(storeName)) {
+      mdrRefreshStore(storeName).catch(error=>console.warn(`Supabase-Hintergrundaktualisierung fehlgeschlagen (${storeName}):`,error));
     }
+    return [...localRows];
   } catch (error) {
     console.warn(`Lokaler Lesecache konnte nicht vorgeladen werden (${storeName}):`,error);
   }
 
-  // Kein lokaler Cache vorhanden (z.B. erster Aufruf in einem neuen Browser):
-  // dann muss der führende Cloud-Bestand weiterhin regulär geladen werden.
+  // Nur wenn IndexedDB selbst nicht lesbar ist, warten wir begrenzt auf die
+  // Cloud. Auch dieser Pfad kann dank Timeout nicht mehr endlos bei „Lade…“ hängen.
   try {
     const rows=await mdrRefreshStore(storeName);
     return [...rows];
   } catch (error) {
-    console.warn(`Supabase-Lesen fehlgeschlagen (${storeName}); verwende lokalen Lesecache:`,error);
-    const rows=await idbGetAll(storeName);
-    mdrSetMemoryCache(storeName,rows,Date.now());
-    return [...rows];
+    console.warn(`Supabase-Lesen fehlgeschlagen (${storeName}); verwende leeren Fallback:`,error);
+    mdrSetMemoryCache(storeName,[],Date.now());
+    return [];
   }
 }
 
@@ -345,13 +362,39 @@ async function localGet(storeName, key) {
       return hit;
     }
   }
+
+  // V54.0.36: einzelne Einstellungen zuerst lokal lesen. Vorher konnte schon
+  // requireSession()/Startkonfiguration an einer einzelnen Supabase-Abfrage hängen,
+  // obwohl der Datensatz im Browsercache vorhanden war.
   try {
-    const { data, error } = await mdrCloudClient()
-      .from(MDR_CLOUD_TABLE)
-      .select('payload')
-      .eq('store_name',storeName)
-      .eq('record_key',recordKey)
-      .maybeSingle();
+    const localHit=await idbGet(storeName,key);
+    if (localHit != null) {
+      if (!MDR_GET_ALL_INFLIGHT.has(storeName)) mdrRefreshStore(storeName).catch(()=>{});
+      return localHit;
+    }
+  } catch (error) {
+    console.warn(`Lokaler Einzelcache konnte nicht gelesen werden (${storeName}/${recordKey}):`,error);
+  }
+
+  // Fehlende Hilfs-/Einstellungswerte bedeuten lokal schlicht „nicht gesetzt“.
+  // Die Hintergrundsynchronisierung füllt sie später nach, ohne den Seitenstart
+  // zu blockieren. Pferde-Einzelaufrufe dürfen dagegen kurz auf die Cloud warten.
+  if (storeName !== LOCAL_STORES.horses) {
+    if (!MDR_GET_ALL_INFLIGHT.has(storeName)) mdrRefreshStore(storeName).catch(()=>{});
+    return null;
+  }
+
+  try {
+    const { data, error } = await mdrWithTimeout(
+      mdrCloudClient()
+        .from(MDR_CLOUD_TABLE)
+        .select('payload')
+        .eq('store_name',storeName)
+        .eq('record_key',recordKey)
+        .maybeSingle(),
+      MDR_CLOUD_READ_TIMEOUT_MS,
+      `Supabase-Lesen (${storeName}/${recordKey})`
+    );
     if (error) throw error;
     if (data?.payload != null) {
       await idbPut(storeName,data.payload).catch(()=>{});
@@ -363,7 +406,7 @@ async function localGet(storeName, key) {
     return data?.payload ?? null;
   } catch (error) {
     console.warn(`Supabase-Lesen fehlgeschlagen (${storeName}/${recordKey}); verwende Cache:`,error);
-    return idbGet(storeName,key);
+    return idbGet(storeName,key).catch(()=>null);
   }
 }
 

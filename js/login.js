@@ -11,7 +11,7 @@
   if(message && messageBox){messageBox.textContent=message;messageBox.hidden=false;}
 
   let client;
-  try{client=mdrCreateSupabaseClient();}
+  try{client=typeof mdrGetSupabaseClient==='function'?await mdrGetSupabaseClient():mdrCreateSupabaseClient();}
   catch(error){errorBox.textContent=error.message;return;}
 
   async function isAllowedSession(session){
