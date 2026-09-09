@@ -297,6 +297,30 @@ async function localGetAll(storeName) {
     }
     return [...cached.rows];
   }
+
+  // V54.0.35 Hotfix: Beim ersten Lesen einer Seite war der Arbeitsspeicher-
+  // Cache noch leer und die App wartete deshalb blockierend auf Supabase,
+  // obwohl bereits ein vollständiger IndexedDB-Lesecache im Browser lag.
+  // Hängt/stockt die Netzwerkabfrage, blieb die Oberfläche bei „Lade…“.
+  // Vorhandene lokale Cache-Daten werden jetzt sofort angezeigt; Supabase
+  // bleibt die Quelle der Wahrheit und aktualisiert den Cache im Hintergrund.
+  try {
+    const localRows=await idbGetAll(storeName);
+    if (localRows.length) {
+      // fetchedAt=0 markiert den Stand absichtlich als alt. Dadurch wird die
+      // Cloud-Aktualisierung sofort angestoßen, ohne die Anzeige zu blockieren.
+      mdrSetMemoryCache(storeName,localRows,0);
+      if (!MDR_GET_ALL_INFLIGHT.has(storeName)) {
+        mdrRefreshStore(storeName).catch(error=>console.warn(`Supabase-Hintergrundaktualisierung fehlgeschlagen (${storeName}):`,error));
+      }
+      return [...localRows];
+    }
+  } catch (error) {
+    console.warn(`Lokaler Lesecache konnte nicht vorgeladen werden (${storeName}):`,error);
+  }
+
+  // Kein lokaler Cache vorhanden (z.B. erster Aufruf in einem neuen Browser):
+  // dann muss der führende Cloud-Bestand weiterhin regulär geladen werden.
   try {
     const rows=await mdrRefreshStore(storeName);
     return [...rows];

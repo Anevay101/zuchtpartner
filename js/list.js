@@ -97,12 +97,20 @@ async function init() {
   // Diese drei Bereiche sind voneinander unabhängig. Nach dem einmaligen
   // Pferde-Ladevorgang dürfen ihre restlichen Stores parallel aus Supabase
   // kommen statt drei Warteketten nacheinander zu bilden.
-  await Promise.all([
-    loadTagSuggestions(),
-    populateFilterOptions(),
-    loadFilterPresets(),
-  ]);
-  await loadHorses();
+  try {
+    await Promise.all([
+      loadTagSuggestions(),
+      populateFilterOptions(),
+      loadFilterPresets(),
+    ]);
+    await loadHorses();
+  } catch (error) {
+    console.error('Pferdedatenbank konnte nicht vollständig initialisiert werden:', error);
+    const tbody=document.querySelector('#horse-table tbody');
+    const countEl=document.querySelector('#result-count');
+    if (tbody) tbody.innerHTML=`<tr><td colspan="21" class="error">Fehler beim Laden: ${escapeHtml(error?.message || String(error))}</td></tr>`;
+    if (countEl) countEl.textContent='';
+  }
 }
 
 // Lädt die in einstellungen.html gewählten persönlichen Einstellungen für
