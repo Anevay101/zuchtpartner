@@ -5412,3 +5412,23 @@ body.planner-high-contrast .filter-checkbox-label {
 .shade-inventory-table .shade-empty-row { opacity:.58; }
 .shade-test-count { margin-left:.35rem; font-size:.82em; white-space:nowrap; cursor:help; }
 .color-base-overview { margin-bottom:.75rem; }
+
+/* V54.0.41 – kompakter Geschlechtsumschalter für Zuchtschau-Entwicklung */
+.dashboard-zs-controls {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  flex-wrap: wrap;
+  margin: .55rem 0 .75rem;
+}
+.dashboard-zs-controls button {
+  min-height: 0;
+  padding: .28rem .65rem;
+  font-size: .86rem;
+  line-height: 1.2;
+}
+.dashboard-zs-controls button.active {
+  font-weight: 700;
+  border-color: currentColor;
+  box-shadow: inset 0 0 0 1px currentColor;
+}

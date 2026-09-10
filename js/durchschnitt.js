@@ -1,5 +1,7 @@
 const durchschnittDerivedCache = new WeakMap();
 let DASHBOARD_FILTER_HORSES = [];
+let DASHBOARD_ZS_GENDER = 'Stute';
+const DASHBOARD_ZS_GENDER_SESSION_KEY = 'mdr-dashboard-zs-gender';
 
 function dashboardOwnerKey(value) { return String(value || '').trim().toLocaleLowerCase('de'); }
 
@@ -11,6 +13,7 @@ async function init() {
   await renderSharedNav(session);
   wireForm();
   wireCheckDropdowns();
+  wireZsTrendGenderToggle();
   populateCheckDropdown('d-tag-drop', getHorseTagOptions().map((t) => t.label), { noneOption: 'Kein Schlagwort' });
   await populateFilterOptions();
   document.querySelector('#d-owner-drop .checkdrop-panel').addEventListener('change', async () => {
@@ -136,27 +139,58 @@ function dashboardLastFiveMonths(now = new Date()) {
   return out;
 }
 
+function dashboardGenderKey(value) {
+  const raw=String(value||'').trim().toLowerCase();
+  if (/stute|mare|female/.test(raw)) return 'Stute';
+  if (/hengst|stallion|male/.test(raw) && !/wallach|gelding/.test(raw)) return 'Hengst';
+  return '';
+}
+
+function wireZsTrendGenderToggle() {
+  try {
+    const saved=sessionStorage.getItem(DASHBOARD_ZS_GENDER_SESSION_KEY);
+    if (saved === 'Stute' || saved === 'Hengst') DASHBOARD_ZS_GENDER=saved;
+  } catch (_) {}
+  const buttons=[...document.querySelectorAll('[data-zs-gender]')];
+  const sync=()=>buttons.forEach(btn=>{
+    const active=btn.dataset.zsGender===DASHBOARD_ZS_GENDER;
+    btn.classList.toggle('active',active);
+    btn.setAttribute('aria-pressed',active?'true':'false');
+  });
+  sync();
+  buttons.forEach(btn=>btn.addEventListener('click',async()=>{
+    const next=btn.dataset.zsGender;
+    if (next!=='Stute' && next!=='Hengst') return;
+    DASHBOARD_ZS_GENDER=next;
+    try { sessionStorage.setItem(DASHBOARD_ZS_GENDER_SESSION_KEY,next); } catch (_) {}
+    sync();
+    await calculate();
+  }));
+}
+
 function renderBreedingShowTrend(rows) {
   const root=document.getElementById('zs-trend-dashboard');
   if (!root) return;
   const months=dashboardLastFiveMonths();
   const monthKeys=new Set(months.map(m=>m.key));
-  const breeds=[...new Set((rows||[]).map(h=>normalizeBreed(h?.breed)||'Rasselos'))].sort((a,b)=>a.localeCompare(b,'de'));
+  const activeRows=(rows||[]).filter(h=>normalizeBreed(h?.breed));
+  const breeds=[...new Set(activeRows.map(h=>normalizeBreed(h?.breed)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
   if (!breeds.length) {
-    root.innerHTML='<p class="muted small">Keine Pferde im aktuellen Filter.</p>';
+    root.innerHTML='<p class="muted small">Keine aktive Rasse im aktuellen Filter.</p>';
     return;
   }
 
   const stats=new Map();
   for (const breed of breeds) stats.set(breed,new Map(months.map(m=>[m.key,[]])));
-  for (const horse of rows || []) {
+  for (const horse of activeRows) {
+    if (dashboardGenderKey(horse?.gender)!==DASHBOARD_ZS_GENDER) continue;
     const total=typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : Number(horse?.breeding_show_points);
     const date=typeof plannerBreedingShowSnapshotDate === 'function' ? plannerBreedingShowSnapshotDate(horse) : null;
     if (!(Number.isFinite(Number(total)) && Number(total)>0) || !date) continue;
     const key=String(date).slice(0,7);
     if (!monthKeys.has(key)) continue;
-    const breed=normalizeBreed(horse?.breed)||'Rasselos';
-    if (!stats.has(breed)) continue;
+    const breed=normalizeBreed(horse?.breed);
+    if (!breed || !stats.has(breed)) continue;
     stats.get(breed).get(key).push(Number(total));
   }
 
@@ -170,10 +204,11 @@ function renderBreedingShowTrend(rows) {
     return `<tr><th>${escapeHtml(breed)}</th>${cells}</tr>`;
   }).join('');
 
-  root.innerHTML=`<div class="table-wrap"><table class="detail-table dashboard-zs-trend-table"><thead><tr><th>Rasse</th>${months.map(m=>`<th>${escapeHtml(m.label)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div><p class="tiny muted">Grundlage: positive eingetragene ZS-Gesamtwerte nach Eintragungsdatum. Ein Eintrag wird als Gewinnwert der betreffenden Zuchtschau behandelt.</p>`;
+  const label=DASHBOARD_ZS_GENDER==='Hengst'?'Hengste':'Stuten';
+  root.innerHTML=`<div class="table-wrap"><table class="detail-table dashboard-zs-trend-table"><thead><tr><th>Rasse</th>${months.map(m=>`<th>${escapeHtml(m.label)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div><p class="tiny muted">${label}: positive eingetragene ZS-Gesamtwerte nach Eintragungsdatum. Ein Eintrag gilt als Gewinnwert der betreffenden Zuchtschau.</p>`;
 }
 
-function localAverageFilter(rows) {
+function localAverageFilter(rows, options = {}) {
   const owners = getCheckDropdownSelected('d-owner-drop');
   const ownerKeys = new Set(owners.map(dashboardOwnerKey));
   const gender = document.querySelector('#d-gender').value;
@@ -183,7 +218,7 @@ function localAverageFilter(rows) {
 
   return rows.filter((h) => {
     if (ownerKeys.size && !ownerKeys.has(dashboardOwnerKey(h.owner))) return false;
-    if (gender && h.gender !== gender) return false;
+    if (!options.ignoreGender && gender && h.gender !== gender) return false;
 
     const normalizedBreed = normalizeBreed(h.breed) || 'Rasselos';
     if (breed && normalizedBreed !== breed) return false;
@@ -204,17 +239,17 @@ async function calculate() {
     const allData = await localGetAll(LOCAL_STORES.horses);
     const activeData = allData.filter(h => isActiveBreeder(h.owner) && !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
     const data = localAverageFilter(activeData);
+    const trendData = localAverageFilter(activeData, { ignoreGender: true });
+    renderBreedingShowTrend(trendData);
 
     if (!data.length) {
       resultEl.innerHTML = '<p>Keine Pferde gefunden.</p>';
       renderBreedingDashboard([]);
-      renderBreedingShowTrend([]);
       renderColorGeneticsDashboard([], allData);
       return;
     }
 
     renderBreedingDashboard(data);
-    renderBreedingShowTrend(data);
     renderColorGeneticsDashboard(data, allData);
     const derived = data.map(computeDerived);
     const total = data.length;
