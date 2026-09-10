@@ -5403,3 +5403,12 @@ body.planner-high-contrast .filter-checkbox-label {
 .app-pattern-unknown { opacity: .78; }
 .app-pattern-legend { margin-left: .1rem; }
 .app-pattern-warning { width: 100%; color: var(--danger); }
+
+/* --- V54.0.39 Dashboard: ZS-Verlauf & kompakte Farbgenetik --- */
+.dashboard-zs-card > summary { cursor:pointer; }
+.dashboard-zs-trend-table th,
+.dashboard-zs-trend-table td { white-space:nowrap; text-align:center; }
+.dashboard-zs-trend-table tbody th { text-align:left; }
+.shade-inventory-table .shade-empty-row { opacity:.58; }
+.shade-test-count { margin-left:.35rem; font-size:.82em; white-space:nowrap; cursor:help; }
+.color-base-overview { margin-bottom:.75rem; }

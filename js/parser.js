@@ -505,12 +505,23 @@ function parseHorseText(rawText) {
   setIf(result, 'hlp_slp', findValueForLabel(nonEmpty, 'HLP/SLP'));
 
   // EN Performance Test / DE HLP-SLP: zusätzlich strukturierte Punkte,
-  // ohne den Originaltext zu verlieren.
+  // ohne den Originaltext zu verlieren. Ein ausdrückliches Nein darf dabei
+  // keinesfalls als bestandene Leistungsprüfung interpretiert werden.
   if (result.hlp_slp) {
-    const ptPoints = String(result.hlp_slp).match(/(\d+)\s*(?:points?|Punkte)/i);
+    const performanceText = String(result.hlp_slp).trim();
+    const ptPoints = performanceText.match(/(\d+)\s*(?:points?|Punkte)/i);
     if (ptPoints) result.performance_test_points = Number(ptPoints[1]);
-    result.performance_test_passed =
-      !/(failed|nicht bestanden|durchgefallen)/i.test(result.hlp_slp);
+
+    const performanceNegative =
+      /^(?:nein|no|false|0)$/i.test(performanceText) ||
+      /(?:failed|nicht bestanden|durchgefallen)/i.test(performanceText);
+    const performancePositive =
+      /^(?:ja|yes|true|1)$/i.test(performanceText) ||
+      /(?:prämienstute|praemienstute|prämienhengst|praemienhengst|premium mare|premium stallion|\bbestanden\b|\bpassed\b)/i.test(performanceText) ||
+      Boolean(ptPoints);
+
+    if (performanceNegative) result.performance_test_passed = false;
+    else if (performancePositive) result.performance_test_passed = true;
   }
 
   // --- Zucht ---
@@ -1006,7 +1017,7 @@ const PEDIGREE_SECTION_LABELS = new Set([
 
 function isUnknownPedigreeName(value) {
   const s = String(value || '').trim().toLowerCase();
-  return s === 'unbekannt' || s === 'unknown' || s === 'n/a' || s === 'na' || s === '-';
+  return ['unbekannt','unknown','n/a','na','-','?','nicht bekannt','unbekanntes projekt','unknown project'].includes(s);
 }
 
 

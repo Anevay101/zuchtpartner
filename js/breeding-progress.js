@@ -12,6 +12,18 @@ function bpNorm(value) {
   return String(value ?? '').trim().replace(/\s+/g,' ').toLocaleLowerCase('de');
 }
 
+function bpIsUnknownParentName(value) {
+  const n = bpNorm(value).replace(/[._]+/g,' ').replace(/\s+/g,' ').trim();
+  return !n || ['unbekannt','unknown','n/a','na','-','?','nicht bekannt','unbekanntes projekt','unknown project'].includes(n);
+}
+
+// Platzhalter wie "Unbekannt" dürfen niemals zwei Pferde miteinander
+// verwandt machen. Für die Anzeige bleibt der Originalwert erhalten; nur
+// Verwandtschafts- und Reverse-Index-Abgleiche verwenden diesen Schlüssel.
+function bpKinshipKey(value) {
+  return bpIsUnknownParentName(value) ? '' : bpNorm(value);
+}
+
 function bpEsc(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -83,8 +95,8 @@ function bpBuildContext(horses) {
 
   for (const horse of list) {
     const { fatherName, motherName } = bpParentNames(horse);
-    const fatherKey = bpNorm(fatherName);
-    const motherKey = bpNorm(motherName);
+    const fatherKey = bpKinshipKey(fatherName);
+    const motherKey = bpKinshipKey(motherName);
     if (fatherKey) add(childrenByParent, fatherKey, horse);
     if (motherKey) add(childrenByParent, motherKey, horse);
     const sex = bpSexKind(horse);
@@ -100,15 +112,15 @@ function bpResolveParents(horse, context) {
   return {
     fatherName,
     motherName,
-    father: context?.byName?.get(bpNorm(fatherName)) || null,
-    mother: context?.byName?.get(bpNorm(motherName)) || null,
+    father: context?.byName?.get(bpKinshipKey(fatherName)) || null,
+    mother: context?.byName?.get(bpKinshipKey(motherName)) || null,
   };
 }
 
 function bpSiblingRelations(horse, context) {
   const ownParents = bpParentNames(horse);
-  const ownFather = bpNorm(ownParents.fatherName);
-  const ownMother = bpNorm(ownParents.motherName);
+  const ownFather = bpKinshipKey(ownParents.fatherName);
+  const ownMother = bpKinshipKey(ownParents.motherName);
   if (!ownFather && !ownMother) return [];
 
   const ownId = horse?.id != null ? String(horse.id) : null;
@@ -123,8 +135,8 @@ function bpSiblingRelations(horse, context) {
     if ((ownId && siblingId === ownId) || (!ownId && ownName && siblingName === ownName)) continue;
 
     const parents = bpParentNames(sibling);
-    const siblingFather = bpNorm(parents.fatherName);
-    const siblingMother = bpNorm(parents.motherName);
+    const siblingFather = bpKinshipKey(parents.fatherName);
+    const siblingMother = bpKinshipKey(parents.motherName);
     const sameFather = Boolean(ownFather && siblingFather && ownFather === siblingFather);
     const sameMother = Boolean(ownMother && siblingMother && ownMother === siblingMother);
     if (!sameFather && !sameMother) continue;
@@ -283,14 +295,14 @@ function bpBestFoalInfo(horse, context) {
   const { fatherName, motherName } = bpParentNames(horse);
   const sameParentName = sex === 'male' ? fatherName : sex === 'female' ? motherName : null;
   const sameParent = sex === 'male'
-    ? context?.byName?.get(bpNorm(fatherName)) || null
+    ? context?.byName?.get(bpKinshipKey(fatherName)) || null
     : sex === 'female'
-      ? context?.byName?.get(bpNorm(motherName)) || null
+      ? context?.byName?.get(bpKinshipKey(motherName)) || null
       : null;
   const siblings = sex === 'male'
-    ? (context?.sonsByFather?.get(bpNorm(fatherName)) || [])
+    ? (context?.sonsByFather?.get(bpKinshipKey(fatherName)) || [])
     : sex === 'female'
-      ? (context?.daughtersByMother?.get(bpNorm(motherName)) || [])
+      ? (context?.daughtersByMother?.get(bpKinshipKey(motherName)) || [])
       : [];
   const own = bpMetricSnapshot(horse);
   const parentMetrics = bpMetricSnapshot(sameParent);

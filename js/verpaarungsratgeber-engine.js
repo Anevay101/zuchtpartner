@@ -696,7 +696,7 @@ function hasFlaxenTrait(horse, byNameMap, childrenByParentName) {
   if (byNameMap) {
     const anc = pedigreeAncestorNames(horse);
     for (const name of [anc[0], anc[1]]) {
-      if (!name || normalizeName(name) === 'unbekannt') continue;
+      if (!name || (typeof isUnknownAncestorName === 'function' && isUnknownAncestorName(name))) continue;
       const parent = byNameMap.get(normalizeName(name));
       if (parent && isVisiblyFlaxen(parent)) return true;
     }

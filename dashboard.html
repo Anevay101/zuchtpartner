@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Dashboard – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5437" />
+  <link rel="stylesheet" href="css/style.css?v=5440" />
 </head>
 <body>
   <header class="topbar">
@@ -72,6 +72,12 @@
       <div id="avg-result"><p class="muted small">Lade…</p></div>
     </fieldset>
 
+    <details class="card dashboard-zs-card dashboard-panel" open>
+      <summary><strong>📈 Zuchtschau-Entwicklung</strong></summary>
+      <p class="small muted">Ø Gewinnwert je aktiver Rasse in den letzten fünf Monaten. Jeder positive ZS-Eintrag wird als Wert der gewonnenen Zuchtschau gewertet.</p>
+      <div id="zs-trend-dashboard"><p class="muted small">Lade…</p></div>
+    </details>
+
     <fieldset class="dashboard-panel">
       <legend>Pferd vs. eigener Rassedurchschnitt</legend>
       <div class="form-grid">
@@ -91,21 +97,21 @@
 
     <details class="card dashboard-color-card dashboard-panel">
       <summary><strong>🎨 Farbgenetik</strong></summary>
-      <p class="small muted">Fellfarben, Schattierungen, Appaloosa-Muster und beobachtete Vererbung im aktuell gefilterten Bestand. Statistische Auffälligkeiten sind Hinweise – keine automatisch behaupteten MDR-Spielregeln.</p>
+      <p class="small muted">Grundfarben, MDR-Schattierungsstufen, LP-Scheckungsmuster und beobachtete Grundfarben-Vererbung im aktuell gefilterten Bestand.</p>
       <div id="color-genetics-dashboard"><p class="muted small">Lade…</p></div>
     </details>
   </main>
 
-  <script src="js/supabase-loader.js?v=5437"></script>
-<script src="js/supabase-config.js?v=5437"></script>
-<script src="js/database-local.js?v=5437"></script>
-  <script src="js/local-app.js?v=5437"></script>
-  <script src="js/learning-file.js?v=5437"></script>
-  <script src="js/parser.js?v=5437"></script>
-  <script src="js/data-quality.js?v=5437"></script>
-  <script src="js/breeding-progress.js?v=5437"></script>
-  <script src="js/planer-common.js?v=5437"></script>
-  <script src="js/color-guide.js?v=5437"></script>
-  <script src="js/durchschnitt.js?v=5437"></script>
+  <script src="js/supabase-loader.js?v=5440"></script>
+<script src="js/supabase-config.js?v=5440"></script>
+<script src="js/database-local.js?v=5440"></script>
+  <script src="js/local-app.js?v=5440"></script>
+  <script src="js/learning-file.js?v=5440"></script>
+  <script src="js/parser.js?v=5440"></script>
+  <script src="js/data-quality.js?v=5440"></script>
+  <script src="js/breeding-progress.js?v=5440"></script>
+  <script src="js/planer-common.js?v=5440"></script>
+  <script src="js/color-guide.js?v=5440"></script>
+  <script src="js/durchschnitt.js?v=5440"></script>
 </body>
 </html>

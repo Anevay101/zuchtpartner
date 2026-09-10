@@ -169,7 +169,7 @@ function renderHorseBreedingShowDetails(horse) {
   }
   const snapshot=typeof plannerBreedingShowSnapshot === 'function' ? plannerBreedingShowSnapshot(horse) : null;
   if (!snapshot) {
-    root.innerHTML=`<div class="notice notice-warning small"><strong>ZS-Gesamtwert:</strong> ${Math.round(total)} · Historischer Bonus-Snapshot fehlt noch.</div>`;
+    root.innerHTML=`<div class="notice notice-warning small"><strong>ZS-Gesamtwert:</strong> ${Math.round(total)} · Historische Bonusdaten zum ZS-Eintrag fehlen noch.</div>`;
     return;
   }
   const tournamentBonus=Number(snapshot.tournament_bonus || 0);
@@ -183,7 +183,7 @@ function renderHorseBreedingShowDetails(horse) {
       <div><span>ZS-Grundwert</span><strong>${Number.isFinite(Number(base))?Math.round(base):'–'}</strong></div>
       <div><span>Turnierbonus bei ZS</span><strong>${Math.round(tournamentBonus)}</strong></div>
       <div><span>Cupbonus bei ZS</span><strong>${Math.round(cupBonus)}</strong></div>
-      <div><span>Snapshot-Datum</span><strong>${plannerEscape(dateText)}</strong></div>
+      <div><span>Eintragungsdatum</span><strong>${plannerEscape(dateText)}</strong></div>
     </div>
     <p class="small muted zs-detail-formula">Grundwert = ZS-Gesamtwert − damaliger Turnierbonus − damaliger Cupbonus. Der Grundwert bleibt danach unverändert.</p>`;
 }

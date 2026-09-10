@@ -123,6 +123,56 @@ function renderBreedingDashboard(rows) {
   }).join('')}</div>${unknown ? `<p class="tiny muted">${unknown} Pferde ohne eindeutig erkannte Begabung/Hauptgruppe.</p>` : ''}`;
 }
 
+
+function dashboardLastFiveMonths(now = new Date()) {
+  const out=[];
+  const anchor=new Date(now.getFullYear(),now.getMonth(),1);
+  for (let offset=4; offset>=0; offset--) {
+    const d=new Date(anchor.getFullYear(),anchor.getMonth()-offset,1);
+    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label=d.toLocaleDateString('de-DE',{month:'short',year:'2-digit'}).replace('.', '');
+    out.push({key,label});
+  }
+  return out;
+}
+
+function renderBreedingShowTrend(rows) {
+  const root=document.getElementById('zs-trend-dashboard');
+  if (!root) return;
+  const months=dashboardLastFiveMonths();
+  const monthKeys=new Set(months.map(m=>m.key));
+  const breeds=[...new Set((rows||[]).map(h=>normalizeBreed(h?.breed)||'Rasselos'))].sort((a,b)=>a.localeCompare(b,'de'));
+  if (!breeds.length) {
+    root.innerHTML='<p class="muted small">Keine Pferde im aktuellen Filter.</p>';
+    return;
+  }
+
+  const stats=new Map();
+  for (const breed of breeds) stats.set(breed,new Map(months.map(m=>[m.key,[]])));
+  for (const horse of rows || []) {
+    const total=typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : Number(horse?.breeding_show_points);
+    const date=typeof plannerBreedingShowSnapshotDate === 'function' ? plannerBreedingShowSnapshotDate(horse) : null;
+    if (!(Number.isFinite(Number(total)) && Number(total)>0) || !date) continue;
+    const key=String(date).slice(0,7);
+    if (!monthKeys.has(key)) continue;
+    const breed=normalizeBreed(horse?.breed)||'Rasselos';
+    if (!stats.has(breed)) continue;
+    stats.get(breed).get(key).push(Number(total));
+  }
+
+  const body=breeds.map(breed=>{
+    const cells=months.map(month=>{
+      const values=stats.get(breed).get(month.key)||[];
+      if (!values.length) return '<td class="muted">–</td>';
+      const avg=values.reduce((sum,v)=>sum+v,0)/values.length;
+      return `<td><strong>${Math.round(avg)}</strong><br><span class="tiny muted">n=${values.length}</span></td>`;
+    }).join('');
+    return `<tr><th>${escapeHtml(breed)}</th>${cells}</tr>`;
+  }).join('');
+
+  root.innerHTML=`<div class="table-wrap"><table class="detail-table dashboard-zs-trend-table"><thead><tr><th>Rasse</th>${months.map(m=>`<th>${escapeHtml(m.label)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div><p class="tiny muted">Grundlage: positive eingetragene ZS-Gesamtwerte nach Eintragungsdatum. Ein Eintrag wird als Gewinnwert der betreffenden Zuchtschau behandelt.</p>`;
+}
+
 function localAverageFilter(rows) {
   const owners = getCheckDropdownSelected('d-owner-drop');
   const ownerKeys = new Set(owners.map(dashboardOwnerKey));
@@ -158,11 +208,13 @@ async function calculate() {
     if (!data.length) {
       resultEl.innerHTML = '<p>Keine Pferde gefunden.</p>';
       renderBreedingDashboard([]);
+      renderBreedingShowTrend([]);
       renderColorGeneticsDashboard([], allData);
       return;
     }
 
     renderBreedingDashboard(data);
+    renderBreedingShowTrend(data);
     renderColorGeneticsDashboard(data, allData);
     const derived = data.map(computeDerived);
     const total = data.length;
@@ -323,7 +375,7 @@ async function renderBreedComparison() {
 // Explorative Bestandsstatistik. Es werden keine neuen MDR-Regeln erfunden:
 // sichtbare Fellfarben und echte gespeicherte Gentests werden getrennt ausgewertet.
 
-const DASHBOARD_COLOR_BASE_ORDER = ['Chestnut','Wild Bay','Bay','Sea Brown','Black','Grey'];
+const DASHBOARD_COLOR_BASE_ORDER = ['Chestnut','Wild Bay','Bay','Sealbrown','Black','Grey'];
 const DASHBOARD_COLOR_GENE_LOCI = [
   'Extension','Agouti','Cream','Dun','Champagne','Grey','Silver',
   'Appaloosa','PATN1','Overo','Splashed','KIT','Flaxen'
@@ -332,7 +384,7 @@ const DASHBOARD_COLOR_GENE_LOCI = [
 function dashboardColorBaseLabel(value) {
   const key = String(value || '').trim().toLowerCase();
   if (key === 'wildbay' || key === 'wild bay') return 'Wild Bay';
-  if (key === 'sealbrown' || key === 'seal brown' || key === 'sea brown') return 'Sea Brown';
+  if (key === 'sealbrown' || key === 'seal brown' || key === 'sea brown') return 'Sealbrown';
   if (key === 'chestnut') return 'Chestnut';
   if (key === 'bay') return 'Bay';
   if (key === 'black') return 'Black';
@@ -363,21 +415,30 @@ function dashboardColorUniqueGeneticBase(horse) {
 function dashboardColorBase(horse) {
   const coat = String(horse?.coat_color || '').trim();
   const lc = coat.toLowerCase();
-  // Grey ist als sichtbare MDR-Farbgruppe relevant, selbst wenn darunter eine
-  // andere genetische Grundfarbe liegt.
+
+  // Grey bleibt im Dashboard eine eigene sichtbare Gruppe. Die darunter
+  // liegende genetische Grundfarbe kann bei Schimmeln zusätzlich vorhanden
+  // sein, soll hier aber nicht doppelt gezählt werden.
   if (/\bgr[ae]y\b/.test(lc)) return 'Grey';
+
+  // V54.0.39: Zuerst Extension/Agouti aus echtem Test bzw. aus der zentralen
+  // MDR-Phänotyp-Logik auswerten. So werden auch Palomino, Dun, Champagne,
+  // Pearl, Buckskin, Grulla usw. ihrer Grundfarbe zugeordnet.
+  const geneticBase = dashboardColorUniqueGeneticBase(horse);
+  if (geneticBase) return dashboardColorBaseLabel(geneticBase);
 
   if (typeof cgShade === 'function') {
     const shade = cgShade(horse);
     if (shade?.base) return dashboardColorBaseLabel(shade.base);
   }
-  if (/wild\s*bay|wildbay/.test(lc)) return 'Wild Bay';
-  if (/seal\s*brown|sealbrown|sea\s*brown/.test(lc)) return 'Sea Brown';
-  if (/chestnut|sorrel/.test(lc)) return 'Chestnut';
-  if (/\bbay\b/.test(lc)) return 'Bay';
-  if (/\bblack\b/.test(lc)) return 'Black';
 
-  return dashboardColorUniqueGeneticBase(horse);
+  // Letzter konservativer Text-Fallback für alte/importierte Bezeichnungen.
+  if (/wild\s*bay|wildbay|wildbraun/.test(lc)) return 'Wild Bay';
+  if (/seal\s*brown|sealbrown|sea\s*brown|schwarzbraun/.test(lc)) return 'Sealbrown';
+  if (/chestnut|sorrel|fuchs|palomino|cremello|dunalino|red dun|gold champagne|apricot/.test(lc)) return 'Chestnut';
+  if (/\bblack\b|rappe|grulla|smoky black|pearl black|classic champagne/.test(lc)) return 'Black';
+  if (/\bbay\b|braun|buckskin|dunskin|amber|perlino|pearl bay/.test(lc)) return 'Bay';
+  return null;
 }
 
 function dashboardColorShade(horse) {
@@ -385,14 +446,47 @@ function dashboardColorShade(horse) {
     const shade = cgShade(horse);
     if (shade?.shade) return { base:dashboardColorBaseLabel(shade.base), shade:shade.shade, orderIndex:shade.index, scaleLength:shade.scale?.length || null };
   }
-  const base = dashboardColorBase(horse);
-  const coat = String(horse?.coat_color || '').trim();
-  if (!base || !coat) return null;
-  // Für noch nicht im Farbguide benannte Skalen (z.B. einzelne Wild-Bay-
-  // Varianten) bleibt bewusst die echte MDR-Bezeichnung aus dem Datensatz stehen.
-  if (base === 'Grey') return {base, shade:'Grey', orderIndex:null, scaleLength:null};
-  if (base === 'Wild Bay' || base === 'Sea Brown') return {base, shade:coat, orderIndex:null, scaleLength:null};
+  if (dashboardColorBase(horse) === 'Grey') return {base:'Grey', shade:'Grey', orderIndex:0, scaleLength:1};
   return null;
+}
+
+function dashboardShadeTestMeta(horses) {
+  const tested = horses.filter(h => {
+    const rows = Array.isArray(h?.colors) ? h.colors : [];
+    return rows.some(r => ['Extension','Agouti'].includes(String(r?.label || '').trim()) && String(r?.value || '').trim() && !(typeof cgUntested === 'function' && cgUntested(r.value)));
+  });
+  if (!tested.length) return {count:0, title:''};
+  const values = new Map();
+  for (const horse of tested) {
+    for (const locus of ['Extension','Agouti']) {
+      const row=(horse.colors || []).find(r=>String(r?.label||'').trim()===locus);
+      const value=String(row?.value||'').trim();
+      if (!value || (typeof cgUntested === 'function' && cgUntested(value))) continue;
+      const key=`${locus}: ${value}`;
+      values.set(key,(values.get(key)||0)+1);
+    }
+  }
+  const title=[...values.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'de')).map(([k,n])=>`${k} (${n})`).join(' · ');
+  return {count:tested.length,title};
+}
+
+function dashboardShadeInventory(rows) {
+  const scales = [];
+  if (typeof CG_SHADE_SCALES !== 'undefined') {
+    for (const base of ['Chestnut','Bay','Sealbrown','Black']) {
+      const scale = CG_SHADE_SCALES[base] || [];
+      scale.forEach((shade,index)=>scales.push({base,shade,index,scaleLength:scale.length,horses:[]}));
+    }
+  }
+  scales.push({base:'Grey',shade:'Grey',index:0,scaleLength:1,horses:[]});
+  const byKey=new Map(scales.map(row=>[`${row.base}|${row.shade}`,row]));
+  for (const horse of rows || []) {
+    const info=dashboardColorShade(horse);
+    if (!info) continue;
+    const row=byKey.get(`${info.base}|${info.shade}`);
+    if (row) row.horses.push(horse);
+  }
+  return scales.map(row=>({...row,testMeta:dashboardShadeTestMeta(row.horses)}));
 }
 
 function dashboardCountMap(values) {
@@ -577,12 +671,18 @@ function dashboardSnowflakeParents(horse) {
   return {fatherName:null,motherName:null};
 }
 
+function dashboardSnowflakeKinshipKey(value) {
+  if (typeof bpIsUnknownParentName === 'function' && bpIsUnknownParentName(value)) return '';
+  const key=dashboardOwnerKey(value).replace(/[._]+/g,' ').replace(/\s+/g,' ').trim();
+  return ['','unbekannt','unknown','n/a','na','-','?','nicht bekannt','unbekanntes projekt','unknown project'].includes(key) ? '' : key;
+}
+
 function dashboardSnowflakePedigreeNames(horse) {
   const pedigree = horse?.pedigree;
   const raw = Array.isArray(pedigree)
     ? pedigree.slice(1)
     : Array.isArray(pedigree?.ancestors) ? pedigree.ancestors : [];
-  return raw.map(x => typeof x === 'string' ? x : x?.name).map(x => String(x || '').trim()).filter(Boolean);
+  return raw.map(x => typeof x === 'string' ? x : x?.name).map(x => String(x || '').trim()).filter(x => dashboardSnowflakeKinshipKey(x));
 }
 
 function dashboardSnowflakeNameIndex(rows) {
@@ -603,7 +703,7 @@ function dashboardSnowflakeNameIndex(rows) {
 }
 
 function dashboardSnowflakeResolveByName(name, child, index) {
-  const key = dashboardOwnerKey(name);
+  const key = dashboardSnowflakeKinshipKey(name);
   if (!key) return null;
   const versionKey = `${String(child?.game_version || 'DE').toUpperCase()}|${key}`;
   const sameVersion = index.byVersionName.get(versionKey) || [];
@@ -791,7 +891,7 @@ function dashboardSnowflakeInformativePairings(rows) {
   const pairs=new Map();
   for (const child of rows||[]) {
     const {fatherName,motherName}=dashboardSnowflakeParents(child);
-    const fk=dashboardOwnerKey(fatherName), mk=dashboardOwnerKey(motherName);
+    const fk=dashboardSnowflakeKinshipKey(fatherName), mk=dashboardSnowflakeKinshipKey(motherName);
     if (!fk || !mk) continue;
     const key=`${fk}|${mk}`;
     if (!pairs.has(key)) pairs.set(key,{
@@ -912,8 +1012,8 @@ function dashboardSnowflakeFamilyAnalysis(rows, snowflakes) {
       child,
       fatherName:String(fatherName || '').trim(),
       motherName:String(motherName || '').trim(),
-      fatherKey:dashboardOwnerKey(fatherName),
-      motherKey:dashboardOwnerKey(motherName),
+      fatherKey:dashboardSnowflakeKinshipKey(fatherName),
+      motherKey:dashboardSnowflakeKinshipKey(motherName),
     });
   }
 
@@ -924,7 +1024,7 @@ function dashboardSnowflakeFamilyAnalysis(rows, snowflakes) {
   let nonSnowflakeParentPairCases = 0;
 
   const addParentCandidate = (parentName, mateName, child, parentHorse) => {
-    const key = dashboardOwnerKey(parentName);
+    const key = dashboardSnowflakeKinshipKey(parentName);
     if (!key) return;
     if (!parentCandidates.has(key)) parentCandidates.set(key,{
       name:parentName,
@@ -961,7 +1061,7 @@ function dashboardSnowflakeFamilyAnalysis(rows, snowflakes) {
       nonSnowflakeParentPairCases++;
     }
 
-    const fk=dashboardOwnerKey(fatherName), mk=dashboardOwnerKey(motherName);
+    const fk=dashboardSnowflakeKinshipKey(fatherName), mk=dashboardSnowflakeKinshipKey(motherName);
     const siblings = childLinks.filter(link => {
       if (link.child === snowflake) return false;
       return (fk && link.fatherKey===fk) || (mk && link.motherKey===mk);
@@ -985,7 +1085,7 @@ function dashboardSnowflakeFamilyAnalysis(rows, snowflakes) {
 
   // Jetzt, nachdem Kandidaten bekannt sind, deren komplette Nachzucht ergänzen.
   for (const row of parentCandidates.values()) {
-    const key=dashboardOwnerKey(row.name);
+    const key=dashboardSnowflakeKinshipKey(row.name);
     row.allKnownChildren = childLinks.filter(link => link.fatherKey===key || link.motherKey===key).map(x=>x.child);
   }
 
@@ -1246,72 +1346,60 @@ function renderColorGeneticsDashboard(rows, allRows) {
   const root=document.getElementById('color-genetics-dashboard');
   if (!root) return;
   if (!rows?.length) {
-    root.innerHTML=`<p class="muted">Keine Pferde im aktuellen Filter.</p>${renderSnowflakeDetective(allRows || [])}`;
+    root.innerHTML='<p class="muted">Keine Pferde im aktuellen Filter.</p>';
     return;
   }
 
-  const baseCounts = new Map(DASHBOARD_COLOR_BASE_ORDER.map(x=>[x,0]));
-  let baseUnknown=0, coatKnown=0;
-  const coatCounts=new Map(), shadeGroups=new Map();
+  const baseCounts=new Map(DASHBOARD_COLOR_BASE_ORDER.map(x=>[x,0]));
+  let baseUnknown=0;
   for (const horse of rows) {
-    const coat=String(horse?.coat_color||'').trim();
-    if (coat) { coatKnown++; coatCounts.set(coat,(coatCounts.get(coat)||0)+1); }
     const base=dashboardColorBase(horse);
-    if (baseCounts.has(base)) baseCounts.set(base,baseCounts.get(base)+1); else baseUnknown++;
-    const info=dashboardColorShade(horse);
-    if (info) {
-      const key=`${info.base}|${info.shade}`;
-      if (!shadeGroups.has(key)) shadeGroups.set(key,{base:info.base,shade:info.shade,orderIndex:info.orderIndex,scaleLength:info.scaleLength,horses:[]});
-      shadeGroups.get(key).horses.push(horse);
-    }
+    if (baseCounts.has(base)) baseCounts.set(base,baseCounts.get(base)+1);
+    else baseUnknown++;
   }
-  const baseEntries=[...baseCounts.entries()].filter(([,n])=>n>0);
-  if (baseUnknown) baseEntries.push(['Nicht eindeutig zugeordnet',baseUnknown]);
-  const shadeRows=dashboardShadeGeneticFingerprints(shadeGroups);
+  const baseEntries=[...baseCounts.entries()];
+  if (baseUnknown) baseEntries.push(['Nicht eindeutig',baseUnknown]);
+
+  const shadeRows=dashboardShadeInventory(rows);
   const app=dashboardAppaloosaAnalysis(rows);
   const inheritance=dashboardColorInheritance(rows,allRows||rows);
 
-  const shadeTable = shadeRows.length ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>Grundfarbe</th><th>Schattierung / Variante</th><th>Stufe hell → dunkel</th><th>n</th><th>auffällige getestete Marker</th></tr></thead><tbody>${shadeRows.map(row=>`<tr><td>${escapeHtml(row.base)}</td><td><strong>${escapeHtml(row.shade)}</strong></td><td>${Number.isFinite(row.orderIndex)&&row.scaleLength?`${row.orderIndex+1}/${row.scaleLength}`:'–'}</td><td>${row.horses.length}</td><td>${row.markers.length ? row.markers.map(escapeHtml).join('<br>') : '<span class="muted">noch kein unterscheidbarer getesteter Marker</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Noch keine eindeutig erkannten Grundfarben-Schattierungen.</p>';
+  const shadeTable=`<div class="table-wrap"><table class="detail-table color-genetics-table shade-inventory-table"><thead><tr><th>Grundfarbe</th><th>Stufe</th><th>Schattierung</th><th>Pferde</th></tr></thead><tbody>${shadeRows.map(row=>{
+    const test=row.testMeta;
+    const tested=test?.count ? ` <span class="shade-test-count" title="${escapeHtml(test.title)}">🧪${test.count}</span>` : '';
+    return `<tr class="${row.horses.length?'':'shade-empty-row'}"><td>${escapeHtml(row.base)}</td><td>${row.index+1}/${row.scaleLength}</td><td><strong>${escapeHtml(row.shade)}</strong></td><td>${row.horses.length}${tested}</td></tr>`;
+  }).join('')}</tbody></table></div>`;
 
-  const appComboTable = app.combos.length ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>LP</th><th>PATN1</th><th>n</th><th>beobachtete sichtbare Muster</th></tr></thead><tbody>${app.combos.map(row=>`<tr><td>${escapeHtml(row.lp)}</td><td>${escapeHtml(row.p1)}</td><td>${row.n}</td><td>${dashboardSortedCounts(row.patterns).map(([pattern,n])=>`${escapeHtml(pattern)} <strong>${n}</strong> (${Math.round(n/row.n*100)}%)`).join(' · ')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Noch keine Pferde mit gleichzeitig getestetem LP, getestetem PATN1 und sichtbarem LP-Scheckungsmuster im aktuellen Filter.</p>';
+  const appComboTable=app.combos.length ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>LP</th><th>PATN1</th><th>n</th><th>beobachtete sichtbare Muster</th></tr></thead><tbody>${app.combos.map(row=>`<tr><td>${escapeHtml(row.lp)}</td><td>${escapeHtml(row.p1)}</td><td>${row.n}</td><td>${dashboardSortedCounts(row.patterns).map(([pattern,n])=>`${escapeHtml(pattern)} <strong>${n}</strong> (${Math.round(n/row.n*100)}%)`).join(' · ')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Noch keine Pferde mit gleichzeitig getestetem LP, getestetem PATN1 und sichtbarem LP-Scheckungsmuster im aktuellen Filter.</p>';
 
-  const inheritanceTable = inheritance.length ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>Mutter</th><th>Vater</th><th>verknüpfte Fohlen</th><th>beobachtete Grundfarben</th></tr></thead><tbody>${inheritance.map(row=>`<tr><td>${escapeHtml(row.mother)}</td><td>${escapeHtml(row.father)}</td><td>${row.n}</td><td>${dashboardSortedCounts(row.children).map(([color,n])=>`${escapeHtml(color)} <strong>${n}</strong> (${Math.round(n/row.n*100)}%)`).join(' · ')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Noch zu wenige verknüpfte Eltern-Fohlen-Paare mit auswertbarer Grundfarbe (mindestens 2 je Kombination).</p>';
+  const inheritanceTable=inheritance.length ? `<div class="table-wrap"><table class="detail-table color-genetics-table"><thead><tr><th>Mutter</th><th>Vater</th><th>verknüpfte Fohlen</th><th>beobachtete Grundfarben</th></tr></thead><tbody>${inheritance.map(row=>`<tr><td>${escapeHtml(row.mother)}</td><td>${escapeHtml(row.father)}</td><td>${row.n}</td><td>${dashboardSortedCounts(row.children).map(([color,n])=>`${escapeHtml(color)} <strong>${n}</strong> (${Math.round(n/row.n*100)}%)`).join(' · ')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Noch zu wenige verknüpfte Eltern-Fohlen-Paare mit auswertbarer Grundfarbe (mindestens 2 je Kombination).</p>';
 
   root.innerHTML=`
-    <div class="color-genetics-grid">
-      <section class="color-genetics-subcard">
-        <h3>Grundfarben</h3>
-        <p class="tiny muted">Sichtbare bzw. aus eindeutigem Farbgenotyp ableitbare Grundfarb-Gruppe.</p>
-        ${dashboardColorPills(baseEntries,rows.length)}
-      </section>
-      <section class="color-genetics-subcard">
-        <h3>Sichtbare Fellfarben</h3>
-        <p class="tiny muted">Exakte MDR-Bezeichnungen werden bewusst nicht zusammengeführt.</p>
-        ${dashboardColorPills(dashboardSortedCounts(coatCounts).slice(0,18),coatKnown,'Keine Fellfarben erfasst.')}
-        ${coatCounts.size>18?`<p class="tiny muted">+ ${coatCounts.size-18} weitere Bezeichnungen im aktuellen Filter.</p>`:''}
-      </section>
-    </div>
+    <section class="color-genetics-subcard color-base-overview">
+      <h3>Grundfarben</h3>
+      <p class="tiny muted">Zuordnung bevorzugt Extension/Agouti und erkennt darunterliegende Grundfarben auch bei Cream, Pearl, Dun, Champagne und weiteren Überlagerungen. Grey bleibt als eigene sichtbare Gruppe.</p>
+      ${dashboardColorPills(baseEntries,rows.length)}
+      ${baseUnknown?`<p class="tiny muted">${baseUnknown} Pferde bleiben nur dann offen, wenn Grundfarbe bzw. Genotyp aus den gespeicherten Angaben wirklich nicht eindeutig ableitbar sind.</p>`:''}
+    </section>
 
     <details class="color-genetics-detail" open>
-      <summary><strong>Schattierungen &amp; genetische Auffälligkeiten</strong></summary>
-      <p class="small muted">Die vollständigen MDR-Schattierungsskalen für Chestnut (8), Bay (8), Sealbrown/Sea Brown (4) und Black (4) sind jetzt in offizieller Reihenfolge hell → dunkel hinterlegt. Varianten ohne eigene veröffentlichte Skala bleiben bei ihrer gespeicherten MDR-Bezeichnung. Die Markeranalyse verwendet ausschließlich echte gespeicherte Gentests und hebt nur Unterschiede zwischen Schattierungen derselben Grundfarbe hervor.</p>
+      <summary><strong>Schattierungen · hell → dunkel</strong></summary>
+      <p class="small muted">Alle bekannten MDR-Stufen werden angezeigt – auch wenn aktuell kein Pferd dieser Stufe vorhanden ist. 🧪 zeigt nur, wie viele Pferde der Stufe einen echten Extension-/Agouti-Test besitzen; daraus wird keine Schattierungsregel behauptet.</p>
       ${shadeTable}
-      <p class="tiny muted">Explorativ: Häufigkeiten können auf einen Zusammenhang hinweisen, beweisen aber noch nicht, welches Gen die MDR-Schattierung verursacht.</p>
     </details>
 
     <details class="color-genetics-detail">
       <summary><strong>LP-Scheckung · LP, PATN1 &amp; sichtbares Muster</strong></summary>
-      <p class="small muted">LP-basierte Scheckungsmuster werden rasseübergreifend betrachtet. Die ergänzte MDR-Patterntafel zeigt Pattern 1, Pattern 2 und Pattern 3: P1_ führt zu Leopard/Few Spot, p1p1 + P2_ zu Spotted Blanket/Snowcap, p1p1 + p2p2 + P3_ zu Varnish Roan und p1p1 + p2p2 + p3p3 zu Snowflake. P2/P3 sind nicht als individuelle Gentests im Datenbestand vorhanden und werden daher nur im Snowflake-Detektiv als Forschungsmodell verwendet.</p>
+      <p class="small muted">LP-basierte Scheckungsmuster werden rasseübergreifend betrachtet. P1 nutzt echte PATN1-Tests; P2/P3 bleiben nicht testbare, aus dem sichtbaren MDR-Muster ableitbare Zustände. </p>
       <h4>Sichtbare Muster</h4>
-      ${dashboardColorPills(app.patterns,app.patterns.reduce((s,x)=>s+x[1],0),'Keine LP-Scheckungsmuster im aktuellen Filter.')}
+      ${dashboardColorPills(app.patterns,app.patterns.reduce((sum,item)=>sum+item[1],0),'Keine LP-Scheckungsmuster im aktuellen Filter.')}
       <h4>Getestete Genetik → beobachtetes Muster</h4>
       ${appComboTable}
-      ${renderSnowflakeDetective(allRows || rows)}
     </details>
 
     <details class="color-genetics-detail">
-      <summary><strong>Beobachtete Farbvererbung</strong></summary>
-      <p class="small muted">Nur tatsächlich in der Datenbank verknüpfte Eltern und Fohlen. Die Prozentwerte sind Beobachtungen des vorhandenen Bestands, keine errechneten Mendel-Wahrscheinlichkeiten.</p>
+      <summary><strong>Beobachtete Grundfarben-Vererbung</strong></summary>
+      <p class="small muted">Nur verknüpfte Eltern und Fohlen; ausgewertet werden ausschließlich die Grundfarben Chestnut, Wild Bay, Bay, Sealbrown, Black und Grey. Prozentwerte sind Beobachtungen des vorhandenen Bestands.</p>
       ${inheritanceTable}
     </details>`;
 }

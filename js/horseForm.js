@@ -449,7 +449,7 @@ function renderBreedingShowEditTab(data = extraData) {
     if (turnierEl) turnierEl.value = String(Math.round(tournamentBonus));
     if (cupEl) cupEl.value = String(Math.round(cupBonus));
     if (dateEl) dateEl.value = 'beim Speichern';
-    if (note) note.textContent = 'Vorschau: Beim Speichern werden der aktuelle Turnier- und Cupbonus automatisch als ZS-Snapshot festgehalten.';
+    if (note) note.textContent = 'Vorschau: Beim Speichern werden der aktuelle Turnier- und Cupbonus automatisch zum Eintragungsdatum festgehalten.';
     return;
   }
 
@@ -1298,7 +1298,7 @@ const CHANGE_FIELD_LABELS = {
   stud_fee: 'Decktaxe',
   tournament_starts_total: 'Turnierstarts',
   breeding_show_points: 'Zuchtschau-Punkte',
-  breeding_show_snapshot: 'ZS-Snapshot',
+  breeding_show_snapshot: 'ZS-Eintragsdaten',
   tournament_results: 'Turniererfolge/Cup',
 };
 

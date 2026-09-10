@@ -35,7 +35,7 @@ function pedigreeAncestorNames(horse) {
 // Namen haben - dient als Warnhinweis, wenn der Stammbaum nur unvollständig
 // erfasst wurde (dann kann eine "kein Risiko"-Aussage trügerisch sein).
 function pedigreeDepth(horse) {
-  return pedigreeAncestorNames(horse).length;
+  return pedigreeAncestorNames(horse).filter(name => !isUnknownAncestorName(name)).length;
 }
 
 function normalizeName(name) {
@@ -44,7 +44,7 @@ function normalizeName(name) {
 
 function isUnknownAncestorName(name) {
   const n = normalizeName(name);
-  return !n || n === 'unbekannt' || n === 'unknown' || n === 'n/a' || n === 'na' || n === '-';
+  return !n || ['unbekannt','unknown','n/a','na','-','?','nicht bekannt','unbekanntes projekt','unknown project'].includes(n);
 }
 
 function isBreedNameInsteadOfAncestor(name, horseA, horseB) {
@@ -298,7 +298,7 @@ function buildDeepPedigree(horse, nameIndex, maxGeneration = COI_MAX_GENERATION)
   function walk(h, offset) {
     pedigreeAncestorNames(h).forEach((name, i) => {
       const key = normalizeName(name);
-      if (!key || key === 'unbekannt') return;
+      if (!key || isUnknownAncestorName(name)) return;
       const generation = offset + ancestorLocalGeneration(i);
       result.push({ name, generation });
       if (generation >= maxGeneration || visited.has(key)) return;
@@ -350,7 +350,7 @@ function ownCoiFraction(horse, nameIndex, coiCache) {
   if (coiCache.has(horse.id)) return coiCache.get(horse.id);
   coiCache.set(horse.id, 0);
   const [fatherName, motherName] = pedigreeAncestorNames(horse);
-  const resolve = (name) => (name && normalizeName(name) !== 'unbekannt' ? nameIndex.get(normalizeName(name)) : null);
+  const resolve = (name) => (!isUnknownAncestorName(name) ? nameIndex.get(normalizeName(name)) : null);
   const father = resolve(fatherName);
   const mother = resolve(motherName);
   const fraction = (father && mother) ? coiFraction(father, mother, nameIndex, coiCache) : 0;

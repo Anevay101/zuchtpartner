@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Guide – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5437" />
+  <link rel="stylesheet" href="css/style.css?v=5440" />
 </head>
 <body class="guide-page">
 <header class="topbar">
@@ -102,7 +102,8 @@
         <p>Das Dashboard eignet sich für Bestandsfragen: Welche Rassen besitzt ein Züchter? Wie liegen Durchschnittswerte? Wie verteilen sich Hauptbegabungen oder Zuchtwerte?</p>
         <p>Besitzer zuerst einschränken und anschließend eine Rasse wählen. Die Rassenauswahl wird automatisch auf den ausgewählten Bestand reduziert. So entstehen keine scheinbaren Rassenoptionen, die beim gewählten Besitzer gar nicht vorkommen.</p>
         <p>Häufige Auswertungen können als Dashboard-Kacheln bzw. gespeicherte Einstellungen wiederverwendet werden.</p>
-        <p><strong>🎨 Farbgenetik:</strong> Der zusätzliche Dashboard-Bereich zeigt Grundfarben, exakte Fellfarbenbezeichnungen, die offiziellen MDR-Schattierungsskalen in der Reihenfolge hell → dunkel, LP-Scheckungsmuster und beobachtete Eltern-Fohlen-Farbvererbung. Die Schattierungsanalyse vergleicht nur tatsächlich gespeicherte Gentests; statistische Auffälligkeiten werden bewusst als Hinweise und nicht automatisch als MDR-Spielregel behandelt. Der <strong>❄️ Snowflake-Detektiv</strong> kombiniert Datenbank und Lerndatei rasseübergreifend für LP-Schecken, vergleicht Snowflakes mit einer Nicht-Snowflake-Kontrollgruppe, berechnet Fisher-Test/Odds Ratio für PATN1 und LP-Dosis, priorisiert informative Paarungen und prüft Ahnen auf Anreicherung gegenüber der Kontrollgruppe. Die ergänzte MDR-Patterntafel zeigt zusätzlich die interne Hierarchie aus Pattern 1, Pattern 2 und Pattern 3: P1p1 → Leopard/Few Spot neu, P1P1 → Leopard/Few Spot alt, p1p1 + P2_ → Spotted Blanket/Snowcap, p1p1 + p2p2 + P3_ → Varnish Roan und p1p1 + p2p2 + p3p3 → Snowflake. P2/P3 sind nicht als individuelle Gentests verfügbar. Auf LP-Schecken-Pferdeseiten wird deshalb nur kompakt P1/P2/P3 mit ✓, ✗ oder ? angezeigt: P1 nutzt den echten PATN1-Test, P2/P3 werden ausschließlich aus dem sichtbaren Muster abgeleitet und nicht als Gentest oder erfundener Genotyp gespeichert. Der Zuchtplaner berücksichtigt dieselbe Hierarchie bei Appaloosa-Farbwünschen und zeigt bei verdeckten Zuständen eine Wahrscheinlichkeitsspanne.</p>
+        <p><strong>📈 Zuchtschau-Entwicklung:</strong> Für die aktuell gefilterten aktiven Rassen zeigt das Dashboard die letzten fünf Kalendermonate. Jeder positive ZS-Eintrag gilt als Gewinnwert; pro Rasse und Monat werden Durchschnitt und Anzahl der Einträge anhand des Eintragungsdatums angezeigt.</p>
+        <p><strong>🎨 Farbgenetik:</strong> Der Dashboard-Bereich <strong>🎨 Farbgenetik</strong> konzentriert sich auf Grundfarben, die offiziellen MDR-Schattierungsstufen, LP-Scheckungsmuster und beobachtete Grundfarben-Vererbung. Verdünnungen und Überlagerungen wie Palomino, Dun, Champagne oder Pearl werden – soweit aus Fellfarbe bzw. Extension/Agouti eindeutig ableitbar – ihrer genetischen Grundfarbe zugeordnet. Die Schattierungstabelle zeigt jede bekannte Stufe hell → dunkel auch bei Bestand 0; echte Extension-/Agouti-Tests werden nur kompakt markiert und nicht als Ursache der Schattierung behauptet. Die Snowflake-Forschung bleibt im Code erhalten, wird im Dashboard aber nicht mehr als eigener Detektiv angezeigt. Auf LP-Schecken-Pferdeseiten wird P1/P2/P3 weiterhin kompakt mit ✓, ✗ oder ? angezeigt; P1 nutzt den echten PATN1-Test, P2/P3 werden aus dem sichtbaren Muster abgeleitet. Der Zuchtplaner berücksichtigt dieselbe Hierarchie bei Appaloosa-Farbwünschen.</p>
       </div></div>
     </details>
 
@@ -120,7 +121,7 @@
       <div class="guide-faq-body"><div class="guide-answer-card">
         <p>Stute oder Hengst als Ausgangspunkt wählen. Besitzer- und Rassefilter helfen, den Gegenpartner einzugrenzen; auch hier werden Rassen nach Besitzerwahl dynamisch reduziert.</p>
         <p>Standardmäßig arbeitet der Verpaarungsratgeber mit <strong>Ext%</strong> als erstem Schwerpunkt und <strong>GP</strong> als zweitem Kriterium im kombinierten Ausgleich. Die Gewichtung startet bei <strong>80% Ext% / 20% GP</strong>, kann aber jederzeit verändert werden.</p>
-        <p>Zusatzwünsche wie Appaloosa-Muster, Farbe oder Turnierzucht nur aktivieren, wenn sie für die konkrete Verpaarung relevant sind. Die Inzuchtprüfung bleibt davon unabhängig.</p>
+        <p>Zusatzwünsche wie <strong>Grundfarbe</strong>, Appaloosa-Muster, weitere Farbgene oder Turnierzucht nur aktivieren, wenn sie für die konkrete Verpaarung relevant sind. Beim Grundfarbenwunsch stehen Chestnut, Wild Bay, Bay, Sealbrown, Black und Grey zur Wahl; die Rangfolge nutzt die berechenbare Fohlenchance. Unknown/Unbekannt im Stammbaum gilt nie als echte Verwandtschaft. Die Inzuchtprüfung bleibt von den Zusatzwünschen unabhängig.</p>
       </div></div>
     </details>
 
@@ -136,7 +137,7 @@
     <details class="card guide-faq-item">
       <summary>Wie funktioniert die ZS-Prognose für Fohlen?</summary>
       <div class="guide-faq-body"><div class="guide-answer-card">
-        <p>Das Lernmodell nutzt ausschließlich <strong>echte positive ZS-Punkte</strong>. Für neue ZS-Einträge speichert die Datenbank automatisch den Turnier- und Cupstand dieses Moments als historischen Snapshot. Aus dem ZS-Gesamtwert werden nur diese damaligen Boni herausgerechnet; spätere Turniererfolge verändern den Grundwert nicht.</p>
+        <p>Das Lernmodell nutzt ausschließlich <strong>echte positive ZS-Punkte</strong>. Für neue ZS-Einträge speichert die Datenbank automatisch den Turnier- und Cupstand dieses Moments zusammen mit dem Eintragungsdatum. Aus dem ZS-Gesamtwert werden nur diese damaligen Boni herausgerechnet; spätere Turniererfolge verändern den Grundwert nicht.</p>
         <p>Für eine ZS-Prognose müssen GP, Ext, Ext% und Int vorhanden sein. Ext und Ext% werden bewusst als zwei getrennte Informationen behandelt. Das Pferd selbst braucht keine Turnierplatzierung und keinen echten ZS-Wert. Die Prognose bleibt unabhängig vom Alter sichtbar, bis ein echter positiver ZS-Wert eingetragen wird, und wird niemals selbst als Lerndatum verwendet.</p>
         <p>Die Datenbank testet mehrere Modellvarianten automatisch gegeneinander: linear, fachlich gerichtete Kernwerte, Ext×Ext%-Zusammenspiel und eine vorsichtig nichtlineare Variante. Verwendet wird die Variante mit der besten Kreuzvalidierungs-Prognoseleistung.</p>
         <p>Unter „Zuchtschau“ zeigt die Modellprüfung MAE, RMSE, R² und die Spearman-Rangkorrelation sowie einen Vergleich mit einer einfachen Durchschnitts-Prognose. Der aufklappbare Modellvergleich zeigt zusätzlich, welche Variante tatsächlich gewonnen hat.</p>
@@ -154,10 +155,10 @@
   </div>
 </main>
 
-<script src="js/supabase-loader.js?v=5437"></script>
-<script src="js/supabase-config.js?v=5437"></script>
-<script src="js/database-local.js?v=5437"></script>
-<script src="js/local-app.js?v=5437"></script>
-<script src="js/guide.js?v=5437"></script>
+<script src="js/supabase-loader.js?v=5440"></script>
+<script src="js/supabase-config.js?v=5440"></script>
+<script src="js/database-local.js?v=5440"></script>
+<script src="js/local-app.js?v=5440"></script>
+<script src="js/guide.js?v=5440"></script>
 </body>
 </html>

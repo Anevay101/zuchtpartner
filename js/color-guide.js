@@ -179,41 +179,45 @@ function cgBasePhenotypeKnowledge(horse, locus) {
   if (tested) return tested;
 
   const coat = String(horse?.coat_color || '');
+
+  // V54.0.39: Die zentrale Parser-Logik kennt auch verdünnte/überlagerte
+  // MDR-Farbnamen (Palomino, Dun, Champagne, Pearl usw.). Dadurch bleibt
+  // die genetische Grundfarbe auch dann ableitbar, wenn sie im sichtbaren
+  // Farbnamen nicht wörtlich vorkommt. Getestete Genotypen haben weiterhin
+  // immer Vorrang.
+  if (typeof inferBaseColorHintsFromPhenotype === 'function') {
+    const hints = inferBaseColorHintsFromPhenotype(coat) || [];
+    const hint = hints.find(h => h?.locus === locus);
+    if (hint) {
+      const allele = String(hint.allele || '');
+      if (locus === 'Extension') {
+        if (allele === 'ee') return { states:[['e','e']], tested:false, source:hint.label || 'Chestnut-Basis aus Fellfarbe abgeleitet' };
+        if (allele === 'E') return { states:[['E','E'],['E','e']], tested:false, source:hint.label || 'schwarze Pigmentbasis E_ aus Fellfarbe abgeleitet' };
+      }
+      if (locus === 'Agouti') {
+        if (allele === 'Ap') return { states:[['Ap','Ap'],['Ap','A1'],['Ap','At'],['Ap','a0']], tested:false, source:hint.label || 'Wildbay (Ap_) aus Fellfarbe abgeleitet' };
+        if (allele === 'A1') return { states:[['A1','A1'],['A1','At'],['A1','a0']], tested:false, source:hint.label || 'Bay-Basis (A1_) aus Fellfarbe abgeleitet' };
+        if (allele === 'At') return { states:[['At','At'],['At','a0']], tested:false, source:hint.label || 'Sealbrown (At_) aus Fellfarbe abgeleitet' };
+        if (allele === 'a0a0') return { states:[['a0','a0']], tested:false, source:hint.label || 'Black-Basis (a0a0) aus Fellfarbe abgeleitet' };
+      }
+    }
+  }
+
+  // Fallback, falls parser.js auf einer Seite nicht geladen ist.
   if (locus === 'Extension') {
-    // Sichtbarer Fuchs ist zwingend ee. Alle sichtbaren schwarzen
-    // Grundfarben benötigen mindestens ein E.
-    if (/chestnut|sorrel|liver chestnut|dunalino|cremello|palomino|apricot/i.test(coat)) {
+    if (/chestnut|sorrel|liver chestnut|dunalino|cremello|palomino|apricot|red dun|gold champagne|gold dun|gold cream|gold pearl/i.test(coat)) {
       return { states:[['e','e']], tested:false, source:'Chestnut-Basis aus Fellfarbe abgeleitet' };
     }
-    if (/wildbay|\bbay\b|sealbrown|\bblack\b|grulla|buckskin|dunskin|smoky|amber|sable|classic|perlino/i.test(coat)) {
+    if (/wildbay|\bbay\b|sealbrown|\bblack\b|grulla|buckskin|dunskin|smoky|amber|sable|classic|perlino|pearl bay|pearl brown|pearl black/i.test(coat)) {
       return { states:[['E','E'],['E','e']], tested:false, source:'schwarze Pigmentbasis E_ aus Fellfarbe abgeleitet' };
     }
   }
 
   if (locus === 'Agouti') {
-    if (/wildbay/i.test(coat)) {
-      return {
-        states:[['Ap','Ap'],['Ap','A1'],['Ap','At'],['Ap','a0']],
-        tested:false, source:'Wildbay (Ap_) aus Fellfarbe abgeleitet'
-      };
-    }
-    if (/sealbrown/i.test(coat)) {
-      return {
-        states:[['At','At'],['At','a0']],
-        tested:false, source:'Sealbrown (At_) aus Fellfarbe abgeleitet'
-      };
-    }
-    // Nur ein ausdrücklich genanntes Bay/Buckskin/Dunskin/Amber (nicht
-    // Wildbay) wird als A1_ gewertet.
-    if (/\b(bay|buckskin|dunskin|amber)\b/i.test(coat) && !/wildbay/i.test(coat)) {
-      return {
-        states:[['A1','A1'],['A1','At'],['A1','a0']],
-        tested:false, source:'Bay-Basis (A1_) aus Fellfarbe abgeleitet'
-      };
-    }
-    if (/\bblack\b|grulla|smoky black|classic champagne/i.test(coat)) {
-      return { states:[['a0','a0']], tested:false, source:'Black-Basis (a0a0) aus Fellfarbe abgeleitet' };
-    }
+    if (/wildbay|wild buckskin|wild dunskin/i.test(coat)) return { states:[['Ap','Ap'],['Ap','A1'],['Ap','At'],['Ap','a0']], tested:false, source:'Wildbay (Ap_) aus Fellfarbe abgeleitet' };
+    if (/sealbrown|smoky brown|sable|brown dun|pearl brown/i.test(coat)) return { states:[['At','At'],['At','a0']], tested:false, source:'Sealbrown (At_) aus Fellfarbe abgeleitet' };
+    if (/\b(bay|buckskin|dunskin|amber|perlino|pearl bay)\b/i.test(coat) && !/wildbay|wild buckskin|wild dunskin/i.test(coat)) return { states:[['A1','A1'],['A1','At'],['A1','a0']], tested:false, source:'Bay-Basis (A1_) aus Fellfarbe abgeleitet' };
+    if (/\bblack\b|grulla|smoky black|classic champagne|classic cream|classic pearl|pearl black/i.test(coat)) return { states:[['a0','a0']], tested:false, source:'Black-Basis (a0a0) aus Fellfarbe abgeleitet' };
   }
   return null;
 }
@@ -358,6 +362,57 @@ function cgBaseColors(mare, stallion) {
     (((b.min+b.max)/2)-((a.min+a.max)/2)) ||
     a.label.localeCompare(b.label,'de')
   );
+}
+
+
+// V54.0.38 – kompakter Grundfarbenwunsch für den Zuchtplaner. Die fünf
+// eigentlichen Grundfarben werden aus Extension + Agouti berechnet. Grey
+// ist genetisch eine Überlagerung (G_), wird auf Nutzerwunsch aber in
+// derselben Auswahlliste geführt, weil es als sichtbarer Farbwunsch dient.
+function cgBaseWishRange(mare, stallion, wish) {
+  const normalized=String(wish || '').trim();
+  if (!normalized || normalized === 'any') return null;
+
+  if (/^grey$/i.test(normalized)) {
+    const visibleGrey=h=>/\bgr[ae]y\b/i.test(String(h?.coat_color||''))
+      ? {states:[['G','G'],['G','g']],tested:false,source:'Grey aus Fellfarbe abgeleitet'} : null;
+    const unknown={states:[['g','g'],['G','g'],['G','G']],tested:false,source:'unbekannt'};
+    const mk=cgKnowledge(mare,'Grey') || visibleGrey(mare) || unknown;
+    const sk=cgKnowledge(stallion,'Grey') || visibleGrey(stallion) || unknown;
+    const r=cgProbabilityRange(cgAllCrosses(mk,sk), pair=>pair.includes('G'));
+    return r ? {min:r.min,max:r.max,label:'Grey',source:'Grey (G_)'} : null;
+  }
+
+  const target = /^wild\s*bay$/i.test(normalized) ? 'Wildbay' : normalized;
+  // Für einen Wunsch darf fehlendes Wissen nicht die gesamte Berechnung
+  // abbrechen. Unbekannte Extension-/Agouti-Genotypen werden deshalb als
+  // vollständige mögliche Zustandsmenge geführt; daraus entsteht eine
+  // ehrliche Min–Max-Spanne. Das ist besonders wichtig bei Chestnut, denn
+  // ee bestimmt den Fuchs unabhängig davon, welches Agouti verdeckt liegt.
+  const extUnknown={states:[['E','E'],['E','e'],['e','e']],tested:false,source:'unbekannt'};
+  const agAlleles=['Ap','A1','At','a0'];
+  const agStates=[];
+  for (let i=0;i<agAlleles.length;i++) for (let j=i;j<agAlleles.length;j++) agStates.push([agAlleles[i],agAlleles[j]]);
+  const agUnknown={states:agStates,tested:false,source:'unbekannt'};
+  const me=cgKnowledge(mare,'Extension') || extUnknown;
+  const se=cgKnowledge(stallion,'Extension') || extUnknown;
+  const ma=cgKnowledge(mare,'Agouti') || agUnknown;
+  const sa=cgKnowledge(stallion,'Agouti') || agUnknown;
+
+  const vals=[];
+  for (const eg of cgAllCrosses(me,se)) for (const ag of cgAllCrosses(ma,sa)) {
+    let p=0;
+    for (const [ek,ep] of eg) for (const [ak,ap] of ag) {
+      if (cgBaseName(cgPair(ek),cgPair(ak))===target) p+=ep*ap;
+    }
+    vals.push(p);
+  }
+  if (!vals.length) return null;
+  return {min:Math.min(...vals),max:Math.max(...vals),label:normalized,source:'Extension/Agouti'};
+}
+
+function cgBaseWishRangeText(range) {
+  return cgAppaloosaWishRangeText(range);
 }
 
 function cgCreamState(pair) {
@@ -1406,12 +1461,25 @@ function cgLethalWarnings(mare,stallion) {
 }
 
 function cgShade(horse) {
-  const coat=String(horse?.coat_color||'');
+  const coat=String(horse?.coat_color||'').trim();
+  const lower=coat.toLowerCase();
   for(const [base,scale] of Object.entries(CG_SHADE_SCALES)) {
     // längste Namen zuerst, damit "Dark Liver Chestnut" nicht als
-    // bloßes "Chestnut" endet.
+    // bloßes "Chestnut" endet. Generische Basisnamen wie "Bay" und
+    // "Black" dürfen aber nicht in Verdünnungsnamen wie "Pearl Bay"
+    // oder "Smoky Black" hineinmatchen.
     const ordered=[...scale].sort((a,b)=>b.length-a.length);
-    const shade=ordered.find(x=>coat.toLowerCase().includes(x.toLowerCase()));
+    const shade=ordered.find(x=>{
+      const sx=x.toLowerCase();
+      if (sx === 'bay') {
+        if (/wild\s*bay|wildbay/.test(lower)) return false;
+        return /^bay(?:\b|\s)/i.test(coat);
+      }
+      if (sx === 'black') return /^black(?:\b|\s)/i.test(coat);
+      if (sx === 'chestnut') return /^chestnut(?:\b|\s)/i.test(coat);
+      if (sx === 'sealbrown') return /^sealbrown(?:\b|\s)/i.test(coat);
+      return lower.includes(sx);
+    });
     if(shade) return {base,shade,index:scale.indexOf(shade),scale};
   }
   return null;

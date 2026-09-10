@@ -16,6 +16,7 @@ let comboWeight = 80;
 let turnierzuchtMode = 'off';
 let turnierzuchtDiscipline = 'Reining';
 let appaloosaWish = 'any';
+let baseColorWish = 'any';
 let talentWish = '';
 const REMEMBERED_PAIRING_TTL_DAYS = 60;
 
@@ -62,7 +63,7 @@ async function repairStoredEnglishHorsesForPlanner(horses) {
     // Nur parserbasierte Felder reparieren. Manuelle Tags/Notizen/Overrides
     // und lokale IDs bleiben unangetastet.
     const keys = [
-      'gender','breed','birthdate','breeding_allowed','hlp_slp',
+      'gender','breed','birthdate','breeding_allowed','hlp_slp','performance_test_points','performance_test_passed',
       'disease_free','genetic_diseases','colors','exterior_genetics',
       'exterior_descriptive','temperament','disciplines','traits',
       'tournament_potential','pedigree','ico','purebred_pct',
@@ -248,6 +249,39 @@ function tagMatchesFilter(horse, tag) {
 function plannerHorseInBreedingStation(horse) {
   if (horse?.in_breeding_station === true) return true;
   return plannerHorseTagLabels(horse).some(label => normalizeFilterText(label) === 'zuchtstation');
+}
+
+// MDR-Regel: Hengste aus der Deck-/Zuchtstation können nur von
+// Prämienstuten genutzt werden. Maßgeblich ist der HLP/SLP-Eintrag der Stute.
+// Alte Importe werden direkt aus dem Originaltext erkannt, damit kein
+// erneuter Import nötig ist.
+function plannerHorseIsPremiumMare(horse) {
+  if (!horse || plannerGenderLocal(horse) !== 'stute') return false;
+
+  const text = String(horse?.hlp_slp ?? '').trim();
+  if (text) {
+    if (/^(?:nein|no|false|0)$/i.test(text) || /(?:failed|nicht bestanden|durchgefallen)/i.test(text)) return false;
+    if (
+      /^(?:ja|yes|true|1)$/i.test(text) ||
+      /(?:prämienstute|praemienstute|premium mare|\bbestanden\b|\bpassed\b)/i.test(text) ||
+      /(\d+)\s*(?:punkte|points?)/i.test(text)
+    ) return true;
+  }
+
+  return horse?.performance_test_passed === true;
+}
+
+function plannerPairAllowedByStation(mare, stallion) {
+  if (!mare || !stallion) return true;
+  if (!plannerHorseInBreedingStation(stallion)) return true;
+  return plannerHorseIsPremiumMare(mare);
+}
+
+function plannerCandidateAllowedForPrimary(primary, candidate) {
+  if (!primary || !candidate) return true;
+  const mare = richtung === 'hengst' ? candidate : primary;
+  const stallion = richtung === 'hengst' ? primary : candidate;
+  return plannerPairAllowedByStation(mare, stallion);
 }
 
 function candidateMatchesFilters(horse, owner, breed, station = '') {
@@ -667,6 +701,21 @@ function wireControls() {
     renderBestMatches();
   });
 
+  document.getElementById('base-color-wish')?.addEventListener('change', e => {
+    baseColorWish = e.target.value || 'any';
+    const info = document.getElementById('base-color-wish-info');
+    const codes = {
+      Chestnut:'ee',
+      'Wild Bay':'E_ · Ap_',
+      Bay:'E_ · A1_ (ohne dominanteres Ap)',
+      Sealbrown:'E_ · At_ (ohne Ap/A1)',
+      Black:'E_ · a0a0',
+      Grey:'G_ · überlagert die eigentliche Grundfarbe',
+    };
+    if (info) info.textContent = baseColorWish === 'any' ? '' : `${baseColorWish}: ${codes[baseColorWish] || ''}`;
+    renderBestMatches();
+  });
+
   document.getElementById('appaloosa-wish').addEventListener('change', e => {
     appaloosaWish = e.target.value;
     const info = document.getElementById('appaloosa-wish-info');
@@ -790,7 +839,7 @@ async function loadEmpiricalLocal() {
   for (const h of combined) {
     const anc = pedigreeAncestorNames(h);
     for (const parentName of [anc[0], anc[1]]) {
-      if (!parentName || normalizeName(parentName) === 'unbekannt') continue;
+      if (!parentName || (typeof isUnknownAncestorName === 'function' && isUnknownAncestorName(parentName))) continue;
       const key = normalizeName(parentName);
       if (!flaxenChildrenByName.has(key)) flaxenChildrenByName.set(key, []);
       flaxenChildrenByName.get(key).push(h);
@@ -1056,7 +1105,9 @@ function renderBestMatches() {
   const owner = document.getElementById('candidate-owner-select').value;
   const breed = document.getElementById('candidate-breed-select').value;
   const station = richtung === 'hengst' ? '' : (document.getElementById('candidate-station-select')?.value || '');
-  const filtered = pool.filter(h => candidateMatchesFilters(h, owner, breed, station));
+  const filterMatchedPool = pool.filter(h => candidateMatchesFilters(h, owner, breed, station));
+  const stationEligibilityExcluded = filterMatchedPool.filter(h => !plannerCandidateAllowedForPrimary(primary, h)).length;
+  const filtered = filterMatchedPool.filter(h => plannerCandidateAllowedForPrimary(primary, h));
 
   const ranked = rankStallions(primary, filtered, {
     schwerpunkt,
@@ -1124,45 +1175,73 @@ function renderBestMatches() {
     }
   }
 
-  if (appaloosaWish !== 'any') {
+  if (appaloosaWish !== 'any' || baseColorWish !== 'any') {
     rankingPool.forEach((c,index) => {
       const candidate = c.stallion;
       const mareForColor = richtung === 'hengst' ? candidate : primary;
       const stallionForColor = richtung === 'hengst' ? primary : candidate;
-      c.appaloosaWishRange = typeof cgAppaloosaWishRange === 'function'
-        ? cgAppaloosaWishRange(mareForColor,stallionForColor,appaloosaWish,globalThis.MDR_COLOR_EMPIRICAL_HORSES || ZH_HORSES)
+
+      if (appaloosaWish !== 'any') {
+        c.appaloosaWishRange = typeof cgAppaloosaWishRange === 'function'
+          ? cgAppaloosaWishRange(mareForColor,stallionForColor,appaloosaWish,globalThis.MDR_COLOR_EMPIRICAL_HORSES || ZH_HORSES)
+          : null;
+        c.appaloosaWishScore = c.appaloosaWishRange?.min ?? cgAppaloosaWishScore(mareForColor,stallionForColor,appaloosaWish,globalThis.MDR_COLOR_EMPIRICAL_HORSES || ZH_HORSES);
+      } else {
+        c.appaloosaWishRange = null;
+        c.appaloosaWishScore = null;
+      }
+
+      if (baseColorWish !== 'any') {
+        c.baseColorWishRange = typeof cgBaseWishRange === 'function'
+          ? cgBaseWishRange(mareForColor,stallionForColor,baseColorWish)
+          : null;
+        c.baseColorWishScore = c.baseColorWishRange?.min ?? null;
+      } else {
+        c.baseColorWishRange = null;
+        c.baseColorWishScore = null;
+      }
+
+      const ranges=[c.baseColorWishRange,c.appaloosaWishRange].filter(Boolean);
+      c.combinedColorWishRange = ranges.length
+        ? {min:ranges.reduce((v,r)=>v*Number(r.min||0),1),max:ranges.reduce((v,r)=>v*Number(r.max||0),1)}
         : null;
-      c.appaloosaWishScore = c.appaloosaWishRange?.min ?? cgAppaloosaWishScore(mareForColor,stallionForColor,appaloosaWish,globalThis.MDR_COLOR_EMPIRICAL_HORSES || ZH_HORSES);
       c._beforeColorRank = index;
     });
+
     rankingPool.sort((a,b) => {
       if (liveTurnierzuchtMode !== 'off') {
         const tzDiff = turnierzuchtRankValue(b.turnierzucht) - turnierzuchtRankValue(a.turnierzucht);
         if (Math.abs(tzDiff) > 0.0001) return tzDiff;
       }
-      if (a.appaloosaWishScore == null && b.appaloosaWishScore == null) return a._beforeColorRank-b._beforeColorRank;
-      if (a.appaloosaWishScore == null) return 1;
-      if (b.appaloosaWishScore == null) return -1;
-      // Erst sichere Mindestchance, dann mögliche Maximalchance. So werden
-      // verdeckte P2/P3-Zustände nicht als sicher angenommen, aber bei
-      // gleicher Mindestchance trotzdem sinnvoll als Potenzial-Tie-Breaker genutzt.
-      if (Math.abs(b.appaloosaWishScore-a.appaloosaWishScore) > 1e-9) return b.appaloosaWishScore-a.appaloosaWishScore;
-      const aMax = a.appaloosaWishRange?.max ?? a.appaloosaWishScore;
-      const bMax = b.appaloosaWishRange?.max ?? b.appaloosaWishScore;
-      if (Math.abs(bMax-aMax) > 1e-9) return bMax-aMax;
+      const ar=a.combinedColorWishRange, br=b.combinedColorWishRange;
+      if (!ar && !br) return a._beforeColorRank-b._beforeColorRank;
+      if (!ar) return 1;
+      if (!br) return -1;
+      // Sichere Mindestchance zuerst; bei Gleichstand das mögliche Maximum.
+      // Sind Grundfarbe UND Appaloosa-Muster aktiv, werden die getrennten
+      // Loci als gemeinsame Erfüllungschance multipliziert.
+      if (Math.abs(br.min-ar.min)>1e-9) return br.min-ar.min;
+      if (Math.abs(br.max-ar.max)>1e-9) return br.max-ar.max;
       return a._beforeColorRank-b._beforeColorRank;
     });
   }
 
   ranked.top = rankingPool
-    .filter(c => candidateMatchesFilters(c.stallion, owner, breed, station))
+    .filter(c => candidateMatchesFilters(c.stallion, owner, breed, station) && plannerCandidateAllowedForPrimary(primary, c.stallion))
     .slice(0, resultLimit);
 
-  // Sicherheitsprüfung: keine Karte darf den aktiven Besitzer-/Rassefilter verletzen.
-  const leaked = ranked.top.filter(c => !candidateMatchesFilters(c.stallion, owner, breed, station));
+  // Sicherheitsprüfung: keine Karte darf den aktiven Besitzer-/Rassefilter
+  // oder die MDR-Deckstationsregel verletzen.
+  const leaked = ranked.top.filter(c =>
+    !candidateMatchesFilters(c.stallion, owner, breed, station) ||
+    !plannerCandidateAllowedForPrimary(primary, c.stallion)
+  );
   if (leaked.length) {
     console.error('Kandidatenfilter-Sicherheitsprüfung fehlgeschlagen', leaked);
-    ranked.top = ranked.top.filter(c => candidateMatchesFilters(c.stallion, owner, breed, station));
+    ranked.top = ranked.top.filter(c =>
+      candidateMatchesFilters(c.stallion, owner, breed, station) &&
+      plannerCandidateAllowedForPrimary(primary, c.stallion)
+    );
   }
 
   const ex = ranked.exclusionStats || {};
@@ -1170,6 +1249,13 @@ function renderBestMatches() {
   if (ex.related) exclusionBits.push(`${ex.related} wegen echter gemeinsamer Verwandtschaft`);
   if (ex.overo) exclusionBits.push(`${ex.overo} wegen Overo × Overo`);
   if (ex.colorWish) exclusionBits.push(`${ex.colorWish} wegen aktivem Farbwunsch`);
+  if (stationEligibilityExcluded) {
+    exclusionBits.push(
+      richtung === 'hengst'
+        ? `${stationEligibilityExcluded} Stuten ohne Prämienstatus für den Deckstation-Hengst`
+        : `${stationEligibilityExcluded} Deckstation-Hengste, da die Stute keine Prämienstute ist`
+    );
+  }
 
   const activeFilterBits = [];
   if (owner) activeFilterBits.push(`Besitzer: ${owner}`);
@@ -1179,6 +1265,7 @@ function renderBestMatches() {
     (activeFilterBits.length ? ` · Aktiver Kandidatenfilter: ${activeFilterBits.join(' · ')}.` : ' · Kandidatenfilter: Alle.') +
     (exclusionBits.length ? ` · Ausgeschlossen: ${exclusionBits.join(', ')}.` : '') +
     (liveTurnierzuchtMode !== 'off' ? ' · Turnierzucht wird vorrangig gewertet.' : '') +
+    (baseColorWish !== 'any' ? ` · Grundfarbenwunsch ${baseColorWish} berücksichtigt.` : '') +
     (appaloosaWish !== 'any' ? ` · Appaloosa-Wunsch ${appaloosaWish === 'snowflake' ? 'Snowflake' : appaloosaWish} berücksichtigt.` : '') +
     (talentWish ? ` · Begabungswunsch ${talentWish} als kleiner Zusatzfaktor.` : '');
 
@@ -1257,6 +1344,9 @@ function renderBestMatches() {
 
         ${empiricalHtml(mare, stallion)}
         ${sortMode === 'combo' ? comboRow(c) : complementRow(c, primaryLabel)}
+        ${baseColorWish !== 'any' && c.baseColorWishRange
+          ? `<p class="small"><strong>Grundfarbe ${esc(baseColorWish)}:</strong> ${typeof cgBaseWishRangeText === 'function' ? cgBaseWishRangeText(c.baseColorWishRange) : cgAppaloosaWishRangeText(c.baseColorWishRange)}${baseColorWish === 'Grey' ? ' · Grey (G_) überlagert die Grundfarbe' : ' · Extension/Agouti'}</p>`
+          : ''}
         ${appaloosaWish !== 'any' && c.appaloosaWishScore != null
           ? `<p class="small"><strong>🐆 ${esc(appaloosaWish === 'snowflake' ? 'Snowflake' : appaloosaWish)}:</strong> ${typeof cgAppaloosaWishRangeText === 'function' ? cgAppaloosaWishRangeText(c.appaloosaWishRange || {min:c.appaloosaWishScore,max:c.appaloosaWishScore}) : cgPct(c.appaloosaWishScore)} nach LP/P1/P2/P3-Modell${c.appaloosaWishRange && Math.abs(c.appaloosaWishRange.max-c.appaloosaWishRange.min)>1e-9 ? ' · Spanne wegen verdeckter Pattern-Zustände' : ''}</p>`
           : ''}

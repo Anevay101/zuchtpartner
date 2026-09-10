@@ -1,0 +1,20 @@
+MDR-Datenbank V54.0.39
+
+Dashboard
+- Neuer Bereich „📈 Zuchtschau-Entwicklung“: letzte fünf Kalendermonate, Ø Gewinnwert je aktiver/gefilterter Rasse und Anzahl der ZS-Einträge.
+- Jeder positive eingetragene ZS-Gesamtwert gilt für diese Statistik als Gewinnwert; Gruppierung erfolgt nach Eintragungsdatum.
+- „Snapshot-Datum“ wurde in der Zuchtschau-Oberfläche in „Eintragungsdatum“ umbenannt. Die interne Datenstruktur bleibt aus Kompatibilitätsgründen unverändert.
+
+Farbgenetik
+- Dashboard deutlich vereinfacht: Grundfarben, Schattierungsstufen, LP-Scheckung und beobachtete Grundfarben-Vererbung.
+- Liste aller sichtbaren Fellfarben und die bisherige Marker-/Auffälligkeitstabelle entfernt.
+- Grundfarb-Erkennung erweitert: Palomino, Cream/Pearl, Dun, Champagne, Buckskin, Grulla und weitere MDR-Farbnamen werden über Extension/Agouti bzw. die zentrale Phänotyp-Logik der Grundfarbe zugeordnet.
+- Sealbrown wird im Dashboard wieder als „Sealbrown“ bezeichnet.
+- Schattierungstabelle zeigt alle bekannten Stufen auch bei Bestand 0; echte Extension-/Agouti-Tests werden nur kompakt mit 🧪 markiert.
+- Snowflake-Detektiv aus der sichtbaren Dashboard-Oberfläche entfernt; Forschungslogik bleibt im Code erhalten.
+- Beobachtete Farbvererbung bleibt auf die sechs Grundfarb-Gruppen beschränkt.
+
+Technik
+- Farbgrundlagen in color-guide.js an die zentrale Parser-Erkennung angebunden.
+- Generische Schattierungsnamen wie „Bay“/„Black“ matchen nicht mehr fälschlich in Verdünnungsnamen wie „Pearl Bay“/„Smoky Black“.
+- Cache-Version 5439.
