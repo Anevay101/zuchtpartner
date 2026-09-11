@@ -1,7 +1,0 @@
-MDR-Datenbank V54.0.35
-
-Hotfix Datenladen
-- IndexedDB-Lesecache wird beim ersten Seitenaufruf sofort verwendet, statt die Oberfläche blockierend auf Supabase warten zu lassen.
-- Supabase bleibt führender Datenbestand und aktualisiert den lokalen Cache im Hintergrund.
-- Die Pferdedatenbank zeigt bei einem Initialisierungsfehler jetzt eine konkrete Fehlermeldung statt dauerhaft „Lade…“.
-- Keine Änderungen an Snowflake-, Farbgenetik- oder Pferdedatenlogik gegenüber V54.0.34.

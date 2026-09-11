@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Pferde – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5445" />
+  <link rel="stylesheet" href="css/style.css?v=5446" />
 </head>
 <body class="list-page">
   <header class="topbar">
@@ -40,8 +40,8 @@
     <details id="database-filter-details" class="database-filter-details">
       <summary>🔎 Filter · <span id="database-filter-summary">0 aktiv · – Pferde</span></summary>
     <form id="filter-form" class="filter-bar database-filter-bar">
-      <div class="filter-group filter-group-search">
-        <div class="filter-group-title">Suche</div>
+      <details class="filter-group filter-group-search filter-group-collapsible" data-filter-section="search" open>
+        <summary class="filter-group-title">Suche <span class="filter-group-summary-note">Name · Besitzer · Rasse</span></summary>
         <div class="filter-group-grid">
           <div class="field">
             <label for="f-name">Name</label>
@@ -92,10 +92,10 @@
             </select>
           </div>
         </div>
-      </div>
+      </details>
 
-      <div class="filter-group filter-group-breeding">
-        <div class="filter-group-title">Zucht</div>
+      <details class="filter-group filter-group-breeding filter-group-collapsible" data-filter-section="breeding" open>
+        <summary class="filter-group-title">Zucht <span class="filter-group-summary-note">Geschlecht · ZZL · Nachkommen</span></summary>
         <div class="filter-group-grid">
           <div class="field">
             <label for="f-gender">Geschlecht</label>
@@ -134,10 +134,10 @@
             <span class="tiny muted bp-filter-legend"><span class="bp-parent-dot bp-parent-better"></span> besser · <span class="bp-parent-dot bp-parent-equal"></span> gleich · <span class="bp-parent-dot bp-parent-worse"></span> schlechter</span>
           </div>
         </div>
-      </div>
+      </details>
 
-      <div class="filter-group filter-group-genetics">
-        <div class="filter-group-title">Genetik &amp; Gesundheit</div>
+      <details class="filter-group filter-group-genetics filter-group-collapsible" data-filter-section="genetics">
+        <summary class="filter-group-title">Genetik &amp; Gesundheit <span class="filter-group-summary-note">Genetik · EKH</span></summary>
         <div class="filter-group-grid">
           <div class="field">
             <label>Genetik</label>
@@ -156,10 +156,10 @@
             <span class="tiny muted">1× einschließen · 2× ausschließen · 3× neutral</span>
           </div>
         </div>
-      </div>
+      </details>
 
-      <div class="filter-group filter-group-performance">
-        <div class="filter-group-title">Leistungswerte</div>
+      <details class="filter-group filter-group-performance filter-group-collapsible" data-filter-section="performance">
+        <summary class="filter-group-title">Leistungswerte <span class="filter-group-summary-note">GP · Ext · Ext% · Int</span></summary>
         <div class="filter-group-grid">
           <div class="field">
             <label for="f-gp-op">GP</label>
@@ -205,15 +205,15 @@
             <span class="tiny muted">Nur Pferde mit bestätigtem Cup-Stern</span>
           </div>
         </div>
-      </div>
+      </details>
 
-      <div class="actions">
+      <div class="actions filter-actions">
         <select id="filter-preset-select" style="width: auto;" title="Gespeicherte Filter-Vorlage laden">
           <option value="">Vorlage laden…</option>
         </select>
         <button type="button" id="save-filter-preset-btn" class="secondary">💾 Als Vorlage speichern</button>
         <button type="button" id="reset-filters" class="secondary">Alle Filter löschen</button>
-        <button type="submit">Filtern</button>
+        <span class="small muted filter-live-hint">Filter wirken sofort.</span>
       </div>
     </form>
 
@@ -456,15 +456,15 @@
     <button type="button" id="scroll-top-btn" class="scroll-top-btn" hidden title="Nach oben">↑</button>
   </main>
 
-  <script src="js/supabase-loader.js?v=5445"></script>
-<script src="js/supabase-config.js?v=5445"></script>
-<script src="js/database-local.js?v=5445"></script>
-  <script src="js/local-app.js?v=5445"></script>
-  <script src="js/learning-file.js?v=5445"></script>
-  <script src="js/parser.js?v=5445"></script>
-  <script src="js/data-quality.js?v=5445"></script>
-  <script src="js/breeding-progress.js?v=5445"></script>
-  <script src="js/planer-common.js?v=5445"></script>
-  <script src="js/list.js?v=5445"></script>
+  <script src="js/supabase-loader.js?v=5446"></script>
+<script src="js/supabase-config.js?v=5446"></script>
+<script src="js/database-local.js?v=5446"></script>
+  <script src="js/local-app.js?v=5446"></script>
+  <script src="js/learning-file.js?v=5446"></script>
+  <script src="js/parser.js?v=5446"></script>
+  <script src="js/data-quality.js?v=5446"></script>
+  <script src="js/breeding-progress.js?v=5446"></script>
+  <script src="js/planer-common.js?v=5446"></script>
+  <script src="js/list.js?v=5446"></script>
 </body>
 </html>

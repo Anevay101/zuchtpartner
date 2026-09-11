@@ -1,8 +1,0 @@
-V54.0.22 – ZS-Prognose für Fohlen korrigiert
-
-- Top Turnierplaner > Zuchtschau > Prognose zeigt jetzt ausschließlich Fohlen ohne echte ZS-Punkte.
-- Fohlen benötigen für die Prognose keine Turnierplatzierungen mehr.
-- Die Turnierplatzierungs-Pflicht bleibt für echte ZS-Lerndaten bestehen, damit der ZS-Grundwert korrekt zurückgerechnet wird.
-- Fohlen mit unvollständigen GP/Ext/Ext%/Int-Daten bleiben sichtbar und erhalten einen konkreten Hinweis, warum noch keine Prognose möglich ist.
-- Die Pferde-Ansichtsseite zeigt unter Stammdaten neu „ZS-Wert / Prognose“: echter ZS-Wert hat Vorrang; sonst wird bei Fohlen die ZS-Grundwertprognose angezeigt.
-- Turnierplaner und Pferdeansicht verwenden dieselbe gemeinsame ZS-Modellfunktion.

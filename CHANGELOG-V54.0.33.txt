@@ -1,8 +1,0 @@
-V54.0.33 – Snowflake-Detektiv: LP-Schecken & genetisch passende Nachzucht
-
-- Snowflake-Detektiv wertet alle LP-Scheckenrassen gemeinsam aus; Anzeige heißt jetzt „LP-Schecken-Referenzen“.
-- Arbeitshypothese LP vorhanden + p1p1 wird pro auffälliger Linie separat geprüft.
-- Träger-/Linientabelle zeigt genetisch passend getestete Nachkommen mit bekanntem Muster, davon Snowflakes und die beobachtete Snowflake-Quote.
-- Nachkommen ohne sichtbare Musterangabe werden separat kenntlich gemacht und nicht in den Quotienten eingerechnet.
-- Hinweise bleiben strikt explorativ: PATN2 bzw. ein zusätzlicher Modifier wird weder als getestet behauptet noch auf einzelnen Pferdeseiten gespeichert/angezeigt.
-- Cache-Version 5433.

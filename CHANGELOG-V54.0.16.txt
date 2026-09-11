@@ -1,7 +1,0 @@
-MDR Pferdedatenbank V54.0.16
-
-- Appaloosa-Musterabfrage direkt zwischen den Stammdaten als einzelnes Dropdown.
-- Alte Appaloosa-Auswahlbuttons/Modal entfernt; nach Import wird das Feld bei Bedarf fokussiert.
-- V54.0.15-Funktionen in die tatsächlich geladenen js/ und css/ Dateien synchronisiert.
-- Damit aktiv: automatischer Cupstern (50 Starts + 15 Siege), ZS-Ausblendung bei fehlenden Turnierdaten, aktive Züchter als Mehrfachauswahl und Noch-pruefen-Bereich.
-- Cachebuster auf 5416 erhöht.

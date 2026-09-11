@@ -5434,3 +5434,309 @@ body.planner-high-contrast .filter-checkbox-label {
   border-color: currentColor;
   box-shadow: inset 0 0 0 1px currentColor;
 }
+
+/* ============================================================
+   V54.0.46 – Interface-System: ruhiger, kompakter, konsistent
+   ============================================================ */
+:root {
+  --surface-soft: color-mix(in srgb, var(--surface) 94%, var(--accent) 6%);
+  --surface-softer: color-mix(in srgb, var(--surface) 97%, var(--accent) 3%);
+  --shadow-sm: 0 1px 3px rgba(33, 55, 28, .08);
+  --shadow-md: 0 5px 18px rgba(33, 55, 28, .10);
+  --radius-lg: 16px;
+}
+
+/* Kopfzeile: kompakter, immer erreichbar, klare Aktionshierarchie. */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  gap: .8rem;
+  padding: .58rem 1rem;
+  box-shadow: 0 2px 10px rgba(31, 53, 27, .09);
+}
+.topbar h1 { line-height: 1.1; }
+.topbar nav { gap: .38rem; }
+.topbar nav .btn,
+.topbar nav button {
+  min-height: 2.05rem;
+  padding: .34rem .62rem;
+  border-radius: 999px !important;
+  font-size: .86rem;
+  box-shadow: none;
+}
+.topbar nav .nav-current {
+  color: var(--accent-dark) !important;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border)) !important;
+  background: color-mix(in srgb, var(--surface) 83%, var(--accent) 17%) !important;
+  font-weight: 800;
+}
+
+/* Einheitliche Oberflächen: Inhalte bleiben leicht voneinander getrennt,
+   ohne durch schwere Rahmen wie einzelne Formulare zu wirken. */
+.card,
+fieldset,
+details.card,
+details.paste-box,
+.compare-avg-block,
+.database-filter-details,
+.table-wrap {
+  box-shadow: var(--shadow-sm);
+}
+fieldset,
+.card,
+details.card {
+  border-color: color-mix(in srgb, var(--border) 84%, var(--accent) 16%);
+}
+fieldset > legend {
+  font-size: .82rem;
+  font-weight: 800;
+  letter-spacing: .015em;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a.btn:focus-visible,
+summary:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  outline-offset: 2px;
+}
+
+/* Reiter: der aktive Bereich ist stärker, auf kleinen Bildschirmen
+   horizontal scrollbar statt mehrzeilig-chaotisch. */
+.tabs,
+.subtabs {
+  gap: .28rem;
+}
+.tab-btn,
+.subtab-btn {
+  transition: background .14s ease, border-color .14s ease, color .14s ease;
+}
+@media (max-width: 760px) {
+  .tabs,
+  .subtabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding-bottom: .2rem;
+  }
+  .tabs .tab-btn,
+  .subtabs .subtab-btn { flex: 0 0 auto; white-space: nowrap; }
+}
+
+/* Datenbankfilter: echte, merkbare Unterbereiche. Suche/Zucht starten offen,
+   Genetik/Leistung lassen sich bei Bedarf aufklappen. */
+.database-filter-bar .filter-group-collapsible {
+  padding: 0;
+  overflow: visible;
+  background: var(--surface-softer);
+}
+.database-filter-bar .filter-group-collapsible > summary.filter-group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  min-height: 2.35rem;
+  margin: 0;
+  padding: .5rem .68rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.database-filter-bar .filter-group-collapsible > summary.filter-group-title::-webkit-details-marker { display: none; }
+.database-filter-bar .filter-group-collapsible > summary.filter-group-title::after {
+  content: '▾';
+  flex: 0 0 auto;
+  font-size: .9rem;
+  transform: rotate(-90deg);
+  transition: transform .12s ease;
+}
+.database-filter-bar .filter-group-collapsible[open] > summary.filter-group-title::after { transform: rotate(0); }
+.database-filter-bar .filter-group-collapsible[open] > summary.filter-group-title {
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, var(--accent) 20%);
+}
+.database-filter-bar .filter-group-collapsible > .filter-group-grid {
+  padding: .45rem .68rem .68rem;
+}
+.filter-group-summary-note {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+.database-filter-bar .filter-actions {
+  padding-top: .2rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 88%, var(--accent) 12%);
+}
+.active-filter-bar { box-shadow: var(--shadow-sm); }
+.active-filter-chip { transition: transform .1s ease, background .1s ease; }
+.active-filter-chip:hover { transform: translateY(-1px); }
+
+/* Tabellen: weniger Linien, bessere Scanbarkeit und klarere Kopfzeile. */
+.table-wrap { overflow: auto; }
+#horse-table thead th,
+.detail-table thead th,
+.tournament-ranking-table thead th {
+  font-weight: 800;
+  color: var(--accent-dark);
+  border-bottom: 2px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+#horse-table tbody tr:nth-child(even) td:not(.cmp-good):not(.cmp-bad):not(.cmp-tolerance) {
+  background: color-mix(in srgb, var(--surface) 97%, var(--accent) 3%);
+}
+#horse-table tbody tr:hover td:not(.cmp-good):not(.cmp-bad):not(.cmp-tolerance) {
+  background: color-mix(in srgb, var(--surface) 91%, var(--accent) 9%);
+}
+#horse-table .name-cell a { font-weight: 800; }
+#horse-table td { line-height: 1.32; }
+
+/* Pferdeprofil: Kennzahlen auf einen Blick, Details bleiben in den Reitern. */
+.horse-view-v53 { max-width: 1240px; }
+.horse-view-v53 .view-actions {
+  justify-content: flex-end;
+  margin-bottom: .45rem;
+}
+.horse-view-v53 .view-actions .btn,
+.horse-view-v53 .view-actions button { padding: .36rem .66rem; }
+.horse-hero-card {
+  grid-template-columns: 48px minmax(0, 780px) 48px;
+  padding: .75rem 1rem .9rem;
+  box-shadow: var(--shadow-md);
+}
+.horse-key-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(82px, 1fr));
+  gap: .38rem;
+  margin: .55rem auto .15rem;
+  max-width: 760px;
+}
+.horse-key-metric {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: .08rem;
+  padding: .4rem .42rem;
+  border: 1px solid color-mix(in srgb, #78956d 55%, var(--border));
+  border-radius: 11px;
+  background: rgba(255,255,255,.63);
+  text-align: center;
+}
+.horse-key-metric span {
+  color: #597052;
+  font-size: .7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .035em;
+}
+.horse-key-metric strong {
+  color: #203d1d;
+  font-size: 1.04rem;
+  line-height: 1.15;
+}
+.horse-summary-chips { margin-top: .42rem; }
+.horse-summary-chips > span { padding: .18rem .48rem; font-size: .82rem; }
+.horse-view-tabs {
+  position: sticky;
+  top: 3.35rem;
+  z-index: 25;
+  padding: .25rem .35rem 0;
+  background: color-mix(in srgb, var(--surface) 95%, var(--accent) 5%);
+  border: 1px solid color-mix(in srgb, var(--border) 85%, var(--accent) 15%);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Zuchtplaner: Begründung nur auf Abruf statt zusätzlicher Textzeile. */
+.candidate-why-disclosure {
+  margin: .35rem 0 .5rem;
+  border: 1px solid #c2ccd2;
+  border-radius: 10px;
+  background: #f7fafb;
+  color: #263137;
+}
+.candidate-why-disclosure > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  margin: 0;
+  padding: .34rem .55rem;
+  cursor: pointer;
+  color: #40545f;
+  font-size: .82rem;
+  font-weight: 800;
+  list-style: none;
+  border-radius: 9px;
+}
+.candidate-why-disclosure > summary::-webkit-details-marker { display: none; }
+.candidate-why-disclosure > summary:hover { background: #eaf1f4; }
+.candidate-why-disclosure[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.candidate-why-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: .32rem;
+  padding: .15rem .5rem .5rem;
+}
+.candidate-why-row {
+  display: grid;
+  grid-template-columns: 1.4rem minmax(0,1fr);
+  gap: .35rem;
+  align-items: start;
+  padding: .35rem .4rem;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #dde5e8;
+}
+.candidate-why-symbol {
+  display: inline-grid;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  font-weight: 900;
+  line-height: 1;
+}
+.candidate-why-row strong { display: block; font-size: .8rem; }
+.candidate-why-row small { display: block; margin-top: .05rem; color: #69767d; font-size: .7rem; line-height: 1.25; }
+.candidate-why-yes .candidate-why-symbol { color: #315b2b; background: #e5f0df; }
+.candidate-why-no .candidate-why-symbol { color: #8a342f; background: #f5e3e1; }
+.candidate-why-unknown .candidate-why-symbol { color: #7b6419; background: #f7efd2; }
+.candidate-why-derived .candidate-why-symbol { color: #345d7a; background: #e1eef6; }
+.status-symbol-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem .7rem;
+  padding: .38rem .55rem;
+  border-top: 1px solid #dfe6e9;
+  color: #66747b;
+  font-size: .68rem;
+}
+
+/* Status-Semantik für neue und schrittweise umgestellte Bereiche. */
+.mdr-status-yes { color: var(--success); }
+.mdr-status-no { color: var(--danger); }
+.mdr-status-unknown { color: var(--warning); }
+.mdr-status-derived { color: var(--info); }
+
+@media (max-width: 900px) {
+  .horse-key-metrics { grid-template-columns: repeat(3, minmax(90px,1fr)); }
+  .candidate-why-list { grid-template-columns: 1fr; }
+  .horse-view-tabs { top: 3rem; }
+}
+@media (max-width: 620px) {
+  .topbar { align-items: flex-start; }
+  .topbar h1 { font-size: 1.25rem; }
+  .topbar nav { gap: .25rem; }
+  .topbar nav .btn,
+  .topbar nav button { padding: .3rem .48rem; font-size: .8rem; }
+  .filter-group-summary-note { display: none; }
+  .horse-key-metrics { grid-template-columns: repeat(2, minmax(90px,1fr)); }
+  .horse-view-v53 .view-actions { justify-content: center; }
+  .horse-view-tabs { top: 4.2rem; }
+}
+.filter-live-hint { margin-left: auto; align-self: center; white-space: nowrap; }
+@media (max-width: 680px) { .filter-live-hint { flex-basis: 100%; text-align: right; } }

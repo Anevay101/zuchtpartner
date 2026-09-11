@@ -80,6 +80,7 @@ async function init() {
   // In der lokalen Version gehört die Datenbank vollständig dem lokalen
   // Benutzer; Löschen wird daher nicht über die frühere Admin-Rolle gesperrt.
   wireFilterForm();
+  wireFilterGroupMemory();
   wireBestFoalFilter();
   wireSortableHeaders();
   wireSelection();
@@ -1261,11 +1262,6 @@ function updateActiveFilterChips() {
   const bar = document.getElementById('active-filter-bar');
   const root = document.getElementById('active-filter-chips');
   if (!bar || !root) return;
-  if (!databaseFilterChipsCommitted) {
-    bar.hidden = true;
-    root.innerHTML = '';
-    return;
-  }
   const chips = activeFilterChipDescriptors();
   bar.hidden = chips.length === 0;
   root.innerHTML = chips.map(({key,label}) => `<button type="button" class="active-filter-chip" data-filter-chip="${escapeHtml(key)}" title="Diesen Filter entfernen">${escapeHtml(label)} <span class="active-filter-chip-x" aria-hidden="true">×</span></button>`).join('');
@@ -1498,25 +1494,22 @@ function wireFilterForm() {
   const form = document.querySelector('#filter-form');
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    // Chips sind eine bewusste Zusammenfassung: erst der Klick auf „Filtern“
-    // bestätigt den aktuell vorbereiteten Filterzustand für die Chip-Leiste.
     databaseFilterChipsCommitted = true;
     loadHorses();
   });
 
-  // Die bewährte Direktreaktion der Ergebnisliste bleibt erhalten. Sobald
-  // danach ein Feld verändert wird, verschwindet eine vorherige Chip-Leiste
-  // wieder, bis der neue Zustand ausdrücklich mit „Filtern“ bestätigt wird.
+  // Ergebnisliste und Filter-Chips reagieren direkt. Dadurch bleibt jederzeit
+  // sichtbar, warum ein Pferd gerade ein- oder ausgeblendet wird.
   let filterTimer = null;
   form.addEventListener('change', (e) => {
     if (!e.target.matches('input,select,.checkdrop-tristate-item')) return;
-    databaseFilterChipsCommitted = false;
+    databaseFilterChipsCommitted = true;
     clearTimeout(filterTimer);
     loadHorses();
   });
   form.addEventListener('input', (e) => {
     if (!e.target.matches('input[type="text"],input[type="number"]')) return;
-    databaseFilterChipsCommitted = false;
+    databaseFilterChipsCommitted = true;
     clearTimeout(filterTimer);
     filterTimer = setTimeout(loadHorses, 180);
   });
@@ -1528,6 +1521,23 @@ function wireFilterForm() {
 
   document.querySelector('#reset-filters').addEventListener('click', resetDatabaseFilters);
   document.getElementById('clear-active-filters')?.addEventListener('click', resetDatabaseFilters);
+}
+
+
+function wireFilterGroupMemory() {
+  const key = 'mdr-database-filter-sections-v54';
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch {}
+  document.querySelectorAll('.filter-group-collapsible[data-filter-section]').forEach((details) => {
+    const section = details.dataset.filterSection;
+    if (Object.prototype.hasOwnProperty.call(saved, section)) details.open = Boolean(saved[section]);
+    details.addEventListener('toggle', () => {
+      let state = {};
+      try { state = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch {}
+      state[section] = details.open;
+      try { localStorage.setItem(key, JSON.stringify(state)); } catch {}
+    });
+  });
 }
 
 function resetDatabaseFilters() {

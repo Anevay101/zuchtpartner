@@ -1055,24 +1055,74 @@ function comboRow(c) {
   </p>`;
 }
 
-function compactWhyRecommendedHtml(c) {
-  const reasons = [];
-  const tz = c.turnierzucht;
-  if (tz?.active) {
-    const excellent = tz.excellentPriority?.length || 0;
-    if (excellent) reasons.push(`+ ${excellent}× Exzellent-Chance`);
+function candidateWhyRangeText(range) {
+  if (!range) return null;
+  const min = Math.max(0, Math.min(1, Number(range.min ?? 0)));
+  const max = Math.max(0, Math.min(1, Number(range.max ?? min)));
+  const fmt = value => `${Math.round(value * 100)}%`;
+  return Math.abs(max - min) < 1e-9 ? fmt(min) : `${fmt(min)}–${fmt(max)}`;
+}
+
+function compactWhyRecommendedHtml(c, mare, stallion) {
+  const rows = [];
+  const add = (state, text, detail = '') => rows.push({ state, text, detail });
+
+  add('✓', 'Zuchtfilter bestanden', 'Keine erkannte gemeinsame Verwandtschaft und kein ausgeschlossener Overo-Fall.');
+
+  if (plannerHorseInBreedingStation(stallion)) {
+    add('✓', 'Deckstationsregel erfüllt', plannerHorseIsPremiumMare(mare) ? 'Die Stute ist als Prämienstute erkannt.' : 'Die Deckstationsregel ist für diese Kombination nicht relevant.');
   }
-  if (talentWish && c.talentWishProjection) {
-    const p = c.talentWishProjection;
-    if (p.n && p.probability != null) reasons.push(`+ ${talentWish} ${Math.round(p.probability*100)}% (n=${p.n})`);
-    else if (p.score >= .45) reasons.push(`+ ${talentWish}-Wunsch passend`);
-  }
+
   const comp = c.complement;
   if (comp?.atStake) {
     const pct = Math.round(comp.saved / comp.atStake * 100);
-    if (pct >= 60) reasons.push(`+ ${pct}% Werte-Ausgleich`);
+    add(pct >= 60 ? '✓' : '≈', `${pct}% Werte-Ausgleich`, pct >= 60 ? 'Ein großer Teil der erkannten Schwächen wird ausgeglichen.' : 'Der Partner gleicht einen Teil der erkannten Schwächen aus.');
   }
-  return reasons.length ? `<div class="candidate-why"><strong>Warum empfohlen:</strong> ${reasons.slice(0,3).map(esc).join(' · ')}</div>` : '';
+
+  if (sortMode === 'combo' && c.comboScore != null && Number.isFinite(Number(c.comboScore))) {
+    add('≈', `Kombinierter Ausgleich ${Math.round(Number(c.comboScore))}%`, `Gewichtung: ${comboWeight}% Hauptkriterium / ${100-comboWeight}% zweites Kriterium.`);
+  }
+
+  const tz = c.turnierzucht;
+  if (tz?.active) {
+    const excellent = tz.excellentPriority?.length || 0;
+    const score = tz.score == null ? null : Math.round(Number(tz.score));
+    if (excellent) add('✓', `${excellent}× Exzellent-Chance`, score == null ? 'Turnierzucht berücksichtigt.' : `Turnierzucht-Score ${score}/100.`);
+    else if (score != null) add(score >= 60 ? '✓' : '≈', `Turnierzucht ${score}/100`, 'Bewertung der für die Disziplin relevanten Interieurwerte.');
+  }
+
+  if (talentWish && c.talentWishProjection) {
+    const p = c.talentWishProjection;
+    if (p.n && p.probability != null) add(p.probability >= .5 ? '✓' : '≈', `${talentWish}: ${Math.round(p.probability * 100)}%`, `Beobachtete Eltern–Fohlen-Gruppe, n=${p.n}.`);
+    else add('?', `${talentWish}: wenig Vergleichsdaten`, 'Es wirkt nur ein kleiner Eltern-Tendenzbonus.');
+  }
+
+  if (baseColorWish !== 'any' && c.baseColorWishRange) {
+    const text = candidateWhyRangeText(c.baseColorWishRange);
+    const uncertain = Math.abs(Number(c.baseColorWishRange.max || 0) - Number(c.baseColorWishRange.min || 0)) > 1e-9;
+    add(uncertain ? '?' : (Number(c.baseColorWishRange.min || 0) > 0 ? '✓' : '✗'), `Grundfarbe ${baseColorWish}: ${text}`, uncertain ? 'Spanne wegen nicht vollständig geklärter Farbgenetik.' : 'Genetisch berechnete Chance.');
+  }
+
+  if (appaloosaWish !== 'any' && c.appaloosaWishRange) {
+    const label = appaloosaWish === 'snowflake' ? 'Snowflake' : appaloosaWish;
+    const text = candidateWhyRangeText(c.appaloosaWishRange);
+    const uncertain = Math.abs(Number(c.appaloosaWishRange.max || 0) - Number(c.appaloosaWishRange.min || 0)) > 1e-9;
+    add(uncertain ? '?' : (Number(c.appaloosaWishRange.min || 0) > 0 ? '✓' : '✗'), `${label}: ${text}`, uncertain ? 'Spanne wegen verdeckter P1/P2/P3-Zustände.' : 'Chance nach dem LP/P1/P2/P3-Modell.');
+  }
+
+  const sortLabels = {
+    best: 'Best Case', worst: 'Worst Case', complement: 'Schwächenausgleich', combo: 'kombiniertem Ausgleich',
+    empirical: 'Datenbank-Schätzung', 'diff-asc': 'kleiner Differenz', 'diff-desc': 'Risiko/Chance'
+  };
+  add('≈', `Rang nach ${sortLabels[sortMode] || 'aktueller Sortierung'}`, 'Die Reihenfolge folgt den aktuell gewählten Optionen und Wünschen.');
+
+  return `<details class="candidate-why-disclosure">
+    <summary title="Erklärt, warum dieser Partner in der aktuellen Auswahl erscheint">ⓘ Warum angezeigt?</summary>
+    <div class="candidate-why-list">
+      ${rows.slice(0, 7).map(row => `<div class="candidate-why-row candidate-why-${row.state === '✓' ? 'yes' : row.state === '✗' ? 'no' : row.state === '?' ? 'unknown' : 'derived'}"><span class="candidate-why-symbol" aria-hidden="true">${row.state}</span><span><strong>${esc(row.text)}</strong>${row.detail ? `<small>${esc(row.detail)}</small>` : ''}</span></div>`).join('')}
+    </div>
+    <div class="status-symbol-legend"><span>✓ sicher/erfüllt</span><span>✗ sicher nicht</span><span>? unbekannt</span><span>≈ abgeleitet/geschätzt</span></div>
+  </details>`;
 }
 
 function renderBestMatches() {
@@ -1326,7 +1376,7 @@ function renderBestMatches() {
           <span>👤 ${esc(h.owner || '–')}</span>
           ${plannerGenderLocal(h) === 'hengst' ? `<span>${studFeeHtml(h)}</span>` : ''}
         </p>
-        ${compactWhyRecommendedHtml(c)}
+        ${compactWhyRecommendedHtml(c, mare, stallion)}
 
         ${ekhWarningHtmlLocal(mare, stallion)}
 

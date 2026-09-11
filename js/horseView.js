@@ -46,15 +46,45 @@ function renderHorseViewHeader(horse) {
       horse?.gender || null,
       age || null,
       group ? `${group}${talent ? ' / ' + talent : ''}` : talent || null,
-      horse?.breeding_allowed === true ? 'ZZL ✓' : null,
+      horse?.breeding_allowed === true ? 'ZZL ✓' : horse?.breeding_allowed === false ? 'ZZL ✗' : 'ZZL ?',
       stars.length ? `⭐ ${stars.map(r=>r.discipline + (r.lk ? ' '+r.lk : '')).join(', ')}` : null,
     ];
     if (/hengst|stallion/i.test(String(horse?.gender || ''))) {
       const inStation = horse?.in_breeding_station === true || viewTagLabels(horse).includes('Zuchtstation');
-      if (inStation) bits.push('Zuchtstation');
+      if (inStation) bits.push('Zuchtstation ✓');
       bits.push(`Decktaxe: ${horse?.stud_fee == null || horse?.stud_fee === '' || Number(horse.stud_fee) === 0 ? 'kostenlos' : `${horse.stud_fee} DD`}`);
     }
     chips.innerHTML = bits.filter(Boolean).map(x => `<span>${plannerEscape(x)}</span>`).join('');
+  }
+
+  const metrics = document.getElementById('horse-key-metrics');
+  if (metrics) {
+    const d = viewDerived(horse);
+    const actualZs = typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : null;
+    let zsValue = actualZs;
+    let zsState = actualZs != null ? '✓' : '?';
+    let zsTitle = actualZs != null ? 'eingetragener ZS-Wert' : 'kein ZS-Wert verfügbar';
+    if (actualZs == null && Array.isArray(viewHorseList) && typeof plannerBuildBreedingShowModel === 'function') {
+      try {
+        const model = plannerBuildBreedingShowModel(viewHorseList);
+        const predicted = model?.predict?.(horse);
+        if (predicted != null && Number.isFinite(Number(predicted))) {
+          zsValue = Number(predicted);
+          zsState = '≈';
+          zsTitle = 'ZS-Prognose';
+        }
+      } catch {}
+    }
+    const offspring = horse?.offspring_count != null && horse.offspring_count !== '' ? Number(horse.offspring_count) : null;
+    const rows = [
+      ['GP', d.gp == null || !Number.isFinite(d.gp) ? '?' : Math.round(d.gp), 'Gesamtpotenzial'],
+      ['Ext', d.ext == null || !Number.isFinite(d.ext) ? '?' : d.ext.toFixed(2), 'Körperbau – niedriger ist besser'],
+      ['Ext%', d.extpct == null || !Number.isFinite(Number(d.extpct)) ? '?' : `${Number(d.extpct).toFixed(0)}%`, 'genetisches Exterieur – höher ist besser'],
+      ['Int', d.int == null || !Number.isFinite(d.int) ? '?' : d.int.toFixed(2), 'Interieur – niedriger ist besser'],
+      ['ZS', `${zsState} ${zsValue == null || !Number.isFinite(Number(zsValue)) ? '–' : Math.round(Number(zsValue))}`, zsTitle],
+      ['Nachkommen', offspring == null || !Number.isFinite(offspring) ? '?' : Math.max(0, Math.round(offspring)), offspring == null ? 'noch nicht aus MDR-Profil eingelesen' : 'Nachkommen laut MDR-Profil'],
+    ];
+    metrics.innerHTML = rows.map(([label,value,title]) => `<div class="horse-key-metric" title="${plannerEscape(title)}"><span>${plannerEscape(label)}</span><strong>${plannerEscape(String(value))}</strong></div>`).join('');
   }
 
   const missing = viewImportantMissing(horse);

@@ -1796,6 +1796,17 @@ async function renderSharedNav() {
     nav.append(settingsLink);
   }
 
+  // V54.0.46: aktive Navigation überall gleich kennzeichnen.
+  const currentPage = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  document.body.dataset.mdrPage = currentPage.replace(/\.html$/,'');
+  nav.querySelectorAll('a[href]').forEach(link => {
+    const href = String(link.getAttribute('href') || '').split(/[?#]/)[0].split('/').pop().toLowerCase();
+    const active = href && href === currentPage;
+    link.classList.toggle('nav-current', active);
+    if (active) link.setAttribute('aria-current','page');
+    else link.removeAttribute('aria-current');
+  });
+
   await initDataSafety(nav);
 }
 
