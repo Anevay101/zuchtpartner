@@ -4908,6 +4908,8 @@ body.planner-high-contrast .filter-checkbox-label {
 .guide-function-table td, .guide-lifecycle-table td { vertical-align: top; }
 
 .pairing-filter-bar { align-items: start; }
+.pairing-search-filter-field { flex: 0 1 290px; min-width: min(290px, 100%); }
+.pairing-search-filter-field input[type="search"] { width: 100%; }
 .pairing-owner-filter-field { min-width: min(520px, 100%); flex: 1 1 420px; }
 .pairing-owner-checkboxes { display: flex; flex-wrap: wrap; gap: .45rem .7rem; margin-top: .25rem; }
 .pairing-owner-option { display: inline-flex; align-items: center; gap: .35rem; padding: .32rem .55rem; border: 1px solid var(--border); border-radius: .45rem; background: var(--surface, transparent); }

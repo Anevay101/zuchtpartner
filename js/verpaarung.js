@@ -16,6 +16,7 @@ let pairingEmpiricalDeviations = null;
 const PAIRING_BREEDER_FILTER_SETTING = 'pairing_log_breeders_v54';
 const PAIRING_BREEDER_FILTER_STORAGE = 'pairing-log-breeders-v54';
 let pairingFilterOwners = [];
+let pairingSearchTimer = null;
 
 function pairingOwnerKey(value) { return String(value || '').trim().toLocaleLowerCase('de'); }
 
@@ -38,6 +39,21 @@ async function init() {
   document.querySelector('#p-mare').addEventListener('input', syncPairingOwnerFromMare);
   document.querySelector('#f-owner').addEventListener('change', onPairingBreederFilterChange);
   document.querySelector('#f-breed').addEventListener('change', loadPairings);
+  const searchInput = document.querySelector('#f-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      clearTimeout(pairingSearchTimer);
+      pairingSearchTimer = setTimeout(loadPairings, 120);
+    });
+  }
+  const filterForm = document.querySelector('#pairing-filter-form');
+  if (filterForm) {
+    filterForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      clearTimeout(pairingSearchTimer);
+      loadPairings();
+    });
+  }
   document.querySelector('#foal-modal-skip').addEventListener('click', closeFoalModal);
   document.querySelector('#foal-modal-save').addEventListener('click', onSaveFoal);
   document.querySelector('#foal-existing-link-btn').addEventListener('click', onLinkExistingFoal);
@@ -771,6 +787,59 @@ function wireSortableHeaders() {
   });
 }
 
+// V54.0.43 – Freitextsuche im Verpaarungslog. Die Suche ist absichtlich
+// breit genug für den praktischen Alltag: Eltern, verknüpftes Fohlen,
+// Besitzer/Züchter, Rasse, Notizen, Datum und bekannte IDs. Mehrere
+// Suchwörter werden mit UND verknüpft; Groß-/Kleinschreibung und Umlaute
+// spielen für den Abgleich keine Rolle.
+function normalizePairingSearchText(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('de')
+    .replace(/ß/g, 'ss')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function pairingSearchHaystack(pairing) {
+  const actual = actualRecordForPairing(pairing);
+  const stallion = pairingHorseRecord(
+    pairing?.stallion,
+    pairing?.prediction_snapshot?.stallion_id ?? pairing?.expected_foal?.stallion_id ?? null
+  );
+  const mare = pairingHorseRecord(
+    pairing?.mare,
+    pairing?.prediction_snapshot?.mare_id ?? pairing?.expected_foal?.mare_id ?? null
+  );
+
+  return normalizePairingSearchText([
+    pairing?.stallion,
+    pairing?.mare,
+    pairing?.owner,
+    pairing?.notes,
+    pairing?.foal_name,
+    pairing?.actual_foal_snapshot?.name,
+    pairing?.prediction_snapshot?.foal_name,
+    actual?.name,
+    actual?.external_id,
+    stallion?.external_id,
+    mare?.external_id,
+    breedOf(pairing?.stallion),
+    breedOf(pairing?.mare),
+    actual?.breed,
+    pairing?.pairing_date,
+    pairing?.pairing_date ? formatEuropeanDate(pairing.pairing_date) : '',
+  ].filter((value) => value != null && String(value).trim()).join(' '));
+}
+
+function pairingMatchesFreeText(pairing, query) {
+  const tokens = normalizePairingSearchText(query).split(' ').filter(Boolean);
+  if (!tokens.length) return true;
+  const haystack = pairingSearchHaystack(pairing);
+  return tokens.every((token) => haystack.includes(token));
+}
+
 async function loadPairings() {
   const currentTbody = document.querySelector('#pairing-table tbody');
   const pastTbody = document.querySelector('#past-pairing-table tbody');
@@ -801,6 +870,12 @@ async function loadPairings() {
     data = data.filter((p) => breedOf(p.stallion) === breed || breedOf(p.mare) === breed);
   }
 
+  const searchQuery = document.querySelector('#f-search')?.value || '';
+  const hasSearch = normalizePairingSearchText(searchQuery).length > 0;
+  if (hasSearch) {
+    data = data.filter((p) => pairingMatchesFreeText(p, searchQuery));
+  }
+
   // V46: aktuelle Verpaarungen IMMER nach nächstem Abfohldatum,
   // vergangene IMMER nach jüngster Geburt. Die Reihenfolge wird nicht
   // mehr durch einen zufälligen letzten Tabellen-Sortierklick verändert.
@@ -811,7 +886,9 @@ async function loadPairings() {
     data.filter((p) => isPastPairing(p))
   );
   const hiddenPastCount = Math.max(0, allPastPairings.length - PAST_PAIRING_VISIBLE_LIMIT);
-  const pastPairings = showAllPastPairings
+  // Bei aktiver Suche niemals Treffer hinter dem 50er-Archivlimit verstecken.
+  // Sonst könnte eine Suche nach einem alten Hengst/Fohlen fälschlich 0 Treffer liefern.
+  const pastPairings = (showAllPastPairings || hasSearch)
     ? allPastPairings
     : allPastPairings.slice(0, PAST_PAIRING_VISIBLE_LIMIT);
 
@@ -829,7 +906,7 @@ async function loadPairings() {
   pastSection.hidden = false;
   const pastCount = document.getElementById('past-pairings-count');
   if (pastCount) {
-    pastCount.textContent = hiddenPastCount && !showAllPastPairings
+    pastCount.textContent = hiddenPastCount && !showAllPastPairings && !hasSearch
       ? `(${pastPairings.length} von ${allPastPairings.length})`
       : `(${allPastPairings.length})`;
   }
@@ -840,7 +917,7 @@ async function loadPairings() {
   const archiveControl = document.getElementById('past-pairings-archive-control');
   const archiveButton = document.getElementById('past-pairings-archive-toggle');
   if (archiveControl && archiveButton) {
-    archiveControl.hidden = hiddenPastCount <= 0;
+    archiveControl.hidden = hasSearch || hiddenPastCount <= 0;
     archiveButton.textContent = showAllPastPairings
       ? `↩️ Nur die neuesten ${PAST_PAIRING_VISIBLE_LIMIT} anzeigen`
       : `📦 ${hiddenPastCount} ältere Verpaarung${hiddenPastCount === 1 ? '' : 'en'} anzeigen`;
