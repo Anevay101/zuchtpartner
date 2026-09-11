@@ -211,6 +211,7 @@ function translateEnglishLineForParser(line, state) {
     [/^Diff\.-OP Parents\s*:/i, 'Diff.-GP Eltern:'],
     [/^Experience\s*:/i, 'Erfahrung:'],
     [/^Competition starts\s*:/i, 'Turnierstarts:'],
+    [/^(?:Offspring(?:\s+in\s+total|\s+total)?|Total\s+offspring)\s*:/i, 'Nachkommen insgesamt:'],
     [/^Starts\s*:/i, 'Starts:'],
     [/^First places\s*:/i, 'Erste Plätze:'],
     [/^Second places\s*:/i, 'Zweite Plätze:'],
@@ -582,6 +583,23 @@ function parseHorseText(rawText) {
     else if (/^(nein|no)$/i.test(zzlValue)) result.breeding_allowed = false;
   }
   setIf(result, 'hlp_slp', findValueForLabel(nonEmpty, 'HLP/SLP'));
+
+  // Anzahl der Nachkommen steht im MDR-Profil dauerhaft im Zuchtbereich.
+  // DE: "Nachkommen insgesamt: 3"; EN wird oben auf dasselbe Label
+  // normalisiert (u.a. "Offspring: 3" / "Offspring in total: 3").
+  // Der Wert wird bewusst als Profilwert gespeichert und nicht aus den
+  // aktuell in unserer Datenbank bekannten Fohlen geschätzt, damit der
+  // Filter auch dann korrekt bleibt, wenn nicht jeder Nachkomme erfasst ist.
+  const offspringRaw = findValueForLabel(nonEmpty, 'Nachkommen insgesamt')
+    || findValueForLabel(nonEmpty, 'Nachkommen')
+    || findValueForLabel(nonEmpty, 'Offspring in total')
+    || findValueForLabel(nonEmpty, 'Offspring total')
+    || findValueForLabel(nonEmpty, 'Total offspring')
+    || findValueForLabel(nonEmpty, 'Offspring');
+  if (offspringRaw != null) {
+    const offspringMatch = String(offspringRaw).match(/\d+/);
+    if (offspringMatch) result.offspring_count = Math.max(0, Number(offspringMatch[0]));
+  }
 
   // EN Performance Test / DE HLP-SLP: zusätzlich strukturierte Punkte,
   // ohne den Originaltext zu verlieren. Ein ausdrückliches Nein darf dabei

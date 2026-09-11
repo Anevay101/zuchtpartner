@@ -9,6 +9,10 @@ const JSONB_KEYS = [
   'temperament', 'disciplines', 'traits', 'tournament_potential', 'pedigree',
   'color_gene_overrides', 'disease_gene_overrides', 'tags', 'pregnancy', 'phenotype_gene_hints', 'cup_results', 'tournament_results',
 ];
+// Strukturierte Profilwerte ohne eigenes Eingabefeld. Sie werden beim
+// Aktualisieren der MDR-Seite automatisch neu eingelesen und unverändert
+// mitgespeichert.
+const IMPORTED_PROFILE_SCALAR_KEYS = ['offspring_count'];
 
 let extraData = {};
 let currentParsedPregnancy = null;
@@ -373,6 +377,9 @@ async function onParse() {
 function mergeParsedIntoExisting(oldData, parsed) {
   const merged = { ...oldData, ...parsed };
   for (const key of JSONB_KEYS) {
+    merged[key] = mergeFieldValue(key, oldData[key], parsed[key]);
+  }
+  for (const key of IMPORTED_PROFILE_SCALAR_KEYS) {
     merged[key] = mergeFieldValue(key, oldData[key], parsed[key]);
   }
   return merged;
@@ -923,7 +930,7 @@ function maybePromptAppaloosaPattern() {
 
 function importRecognizedCount(parsed) {
   if (!parsed || typeof parsed !== 'object') return 0;
-  const keys = ['name','external_id','game_version','gender','breed','purebred_pct','breed_composition','coat_color','birthdate','owner','disease_free','breeding_allowed','hlp_slp','ico','in_breeding_station','stud_fee','breeding_goal','genetic_diseases','colors','exterior_genetics','exterior_descriptive','temperament','disciplines','traits','tournament_potential','tournament_results','tournament_starts_total','pedigree'];
+  const keys = ['name','external_id','game_version','gender','breed','purebred_pct','breed_composition','coat_color','birthdate','owner','disease_free','breeding_allowed','hlp_slp','offspring_count','ico','in_breeding_station','stud_fee','breeding_goal','genetic_diseases','colors','exterior_genetics','exterior_descriptive','temperament','disciplines','traits','tournament_potential','tournament_results','tournament_starts_total','pedigree'];
   return keys.reduce((n,key) => n + (isEmptyValue(key, parsed[key]) ? 0 : 1), 0);
 }
 
@@ -1111,6 +1118,9 @@ async function runSaveFlow() {
   for (const k of JSONB_KEYS) {
     if (extraData[k] !== undefined) payload[k] = extraData[k];
   }
+  for (const k of IMPORTED_PROFILE_SCALAR_KEYS) {
+    if (extraData[k] !== undefined) payload[k] = extraData[k];
+  }
   // Der reinkopierte Rohtext wird nur zum Auslesen gebraucht - nach dem
   // Speichern soll ausschließlich das daraus extrahierte Ergebnis in der
   // Datenbank stehen, nicht der Rohtext selbst.
@@ -1276,6 +1286,7 @@ const CHANGE_FIELD_LABELS = {
   flaxen_carrier: 'Flaxen-Träger',
   owner: 'Besitzer',
   hlp_slp: 'HLP/SLP',
+  offspring_count: 'Nachkommen',
   breeding_goal: 'Zuchtziel',
   notes: 'Notizen',
   image_url: 'Bild',
@@ -1445,7 +1456,7 @@ const IMPORT_PREVIEW_SKIP_FIELDS = new Set([
 function importPreviewLabel(key) {
   const extra = {
     game_version:'Spielversion', purebred_pct:'Reinrassigkeit', breed_composition:'Rasseanteile', coat_color:'Fellfarbe',
-    birthdate:'Geburtsdatum', disease_free:'Erbkrankheiten', ico:'ICO', in_breeding_station:'Zuchtstation', stud_fee:'Decktaxe',
+    birthdate:'Geburtsdatum', disease_free:'Erbkrankheiten', offspring_count:'Nachkommen', ico:'ICO', in_breeding_station:'Zuchtstation', stud_fee:'Decktaxe',
     genetic_diseases:'Erbkrankheits-Details', colors:'Farbgenetik', exterior_genetics:'Exterieur-Genetik', exterior_descriptive:'Exterieur',
     temperament:'Interieur', disciplines:'Disziplinen', traits:'Eigenschaften', tournament_potential:'Turnierpotenzial',
     tournament_results:'Turnierergebnisse', tournament_starts_total:'Turnierstarts', pedigree:'Stammbaum', tags:'Schlagwörter',

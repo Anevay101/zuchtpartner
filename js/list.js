@@ -1086,6 +1086,8 @@ function applyClientFilters(rows) {
   const extpctVal = document.querySelector('#f-extpct-val').value;
   const intOp = document.querySelector('#f-int-op').value;
   const intVal = document.querySelector('#f-int-val').value;
+  const offspringOp = document.querySelector('#f-offspring-op')?.value || 'gte';
+  const offspringVal = document.querySelector('#f-offspring-val')?.value ?? '';
   const bestFoalMode = bestFoalOverviewEnabled ? (document.querySelector('#f-best-foal-toggle')?.dataset.state || 'off') : 'off';
 
   return rows.filter((row) => {
@@ -1104,6 +1106,16 @@ function applyClientFilters(rows) {
     if (!compareValue(d.extAvg, extOp, extVal)) return false;
     if (!compareValue(d.extPercent, extpctOp, extpctVal)) return false;
     if (!compareValue(d.intAvg, intOp, intVal)) return false;
+
+    if (offspringVal !== '') {
+      const rawCount = row.offspring_count;
+      if (rawCount == null || rawCount === '') return false;
+      const count = Number(rawCount);
+      const targetRaw = Number(offspringVal);
+      const target = Math.max(0, Math.floor(targetRaw));
+      if (!Number.isFinite(count) || !Number.isFinite(targetRaw)) return false;
+      if (offspringOp === 'lt' ? !(count < target) : !(count >= target)) return false;
+    }
 
     if (bestFoalMode !== 'off' && typeof bpBestFoalInfo === 'function' && breedingOverviewContext) {
       const info = bpBestFoalInfo(row, breedingOverviewContext);
@@ -1160,7 +1172,7 @@ function applySort(rows) {
 function databaseFilterActiveCount() {
   const state = collectFilterState();
   let count = 0;
-  const filled = [state.name,state.owner,state.gender,state.breed,state.gameVersion,state.zzl,state.breedingStation,state.dataQuality,state.mainGroup,state.talent,state.gpVal,state.extVal,state.extpctVal,state.intVal];
+  const filled = [state.name,state.owner,state.gender,state.breed,state.gameVersion,state.zzl,state.breedingStation,state.dataQuality,state.mainGroup,state.talent,state.gpVal,state.extVal,state.extpctVal,state.intVal,state.offspringVal];
   count += filled.filter(v => String(v ?? '').trim() !== '').length;
   count += [state.tags,state.genetik,state.ekh].filter(v => { const t = normalizeTriStateSavedState(v); return t.include.length || t.exclude.length; }).length;
   // "Lerndatei ausblenden" ist die normale Ausgangsansicht und wird nicht
@@ -1201,6 +1213,9 @@ function activeFilterChipDescriptors() {
   add('gameVersion', `Spielversion: ${state.gameVersion}`, Boolean(state.gameVersion));
   add('zzl', `Zuchtzulassung: ${state.zzl === 'true' ? 'Ja' : 'Nein'}`, Boolean(state.zzl));
   add('breedingStation', `Zuchtstation: ${state.breedingStation === 'true' ? 'Ja' : 'Nein'}`, Boolean(state.breedingStation));
+  if (state.offspringVal !== '') {
+    add('offspringVal', `Nachkommen: ${state.offspringOp === 'lt' ? '<' : '≥'} ${state.offspringVal}`);
+  }
   const qualityLabels = {green:'Vollständig',yellow:'Teilweise vollständig',red:'Unvollständig'};
   add('dataQuality', `Datenqualität: ${qualityLabels[state.dataQuality] || state.dataQuality}`, Boolean(state.dataQuality));
   add('learningFile', 'Nur Lerndatei', state.learningFile === 'only');
@@ -1224,7 +1239,7 @@ function clearDatabaseFilterChip(key) {
   const direct = {
     name:'#f-name', owner:'#f-owner', breed:'#f-breed', gender:'#f-gender', gameVersion:'#f-game-version',
     zzl:'#f-zzl', breedingStation:'#f-breeding-station', dataQuality:'#f-data-quality', mainGroup:'#f-main-group', talent:'#f-talent',
-    gpVal:'#f-gp-val', extVal:'#f-ext-val', extpctVal:'#f-extpct-val', intVal:'#f-int-val',
+    gpVal:'#f-gp-val', extVal:'#f-ext-val', extpctVal:'#f-extpct-val', intVal:'#f-int-val', offspringVal:'#f-offspring-val',
   };
   if (direct[key]) document.querySelector(direct[key]).value = '';
   if (key === 'owner') refreshDatabaseBreedOptions();
@@ -1614,6 +1629,8 @@ function collectFilterState() {
     gameVersion: document.querySelector('#f-game-version').value,
     zzl: document.querySelector('#f-zzl').value,
     breedingStation: document.querySelector('#f-breeding-station')?.value || '',
+    offspringOp: document.querySelector('#f-offspring-op')?.value || 'gte',
+    offspringVal: document.querySelector('#f-offspring-val')?.value || '',
     dataQuality: document.querySelector('#f-data-quality').value,
     learningFile: document.querySelector('#f-learning-file')?.value || 'exclude',
     cupStarOnly: Boolean(document.querySelector('#f-cupstar')?.checked),
@@ -1654,6 +1671,8 @@ async function applyFilterState(state) {
   document.querySelector('#f-game-version').value = state.gameVersion || '';
   document.querySelector('#f-zzl').value = state.zzl || '';
   if (document.querySelector('#f-breeding-station')) document.querySelector('#f-breeding-station').value = state.breedingStation || '';
+  if (document.querySelector('#f-offspring-op')) document.querySelector('#f-offspring-op').value = state.offspringOp === 'lt' ? 'lt' : 'gte';
+  if (document.querySelector('#f-offspring-val')) document.querySelector('#f-offspring-val').value = state.offspringVal ?? '';
   document.querySelector('#f-data-quality').value = state.dataQuality || '';
   if (document.querySelector('#f-learning-file')) document.querySelector('#f-learning-file').value = state.learningFile || 'exclude';
   if (document.querySelector('#f-cupstar')) document.querySelector('#f-cupstar').checked = Boolean(state.cupStarOnly);
