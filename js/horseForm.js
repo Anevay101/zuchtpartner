@@ -1966,8 +1966,8 @@ async function renderDetailTables(data) {
   if (data.colors?.length) {
     const notes = document.getElementById('notes').value;
     const horseName = document.getElementById('name').value;
-    const { hints: parentHints, parentMightHavePearl } = await fetchParentColorHints(data.pedigree, data.coat_color, notes, horseName);
-    genetikParts.push(colorGeneticsHtml(data.colors, data.coat_color, notes, horseName, parentHints, data.color_gene_overrides, parentMightHavePearl));
+    const { hints: parentHints, absences: parentAbsences, parentMightHavePearl } = await fetchParentColorHints(data.pedigree, data.coat_color, notes, horseName);
+    genetikParts.push(colorGeneticsHtml(data.colors, data.coat_color, notes, horseName, parentHints, data.color_gene_overrides, parentMightHavePearl, parentAbsences));
   }
   if (data.exterior_genetics?.rows?.length) genetikParts.push(exteriorGeneticsHtml(data.exterior_genetics));
   if (data.exterior_descriptive?.length) {
@@ -2134,13 +2134,15 @@ function geneOverrideBadge(key, state, allelePrefix) {
 // Name (Fellfarbe) + Rohwerte je Locus + Zusammenfassung der tatsächlich
 // vorhandenen Gene (großgeschrieben = vorhanden, Ausnahme "pl"). Bei nicht
 // getesteten Loci werden zusätzlich Hinweise aus Fellfarbe-Namen, Notiz
-// UND (falls Vater/Mutter in der Datenbank stehen und dort reinerbig
-// getestet sind) den Eltern einbezogen (siehe fetchParentColorHints) -
+// UND (falls Vater/Mutter in der Datenbank stehen) den Eltern einbezogen:
+// reinerbig vorhandene Allele als sichere positive Hinweise und bei BEIDEN
+// Eltern sicher fehlende Allele als genetisch ausgeschlossen. -
 // eine manuelle Bestätigung/Ausschluss (overrides, per Klick-Button,
 // siehe geneOverrideBadge) hat dabei Vorrang vor diesen automatischen
 // Hinweisen.
-function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, overrides, parentMightHavePearl) {
+function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, overrides, parentMightHavePearl, parentAbsences) {
   const ov = overrides || {};
+  const inheritedAbsences = new Set(parentAbsences || []);
   const hints = [
     ...inferGeneticHintsFromPhenotype(coatColorName, parentMightHavePearl),
     ...inferGeneticHintsFromPhenotype(notes, parentMightHavePearl),
@@ -2177,6 +2179,7 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, o
       for (const allele of multiAlleles) {
         const key = `${r.label}:${allele}`;
         const state = ov[key] || null;
+        const inheritedAbsent = !state && inheritedAbsences.has(key);
         if (state === 'absent') {
           parts.push(`${allele}: nicht vorhanden (manuell)`);
         } else if (state) {
@@ -2191,13 +2194,16 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, o
           if (hint) {
             const isDoubled = hint.allele === allele + allele;
             parts.push(`${allele}: ${isDoubled ? 'reinerbig' : 'mindestens 1x'} vorhanden (${hint.fromParent ? 'laut Elternteil' : 'laut Fellfarbe/Notiz'})`);
+          } else if (inheritedAbsent) {
+            parts.push(`${allele}: nicht vorhanden (durch beide Eltern genetisch ausgeschlossen)`);
           }
         }
-        badges += geneOverrideBadge(key, state, allele);
+        badges += geneOverrideBadge(key, inheritedAbsent ? 'absent' : state, allele);
       }
       if (parts.length) value += ' — ' + parts.join(', ');
     } else if (untested) {
       const overrideState = ov[r.label] || null;
+      const inheritedAbsent = !overrideState && inheritedAbsences.has(r.label);
       if (overrideState) {
         const primary = LOCUS_PRIMARY_ALLELE[r.label];
         if (overrideState === 'absent') {
@@ -2215,8 +2221,10 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, o
         if (fromPhenotype.length) parts.push(`mindestens ${escapeHtml(fromPhenotype.join(', '))} (laut Fellfarbe/Notiz)`);
         if (fromParent.length) parts.push(`mindestens ${escapeHtml(fromParent.join(', '))} (laut Elternteil)`);
         value += ' — ' + parts.join(', ');
+      } else if (inheritedAbsent) {
+        value += ' — nicht vorhanden (durch beide Eltern genetisch ausgeschlossen)';
       }
-      badges = geneOverrideBadge(r.label, overrideState, LOCUS_PRIMARY_ALLELE[r.label]);
+      badges = geneOverrideBadge(r.label, inheritedAbsent ? 'absent' : overrideState, LOCUS_PRIMARY_ALLELE[r.label]);
     }
     // Text und Klick-Button(s) in getrennten Spans innerhalb einer
     // Flex-Zelle, damit die Buttons unabhängig von der (je Zeile
@@ -2340,13 +2348,90 @@ function parentsMightHavePearl(parents) {
   });
 }
 
+// Liefert für einen Elternteil alle Farballele, die durch einen echten
+// getesteten Genotyp ODER eine bewusste manuelle ✗-Bestätigung sicher
+// ausgeschlossen sind. Sichtbare Fellfarbe allein reicht dafür absichtlich
+// nicht aus: Die Negativ-Ableitung soll nur auf harter Information beruhen.
+//
+// Beispiele:
+//   Champagne chch -> „Champagne“ ausgeschlossen
+//   Silver zz      -> „Silver“ ausgeschlossen
+//   Cream Crcr     -> „Cream:pl“ ausgeschlossen, Cr aber vorhanden
+//   KIT toto       -> „KIT:To“ ausgeschlossen
+function parentConfirmedColorAbsenceKeys(parent) {
+  const out = new Set();
+  const rows = Array.isArray(parent?.colors) ? parent.colors : [];
+  const testedLoci = new Set();
+
+  const hasAllele = (present, allele) => {
+    if (!present || !allele) return false;
+    return String(present).toLowerCase().includes(String(allele).toLowerCase());
+  };
+
+  for (const row of rows) {
+    if (!row || isUntestedLocusValue(row.value)) continue;
+    const locus = typeof normalizeColorLocusLabel === 'function'
+      ? normalizeColorLocusLabel(row.label)
+      : row.label;
+    testedLoci.add(locus);
+    const present = extractPresentAlleles(row.value);
+    const multi = LOCUS_MULTI_ALLELES[locus];
+    if (multi) {
+      for (const allele of multi) {
+        if (!hasAllele(present, allele)) out.add(`${locus}:${allele}`);
+      }
+    } else {
+      const allele = LOCUS_PRIMARY_ALLELE[locus];
+      if (allele && !hasAllele(present, allele)) out.add(locus);
+    }
+  }
+
+  // Manuelle ✗-Bestätigungen zählen ebenfalls als sichere Negativangabe,
+  // solange kein echter Test für denselben Locus vorliegt. Ein vorhandener
+  // Test bleibt immer maßgeblich.
+  const overrides = parent?.color_gene_overrides || {};
+  for (const [key, state] of Object.entries(overrides)) {
+    if (state !== 'absent') continue;
+    const locus = localeOfOverrideKey(key);
+    if (!testedLoci.has(locus)) out.add(key);
+  }
+  return out;
+}
+
+// Eine Negativ-Aussage fürs Fohlen ist nur dann genetisch sicher, wenn
+// BEIDE direkten Eltern genau dieses Allel sicher nicht besitzen. Ein
+// fehlender/uneindeutiger Eltern-Datensatz erzeugt daher bewusst keinen
+// automatischen ✗-Status.
+async function fetchParentColorAbsenceHints(pedigree) {
+  const ancestors = Array.isArray(pedigree) ? pedigree.slice(1) : (pedigree?.ancestors || []);
+  const parentNames = [ancestors[0]?.name, ancestors[1]?.name].filter(Boolean);
+  if (parentNames.length !== 2) return [];
+
+  const all = await localGetAll(LOCAL_STORES.horses);
+  const resolved = [];
+  for (const name of parentNames) {
+    const matches = all.filter((h) => String(h?.name || '').trim().toLowerCase() === String(name).trim().toLowerCase());
+    // Bei Namens-Dubletten lieber nichts ableiten als das falsche Pferd
+    // als Elternteil zu verwenden.
+    if (matches.length !== 1) return [];
+    resolved.push(matches[0]);
+  }
+  if (resolved[0]?.id != null && resolved[1]?.id != null && resolved[0].id === resolved[1].id) return [];
+
+  const left = parentConfirmedColorAbsenceKeys(resolved[0]);
+  const right = parentConfirmedColorAbsenceKeys(resolved[1]);
+  return [...left].filter((key) => right.has(key));
+}
+
 async function fetchParentColorHints(pedigree, coatColorName, notes, horseName) {
   const parents = await fetchParentRecords(pedigree);
+  const absences = await fetchParentColorAbsenceHints(pedigree);
   return {
     hints: [
       ...parentColorHints(parents),
       ...pintoParentHints(parents, coatColorName, notes, horseName),
     ],
+    absences,
     parentMightHavePearl: parentsMightHavePearl(parents),
   };
 }
