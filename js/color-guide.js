@@ -60,16 +60,65 @@ function cgRangeText(min, max) {
 }
 
 function cgRaw(v) {
-  return String(v || '').replace(/\s+/g, '').replace(/\//g, '');
+  return String(v || '').replace(/\s+/g, '').replace(/[\/|]/g, '');
 }
 
 function cgUntested(v) {
-  return !v || /nicht getestet|not tested/i.test(String(v));
+  return !v || /nicht getestet|not tested|untested|unknown|not analy[sz]ed/i.test(String(v));
+}
+
+// V54.0.42: English/legacy locus labels are normalized at READ TIME as
+// well. This is deliberate: already stored EN horses immediately work in
+// the colour prediction without having to be re-imported.
+function cgCanonicalLocusLabel(label) {
+  if (typeof normalizeColorLocusLabel === 'function') return normalizeColorLocusLabel(label);
+  const raw=String(label || '').trim();
+  const key=raw.toLowerCase().replace(/[()\[\]{}:_-]+/g,' ').replace(/[\/]+/g,' ').replace(/\s+/g,' ').trim();
+  const aliases={
+    'gray':'Grey','grey':'Grey','gray gene':'Grey','grey gene':'Grey',
+    'splashed white':'Splashed','splash white':'Splashed','splash':'Splashed',
+    'frame overo':'Overo','leopard':'Appaloosa','leopard complex':'Appaloosa','lp':'Appaloosa',
+    'patn 1':'PATN1','pattern 1':'PATN1','pattern1':'PATN1','pattern gene 1':'PATN1',
+    'c kit':'KIT','ckit':'KIT','kit locus':'KIT','pearl':'Cream','cream pearl':'Cream'
+  };
+  return aliases[key] || raw;
+}
+
+const CG_REPARSED_COLOR_CACHE = new WeakMap();
+
+function cgColorRowsForHorse(horse) {
+  if (!horse || typeof horse !== 'object') return [];
+  const stored=Array.isArray(horse.colors) ? horse.colors : [];
+  const byLocus=new Map();
+  for (const row of stored) {
+    const key=cgCanonicalLocusLabel(row?.label).toLowerCase();
+    if (key && !byLocus.has(key)) byLocus.set(key,row);
+  }
+
+  // Vor V54.0.42 konnten EN-Seiten mit der Überschrift „Colors“ statt
+  // „Colours“ ohne Farbgentabelle gespeichert worden sein. Der Rohtext ist
+  // absichtlich Teil des Pferdedatensatzes; deshalb können wir fehlende
+  // Genorte hier transparent neu auslesen, ohne dass der Nutzer das Pferd
+  // erneut importieren muss.
+  if (horse.raw_text && typeof parseHorseText === 'function') {
+    let reparsed=CG_REPARSED_COLOR_CACHE.get(horse);
+    if (reparsed === undefined) {
+      try { reparsed=parseHorseText(horse.raw_text)?.colors || []; }
+      catch { reparsed=[]; }
+      CG_REPARSED_COLOR_CACHE.set(horse,reparsed);
+    }
+    for (const row of reparsed || []) {
+      const key=cgCanonicalLocusLabel(row?.label).toLowerCase();
+      if (key && !byLocus.has(key)) byLocus.set(key,row);
+    }
+  }
+  return [...byLocus.values()];
 }
 
 function cgRow(horse, label) {
-  return (horse?.colors || []).find(
-    r => String(r?.label || '').toLowerCase() === String(label || '').toLowerCase()
+  const wanted=cgCanonicalLocusLabel(label).toLowerCase();
+  return cgColorRowsForHorse(horse).find(
+    r => cgCanonicalLocusLabel(r?.label).toLowerCase() === wanted
   ) || null;
 }
 
@@ -208,14 +257,14 @@ function cgBasePhenotypeKnowledge(horse, locus) {
     if (/chestnut|sorrel|liver chestnut|dunalino|cremello|palomino|apricot|red dun|gold champagne|gold dun|gold cream|gold pearl/i.test(coat)) {
       return { states:[['e','e']], tested:false, source:'Chestnut-Basis aus Fellfarbe abgeleitet' };
     }
-    if (/wildbay|\bbay\b|sealbrown|\bblack\b|grulla|buckskin|dunskin|smoky|amber|sable|classic|perlino|pearl bay|pearl brown|pearl black/i.test(coat)) {
+    if (/wild\s*bay|wildbay|\bbay\b|seal\s*brown|sealbrown|\bblack\b|grulla|buckskin|dunskin|smoky|amber|sable|classic|perlino|pearl bay|pearl brown|pearl black/i.test(coat)) {
       return { states:[['E','E'],['E','e']], tested:false, source:'schwarze Pigmentbasis E_ aus Fellfarbe abgeleitet' };
     }
   }
 
   if (locus === 'Agouti') {
-    if (/wildbay|wild buckskin|wild dunskin/i.test(coat)) return { states:[['Ap','Ap'],['Ap','A1'],['Ap','At'],['Ap','a0']], tested:false, source:'Wildbay (Ap_) aus Fellfarbe abgeleitet' };
-    if (/sealbrown|smoky brown|sable|brown dun|pearl brown/i.test(coat)) return { states:[['At','At'],['At','a0']], tested:false, source:'Sealbrown (At_) aus Fellfarbe abgeleitet' };
+    if (/wild\s*bay|wildbay|wild buckskin|wild dunskin/i.test(coat)) return { states:[['Ap','Ap'],['Ap','A1'],['Ap','At'],['Ap','a0']], tested:false, source:'Wildbay (Ap_) aus Fellfarbe abgeleitet' };
+    if (/seal\s*brown|sealbrown|smoky brown|sable|brown dun|pearl brown/i.test(coat)) return { states:[['At','At'],['At','a0']], tested:false, source:'Sealbrown (At_) aus Fellfarbe abgeleitet' };
     if (/\b(bay|buckskin|dunskin|amber|perlino|pearl bay)\b/i.test(coat) && !/wildbay|wild buckskin|wild dunskin/i.test(coat)) return { states:[['A1','A1'],['A1','At'],['A1','a0']], tested:false, source:'Bay-Basis (A1_) aus Fellfarbe abgeleitet' };
     if (/\bblack\b|grulla|smoky black|classic champagne|classic cream|classic pearl|pearl black/i.test(coat)) return { states:[['a0','a0']], tested:false, source:'Black-Basis (a0a0) aus Fellfarbe abgeleitet' };
   }

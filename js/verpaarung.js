@@ -6,7 +6,9 @@ let currentSort = { field: 'pairing_date', dir: 'desc' }; // siehe wireSortableH
 // Verknuepfung zu horses.id, daher der Umweg ueber den Namen.
 let nameToBreed = new Map();
 let nameToHorse = new Map();
+let nameToHorseCount = new Map();
 let horseById = new Map();
+let horseByExternalId = new Map();
 let foalReferenceById = new Map();
 const PAST_PAIRING_VISIBLE_LIMIT = 50;
 let showAllPastPairings = false;
@@ -66,7 +68,9 @@ async function populateHorseNames() {
   if (foalDatalist) foalDatalist.innerHTML = '';
   nameToBreed = new Map();
   nameToHorse = new Map();
+  nameToHorseCount = new Map();
   horseById = new Map();
+  horseByExternalId = new Map();
 
   const activeBreeds = new Set(typeof activeBreedingBreeds === 'function'
     ? activeBreedingBreeds(data)
@@ -103,8 +107,12 @@ async function populateHorseNames() {
     }
     const key = (h.name || '').trim().toLowerCase();
     nameToBreed.set(key, breed || '');
-    if (key && !nameToHorse.has(key)) nameToHorse.set(key, h);
+    if (key) {
+      nameToHorseCount.set(key, (nameToHorseCount.get(key) || 0) + 1);
+      if (!nameToHorse.has(key)) nameToHorse.set(key, h);
+    }
     if (h.id != null) horseById.set(String(h.id), h);
+    if (h.external_id != null && String(h.external_id).trim()) horseByExternalId.set(String(h.external_id).trim(), h);
   });
 }
 
@@ -247,6 +255,12 @@ function syncPairingOwnerFromMare() {
 
 function pairingHorseByName(name) {
   return nameToHorse.get((name || '').trim().toLowerCase()) || null;
+}
+
+function uniquePairingHorseByName(name) {
+  const key=(name || '').trim().toLowerCase();
+  if (!key || nameToHorseCount.get(key) !== 1) return null;
+  return nameToHorse.get(key) || null;
 }
 
 async function refreshPairingPredictionContext() {
@@ -401,6 +415,7 @@ function pairingPredictionDetailsHtml(pairing) {
     ? foalPredictionHasAnyValue(snapshot)
     : !!snapshot;
   const foalName = actualRecord?.name || pairing?.foal_name || null;
+  const foalLink = foalName ? pairingFoalLinkHtml(pairing, actualRecord) : '';
 
   if (!hasPrediction) {
     return `
@@ -427,13 +442,13 @@ function pairingPredictionDetailsHtml(pairing) {
     <details class="pairing-prediction-details">
       <summary>
         🔮 Voraussichtliche Fohlendaten
-        ${actualRecord ? ` · 🐴 Vergleich mit ${pairingFoalLinkHtml(pairing, actualRecord)}` : ''}
+        ${foalName ? ` · 🐴 ${foalLink}` : ''}
       </summary>
       <div class="pairing-prediction-body">
         <div class="pairing-prediction-family">
           <span><strong>Deckhengst:</strong> ${pairingParentLinkHtml(pairing, 'stallion')}</span>
           <span><strong>Stute:</strong> ${pairingParentLinkHtml(pairing, 'mare')}</span>
-          ${actualRecord ? `<span><strong>Fohlen:</strong> ${pairingFoalLinkHtml(pairing, actualRecord)}</span>` : ''}
+          ${foalName ? `<span><strong>Fohlen:</strong> ${foalLink}</span>` : ''}
         </div>
         <table class="prediction-compare-table">
           <thead>
@@ -882,11 +897,21 @@ function pairingFoalLinkHtml(pairing, actualRecord = null) {
 
   // Nur echte Pferdedatensätze haben eine lokale Pferdeseite.
   // Reine foal_reference_data bleiben bewusst Text.
-  const horse = pairing?.foal_horse_id != null
+  let horse = pairing?.foal_horse_id != null
     ? horseById.get(String(pairing.foal_horse_id))
     : (record?.id != null && horseById.has(String(record.id))
         ? horseById.get(String(record.id))
         : null);
+
+  // Ältere Verpaarungen/Fohlen-Snapshots enthalten teilweise nur den Namen
+  // (oder eine MDR-ID), obwohl das Fohlen inzwischen als echtes Pferd in der
+  // Datenbank existiert. Dann nachträglich sicher verlinken. Namens-Fallback
+  // nur bei EINDEUTIGEM Namen, damit gleichnamige Pferde nie falsch verlinkt
+  // werden.
+  if (!horse && record?.external_id != null) {
+    horse = horseByExternalId.get(String(record.external_id).trim()) || null;
+  }
+  if (!horse && label) horse = uniquePairingHorseByName(label);
 
   return localHorseLinkHtml(horse, label, 'pairing-horse-link pairing-foal-link');
 }

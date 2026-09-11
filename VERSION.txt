@@ -1,2 +1,2 @@
-MDR-Datenbank V54.0.41
-Cache-Version 5441
+MDR-Datenbank V54.0.42
+Cache-Version 5442

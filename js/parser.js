@@ -39,6 +39,11 @@ const EN_TO_INTERNAL_EXACT = {
   // Navigation / Bereiche
   'Hereditary diseases': 'Erbkrankheiten',
   'Colours': 'Farben',
+  'Colors': 'Farben',
+  'Colour genetics': 'Farben',
+  'Color genetics': 'Farben',
+  'Colour genes': 'Farben',
+  'Color genes': 'Farben',
   'Performance': 'Leistung',
   'Discipline': 'Disziplin',
   'Training condition': 'Trainingszustand',
@@ -187,7 +192,9 @@ function translateEnglishLineForParser(line, state) {
   const prefixMap = [
     [/^Birthday\s*:/i, 'Geburtstag:'],
     [/^Colour\s*:/i, 'Fellfarbe:'],
+    [/^Color\s*:/i, 'Fellfarbe:'],
     [/^Coat colour\s*:/i, 'Fellfarbe:'],
+    [/^Coat color\s*:/i, 'Fellfarbe:'],
     [/^Owner\s*:/i, 'Besitzer:'],
     [/^Hereditary disease\s*:/i, 'Erbkrankheit:'],
     [/^Test result\s*:/i, 'Testergebnis:'],
@@ -248,6 +255,78 @@ function translateEnglishLineForParser(line, state) {
   s = mapped.join('\t');
 
   return EN_TO_INTERNAL_EXACT[s] || s;
+}
+
+// V54.0.42 – Farbgenetik aus DE/EN auf gemeinsame interne Genortnamen
+// abbilden. Die englische Spielversion verwendet je nach Ansicht/Übersetzung
+// teils andere Schreibweisen (z.B. Gray, Pattern 1, Splashed White oder
+// Color/Colour). Rasse und sichtbare Fellfarbe bleiben weiterhin im Original;
+// nur die Genort-Bezeichnung wird für Berechnungen vereinheitlicht.
+function normalizeColorLocusLabel(label) {
+  const raw = String(label || '').trim();
+  if (!raw) return raw;
+  const key = raw
+    .toLowerCase()
+    .replace(/[()\[\]{}:_-]+/g, ' ')
+    .replace(/[\/]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const aliases = {
+    'extension': 'Extension',
+    'extension gene': 'Extension',
+    'red black extension': 'Extension',
+    'agouti': 'Agouti',
+    'agouti gene': 'Agouti',
+    'cream': 'Cream',
+    'cream gene': 'Cream',
+    'cream pearl': 'Cream',
+    'pearl cream': 'Cream',
+    'pearl': 'Cream',
+    'dun': 'Dun',
+    'dun gene': 'Dun',
+    'champagne': 'Champagne',
+    'champagne gene': 'Champagne',
+    'grey': 'Grey',
+    'gray': 'Grey',
+    'grey gene': 'Grey',
+    'gray gene': 'Grey',
+    'silver': 'Silver',
+    'silver gene': 'Silver',
+    'silver dapple': 'Silver',
+    'appaloosa': 'Appaloosa',
+    'leopard': 'Appaloosa',
+    'leopard complex': 'Appaloosa',
+    'leopard complex lp': 'Appaloosa',
+    'lp': 'Appaloosa',
+    'patn1': 'PATN1',
+    'patn 1': 'PATN1',
+    'pattern1': 'PATN1',
+    'pattern 1': 'PATN1',
+    'pattern gene 1': 'PATN1',
+    'overo': 'Overo',
+    'frame overo': 'Overo',
+    'splashed': 'Splashed',
+    'splashed white': 'Splashed',
+    'splash white': 'Splashed',
+    'splash': 'Splashed',
+    'kit': 'KIT',
+    'c kit': 'KIT',
+    'ckit': 'KIT',
+    'kit locus': 'KIT',
+    'flaxen': 'Flaxen',
+  };
+  return aliases[key] || raw;
+}
+
+function normalizeColorGenotypeValue(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return raw;
+  if (/^(?:nicht getestet|not tested|untested|unknown|not analy[sz]ed)$/i.test(raw)) return 'Nicht getestet';
+  // Trenner unterscheiden sich zwischen DE/EN-Ansichten. Intern arbeiten
+  // die Farbhelfer mit kompakten Allelpaaren; die eigentlichen Allelcodes
+  // bleiben unverändert.
+  return raw.replace(/\s+/g, '').replace(/[\/|]/g, '');
 }
 
 function normalizeEnglishHorseText(rawText) {
@@ -556,9 +635,13 @@ function parseHorseText(rawText) {
 
   // --- Tabellen ---
   result.genetic_diseases = extractSimpleTable(lines, 'Erbkrankheiten', ['Farben']);
-  result.colors = extractSimpleTable(lines, 'Farben', ['Exterieur']).filter(
-    (r) => r.label !== 'Fellfarbe'
-  );
+  result.colors = extractSimpleTable(lines, 'Farben', ['Exterieur'])
+    .filter((r) => r.label !== 'Fellfarbe')
+    .map((r) => ({
+      ...r,
+      label: normalizeColorLocusLabel(r.label),
+      value: normalizeColorGenotypeValue(r.value),
+    }));
 
   const exteriorGenetic = parseExteriorGenetics(lines);
   result.exterior_genetics = exteriorGenetic;
@@ -1336,8 +1419,8 @@ const PHENOTYPE_GENE_HINTS = [
   // Basisfarbe + Verdünnung: diese Namen setzen laut MDR-Farbvererbung
   // zwingend bestimmte Allele voraus.
   { pattern: /grulla/i, label: 'Grulla', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Dun', allele: 'D' }] },
-  { pattern: /wildbay|wildbraun/i, label: 'Wildbay', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'Ap' }] },
-  { pattern: /sealbrown|schwarzbraun|\bbrown\b/i, label: 'Sealbrown/Brown', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }] },
+  { pattern: /wild\s*bay|wildbay|wildbraun/i, label: 'Wildbay', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'Ap' }] },
+  { pattern: /seal\s*brown|sealbrown|schwarzbraun|\bbrown\b/i, label: 'Sealbrown/Brown', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }] },
   { pattern: /\b(bay|braun)\b/i, label: 'Bay', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }] },
 
   // Cream-Kombinationsnamen: einfache (Crcr) und doppelte (CrCr) Aufhellung
@@ -1390,7 +1473,7 @@ const PHENOTYPE_GENE_HINTS = [
   { pattern: /\bflaxen\b/i, label: 'Flaxen', hints: [{ locus: 'Flaxen', allele: 'flfl' }] },
   { pattern: /\bsooty\b/i, label: 'Sooty', hints: [{ locus: 'Sooty', allele: 'sty' }] },
   { pattern: /\brabicano\b/i, label: 'Rabicano', hints: [{ locus: 'Rabicano', allele: 'rc' }] },
-  { pattern: /\bgrey\b/i, label: 'Grey', hints: [{ locus: 'Grey', allele: 'G' }] },
+  { pattern: /\bgr[ae]y\b/i, label: 'Grey', hints: [{ locus: 'Grey', allele: 'G' }] },
   { pattern: /\b(leopard|few\s*spot|fewspot|spotted\s*blanket|blanket|snowcap|snowflake)\b/i, label: 'Leopard-Musterung', hints: [{ locus: 'Appaloosa', allele: 'Lp' }]},
   { pattern: /\bappaloosa\b/i, label: 'Appaloosa-Scheckung', hints: [{ locus: 'Appaloosa', allele: 'Lp' }]},
 
@@ -1462,20 +1545,20 @@ function inferBaseColorHintsFromPhenotype(text) {
   // Grundfarbenfamilie fest, Modifikatoren wie Sooty/Roan/Appaloosa ändern
   // diese Basis nicht.
   // MDR-Farbguide: Chestnut = ee.
-  if (/\b(?:light\s+|gold\s+|sorrel\s+|copper\s+|dark\s+|liver\s+|dark\s+liver\s+)?chestnut\b|\bpalomino\b|\bcremello\b|\bdunalino\b|\bred dun\b|\bgold champagne\b|\bgold dun\b|\bgold cream\b|\bgold pearl\b|\bapricot\b/i.test(s)) {
+  if (/\b(?:light\s+|gold\s+|sorrel\s+|copper\s+|dark\s+|liver\s+|dark\s+liver\s+)?chestnut\b|\bsorrel\b|\bpalomino\b|\bcremello\b|\bdunalino\b|\bred dun\b|\bgold champagne\b|\bgold dun\b|\bgold cream\b|\bgold pearl\b|\bapricot\b/i.test(s)) {
     add('Extension', 'ee', 'Chestnut-Grundfarbe aus Fellfarbe abgeleitet');
     return out;
   }
 
   // Wildbay = E_ + Ap_.
-  if (/\bwildbay\b|\bwild buckskin\b|\bwild dunskin\b|\bwildbraun\b/i.test(s)) {
+  if (/\bwild\s*bay\b|\bwildbay\b|\bwild buckskin\b|\bwild dunskin\b|\bwildbraun\b/i.test(s)) {
     add('Extension', 'E', 'Wildbay-Grundfarbe: mindestens 1× E');
     add('Agouti', 'Ap', 'Wildbay-Grundfarbe: mindestens 1× Ap');
     return out;
   }
 
   // Sealbrown = E_ + At_.
-  if (/\bsealbrown\b|\bsmoky brown\b|\bsable(?: champagne| cream| pearl| dun)?\b|\bbrown dun\b|\bpearl brown\b/i.test(s)) {
+  if (/\bseal\s*brown\b|\bsealbrown\b|\bbrown\b|\bsmoky brown\b|\bsable(?: champagne| cream| pearl| dun)?\b|\bbrown dun\b|\bpearl brown\b/i.test(s)) {
     add('Extension', 'E', 'Sealbrown-Grundfarbe: mindestens 1× E');
     add('Agouti', 'At', 'Sealbrown-Grundfarbe: mindestens 1× At');
     return out;
@@ -1524,7 +1607,7 @@ function inferGeneticHintsFromPhenotype(text, parentMightHavePearl) {
 }
 
 function isUntestedLocusValue(value) {
-  return /nicht getestet/i.test(value || '');
+  return /nicht getestet|not tested|untested|unknown|not analy[sz]ed/i.test(value || '');
 }
 
 // Zerlegt einen Locus-Rohwert (zwei gleich lange Allel-Tokens) und behält
