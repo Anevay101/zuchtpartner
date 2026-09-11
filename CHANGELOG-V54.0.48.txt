@@ -1,0 +1,6 @@
+MDR-Datenbank V54.0.48
+
+Hotfix Navigation
+- "➕ Neues Pferd" ist wieder direkt in der einheitlichen Hauptnavigation erreichbar.
+- Der Eintrag steht auf allen Hauptseiten direkt neben "Datenbank" und bleibt auch beim Wechsel in Dashboard, Zuchtplaner, Verpaarungslog, Turnier & Leistung, Guide usw. verfügbar.
+- Cache auf 5448 erhöht.
