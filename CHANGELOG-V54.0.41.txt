@@ -1,0 +1,12 @@
+MDR-Datenbank V54.0.41
+
+Dashboard · Zuchtschau-Entwicklung
+- Bereich standardmäßig eingeklappt.
+- Nur aktive Rassen des aktuellen Dashboard-Kontexts werden gezeigt.
+- Stuten und Hengste werden getrennt ausgewertet.
+- Kompakter Umschalter „Stuten | Hengste“ im ZS-Block.
+- Auswahl bleibt innerhalb der Browser-Sitzung erhalten.
+- Die letzten fünf Kalendermonate bleiben als kompakte Matrix sichtbar.
+- Allgemeiner Dashboard-Geschlechtsfilter wird für diese Auswertung bewusst durch den eigenen ZS-Umschalter ersetzt; Besitzer, Rasse, ZZL und Schlagwörter gelten weiter.
+
+Cache-Version 5441.

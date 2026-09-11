@@ -7,17 +7,21 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Guide – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5446" />
+  <link rel="stylesheet" href="css/style.css?v=5447" />
 </head>
 <body class="guide-page">
 <header class="topbar">
-  <h1>MDR-Guide</h1>
-  <nav>
-    <a class="btn secondary" href="index.html">← Datenbank</a>
-    <a class="btn secondary" href="dashboard.html">Dashboard</a>
-    <a class="btn secondary" href="zuchtplaner.html">Zuchtplaner</a>
-    <a class="btn secondary" href="turnierplaner.html">Turnier &amp; Leistung</a>
-  </nav>
+  <h1>📖 MDR-Guide</h1>
+  <nav class="app-main-nav">
+      <a class="btn secondary" href="index.html">🐴 Datenbank</a>
+      <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
+      <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
+      <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
+      <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
+      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
+      <a class="btn secondary" href="guide.html">📖 Guide</a>
+      <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
+    </nav>
 </header>
 
 <main class="container guide-content">
@@ -36,7 +40,7 @@
         <p><strong>Pferdedatenbank:</strong> zentrale Übersicht für Stammdaten, Genetik, Leistungswerte, Zucht, Stammbaum und Turnierdaten.</p>
         <p><strong>Dashboard:</strong> Bestandsauswertung mit Besitzer- und Rassefiltern. Wird ein Besitzer gewählt, stehen nur dessen tatsächlich vorhandene Rassen zur Auswahl.</p>
         <p><strong>Verpaarungs-Log:</strong> dokumentiert aktuelle und vergangene Verpaarungen und verbindet geborene Fohlen mit der ursprünglichen Planung.</p>
-        <p><strong>Zuchtplaner:</strong> Inzuchtprüfung, Partnervergleich, genetischer Ausgleich, Farbe und Turnierzucht.</p>
+        <p><strong>Zuchtplaner:</strong> Partner finden mit automatischer Verwandtschaftsprüfung, direkter Verpaarungsvergleich, gemerkte Kombinationen, Farbe und Turnierzucht.</p>
         <p><strong>Turnier &amp; Leistung:</strong> Disziplin-Ranglisten, Cups, Zuchtschau-Prognosen und LK-Referenzen.</p>
       </div></div>
     </details>
@@ -56,7 +60,7 @@
         <p><strong>MDR-ID:</strong> Eine bereits vorhandene MDR-ID kann nicht als zweites Pferd gespeichert werden. Stattdessen lässt sich der bestehende Datensatz öffnen oder gezielt aktualisieren. Gleiche Namen bzw. identische GP/Ext/Ext%/Int-Werte bleiben nur Hinweise, weil sie nicht eindeutig sind.</p>
         <p><strong>Import-Vorschau:</strong> Nach dem automatischen Auslesen zeigt die Datenbank vor dem Speichern, wie viele Datenbereiche geändert, ergänzt oder unverändert bleiben. Erst nach Bestätigung wird gespeichert.</p>
         <p><strong>Mehrfachbearbeitung:</strong> In der Übersicht mehrere Pferde markieren und Besitzer, Zuchtstation, Zuchtzulassung oder Schlagwörter gemeinsam ändern. Alle Felder starten auf „Keine Änderung“. Bei Schlagwörtern stehen Hinzufügen, Entfernen und Ersetzen getrennt zur Verfügung.</p>
-        <p><strong>Rückgängig:</strong> Die letzte kritische Pferdeaktion – Import, Löschung oder Mehrfachänderung – wird lokal als Sicherheits-Snapshot gespeichert und kann auch nach einem Seiten-Reload über „Rückgängig“ wiederhergestellt werden. Eine neue kritische Aktion ersetzt den vorherigen Undo-Punkt.</p>
+        <p><strong>Rückgängig:</strong> Nach einer kritischen Pferdeaktion – Import, Löschung oder Mehrfachänderung – erscheint unten rechts kurz eine schwebende Rückgängig-Leiste. Sie verändert das Seitenlayout nicht. Eine neue kritische Aktion ersetzt den vorherigen Undo-Punkt.</p>
       </div></div>
     </details>
 
@@ -120,17 +124,18 @@
       <summary>Wie nutze ich den Zuchtplaner?</summary>
       <div class="guide-faq-body"><div class="guide-answer-card">
         <p>Stute oder Hengst als Ausgangspunkt wählen. Besitzer- und Rassefilter helfen, den Gegenpartner einzugrenzen; auch hier werden Rassen nach Besitzerwahl dynamisch reduziert.</p>
+        <p>Im Tab <strong>Verpaarungsvergleich</strong> lässt sich eine Stute mit bis zu drei Hengsten oder ein Hengst mit bis zu drei Stuten direkt nebeneinander vergleichen. Kombinationen können gemerkt oder unmittelbar ins Verpaarungslog übernommen werden. Gemerkte Kombinationen stehen in einem eigenen Tab und lassen sich später wieder in den Vergleich laden.</p>
         <p>Standardmäßig arbeitet der Verpaarungsratgeber mit <strong>Ext%</strong> als erstem Schwerpunkt und <strong>GP</strong> als zweitem Kriterium im kombinierten Ausgleich. Die Gewichtung startet bei <strong>80% Ext% / 20% GP</strong>, kann aber jederzeit verändert werden.</p>
-        <p>Zusatzwünsche wie <strong>Grundfarbe</strong>, Appaloosa-Muster, weitere Farbgene oder Turnierzucht nur aktivieren, wenn sie für die konkrete Verpaarung relevant sind. Beim Grundfarbenwunsch stehen Chestnut, Wild Bay, Bay, Sealbrown, Black und Grey zur Wahl; die Rangfolge nutzt die berechenbare Fohlenchance. Unknown/Unbekannt im Stammbaum gilt nie als echte Verwandtschaft. Die Inzuchtprüfung bleibt von den Zusatzwünschen unabhängig.</p>
+        <p>Zusatzwünsche wie <strong>Grundfarbe</strong>, Appaloosa-Muster, weitere Farbgene oder Turnierzucht nur aktivieren, wenn sie für die konkrete Verpaarung relevant sind. Beim Grundfarbenwunsch stehen Chestnut, Wild Bay, Bay, Sealbrown, Black und Grey zur Wahl; die Rangfolge nutzt die berechenbare Fohlenchance. Unknown/Unbekannt im Stammbaum gilt nie als echte Verwandtschaft. Verwandtschaft, Overo × Overo und die Deckstationsregel werden automatisch geprüft; dafür gibt es keinen separaten Inzucht-Tab mehr.</p>
       </div></div>
     </details>
 
     <details class="card guide-faq-item">
-      <summary>Wie lese ich den Turnierplaner und die Cup-Liste?</summary>
+      <summary>Wie nutze ich Turnier &amp; Leistung und die Cup-Liste?</summary>
       <div class="guide-faq-body"><div class="guide-answer-card">
-        <p>Der Einzelpferd-Rechner bewertet alle vorhandenen Disziplinen aus Potenzial und relevantem Interieur. Die Bestandsrangliste vergleicht Pferde innerhalb einer ausgewählten Disziplin.</p>
+        <p>Unter <strong>Turniereignung</strong> werden alle Disziplinen eines Pferdes aus Potenzial und relevantem Interieur bewertet. <strong>Bestand vergleichen</strong> dreht die Frage um und zeigt die stärksten Pferde einer gewählten Disziplin; Besitzer können dabei mehrfach ausgewählt werden.</p>
         <p>In <strong>Cups &amp; Erfolge</strong> werden Einträge ab <strong>7 Siegen</strong> in einer Disziplin angezeigt. Die Liste zeigt Siege, Starts, Cup-Stern, Cup-LK und Turnierwert; zweite und dritte Plätze sind dort bewusst ausgeblendet.</p>
-        <p>Ein Cup-Stern wird weiterhin automatisch erkannt, wenn die hinterlegte Regel erfüllt ist: mindestens 50 Gesamtstarts und 15 Siege in der jeweiligen Disziplin.</p>
+        <p>Ein Cup-Stern wird weiterhin automatisch erkannt, wenn die hinterlegte Regel erfüllt ist: mindestens 50 Gesamtstarts und 15 Siege in der jeweiligen Disziplin. Der Cup-Kalender konzentriert sich auf heute und die nächsten fünf Kalendertage.</p>
       </div></div>
     </details>
 
@@ -155,10 +160,10 @@
   </div>
 </main>
 
-<script src="js/supabase-loader.js?v=5446"></script>
-<script src="js/supabase-config.js?v=5446"></script>
-<script src="js/database-local.js?v=5446"></script>
-<script src="js/local-app.js?v=5446"></script>
-<script src="js/guide.js?v=5446"></script>
+<script src="js/supabase-loader.js?v=5447"></script>
+<script src="js/supabase-config.js?v=5447"></script>
+<script src="js/database-local.js?v=5447"></script>
+<script src="js/local-app.js?v=5447"></script>
+<script src="js/guide.js?v=5447"></script>
 </body>
 </html>

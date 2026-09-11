@@ -1,0 +1,18 @@
+MDR-Datenbank V54.0.42
+
+Farbvorhersage · englische Pferde
+- Englische Schreibvarianten der Farbsektion werden erkannt: Colors/Colours, Color/Colour genetics sowie Color/Colour genes.
+- Color/Colour und Coat color/Coat colour werden als Fellfarbe erkannt.
+- Genort-Synonyme werden intern vereinheitlicht (u.a. Gray/Grey, Splashed White, Frame Overo, Leopard Complex/LP, PATN 1/Pattern 1, cKit/KIT, Pearl/Cream).
+- Genotyp-Schreibweisen mit Slash/Pipe/Leerzeichen werden für die Berechnung normalisiert.
+- Read-Time-Aliasauflösung im Farbguide: bereits gespeicherte EN-Pferde funktionieren ohne Neuimport.
+- Falls bei älteren EN-Imports die Farbgentabelle wegen „Colors“ leer blieb, wird sie aus dem gespeicherten Rohtext im Hintergrund neu ausgelesen.
+- Zusätzliche sichere Phänotyp-Synonyme: Wild Bay, Seal Brown/Brown, Sorrel, Gray.
+
+Verpaarungslog · Fohlenlink
+- Fohlenname in „Voraussichtliche Fohlendaten“ wird verlinkt, sobald das Fohlen eindeutig als Pferd in der Datenbank existiert.
+- Vorrang: direkte interne Pferde-ID, dann MDR-ID, danach eindeutiger Name.
+- Bei mehrfach vorkommendem Pferdenamen wird aus Sicherheitsgründen kein Namenslink geraten.
+- Funktioniert auch für ältere Verpaarungen, die ursprünglich nur Fohlenname/Snapshot gespeichert hatten.
+
+Cache-Version 5442.

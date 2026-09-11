@@ -1,0 +1,33 @@
+MDR-Datenbank V54.0.47
+
+Interface- und Planer-Überarbeitung
+- Einheitliche Hauptnavigation auf allen App-Seiten: Datenbank, Dashboard, Zuchtplaner, Verpaarungslog, Turnier & Leistung, Aussortierhilfe, Guide und Einstellungen. Guide nutzt 📖.
+- Aktiver Hauptbereich wird konsistent markiert; Pferdeansicht/-bearbeitung zählen zur Datenbank, Durchschnittsseite zum Dashboard.
+- Navigation und Datensicherheits-UI blockieren den sichtbaren Seitenstart nicht mehr.
+
+Datenbankübersicht
+- Spalte und Sortieroption „Zuletzt bearbeitet“ entfernt.
+- CSV-Export aus der Übersicht entfernt; Export bleibt in den Einstellungen.
+- Import-Hinweis aus der Übersicht entfernt; er bleibt auf der Pferd-hinzufügen/-importieren-Seite.
+- Geschlechtsspalte verbreitert, sodass „Geschlecht“ nicht mehr abgeschnitten wird.
+- Undo bleibt erhalten, wird aber beim Seitenstart nicht mehr geladen/eingeblendet. Nach einer kritischen Aktion erscheint es als schwebender Toast ohne Layout-Ruckeln.
+
+Dashboard
+- „Zuchtschau-Entwicklung“ direkt unter „Pferd vs. eigener Rassedurchschnitt“ verschoben und weiterhin standardmäßig eingeklappt.
+
+Turnier & Leistung
+- Haupttab „Turnierplaner“ in „Turnierplanung“ umbenannt; Statistik heißt kompakt „Referenzwerte“.
+- Turnierplanung in zwei klare Modi geteilt: „Turniereignung“ und „Bestand vergleichen“.
+- Turniereignung: kompakte Filter für Rasse, Pferd, Disziplin, Mindestpunkte, maximales Interieur und LK; geeignete Disziplinen mit ✓, alle 28 Disziplinen weiterhin aufklappbar.
+- Bestand vergleichen: Besitzer als Mehrfachauswahl; Rasse, Punkte, Interieur, LK und Pferdesuche in einer einzigen Filterleiste statt doppelter Tabellenfilter.
+- Cup-Bereich mit kompakter Übersicht; Cup-Kalender zeigt nur heute + die nächsten fünf Kalendertage.
+- Zuchtschau: Modelltext kompakter unter „ℹ️ Modell & Diagnose“; sichtbarer Begriff „Snapshot“ ersetzt.
+
+Zuchtplaner
+- Eigener Inzuchtprüfung-Tab entfernt; Verwandtschaft, Overo×Overo und Deckstationsregel bleiben automatisch in Partnerfindung/Verpaarungsvergleich aktiv.
+- Drei Haupttabs: „Partner finden“, „Verpaarungsvergleich“, „Gemerkte Verpaarungen“.
+- Partner finden zeigt nur das tatsächlich gewählte Ausgangsgeschlecht; Fremdhengst-Eingabe erscheint nur im Hengst-Modus.
+- Neuer Verpaarungsvergleich: 1 Stute + bis zu 3 Hengste oder 1 Hengst + bis zu 3 Stuten nebeneinander.
+- Vergleich zeigt Verwandtschaft, Overo, Deckstationsregel, EKH, GP, Ext, Ext%, Int, Grundfarben und Decktaxe.
+- Vergleichskombinationen können gemerkt oder direkt ins Verpaarungslog übernommen werden.
+- Gemerkte Verpaarungen haben einen eigenen Tab und können erneut in den Direktvergleich geladen oder ins Verpaarungslog übernommen werden.

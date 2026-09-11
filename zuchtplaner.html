@@ -7,99 +7,37 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Zuchtplaner – MDR Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5446" />
+  <link rel="stylesheet" href="css/style.css?v=5447" />
 </head>
 <body class="planner-high-contrast">
 <header class="topbar">
   <h1>🐴 Zuchtplaner</h1>
-  <nav>
-    <a class="btn secondary" href="index.html">← Datenbank</a>
-    <a class="btn secondary" href="verpaarung.html">💞 Verpaarungs-Log</a>
-    <a class="btn secondary" href="turnierplaner.html">🏆 Turnierplaner</a>
-    <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
-  </nav>
+  <nav class="app-main-nav">
+      <a class="btn secondary" href="index.html">🐴 Datenbank</a>
+      <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
+      <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
+      <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
+      <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
+      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
+      <a class="btn secondary" href="guide.html">📖 Guide</a>
+      <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
+    </nav>
 </header>
 
-<main class="container zuchtplaner-v46">
-  <section class="card zp-parent-card">
-    <div class="zp-parent-grid">
-      <div class="zp-parent-panel">
-        <div class="zp-parent-title">♀ Stute</div>
-        <div class="zp-compact-fields">
-          <div>
-            <label for="mare-owner-select">Besitzer</label>
-            <select id="mare-owner-select"><option value="">Alle</option></select>
-          </div>
-          <div class="zp-horse-select-wide">
-            <label for="mare-select">Stute auswählen</label>
-            <select id="mare-select"><option value="">Bitte wählen…</option></select>
-          </div>
-          <div>
-            <label for="mare-breed-select">Rasse</label>
-            <select id="mare-breed-select"><option value="">Alle</option></select>
-          </div>
-        </div>
-        <div id="mare-selected-summary" class="zp-selected-parent-summary" hidden></div>
-      </div>
-
-      <div class="zp-parent-panel">
-        <div class="zp-parent-title">♂ Hengst</div>
-        <div class="zp-compact-fields">
-          <div>
-            <label for="stallion-owner-select">Besitzer</label>
-            <select id="stallion-owner-select"><option value="">Alle</option></select>
-          </div>
-          <div class="zp-horse-select-wide">
-            <label for="stallion-select">Hengst auswählen</label>
-            <select id="stallion-select"><option value="">Bitte wählen…</option></select>
-          </div>
-          <div>
-            <label for="stallion-breed-select">Rasse</label>
-            <select id="stallion-breed-select"><option value="">Alle</option></select>
-          </div>
-        </div>
-        <div id="stallion-selected-summary" class="zp-selected-parent-summary" hidden></div>
-      </div>
-    </div>
-  </section>
-
-  <details class="card zp-foreign-stallion">
-    <summary><strong>▸ Fremder Hengst (Freitext)</strong></summary>
-    <p class="small muted">Für einen Hengst, der nicht in der gemeinsamen Datenbank steht.</p>
-    <label for="stallion-raw-text">Pferdeseite des fremden Hengstes</label>
-    <textarea id="stallion-raw-text" rows="5" placeholder="Pferdeseite im Spiel kopieren und hier einfügen…"></textarea>
-    <div class="zp-foreign-fee">
-      <label for="foreign-stud-fee">Decktaxe / Decksprungkosten</label>
-      <input id="foreign-stud-fee" type="number" min="0" step="1" placeholder="leer = kostenlos" />
-      <span class="tiny muted">Leer bedeutet kostenlos. Nur einen Betrag eintragen, wenn für den Decksprung Kosten anfallen.</span>
-    </div>
-    <div class="actions">
-      <button type="button" id="stallion-parse-btn" class="secondary">Auslesen</button>
-      <span id="stallion-parse-status" class="small muted"></span>
-    </div>
-  </details>
-
-  <div class="subtabs zp-main-tabs">
-    <button type="button" class="subtab-btn active" data-zp-tab="inzucht">🧬 Inzuchtprüfung</button>
-    <button type="button" class="subtab-btn" data-zp-tab="auswahl">💡 Verpaarungsratgeber</button>
+<main class="container zuchtplaner-v47">
+  <div class="subtabs zp-main-tabs" role="tablist" aria-label="Zuchtplaner">
+    <button type="button" class="subtab-btn active" data-zp-tab="auswahl">💡 Partner finden</button>
+    <button type="button" class="subtab-btn" data-zp-tab="vergleich">⚖️ Verpaarungsvergleich</button>
+    <button type="button" class="subtab-btn" data-zp-tab="gemerkt">⭐ Gemerkte Verpaarungen</button>
   </div>
 
-  <section id="tab-inzucht" class="card zp-tool-card">
-    <h2>Inzuchtprüfung</h2>
-    <div id="inzucht-result"><p class="muted">Stute und Hengst auswählen.</p></div>
-  </section>
-
-  <section id="tab-auswahl" hidden>
+  <section id="tab-auswahl">
     <div class="zp-advisor-heading">
-      <h2>Verpaarungsratgeber</h2>
-      <p class="small muted">
-        Top 20 passende Partner mit Fohlen-Vorhersage. Sichtbare Verwandtschaft
-        und problematisches Overo × Overo werden weiterhin ausgeschlossen.
-      </p>
+      <h2>Partner finden</h2>
+      <p class="small muted">Passende Partner mit Fohlen-Vorhersage. ✓ Verwandtschaft, Overo × Overo und Deckstationsregeln werden automatisch geprüft.</p>
     </div>
 
-    <fieldset class="card zp-tool-card">
-      <legend>Richtung</legend>
+    <section class="card zp-start-card">
       <div class="zp-direction-row">
         <div>
           <label for="richtung-select">Ausgangspunkt</label>
@@ -108,147 +46,77 @@
             <option value="hengst">Hengst → beste Stuten</option>
           </select>
         </div>
-        <p class="small muted">
-          Nutzt dafür die oben ausgewählte Stute bzw. den ausgewählten Hengst.
-          Auch ein per Freitext eingelesener fremder Hengst kann Ausgangspunkt sein.
-        </p>
+        <p class="small muted">Wähle nur das Ausgangspferd; die Gegenpartner werden darunter automatisch gerankt.</p>
       </div>
-    </fieldset>
+
+      <div class="zp-parent-grid zp-single-parent-grid">
+        <div class="zp-parent-panel" id="zp-mare-parent-panel">
+          <div class="zp-parent-title">♀ Stute</div>
+          <div class="zp-compact-fields">
+            <div><label for="mare-owner-select">Besitzer</label><select id="mare-owner-select"><option value="">Alle</option></select></div>
+            <div class="zp-horse-select-wide"><label for="mare-select">Stute auswählen</label><select id="mare-select"><option value="">Bitte wählen…</option></select></div>
+            <div><label for="mare-breed-select">Rasse</label><select id="mare-breed-select"><option value="">Alle</option></select></div>
+          </div>
+          <div id="mare-selected-summary" class="zp-selected-parent-summary" hidden></div>
+        </div>
+
+        <div class="zp-parent-panel" id="zp-stallion-parent-panel" hidden>
+          <div class="zp-parent-title">♂ Hengst</div>
+          <div class="zp-compact-fields">
+            <div><label for="stallion-owner-select">Besitzer</label><select id="stallion-owner-select"><option value="">Alle</option></select></div>
+            <div class="zp-horse-select-wide"><label for="stallion-select">Hengst auswählen</label><select id="stallion-select"><option value="">Bitte wählen…</option></select></div>
+            <div><label for="stallion-breed-select">Rasse</label><select id="stallion-breed-select"><option value="">Alle</option></select></div>
+          </div>
+          <div id="stallion-selected-summary" class="zp-selected-parent-summary" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <details class="card zp-foreign-stallion" id="zp-foreign-stallion" hidden>
+      <summary><strong>Fremder Hengst (Freitext)</strong></summary>
+      <p class="small muted">Optionaler Ausgangshengst, wenn er nicht in der gemeinsamen Datenbank steht.</p>
+      <label for="stallion-raw-text">Pferdeseite des fremden Hengstes</label>
+      <textarea id="stallion-raw-text" rows="5" placeholder="Pferdeseite im Spiel kopieren und hier einfügen…"></textarea>
+      <div class="zp-foreign-fee">
+        <label for="foreign-stud-fee">Decktaxe / Decksprungkosten</label>
+        <input id="foreign-stud-fee" type="number" min="0" step="1" placeholder="leer = kostenlos" />
+        <span class="tiny muted">Leer bedeutet kostenlos.</span>
+      </div>
+      <div class="actions"><button type="button" id="stallion-parse-btn" class="secondary">Auslesen</button><span id="stallion-parse-status" class="small muted"></span></div>
+    </details>
+
+    <div id="inzucht-result" hidden></div>
 
     <div class="notice zp-prediction-note">
-      ⚠️ Best-/Worst-Case bei <strong>GP</strong> und <strong>Int</strong> sind theoretische Extremwerte.
-      Für die praktische Einschätzung ist die <strong>Datenbank-Schätzung</strong> meist hilfreicher.
-      Ext und Ext% beruhen auf den bekannten genetischen Daten.
+      Best-/Worst-Case bei <strong>GP</strong> und <strong>Int</strong> sind theoretische Extremwerte. Für die Praxis ist die <strong>Datenbank-Schätzung</strong> meist hilfreicher; Ext und Ext% beruhen auf bekannten genetischen Daten.
     </div>
 
     <div class="zp-advisor-layout">
       <fieldset class="card zp-tool-card zp-core-options">
         <legend>Schwerpunkt &amp; Partnerfilter</legend>
         <div class="zp-compact-fields zp-advisor-controls">
-          <div>
-            <label for="schwerpunkt-select">Schwerpunkt</label>
-            <select id="schwerpunkt-select">
-              <option value="gp">GP (Gesamtpotenzial)</option>
-              <option value="ext">Ext (Körperbau)</option>
-              <option value="extpct" selected>Ext% (genetisch)</option>
-              <option value="int">Int (Interieur)</option>
-            </select>
-          </div>
-
-          <div>
-            <label for="sortierung-select">Sortierung</label>
-            <select id="sortierung-select">
-              <option value="best">Bester Best Case</option>
-              <option value="worst">Bester Worst Case</option>
-              <option value="complement" id="complement-sort-option">Bester Ausgleich der Schwächen</option>
-              <option value="combo" selected>Kombinierter Ausgleich (2 Kriterien)</option>
-              <option value="empirical">Beste Datenbank-Schätzung</option>
-              <option value="diff-asc">Kleinste Differenz (verlässlich)</option>
-              <option value="diff-desc">Größte Differenz (Risiko/Chance)</option>
-            </select>
-          </div>
-
-          <div id="combo-second-wrap">
-            <label for="combo-second-select">2. Kriterium</label>
-            <select id="combo-second-select">
-              <option value="gp" selected>GP</option>
-              <option value="ext">Ext</option>
-              <option value="extpct">Ext%</option>
-              <option value="int">Int</option>
-            </select>
-          </div>
-
-          <div id="combo-weight-wrap">
-            <label for="combo-weight-input">Gewichtung 1. Kriterium (%)</label>
-            <input id="combo-weight-input" type="number" min="0" max="100" value="80" />
-          </div>
-
-          <div>
-            <label id="candidate-breed-label" for="candidate-breed-select">Hengst-Rasse</label>
-            <select id="candidate-breed-select"><option value="">Alle</option></select>
-          </div>
-
-          <div>
-            <label id="candidate-owner-label" for="candidate-owner-select">Hengst-Besitzer</label>
-            <select id="candidate-owner-select"><option value="">Alle</option></select>
-          </div>
-
-          <div id="candidate-station-wrap">
-            <label for="candidate-station-select">In Zuchtstation</label>
-            <select id="candidate-station-select">
-              <option value="">Alle</option>
-              <option value="true">Ja</option>
-              <option value="false">Nein</option>
-            </select>
-          </div>
+          <div><label for="schwerpunkt-select">Schwerpunkt</label><select id="schwerpunkt-select"><option value="gp">GP (Gesamtpotenzial)</option><option value="ext">Ext (Körperbau)</option><option value="extpct" selected>Ext% (genetisch)</option><option value="int">Int (Interieur)</option></select></div>
+          <div><label for="sortierung-select">Sortierung</label><select id="sortierung-select"><option value="best">Bester Best Case</option><option value="worst">Bester Worst Case</option><option value="complement" id="complement-sort-option">Bester Ausgleich der Schwächen</option><option value="combo" selected>Kombinierter Ausgleich (2 Kriterien)</option><option value="empirical">Beste Datenbank-Schätzung</option><option value="diff-asc">Kleinste Differenz (verlässlich)</option><option value="diff-desc">Größte Differenz (Risiko/Chance)</option></select></div>
+          <div id="combo-second-wrap"><label for="combo-second-select">2. Kriterium</label><select id="combo-second-select"><option value="gp" selected>GP</option><option value="ext">Ext</option><option value="extpct">Ext%</option><option value="int">Int</option></select></div>
+          <div id="combo-weight-wrap"><label for="combo-weight-input">Gewichtung 1. Kriterium (%)</label><input id="combo-weight-input" type="number" min="0" max="100" value="80" /></div>
+          <div><label id="candidate-breed-label" for="candidate-breed-select">Hengst-Rasse</label><select id="candidate-breed-select"><option value="">Alle</option></select></div>
+          <div><label id="candidate-owner-label" for="candidate-owner-select">Hengst-Besitzer</label><select id="candidate-owner-select"><option value="">Alle</option></select></div>
+          <div id="candidate-station-wrap"><label for="candidate-station-select">In Zuchtstation</label><select id="candidate-station-select"><option value="">Alle</option><option value="true">Ja</option><option value="false">Nein</option></select></div>
         </div>
-
-        <p class="small muted candidate-filter-note">
-          Besitzer- und Rassefilter gelten für den Gegenpartner. Deckstation-Hengste werden nur für Prämienstuten berücksichtigt.
-        </p>
+        <p class="small muted candidate-filter-note">Besitzer- und Rassefilter gelten für den Gegenpartner. Deckstation-Hengste werden nur für Prämienstuten berücksichtigt.</p>
       </fieldset>
 
       <div class="zp-option-stack">
         <section class="card zp-tool-card zp-mini-card">
           <h3>🎨 Zusatzwünsche</h3>
           <div class="zp-option-stack-fields">
-            <div>
-              <label for="base-color-wish">Grundfarbe bevorzugen</label>
-              <select id="base-color-wish">
-                <option value="any">Egal</option>
-                <option value="Chestnut">Chestnut</option>
-                <option value="Wild Bay">Wild Bay</option>
-                <option value="Bay">Bay</option>
-                <option value="Sealbrown">Sealbrown</option>
-                <option value="Black">Black</option>
-                <option value="Grey">Grey</option>
-              </select>
-              <p id="base-color-wish-info" class="tiny muted"></p>
-            </div>
-            <div>
-              <label for="appaloosa-wish">🐆 Appaloosa-Muster bevorzugen</label>
-              <select id="appaloosa-wish">
-                <option value="any">Egal</option>
-                <option value="Leopard">Leopard</option>
-                <option value="Few Spot">Few Spot</option>
-                <option value="Spotted Blanket">Spotted Blanket</option>
-                <option value="Snowcap">Snowcap</option>
-                <option value="Varnish Roan">Varnish Roan</option>
-                <option value="snowflake">Snowflake</option>
-              </select>
-            </div>
+            <div><label for="base-color-wish">Grundfarbe bevorzugen</label><select id="base-color-wish"><option value="any">Egal</option><option value="Chestnut">Chestnut</option><option value="Wild Bay">Wild Bay</option><option value="Bay">Bay</option><option value="Sealbrown">Sealbrown</option><option value="Black">Black</option><option value="Grey">Grey</option></select><p id="base-color-wish-info" class="tiny muted"></p></div>
+            <div><label for="appaloosa-wish">🐆 Appaloosa-Muster bevorzugen</label><select id="appaloosa-wish"><option value="any">Egal</option><option value="Leopard">Leopard</option><option value="Few Spot">Few Spot</option><option value="Spotted Blanket">Spotted Blanket</option><option value="Snowcap">Snowcap</option><option value="Varnish Roan">Varnish Roan</option><option value="snowflake">Snowflake</option></select></div>
           </div>
           <p id="appaloosa-wish-info" class="tiny muted"></p>
         </section>
-
-        <details class="card farbwunsch-box zp-color-wishes zp-tool-card" id="farbwunsch-details">
-          <summary><strong>🎨 Weitere Farbwünsche (optional)</strong></summary>
-          <div id="farbwunsch-options" class="farbwunsch-grid"></div>
-        </details>
-
-        <details class="card farbwunsch-box turnierzucht-box zp-tool-card" id="turnierzucht-details">
-          <summary><strong>🏆 Turnierzucht</strong><span id="turnierzucht-summary-status" class="zp-summary-status">Aus</span></summary>
-          <p class="small muted">Gewichtet relevantes Interieur stärker: Exzellent Bonus, Gut neutral, In Ordnung leicht negativ, darunter deutlich negativ.</p>
-          <div class="zp-compact-fields zp-turnier-fields">
-            <div>
-              <label for="turnierzucht-mode">Turnierzucht berücksichtigen</label>
-              <select id="turnierzucht-mode">
-                <option value="off">Aus</option>
-                <option value="main">Hauptdisziplin des Ausgangspferdes</option>
-                <option value="specific">Bestimmte Disziplin</option>
-              </select>
-            </div>
-            <div id="turnierzucht-specific-wrap" hidden>
-              <label for="turnierzucht-discipline">Disziplin</label>
-              <select id="turnierzucht-discipline"></select>
-            </div>
-            <div>
-              <label for="talent-wish-select">Gewünschte Begabung (optional)</label>
-              <select id="talent-wish-select"><option value="">Keine Präferenz</option></select>
-            </div>
-          </div>
-          <div id="turnierzucht-info" class="small muted"></div>
-        </details>
+        <details class="card farbwunsch-box zp-color-wishes zp-tool-card" id="farbwunsch-details"><summary><strong>🎨 Weitere Farbwünsche (optional)</strong></summary><div id="farbwunsch-options" class="farbwunsch-grid"></div></details>
+        <details class="card farbwunsch-box turnierzucht-box zp-tool-card" id="turnierzucht-details"><summary><strong>🏆 Turnierzucht</strong><span id="turnierzucht-summary-status" class="zp-summary-status">Aus</span></summary><p class="small muted">Gewichtet relevantes Interieur stärker: Exzellent Bonus, Gut neutral, In Ordnung leicht negativ, darunter deutlich negativ.</p><div class="zp-compact-fields zp-turnier-fields"><div><label for="turnierzucht-mode">Turnierzucht berücksichtigen</label><select id="turnierzucht-mode"><option value="off">Aus</option><option value="main">Hauptdisziplin des Ausgangspferdes</option><option value="specific">Bestimmte Disziplin</option></select></div><div id="turnierzucht-specific-wrap" hidden><label for="turnierzucht-discipline">Disziplin</label><select id="turnierzucht-discipline"></select></div><div><label for="talent-wish-select">Gewünschte Begabung (optional)</label><select id="talent-wish-select"><option value="">Keine Präferenz</option></select></div></div><div id="turnierzucht-info" class="small muted"></div></details>
       </div>
     </div>
 
@@ -256,31 +124,54 @@
     <div id="auswahl-result"></div>
   </section>
 
-  <p id="zucht-error" class="error"></p>
-
-  <details class="card remembered-pairings-card">
-    <summary><strong>⭐ Gemerkte Verpaarungsvergleiche</strong></summary>
-    <div class="remembered-pairings-body">
-      <p class="small muted">Interessante Kombinationen merken, ohne sie direkt ins Verpaarungs-Log einzutragen.</p>
-      <div id="remembered-pairings"><p class="muted">Noch nichts gemerkt.</p></div>
+  <section id="tab-vergleich" hidden>
+    <div class="zp-advisor-heading">
+      <h2>Verpaarungsvergleich</h2>
+      <p class="small muted">Ein Ausgangspferd mit bis zu drei Gegenpartnern direkt nebeneinander vergleichen.</p>
     </div>
-  </details>
+    <section class="card zp-compare-controls">
+      <div class="form-grid">
+        <div><label for="compare-direction">Vergleich</label><select id="compare-direction"><option value="mare">1 Stute + bis zu 3 Hengste</option><option value="stallion">1 Hengst + bis zu 3 Stuten</option></select></div>
+        <div><label for="compare-base-breed">Rasse Ausgangspferd</label><select id="compare-base-breed"><option value="">Alle</option></select></div>
+        <div><label for="compare-base-horse">Ausgangspferd</label><select id="compare-base-horse"><option value="">Bitte wählen…</option></select></div>
+        <div><label for="compare-candidate-breed">Rasse Gegenpartner</label><select id="compare-candidate-breed"><option value="">Alle</option></select></div>
+      </div>
+      <div class="zp-compare-candidate-grid">
+        <div><label for="compare-candidate-1">Gegenpartner 1</label><select id="compare-candidate-1"><option value="">Bitte wählen…</option></select></div>
+        <div><label for="compare-candidate-2">Gegenpartner 2</label><select id="compare-candidate-2"><option value="">optional</option></select></div>
+        <div><label for="compare-candidate-3">Gegenpartner 3</label><select id="compare-candidate-3"><option value="">optional</option></select></div>
+      </div>
+    </section>
+    <div id="pairing-compare-result"><p class="muted">Ausgangspferd und mindestens einen Gegenpartner auswählen.</p></div>
+  </section>
+
+  <section id="tab-gemerkt" hidden>
+    <div class="zp-advisor-heading">
+      <h2>Gemerkte Verpaarungen</h2>
+      <p class="small muted">Interessante Kombinationen bleiben 60 Tage gemerkt. Von hier kannst du sie erneut vergleichen oder direkt ins Verpaarungslog übernehmen.</p>
+    </div>
+    <section class="card remembered-pairings-card">
+      <div id="remembered-pairings"><p class="muted">Noch nichts gemerkt.</p></div>
+    </section>
+  </section>
+
+  <p id="zucht-error" class="error"></p>
 </main>
 
-<script src="js/supabase-loader.js?v=5446"></script>
-<script src="js/supabase-config.js?v=5446"></script>
-<script src="js/database-local.js?v=5446"></script>
-<script src="js/local-app.js?v=5446"></script>
-<script src="js/learning-file.js?v=5446"></script>
-<script src="js/parser.js?v=5446"></script>
-<script src="js/data-quality.js?v=5446"></script>
-<script src="js/planer-common.js?v=5446"></script>
-<script src="js/zuchtplaner-engine-helpers.js?v=5446"></script>
-<script src="js/breeding-original.js?v=5446"></script>
-<script src="js/verpaarungsratgeber-engine.js?v=5446"></script>
-<script src="js/foal-prediction.js?v=5446"></script>
-<script src="js/color-guide.js?v=5446"></script>
-<script src="js/turnierzucht.js?v=5446"></script>
-<script src="js/zuchtplaner-local.js?v=5446"></script>
+<script src="js/supabase-loader.js?v=5447"></script>
+<script src="js/supabase-config.js?v=5447"></script>
+<script src="js/database-local.js?v=5447"></script>
+<script src="js/local-app.js?v=5447"></script>
+<script src="js/learning-file.js?v=5447"></script>
+<script src="js/parser.js?v=5447"></script>
+<script src="js/data-quality.js?v=5447"></script>
+<script src="js/planer-common.js?v=5447"></script>
+<script src="js/zuchtplaner-engine-helpers.js?v=5447"></script>
+<script src="js/breeding-original.js?v=5447"></script>
+<script src="js/verpaarungsratgeber-engine.js?v=5447"></script>
+<script src="js/foal-prediction.js?v=5447"></script>
+<script src="js/color-guide.js?v=5447"></script>
+<script src="js/turnierzucht.js?v=5447"></script>
+<script src="js/zuchtplaner-local.js?v=5447"></script>
 </body>
 </html>

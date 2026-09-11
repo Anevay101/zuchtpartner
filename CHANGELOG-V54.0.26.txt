@@ -1,0 +1,21 @@
+V54.0.26 – Zuchtschau-Reiter + automatische Modellwahl
+
+PFERDESEITE
+- Neuer eigener Reiter „Zuchtschau“ auf Bearbeiten- und Ansichtsseite.
+- Stammdaten behalten nur das kompakte Feld „ZS-Wert / Prognose“.
+- Im Zuchtschau-Reiter stehen ZS-Gesamtwert, ZS-Grundwert, Turnierbonus bei ZS, Cupbonus bei ZS und Snapshot-Datum.
+- Keine sichtbare Altbestand-Kennzeichnung; technische Herkunft bleibt nur intern im Snapshot gespeichert.
+- Keine Mehrfach-ZS-Historie: ein Pferd behält einen ZS-Datensatz/Snapshot.
+
+ZS-LERNMODELL
+- Ext und Ext% bleiben in allen Modellvarianten als getrennte Kernwerte erhalten.
+- Automatische Modellwahl nach echter Kreuzvalidierungs-Prognoseleistung.
+- Primäres Auswahlkriterium: niedrigster RMSE; MAE entscheidet bei Gleichstand.
+- Getestete Kandidaten: linear, fachlich gerichtete lineare Variante, Ext×Ext%-Interaktion, gerichtete Ext×Ext%-Variante und vorsichtig nichtlineare Variante mit GP²/Ext%².
+- Ridge-Lambda wird innerhalb jeder Modellvariante ebenfalls per Kreuzvalidierung gewählt.
+- Neu: Spearman-Rangkorrelation zur Beurteilung der Sortierqualität.
+- Turnierplaner zeigt das gewählte Modell, MAE, RMSE, R², Spearman, Baselinevergleich und eine aufklappbare Tabelle aller Kandidaten.
+- Ungewöhnliche Teilkoeffizientenrichtungen werden weiterhin transparent gemeldet, sind bei stark korreliertem Ext/Ext% aber kein automatischer Ausschluss; die Kreuzvalidierung entscheidet.
+
+TECHNIK
+- Asset-Cache auf 5426 erhöht.

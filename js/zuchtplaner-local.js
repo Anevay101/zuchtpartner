@@ -148,6 +148,7 @@ async function initZucht() {
   await loadEmpiricalLocal();
   buildFilters();
   buildTurnierzuchtControls();
+  buildPairingCompareControls();
   wireControls();
   renderInzuchtResult();
   renderRememberedPairings();
@@ -577,9 +578,13 @@ function wireControls() {
     btn.addEventListener('click', () => {
       const tab = btn.dataset.zpTab;
       document.querySelectorAll('[data-zp-tab]').forEach(b => b.classList.toggle('active', b === btn));
-      document.getElementById('tab-inzucht').hidden = tab !== 'inzucht';
-      document.getElementById('tab-auswahl').hidden = tab !== 'auswahl';
+      ['auswahl','vergleich','gemerkt'].forEach(name => {
+        const panel=document.getElementById(`tab-${name}`);
+        if (panel) panel.hidden = name !== tab;
+      });
       if (tab === 'auswahl') renderBestMatches();
+      if (tab === 'vergleich') renderPairingCompare();
+      if (tab === 'gemerkt') renderRememberedPairings();
     });
   });
 
@@ -646,6 +651,7 @@ function wireControls() {
 
   document.getElementById('richtung-select').addEventListener('change', e => {
     richtung = e.target.value;
+    updatePartnerDirectionUi();
     refreshCandidateFilters();
     updateDirectionLabels();
     refreshTalentWishOptions();
@@ -756,9 +762,180 @@ function wireControls() {
     renderBestMatches();
   });
 
+  document.getElementById('compare-direction')?.addEventListener('change', () => {
+    buildPairingCompareControls(true);
+    renderPairingCompare();
+  });
+  document.getElementById('compare-base-breed')?.addEventListener('change', () => {
+    refreshPairingCompareSelects('base');
+    renderPairingCompare();
+  });
+  document.getElementById('compare-candidate-breed')?.addEventListener('change', () => {
+    refreshPairingCompareSelects('candidates');
+    renderPairingCompare();
+  });
+  ['compare-base-horse','compare-candidate-1','compare-candidate-2','compare-candidate-3'].forEach(id =>
+    document.getElementById(id)?.addEventListener('change', renderPairingCompare)
+  );
+
   document.addEventListener('click', onDecksprungLocal);
   document.addEventListener('click', onRememberPairing);
   document.addEventListener('click', onDeleteRememberedPairing);
+  document.addEventListener('click', onOpenPairingCompare);
+  updatePartnerDirectionUi();
+}
+
+
+function updatePartnerDirectionUi() {
+  const marePanel=document.getElementById('zp-mare-parent-panel');
+  const stallionPanel=document.getElementById('zp-stallion-parent-panel');
+  const foreign=document.getElementById('zp-foreign-stallion');
+  const isStallion=richtung === 'hengst';
+  if (marePanel) marePanel.hidden=isStallion;
+  if (stallionPanel) stallionPanel.hidden=!isStallion;
+  if (foreign) foreign.hidden=!isStallion;
+}
+
+function compareHorseOption(h) {
+  return `${h.name || '(ohne Name)'} · ${h.owner || '–'} · ${h.breed || '–'}`;
+}
+
+function setCompareSelectOptions(id, horses, placeholder='Bitte wählen…') {
+  const el=document.getElementById(id);
+  if (!el) return;
+  const old=el.value;
+  el.innerHTML=`<option value="">${esc(placeholder)}</option>` + horses.map(h=>`<option value="${esc(h.id)}">${esc(compareHorseOption(h))}</option>`).join('');
+  if (horses.some(h=>String(h.id)===String(old))) el.value=old;
+}
+
+function comparePools() {
+  const mode=document.getElementById('compare-direction')?.value || 'mare';
+  return mode==='stallion'
+    ? {base:ZH_STALLIONS,candidates:ZH_MARES,baseGender:'Hengst',candidateGender:'Stute'}
+    : {base:ZH_MARES,candidates:ZH_STALLIONS,baseGender:'Stute',candidateGender:'Hengst'};
+}
+
+function buildPairingCompareControls(resetValues=false) {
+  const pools=comparePools();
+  const baseBreed=document.getElementById('compare-base-breed');
+  const candidateBreed=document.getElementById('compare-candidate-breed');
+  if (!baseBreed || !candidateBreed) return;
+  if (resetValues) {
+    baseBreed.value=''; candidateBreed.value='';
+    ['compare-base-horse','compare-candidate-1','compare-candidate-2','compare-candidate-3'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  }
+  fillSelect('compare-base-breed',uniqueSorted(pools.base.map(h=>normalizeBreed(h.breed)||'Rasselos')));
+  fillSelect('compare-candidate-breed',uniqueSorted(pools.candidates.map(h=>normalizeBreed(h.breed)||'Rasselos')));
+  refreshPairingCompareSelects('all');
+}
+
+function refreshPairingCompareSelects(which='all') {
+  const pools=comparePools();
+  if (which==='all' || which==='base') {
+    const breed=document.getElementById('compare-base-breed')?.value || '';
+    const rows=pools.base.filter(h=>!breed || (normalizeBreed(h.breed)||'Rasselos')===breed);
+    setCompareSelectOptions('compare-base-horse',rows,'Bitte wählen…');
+  }
+  if (which==='all' || which==='candidates') {
+    const breed=document.getElementById('compare-candidate-breed')?.value || '';
+    const rows=pools.candidates.filter(h=>!breed || (normalizeBreed(h.breed)||'Rasselos')===breed);
+    setCompareSelectOptions('compare-candidate-1',rows,'Bitte wählen…');
+    setCompareSelectOptions('compare-candidate-2',rows,'optional');
+    setCompareSelectOptions('compare-candidate-3',rows,'optional');
+  }
+}
+
+function pairingCompareRangeText(snapshot,key,formatter) {
+  const estimate=snapshot?.database?.[key];
+  const best=snapshot?.best?.[key];
+  const worst=snapshot?.worst?.[key];
+  const fmt=formatter || (v=>v==null?'–':String(v));
+  if (estimate!=null) return `${fmt(estimate)} <span class="tiny muted">DB</span>`;
+  if (best==null && worst==null) return '?';
+  return `${fmt(worst)}–${fmt(best)}`;
+}
+
+function pairingCompareBaseColors(mare,stallion) {
+  if (typeof cgBaseWishRange !== 'function') return '?';
+  const wishes=['Chestnut','Wild Bay','Bay','Sealbrown','Black','Grey'];
+  const rows=wishes.map(label=>({label,range:cgBaseWishRange(mare,stallion,label)}))
+    .filter(x=>x.range && Number(x.range.max)>0.0001)
+    .sort((a,b)=>Number(b.range.max)-Number(a.range.max) || Number(b.range.min)-Number(a.range.min));
+  return rows.slice(0,3).map(({label,range})=>{
+    const pct=typeof cgBaseWishRangeText==='function'
+      ? cgBaseWishRangeText(range)
+      : `${Math.round(Number(range.min||0)*100)}–${Math.round(Number(range.max||0)*100)}%`;
+    return `${esc(label)} ${esc(pct)}`;
+  }).join('<br>') || '?';
+}
+
+function renderPairingCompare() {
+  const root=document.getElementById('pairing-compare-result');
+  if (!root) return;
+  const pools=comparePools();
+  const baseId=document.getElementById('compare-base-horse')?.value || '';
+  const base=pools.base.find(h=>String(h.id)===String(baseId));
+  const candidateIds=['compare-candidate-1','compare-candidate-2','compare-candidate-3']
+    .map(id=>document.getElementById(id)?.value || '').filter(Boolean);
+  const seen=new Set();
+  const candidates=candidateIds.map(id=>pools.candidates.find(h=>String(h.id)===String(id))).filter(h=>h && !seen.has(String(h.id)) && seen.add(String(h.id)));
+  if (!base || !candidates.length) {
+    root.innerHTML='<p class="muted">Ausgangspferd und mindestens einen Gegenpartner auswählen.</p>';
+    return;
+  }
+
+  const cols=candidates.map(candidate=>{
+    const mare=(document.getElementById('compare-direction')?.value==='stallion') ? candidate : base;
+    const stallion=(document.getElementById('compare-direction')?.value==='stallion') ? base : candidate;
+    const snapshot=buildFoalPredictionSnapshot(mare,stallion,empiricalDeviations,'zuchtplaner-vergleich');
+    const related=findSharedNames(mare,stallion);
+    const overo=hasOveroGene(mare) && hasOveroGene(stallion);
+    return {candidate,mare,stallion,snapshot,related,overo};
+  });
+  const cell=fn=>cols.map(fn).join('');
+  root.innerHTML=`
+    <div class="zp-compare-base-summary"><strong>Ausgangspunkt:</strong> <a href="view.html?id=${encodeURIComponent(base.id)}">${esc(base.name||'(ohne Name)')}</a> <span class="small muted">· ${esc(base.owner||'')} · ${esc(base.breed||'')}</span></div>
+    <div class="table-wrap zp-pairing-compare-wrap">
+      <table class="detail-table zp-pairing-compare-table">
+        <thead><tr><th>Vergleich</th>${cell(c=>`<th><a href="view.html?id=${encodeURIComponent(c.candidate.id)}">${esc(c.candidate.name || '(ohne Name)')}</a><br><span class="tiny muted">${esc(c.candidate.owner||'')} · ${esc(c.candidate.breed||'')}</span></th>`)}</tr></thead>
+        <tbody>
+          <tr><th>Verwandtschaft</th>${cell(c=>`<td>${c.related.length ? '✗ sichtbar verwandt' : '✓ keine sichtbare Verwandtschaft'}</td>`)}</tr>
+          <tr><th>Overo × Overo</th>${cell(c=>`<td>${c.overo ? '✗ Risiko' : '✓ kein Doppel-Overo'}</td>`)}</tr>
+          <tr><th>Deckstationsregel</th>${cell(c=>`<td>${plannerPairAllowedByStation(c.mare,c.stallion) ? '✓ zulässig' : '✗ Stute ist keine Prämienstute'}</td>`)}</tr>
+          <tr><th>EKH</th>${cell(c=>{ const risks=typeof sharedDiseaseRisks==='function' ? sharedDiseaseRisks(c.mare,c.stallion) : []; return `<td>${risks.length ? `✗ gemeinsames Risiko: ${esc(risks.join(', '))}` : '✓ kein gemeinsames Trägerrisiko erkannt'}</td>`; })}</tr>
+          <tr><th>GP</th>${cell(c=>`<td><strong>${pairingCompareRangeText(c.snapshot,'gp',fmtGp)}</strong></td>`)}</tr>
+          <tr><th>Ext</th>${cell(c=>`<td><strong>${pairingCompareRangeText(c.snapshot,'ext',fmtScore)}</strong></td>`)}</tr>
+          <tr><th>Ext%</th>${cell(c=>`<td><strong>${pairingCompareRangeText(c.snapshot,'extPct',fmtPct)}</strong></td>`)}</tr>
+          <tr><th>Int</th>${cell(c=>`<td><strong>${pairingCompareRangeText(c.snapshot,'int',fmtScore)}</strong></td>`)}</tr>
+          <tr><th>Grundfarben</th>${cell(c=>`<td>${pairingCompareBaseColors(c.mare,c.stallion)}</td>`)}</tr>
+          <tr><th>Decktaxe</th>${cell(c=>`<td>${esc(studFeeDisplay(c.stallion))}</td>`)}</tr>
+          <tr><th>Aktionen</th>${cell(c=>{ const blocked=c.related.length || c.overo || !plannerPairAllowedByStation(c.mare,c.stallion); return `<td><div class="zp-compare-actions"><button type="button" class="btn secondary remember-pairing-btn" data-mare-id="${esc(c.mare.id||'')}" data-stallion-id="${esc(c.stallion.id||'')}">⭐ Merken</button><button type="button" class="btn secondary decksprung-btn" data-mare="${esc(c.mare.name||'')}" data-mare-id="${esc(c.mare.id||'')}" data-stallion="${esc(c.stallion.name||'')}" data-stallion-id="${esc(c.stallion.id||'')}" data-owner="${esc(c.mare.owner||'')}" ${blocked?'disabled title="Diese Kombination ist nach den Sicherheitsregeln nicht zulässig."':''}>${blocked?'✗ Nicht zulässig':'💞 Ins Verpaarungslog'}</button><span class="small muted decksprung-status"></span></div></td>`; })}</tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tiny muted">DB = Datenbank-Schätzung aus bisherigen Eltern–Fohlen-Abweichungen. ? = für diese Kombination noch nicht sicher berechenbar.</p>`;
+}
+
+function openPairingCompare(mareId,stallionId) {
+  const mare=ZH_MARES.find(h=>String(h.id)===String(mareId));
+  const stallion=ZH_STALLIONS.find(h=>String(h.id)===String(stallionId));
+  if (!mare || !stallion) return false;
+  const direction=document.getElementById('compare-direction');
+  if (direction) direction.value='mare';
+  buildPairingCompareControls(true);
+  const base=document.getElementById('compare-base-horse');
+  const first=document.getElementById('compare-candidate-1');
+  if (base) base.value=String(mare.id);
+  if (first) first.value=String(stallion.id);
+  document.querySelector('[data-zp-tab="vergleich"]')?.click();
+  renderPairingCompare();
+  return true;
+}
+
+function onOpenPairingCompare(e) {
+  const btn=e.target.closest('.open-pairing-compare,.compare-remembered-pairing');
+  if (!btn) return;
+  openPairingCompare(btn.dataset.mareId,btn.dataset.stallionId);
 }
 
 function updateComboVisibility() {
@@ -980,6 +1157,7 @@ function renderInzuchtResult() {
   const mare = selectedMare();
   const stallion = selectedStallion();
   const el = document.getElementById('inzucht-result');
+  if (!el || el.hidden) return;
 
   let html = horseSummary('Mutter', mare) + horseSummary('Vater', stallion);
   if (!mare || !stallion) {
@@ -1417,9 +1595,12 @@ function renderBestMatches() {
             data-stallion="${esc(stallion.name || '')}"
             data-stallion-id="${esc(stallion.id || '')}"
             data-owner="${esc(mare.owner || '')}">Decksprung nutzen</button>
+          <button type="button" class="btn secondary open-pairing-compare"
+            data-mare-id="${esc(mare.id || '')}"
+            data-stallion-id="${esc(stallion.id || '')}">⚖️ Vergleichen</button>
           <button type="button" class="btn secondary remember-pairing-btn"
             data-mare-id="${esc(mare.id || '')}"
-            data-stallion-id="${esc(stallion.id || '')}">⭐ Vergleich merken</button>
+            data-stallion-id="${esc(stallion.id || '')}">⭐ Merken</button>
           <span class="small muted decksprung-status"></span>
         </div>
       </div>`;
@@ -1620,7 +1801,7 @@ async function renderRememberedPairings() {
   root.innerHTML = `
     <div class="table-wrap">
       <table class="detail-table remembered-pairings-table">
-        <thead><tr><th>Stute</th><th>Hengst</th><th>Zuchtziel</th><th>Gemerkt</th><th>Noch</th><th></th></tr></thead>
+        <thead><tr><th>Stute</th><th>Hengst</th><th>Zuchtziel</th><th>Gemerkt</th><th>Noch</th><th>Aktionen</th></tr></thead>
         <tbody>
           ${rows.map(r => `
             <tr>
@@ -1629,7 +1810,12 @@ async function renderRememberedPairings() {
               <td>${esc(r.mare_goal || r.stallion_goal || '–')}</td>
               <td>${r.created_at ? esc(new Date(r.created_at).toLocaleDateString('de-DE')) : '–'}</td>
               <td><strong>${remainingDays(r)} Tage</strong></td>
-              <td><button type="button" class="btn secondary delete-remembered-pairing" data-id="${r.id}">Löschen</button></td>
+              <td><div class="zp-remembered-actions">
+                <button type="button" class="btn secondary compare-remembered-pairing" data-mare-id="${esc(r.mare_id || '')}" data-stallion-id="${esc(r.stallion_id || '')}">⚖️ Vergleichen</button>
+                <button type="button" class="btn secondary decksprung-btn" data-mare="${esc(r.mare_name || '')}" data-mare-id="${esc(r.mare_id || '')}" data-stallion="${esc(r.stallion_name || '')}" data-stallion-id="${esc(r.stallion_id || '')}" data-owner="${esc(r.mare_owner || '')}">💞 Ins Log</button>
+                <button type="button" class="btn secondary delete-remembered-pairing" data-id="${r.id}">Löschen</button>
+                <span class="small muted decksprung-status"></span>
+              </div></td>
             </tr>
           `).join('')}
         </tbody>

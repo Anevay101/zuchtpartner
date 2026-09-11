@@ -1,0 +1,9 @@
+MDR-Datenbank V54.0.28
+
+ZS-Prognose dauerhaft bis zum echten ZS-Wert
+- ZS-Prognosen sind nicht mehr an das Fohlenalter (<3 Jahre) gebunden.
+- Ein Pferd bleibt in der Prognoseansicht, solange kein echter positiver ZS-Wert eingetragen ist.
+- Das gilt auch für 6-, 7- oder 8-jährige Pferde, die noch nicht durch die Zuchtschau gegangen sind.
+- Sobald ein echter positiver ZS-Wert manuell eingetragen wird, ersetzt dieser die Prognose automatisch.
+- Turnierplaner-Texte, Stammdaten-Hinweise und Guide wurden entsprechend angepasst.
+- Asset-Cache auf 5428 angehoben.

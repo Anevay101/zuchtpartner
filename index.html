@@ -7,29 +7,24 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Pferde – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5446" />
+  <link rel="stylesheet" href="css/style.css?v=5447" />
 </head>
 <body class="list-page">
   <header class="topbar">
     <h1>🐴 MDR Pferdedatenbank</h1>
-    <nav>
-      <a class="btn secondary" href="horse.html">+ Neues Pferd</a>
+    <nav class="app-main-nav">
+      <a class="btn secondary" href="index.html">🐴 Datenbank</a>
       <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
-      <a class="btn secondary" href="verpaarung.html">💞 Verpaarung</a>
-      
-          <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
-      <a class="btn secondary" href="turnierplaner.html">🏆 Turnierplaner</a>
+      <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
+      <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
+      <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
       <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
+      <a class="btn secondary" href="guide.html">📖 Guide</a>
+      <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
     </nav>
   </header>
 
   <main class="container">
-    <div class="notice data-copy-notice">
-      <strong>📌 Wichtig für vollständige Daten:</strong>
-      Bitte auf der Pferdeseite die <strong>Gentest-Seite öffnen</strong>, 
-      <strong>alle Disziplinen ausklappen</strong> und auch die <strong>Rasseanteile einblenden</strong>,
-      bevor du die Seite mit Strg+A / Strg+C kopierst. Nur dann können möglichst alle Werte automatisch ausgelesen werden.
-    </div>
     <div id="flash-banner" class="flash-banner" hidden></div>
     <details id="missing-data-notice" class="missing-data-notice" open hidden></details>
     <details id="tag-suggestions-notice" class="missing-data-notice" open hidden></details>
@@ -286,7 +281,6 @@
 
     <div class="list-header">
       <span id="result-count" class="muted small"></span>
-      <button type="button" id="export-csv-btn" class="secondary small" title="Exportiert die ausgewählten Pferde (Kästchen) - ohne Auswahl alle aktuell gefilterten">📄 CSV exportieren</button>
       <label class="mobile-select-all small muted">
         <input type="checkbox" id="select-all-mobile" class="horse-select-checkbox" /> Alle auswählen
       </label>
@@ -307,7 +301,6 @@
           <option value="zzl">ZZL</option>
           <option value="owner">Besitzer</option>
           <option value="birthdate">Alter</option>
-          <option value="updated_at">Zuletzt bearbeitet</option>
         </select>
         <select id="f-sort-dir">
           <option value="asc">aufsteigend</option>
@@ -326,7 +319,7 @@
           <col style="width: 5%" />
           <col style="width: 9%" />
           <col style="width: 7%" />
-          <col style="width: 5%" />
+          <col style="width: 6%" />
           <col style="width: 6%" />
           <col style="width: 9%" />
           <col style="width: 8%" />
@@ -339,7 +332,6 @@
           <col style="width: 6%" />
           <col style="width: 6%" />
           <col style="width: 6%" />
-          <col style="width: 8%" />
           <col style="width: 6%" />
         </colgroup>
         <thead>
@@ -363,12 +355,11 @@
             <th>EKH</th>
             <th data-sort="owner">Besitzer</th>
             <th data-sort="birthdate">Alter</th>
-            <th data-sort="updated_at">Zuletzt bearbeitet</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="21">Lade…</td></tr>
+          <tr><td colspan="20">Lade…</td></tr>
         </tbody>
       </table>
     </div>
@@ -456,15 +447,15 @@
     <button type="button" id="scroll-top-btn" class="scroll-top-btn" hidden title="Nach oben">↑</button>
   </main>
 
-  <script src="js/supabase-loader.js?v=5446"></script>
-<script src="js/supabase-config.js?v=5446"></script>
-<script src="js/database-local.js?v=5446"></script>
-  <script src="js/local-app.js?v=5446"></script>
-  <script src="js/learning-file.js?v=5446"></script>
-  <script src="js/parser.js?v=5446"></script>
-  <script src="js/data-quality.js?v=5446"></script>
-  <script src="js/breeding-progress.js?v=5446"></script>
-  <script src="js/planer-common.js?v=5446"></script>
-  <script src="js/list.js?v=5446"></script>
+  <script src="js/supabase-loader.js?v=5447"></script>
+<script src="js/supabase-config.js?v=5447"></script>
+<script src="js/database-local.js?v=5447"></script>
+  <script src="js/local-app.js?v=5447"></script>
+  <script src="js/learning-file.js?v=5447"></script>
+  <script src="js/parser.js?v=5447"></script>
+  <script src="js/data-quality.js?v=5447"></script>
+  <script src="js/breeding-progress.js?v=5447"></script>
+  <script src="js/planer-common.js?v=5447"></script>
+  <script src="js/list.js?v=5447"></script>
 </body>
 </html>

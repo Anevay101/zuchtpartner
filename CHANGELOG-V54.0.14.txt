@@ -1,0 +1,8 @@
+MDR-Pferdedatenbank V54.0.14
+
+- Einzelpferd-Rechner: Filter korrigiert.
+  - Obere Filter (Punkte/LK) und eingeklappte Tabellenfilter (Disziplin, Punkte, Interieur, LK) wirken jetzt auf dieselbe Ergebnismenge.
+  - Empfehlung, Hauptgruppenübersicht, geeignete Disziplinen, Kopiertext und 28er-Detailtabelle reagieren gemeinsam auf die Filter.
+- Pferdename in der Ergebnisbox des Turnierplaners verlinkt direkt auf die Pferdeseite der Datenbank.
+- Copy-Paste: Kennzeichnung "bewährt" wird nicht mehr in kopierte Turnierwerte übernommen.
+- Cachebuster auf V54.0.14 angehoben.

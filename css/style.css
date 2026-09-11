@@ -2763,7 +2763,7 @@ body.planner-high-contrast {
   background: linear-gradient(135deg, #dce9cf 0%, #eef5e8 45%, #f6f9f2 100%);
   background-attachment: fixed;
 }
-.zuchtplaner-v46 {
+.zuchtplaner-v47 {
   max-width: 1180px;
 }
 .zp-intro {
@@ -2896,16 +2896,16 @@ body.planner-high-contrast {
 
 
 /* --- V47 Zuchtplaner: wieder Datenbankgrün --- */
-.zuchtplaner-v46 .zp-parent-title {
+.zuchtplaner-v47 .zp-parent-title {
   color: var(--accent-dark);
   border-bottom-color: var(--accent);
 }
-.zuchtplaner-v46 .zp-main-tabs {
+.zuchtplaner-v47 .zp-main-tabs {
   border-bottom-color: rgba(107,157,0,.28);
 }
-.zuchtplaner-v46 .card,
-.zuchtplaner-v46 fieldset,
-.zuchtplaner-v46 .result-card {
+.zuchtplaner-v47 .card,
+.zuchtplaner-v47 fieldset,
+.zuchtplaner-v47 .result-card {
   box-shadow: 0 1px 0 rgba(74, 104, 45, .04);
 }
 
@@ -3111,7 +3111,7 @@ body.planner-high-contrast .btn.secondary:hover {
   border-color: #8eaa72;
   background: #f1f7ec;
 }
-.zuchtplaner-v46 .result-card {
+.zuchtplaner-v47 .result-card {
   background: #fff;
 }
 
@@ -4055,11 +4055,11 @@ td.foal-recommendation-cell {
 
 
 /* --- V53.6.2 Feinschliff Zuchtplaner + Dashboard --- */
-.zuchtplaner-v46 {
+.zuchtplaner-v47 {
   max-width: 1260px;
 }
-.zuchtplaner-v46 .card,
-.zuchtplaner-v46 fieldset {
+.zuchtplaner-v47 .card,
+.zuchtplaner-v47 fieldset {
   margin-bottom: .8rem;
 }
 .zp-parent-card {
@@ -4228,11 +4228,11 @@ td.foal-recommendation-cell {
   background: rgba(107,157,0,.13);
 }
 
-.zuchtplaner-v46 .result-card {
+.zuchtplaner-v47 .result-card {
   padding: .78rem .9rem;
   margin: .6rem 0;
 }
-.zuchtplaner-v46 .result-card > p {
+.zuchtplaner-v47 .result-card > p {
   margin: .42rem 0;
 }
 .zp-candidate-card {
@@ -4571,7 +4571,7 @@ body.hide-best-foal-overview #horse-table .bp-best-aggregate-cell { display: non
   .topbar nav {
     justify-self: center;
     justify-content: center;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
   }
   .topbar .mdr-account-controls {
     justify-self: end;
@@ -5159,15 +5159,20 @@ body.planner-high-contrast .filter-checkbox-label {
 
 /* V54.0.29 – sichere Bearbeitung, Import-Vorschau und Ein-Schritt-Undo */
 .undo-action-bar {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1200;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 12px 0;
+  max-width: min(520px, calc(100vw - 36px));
   padding: 10px 12px;
   border: 1px solid var(--border, #c9d8cf);
-  border-radius: 10px;
-  background: rgba(235, 246, 239, 0.95);
+  border-radius: 12px;
+  background: rgba(235, 246, 239, 0.97);
+  box-shadow: 0 10px 28px rgba(24, 55, 38, .18);
 }
 .undo-action-bar[hidden] { display: none !important; }
 .bulk-edit-grid {
@@ -5199,7 +5204,7 @@ body.planner-high-contrast .filter-checkbox-label {
 @media (max-width: 720px) {
   .bulk-edit-grid,
   .import-preview-stats { grid-template-columns: 1fr; }
-  .undo-action-bar { align-items: flex-start; flex-direction: column; }
+  .undo-action-bar { left: 12px; right: 12px; bottom: 12px; max-width:none; align-items: flex-start; flex-direction: column; }
 }
 
 
@@ -5740,3 +5745,100 @@ summary:focus-visible {
 }
 .filter-live-hint { margin-left: auto; align-self: center; white-space: nowrap; }
 @media (max-width: 680px) { .filter-live-hint { flex-basis: 100%; text-align: right; } }
+
+
+/* ============================================================
+   V54.0.47 – konsistente Navigation + Planer-Neuordnung
+   ============================================================ */
+.app-main-nav {
+  align-items: center;
+}
+.app-main-nav .btn { white-space: nowrap; }
+
+/* Die Geschlechtsspalte darf auf Desktop nicht mehr mitten im Wort enden. */
+@media (min-width: 901px) {
+  #horse-table th[data-sort="gender"],
+  #horse-table td[data-label="Geschlecht"] {
+    min-width: 86px;
+    white-space: nowrap;
+  }
+}
+
+/* Zuchtplaner: ein Ausgangspferd statt zwei gleichzeitig sichtbarer Blöcke. */
+.zuchtplaner-v47 { max-width: 1220px; }
+.zp-single-parent-grid { grid-template-columns: minmax(0, 1fr); }
+.zp-start-card { margin-bottom: .7rem; }
+.zp-start-card .zp-direction-row { margin-bottom: .8rem; }
+.zp-compare-controls { margin-bottom: .75rem; }
+.zp-compare-candidate-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: .7rem;
+  margin-top: .75rem;
+}
+.zp-pairing-compare-wrap { margin-top: .65rem; }
+.zp-pairing-compare-table { min-width: 780px; }
+.zp-pairing-compare-table th:first-child {
+  width: 150px;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--th-bg-solid);
+}
+.zp-pairing-compare-table td { vertical-align: top; }
+.zp-compare-actions,
+.zp-remembered-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  align-items: center;
+}
+.remembered-pairings-table { min-width: 980px; }
+
+/* Turnier & Leistung: zwei klare Arbeitsmodi im ersten Haupttab. */
+.tp-planning-tabs { margin: .7rem 0; }
+.tp-planning-mode-panel { margin-top: .7rem; }
+.tp-primary-filter-grid {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  align-items: end;
+}
+.tp-owner-multi-field { grid-column: span 2; }
+.tp-owner-multi-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem .55rem;
+  min-height: 2.35rem;
+  padding: .42rem .55rem;
+  border: 1px solid var(--border);
+  border-radius: .65rem;
+  background: var(--surface);
+}
+.tp-owner-multi-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  margin: 0;
+  font-size: .82rem;
+}
+.tp-owner-multi-options input { width: auto; }
+.tp-summary-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin: .6rem 0 .8rem;
+}
+.tp-summary-pills > span {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .38rem .58rem;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, var(--accent) 18%);
+  border-radius: 999px;
+  background: var(--surface-softer);
+  font-size: .84rem;
+}
+
+@media (max-width: 720px) {
+  .zp-compare-candidate-grid { grid-template-columns: 1fr; }
+  .tp-owner-multi-field { grid-column: auto; }
+}

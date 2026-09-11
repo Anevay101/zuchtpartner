@@ -7,112 +7,98 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Turnier & Leistung – MDR Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5446" />
+  <link rel="stylesheet" href="css/style.css?v=5447" />
 </head>
 <body class="turnierplaner-page">
 <header class="topbar">
   <h1>🏆 Turnier & Leistung</h1>
-  <nav>
-    <a class="btn secondary" href="index.html">← Datenbank</a>
-    <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
-    <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
-    <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
-  </nav>
+  <nav class="app-main-nav">
+      <a class="btn secondary" href="index.html">🐴 Datenbank</a>
+      <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
+      <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
+      <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
+      <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
+      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
+      <a class="btn secondary" href="guide.html">📖 Guide</a>
+      <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
+    </nav>
 </header>
 
 <main class="container">
   <div class="tabs tp-main-tabs">
-    <button type="button" class="tab-btn active" data-tp-main-tab="planner">🏆 Turnierplaner</button>
+    <button type="button" class="tab-btn active" data-tp-main-tab="planner">🏆 Turnierplanung</button>
     <button type="button" class="tab-btn" data-tp-main-tab="cups">⭐ Cups &amp; Erfolge</button>
     <button type="button" class="tab-btn" data-tp-main-tab="show">Zuchtschau</button>
-    <button type="button" class="tab-btn" data-tp-main-tab="stats">Durchschnittliche Turnierwerte</button>
+    <button type="button" class="tab-btn" data-tp-main-tab="stats">📊 Referenzwerte</button>
   </div>
 
   <section id="tp-tab-planner" class="tp-main-panel">
-    <div class="notice small">
-      <strong>Punkte:</strong> 3 × Disziplin-Potenzial + 6 weitere Leistungspotenziale. <strong>LK:</strong> schlechtester der 7 Werte. <strong>Int:</strong> Mittel der 3 relevanten Interieurwerte.
+    <div class="subtabs tp-planning-tabs" role="tablist" aria-label="Turnierplanung">
+      <button type="button" class="subtab-btn active" data-tp-planning-mode="horse">Turniereignung</button>
+      <button type="button" class="subtab-btn" data-tp-planning-mode="stock">Bestand vergleichen</button>
     </div>
 
     <details class="card tp-compact-card tp-threshold-details">
-      <summary>Turniergrenzen</summary>
+      <summary>⚙️ Turniergrenzen</summary>
       <div class="form-grid">
         <div>
           <label for="tp-secondary-threshold">Nebendisziplin ab Punkten</label>
           <input id="tp-secondary-threshold" min="150" step="1" type="number" value="150" />
         </div>
       </div>
-      <p class="small muted">Aktuell: Hauptdisziplin ab 180 Punkten, Nebendisziplin ab 150. Relative LK-Werte sind Vergleichswerte und ändern die Empfehlung noch nicht.</p>
+      <p class="small muted">Hauptdisziplin ab 180 Punkten, Nebendisziplin standardmäßig ab 150. Interieur bleibt Bestandteil jeder Disziplinbewertung.</p>
     </details>
 
-    <details class="card tp-collapsible-card">
-      <summary>1. Einzelpferd-Rechner</summary>
-      <div class="tp-details-body">
-        <p class="muted small">Berechnet automatisch alle 28 Disziplinen und sortiert sie nach Turnierpunkten.</p>
-        <div class="form-grid">
-          <div><label for="tp-horse">Pferd</label><select id="tp-horse"><option value="">Bitte wählen…</option></select></div>
-          <div><label for="tp-horse-breed">Rasse</label><select id="tp-horse-breed"><option value="">Alle</option></select></div>
-          <div><label for="tp-horse-points-min">Nur Disziplinen ab Punkten</label><input id="tp-horse-points-min" min="0" placeholder="optional, z. B. 150" step="1" type="number" /></div>
-          <div><label for="tp-horse-lk">Nur LK</label><select id="tp-horse-lk"><option value="">Alle</option><option>LK10</option><option>LK9</option><option>LK8</option><option>LK7</option><option>LK6</option><option>LK5</option><option>LK4</option><option>LK3</option><option>LK2</option><option>LK1</option></select></div>
+    <section id="tp-planning-horse" class="card tp-planning-mode-panel">
+      <div class="tournament-section-head">
+        <div>
+          <h2>Turniereignung</h2>
+          <p class="small muted">Welche Disziplinen passen zu diesem Pferd? Die stärksten Empfehlungen stehen zuerst; alle 28 Disziplinen bleiben aufklappbar.</p>
         </div>
-        <details class="table-inline-filters tp-table-filter-details">
-          <summary><strong>Tabellenfilter</strong></summary>
-          <div class="form-grid">
-            <div><label for="tp-horse-table-discipline">Disziplin</label><input id="tp-horse-table-discipline" placeholder="z. B. Dressur" type="text" /></div>
-            <div><label for="tp-horse-table-points">Punkte mindestens</label><input id="tp-horse-table-points" min="0" placeholder="z. B. 150" step="1" type="number" /></div>
-            <div><label for="tp-horse-table-interior">Interieur höchstens</label><input id="tp-horse-table-interior" max="5" min="1" placeholder="z. B. 2.50" step="0.01" type="number" /></div>
-          </div>
-          <div class="lk-filter-box">
-            <span class="small"><strong>LK auswählen</strong></span>
-            <div class="lk-checkbox-grid" id="tp-horse-table-lks">
-              <label>LK10 <input type="checkbox" value="LK10" /></label><label>LK9 <input type="checkbox" value="LK9" /></label><label>LK8 <input type="checkbox" value="LK8" /></label><label>LK7 <input type="checkbox" value="LK7" /></label><label>LK6 <input type="checkbox" value="LK6" /></label><label>LK5 <input type="checkbox" value="LK5" /></label><label>LK4 <input type="checkbox" value="LK4" /></label><label>LK3 <input type="checkbox" value="LK3" /></label><label>LK2 <input type="checkbox" value="LK2" /></label><label>LK1 <input type="checkbox" value="LK1" /></label>
-            </div>
-            <button class="secondary small" id="tp-horse-table-reset" type="button">Tabellenfilter zurücksetzen</button>
-          </div>
-        </details>
-        <div id="tp-horse-summary"></div>
-        <div id="tp-horse-options"><p class="muted">Bitte ein Pferd auswählen.</p></div>
       </div>
-    </details>
+      <div class="form-grid tp-primary-filter-grid">
+        <div><label for="tp-horse-owner">Besitzer</label><select id="tp-horse-owner"><option value="">Alle</option></select></div>
+        <div><label for="tp-horse-breed">Rasse</label><select id="tp-horse-breed"><option value="">Alle</option></select></div>
+        <div><label for="tp-horse">Pferd</label><select id="tp-horse"><option value="">Bitte wählen…</option></select></div>
+        <div><label for="tp-horse-discipline">Disziplin</label><input id="tp-horse-discipline" placeholder="optional, z. B. Dressur" type="text" /></div>
+        <div><label for="tp-horse-points-min">Punkte mindestens</label><input id="tp-horse-points-min" min="0" placeholder="optional, z. B. 150" step="1" type="number" /></div>
+        <div><label for="tp-horse-interior-max">Interieur höchstens</label><input id="tp-horse-interior-max" max="5" min="1" placeholder="z. B. 2.50" step="0.01" type="number" /></div>
+        <div><label for="tp-horse-lk">LK</label><select id="tp-horse-lk"><option value="">Alle</option><option>LK10</option><option>LK9</option><option>LK8</option><option>LK7</option><option>LK6</option><option>LK5</option><option>LK4</option><option>LK3</option><option>LK2</option><option>LK1</option></select></div>
+      </div>
+      <div id="tp-horse-summary"></div>
+      <div id="tp-horse-options"><p class="muted">Bitte ein Pferd auswählen.</p></div>
+    </section>
 
-    <details class="card tp-collapsible-card">
-      <summary>2. Bestands-Rangliste nach Disziplin</summary>
-      <div class="tp-details-body">
-        <div class="form-grid">
-          <div><label for="tp-discipline">Disziplin</label><select id="tp-discipline"></select></div>
-          <div><label for="tp-points-min">Punkte mindestens</label><input id="tp-points-min" min="0" placeholder="z. B. 150" step="1" type="number" /></div>
-          <div><label for="tp-interior-max">Interieur höchstens</label><input id="tp-interior-max" max="5" min="1" placeholder="z. B. 2.50" step="0.01" type="number" /></div>
-          <div><label for="tp-lk">LK</label><select id="tp-lk"><option value="">Alle</option><option>LK10</option><option>LK9</option><option>LK8</option><option>LK7</option><option>LK6</option><option>LK5</option><option>LK4</option><option>LK3</option><option>LK2</option><option>LK1</option></select></div>
-          <div><label for="tp-owner">Besitzer</label><select id="tp-owner"><option value="">Alle</option></select></div>
-          <div><label for="tp-breed">Rasse</label><select id="tp-breed"><option value="">Alle</option></select></div>
-        </div>
-        <div class="actions"><button id="tp-run" type="button">Rangliste aktualisieren</button><button class="secondary" id="tp-reset" type="button">Filter zurücksetzen</button></div>
-        <div class="table-inline-filters">
-          <strong>Zusätzliche Tabellenfilter</strong>
-          <div class="form-grid">
-            <div><label for="tp-table-horse">Pferd / Besitzer</label><input id="tp-table-horse" placeholder="Name oder Besitzer" type="text" /></div>
-            <div><label for="tp-table-breed">Rasse</label><select id="tp-table-breed"><option value="">Alle</option></select></div>
-            <div><label for="tp-table-discipline">Disziplin</label><input id="tp-table-discipline" placeholder="Disziplin" type="text" /></div>
-            <div><label for="tp-table-points">Punkte mindestens</label><input id="tp-table-points" min="0" placeholder="z. B. 150" step="1" type="number" /></div>
-            <div><label for="tp-table-interior">Interieur höchstens</label><input id="tp-table-interior" max="5" min="1" placeholder="z. B. 2.50" step="0.01" type="number" /></div>
-          </div>
-          <div class="lk-filter-box">
-            <span class="small"><strong>LK auswählen</strong></span>
-            <div class="lk-checkbox-grid" id="tp-table-lks">
-              <label>LK10 <input type="checkbox" value="LK10" /></label><label>LK9 <input type="checkbox" value="LK9" /></label><label>LK8 <input type="checkbox" value="LK8" /></label><label>LK7 <input type="checkbox" value="LK7" /></label><label>LK6 <input type="checkbox" value="LK6" /></label><label>LK5 <input type="checkbox" value="LK5" /></label><label>LK4 <input type="checkbox" value="LK4" /></label><label>LK3 <input type="checkbox" value="LK3" /></label><label>LK2 <input type="checkbox" value="LK2" /></label><label>LK1 <input type="checkbox" value="LK1" /></label>
-            </div>
-            <button class="secondary small" id="tp-table-reset" type="button">Tabellenfilter zurücksetzen</button>
-          </div>
-        </div>
-        <div class="tournament-ranking-head tp-ranking-subhead"><h2 id="tp-title">Turnierwerte</h2><p class="muted small" id="tp-count"></p></div>
-        <div class="table-wrap" id="tp-ranking-scroll">
-          <table class="detail-table tournament-ranking-table"><thead><tr><th>#</th><th>Pferd</th><th>Disziplin</th><th>Punkte</th><th>Interieur</th><th>LK</th><th>Einordnung</th></tr></thead><tbody id="tp-ranking-body"><tr><td class="muted" colspan="7">Lade…</td></tr></tbody></table>
+    <section id="tp-planning-stock" class="card tp-planning-mode-panel" hidden>
+      <div class="tournament-section-head">
+        <div>
+          <h2>Bestand vergleichen</h2>
+          <p class="small muted">Welche Pferde sind für eine bestimmte Disziplin am stärksten? Punkte und Interieur werden gemeinsam sichtbar gefiltert.</p>
         </div>
       </div>
-    </details>
+      <div class="form-grid tp-primary-filter-grid">
+        <div><label for="tp-discipline">Disziplin</label><select id="tp-discipline"></select></div>
+        <div class="tp-owner-multi-field">
+          <label>Besitzer (Mehrfachauswahl)</label>
+          <div id="tp-owner-options" class="tp-owner-multi-options"></div>
+        </div>
+        <div><label for="tp-breed">Rasse</label><select id="tp-breed"><option value="">Alle</option></select></div>
+        <div><label for="tp-points-min">Punkte mindestens</label><input id="tp-points-min" min="0" placeholder="z. B. 150" step="1" type="number" /></div>
+        <div><label for="tp-interior-max">Interieur höchstens</label><input id="tp-interior-max" max="5" min="1" placeholder="z. B. 2.50" step="0.01" type="number" /></div>
+        <div><label for="tp-lk">LK</label><select id="tp-lk"><option value="">Alle</option><option>LK10</option><option>LK9</option><option>LK8</option><option>LK7</option><option>LK6</option><option>LK5</option><option>LK4</option><option>LK3</option><option>LK2</option><option>LK1</option></select></div>
+        <div><label for="tp-table-horse">Pferd suchen</label><input id="tp-table-horse" placeholder="Name" type="text" /></div>
+      </div>
+      <div class="actions"><button class="secondary" id="tp-reset" type="button">Filter zurücksetzen</button></div>
+      <div class="tournament-ranking-head tp-ranking-subhead"><h2 id="tp-title">Turnierwerte</h2><p class="muted small" id="tp-count"></p></div>
+      <div class="table-wrap" id="tp-ranking-scroll">
+        <table class="detail-table tournament-ranking-table"><thead><tr><th>#</th><th>Pferd</th><th>Disziplin</th><th>Punkte</th><th>Interieur</th><th>LK</th><th>Einordnung</th></tr></thead><tbody id="tp-ranking-body"><tr><td class="muted" colspan="7">Lade…</td></tr></tbody></table>
+      </div>
+    </section>
   </section>
 
   <section id="tp-tab-cups" class="tp-main-panel" hidden>
     <div class="notice small"><strong>Cup-Stern:</strong> automatisch ab 50 Gesamtstarts und 15 Siegen in der Disziplin. Vorhandene Cup-LK wird übernommen.</div>
+    <div id="tp-cup-summary" class="tp-cup-summary"></div>
     <details class="card tp-cup-calendar-card tp-collapsible-card">
       <summary>📅 Cup-Kalender</summary>
       <div class="tp-details-body">
@@ -140,12 +126,12 @@
 
   <section id="tp-tab-show" class="tp-main-panel" hidden>
     <div class="notice small">
-      <strong>Zuchtschau:</strong> 1. Platz = 35, 2. Platz = 25, 3. Platz = 15 Zusatzpunkte; Turnierbonus maximal 500. Jeder Cupstern zählt 100 Punkte. Beim ersten Speichern eines neuen ZS-Werts werden Turnier- und Cupstand dieses Moments als historischer Snapshot festgehalten. Spätere Erfolge verändern den ZS-Grundwert nicht.
+      <strong>Zuchtschau:</strong> 1. Platz = 35, 2. Platz = 25, 3. Platz = 15 Zusatzpunkte; Turnierbonus maximal 500. Jeder Cupstern zählt 100 Punkte. Beim ersten Speichern eines neuen ZS-Werts werden Turnier- und Cupstand dieses Eintragungsdatums festgehalten. Spätere Erfolge verändern den ZS-Grundwert nicht.
     </div>
     <section class="card">
       <div id="tp-zs-model-info" class="tp-zs-model-status"></div>
       <details class="tp-zs-model-details">
-        <summary>ℹ️ Wie funktioniert das Lernmodell?</summary>
+        <summary>ℹ️ Modell &amp; Diagnose</summary>
         <div class="tp-zs-model-explanation small">
           <p><strong>Lerndaten:</strong> nur Pferde mit positiver ZS-Punktzahl und auswertbarem GP, Ext, Ext% und Int. EKH wird nur optional mitgelernt, wenn dafür genügend eindeutig bekannte Daten vorliegen. Leer oder 0 bleibt Prognose und wird nicht gelernt.</p>
           <p><strong>Grundwert:</strong> ZS gesamt minus <em>historischem</em> Turnierbonus zum ZS-Eintrag (35/25/15, max. 500) minus 100 je damaligem Cupstern. Die beim Eintrag festgehaltenen Bonusdaten werden danach nicht mehr aus heutigen Erfolgen neu berechnet.</p>
@@ -176,7 +162,7 @@
     <section class="card tp-stats-card">
       <div class="tournament-section-head">
         <div>
-          <h2>Durchschnittliche Turnierwerte</h2>
+          <h2>Referenzwerte</h2>
           <p class="small muted">Referenz sind Pferde mit erkannter Hauptbegabung. Je Pferd zählt der beste Wert innerhalb seiner Hauptgruppe.</p>
         </div>
       </div>
@@ -204,15 +190,15 @@
   </section>
 </main>
 
-<script src="js/supabase-loader.js?v=5446"></script>
-<script src="js/supabase-config.js?v=5446"></script>
-<script src="js/database-local.js?v=5446"></script>
-<script src="js/local-app.js?v=5446"></script>
-<script src="js/learning-file.js?v=5446"></script>
-<script src="js/parser.js?v=5446"></script>
-<script src="js/data-quality.js?v=5446"></script>
-<script src="js/planer-common.js?v=5446"></script>
-<script src="js/tournament-recommendation.js?v=5446"></script>
-<script src="js/turnierplaner-local.js?v=5446"></script>
+<script src="js/supabase-loader.js?v=5447"></script>
+<script src="js/supabase-config.js?v=5447"></script>
+<script src="js/database-local.js?v=5447"></script>
+<script src="js/local-app.js?v=5447"></script>
+<script src="js/learning-file.js?v=5447"></script>
+<script src="js/parser.js?v=5447"></script>
+<script src="js/data-quality.js?v=5447"></script>
+<script src="js/planer-common.js?v=5447"></script>
+<script src="js/tournament-recommendation.js?v=5447"></script>
+<script src="js/turnierplaner-local.js?v=5447"></script>
 </body>
 </html>

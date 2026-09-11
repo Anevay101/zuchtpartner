@@ -1,0 +1,19 @@
+V54.0.27 – ZS-Modellwahl stabilisiert + Ausreißerdiagnostik
+
+ZS-LERNMODELL
+- Das numerisch niedrigste Kreuzvalidierungs-RMSE bleibt Referenz.
+- Modelle bis 1% über diesem RMSE gelten als prognostisch praktisch gleichwertig.
+- Innerhalb der Toleranz werden zuerst fachlich gerichtete Modelle bevorzugt, danach Modelle mit weniger Zusatztermen.
+- Erst danach entscheiden MAE/RMSE über verbleibende Gleichstände.
+- Damit kann eine fachlich plausible, einfachere Variante gewählt werden, wenn ihr Prognoseverlust statistisch praktisch bedeutungslos ist.
+- Ext und Ext% bleiben weiterhin in jeder Kandidatenvariante getrennte Kernwerte.
+
+AUSREISSERDIAGNOSTIK
+- Neuer aufklappbarer Bereich „Größte Kreuzvalidierungs-Abweichungen“.
+- Zeigt die 10 größten absoluten Testfehler des tatsächlich gewählten Modells.
+- Angezeigt werden Pferd, GP, Ext, Ext%, Int, echter ZS-Grundwert, CV-Prognose und Abweichung.
+- Die Werte stammen aus Test-Folds, in denen das jeweilige Pferd nicht zum Lernen verwendet wurde; dadurch entsteht keine optimistische Trainingsfehler-Anzeige.
+- Die Diagnose korrigiert oder entfernt Daten nicht automatisch.
+
+TECHNIK
+- Asset-Cache auf 5427 erhöht.

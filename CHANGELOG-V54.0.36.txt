@@ -1,0 +1,30 @@
+MDR-Datenbank V54.0.36
+======================
+
+Lade-Hotfix
+- Supabase-JS wird nicht mehr als parser-blockierendes externes Script geladen.
+  Ein lokaler Loader versucht jsDelivr und unpkg jeweils mit Timeout.
+- IndexedDB ist für alle Listen-/Hilfs-Stores sofortiger Lesestand – auch wenn
+  ein lokaler Store leer ist. Supabase aktualisiert im Hintergrund.
+- Einzelne lokale Einstellungen werden vor einer Cloud-Abfrage aus IndexedDB
+  gelesen; Hilfswerte können den Seitenstart nicht mehr festhalten.
+- Supabase-Leseabfragen besitzen einen harten Timeout statt unbegrenzt auf
+  Netzwerkantworten zu warten.
+- Die Pferdetabelle rendert vor Datenqualitäts-/Filter-Nebenbereichen.
+- Nach erfolgreichem Hintergrund-Refresh des Pferdestores rendert die Tabelle
+  automatisch neu.
+- Bei temporär nicht erreichbarer Mitglieds-RPC darf ein gültiger, fest
+  konfigurierter MDR-Account den lokalen Lesecache starten. Eine explizite
+  Nichtfreigabe bleibt ein harter Logout.
+
+Snowflake-Detektiv
+- MDR-Patterntafel P1/P2/P3 als reines Forschungsmodell ergänzt:
+  P1p1 -> Leopard / Few Spot neu
+  P1P1 -> Leopard / Few Spot alt
+  p1p1 + P2_ -> Spotted Blanket / Snowcap
+  p1p1 + p2p2 + P3_ -> Varnish Roan
+  p1p1 + p2p2 + p3p3 -> Snowflake
+- Modell-Audit markiert Widersprüche zwischen sichtbarem Snowflake und echtem
+  PATN1-Test bzw. unmöglichen P1P1-Elternkonstellationen.
+- P2/P3 werden weiterhin niemals als individuelle Gentests oder Merkmale auf
+  Pferdeseiten gespeichert; ausschließlich Dashboard-Forschung.

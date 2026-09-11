@@ -1,0 +1,10 @@
+MDR-Datenbank V54.0.43
+
+Verpaarungslog · Freitextsuche
+- Neuer kompakter Suchfilter im Verpaarungslog.
+- Durchsucht Deckhengst, Stute, verknüpftes Fohlen, Besitzer/Züchter, Rasse, Notizen, Abfohldatum und bekannte Pferde-IDs.
+- Mehrere Suchwörter werden gemeinsam abgeglichen; Suche ist ohne Beachtung von Groß-/Kleinschreibung und Akzenten/Umlauten.
+- Besitzer- und Rassefilter bleiben kombinierbar mit der Freitextsuche.
+- Bei aktiver Suche wird das 50-Einträge-Anzeigelimit der vergangenen Verpaarungen aufgehoben, damit auch alte Treffer gefunden werden.
+
+Cache-Version 5443.

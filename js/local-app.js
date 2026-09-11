@@ -1772,42 +1772,29 @@ async function renderSharedNav() {
   if (!nav || nav.dataset.localNavReady === '1') return;
   nav.dataset.localNavReady = '1';
 
-  if (
-    !/(?:^|\/)guide\.html$/i.test(location.pathname) &&
-    !nav.querySelector('a[href="guide.html"]')
-  ) {
-    const guideLink = document.createElement('a');
-    guideLink.className = 'btn secondary';
-    guideLink.href = 'guide.html';
-    guideLink.textContent = 'Guide';
-    guideLink.title = 'Kurzanleitung und MDR-Lebenszyklus';
-    nav.append(guideLink);
-  }
-
-  if (
-    !/(?:^|\/)einstellungen\.html$/i.test(location.pathname) &&
-    !nav.querySelector('a[href="einstellungen.html"]')
-  ) {
-    const settingsLink = document.createElement('a');
-    settingsLink.className = 'btn secondary';
-    settingsLink.href = 'einstellungen.html';
-    settingsLink.textContent = '⚙️ Einstellungen';
-    settingsLink.title = 'Backups, Filtervorlagen und Schlagwörter verwalten';
-    nav.append(settingsLink);
-  }
-
-  // V54.0.46: aktive Navigation überall gleich kennzeichnen.
+  // V54.0.47: Die Hauptnavigation steht bereits statisch identisch in allen
+  // App-Seiten. Hier wird nur noch der aktive Bereich markiert. Dadurch
+  // springen Guide/Einstellungen nicht mehr erst nach dem JS-Start in die Leiste.
   const currentPage = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  const sectionPage = ({
+    'horse.html':'index.html',
+    'view.html':'index.html',
+    'durchschnitt.html':'dashboard.html',
+  })[currentPage] || currentPage;
   document.body.dataset.mdrPage = currentPage.replace(/\.html$/,'');
   nav.querySelectorAll('a[href]').forEach(link => {
     const href = String(link.getAttribute('href') || '').split(/[?#]/)[0].split('/').pop().toLowerCase();
-    const active = href && href === currentPage;
+    const active = href && href === sectionPage;
     link.classList.toggle('nav-current', active);
     if (active) link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
   });
 
-  await initDataSafety(nav);
+  // Datensicherheits-UI darf Navigation bzw. Seitendaten nicht blockieren.
+  // Die eigentliche Start-/Recovery-Prüfung läuft bereits in requireSession().
+  Promise.resolve(initDataSafety(nav)).catch(error =>
+    console.warn('Datensicherheits-UI konnte nicht vollständig initialisiert werden:', error)
+  );
 }
 
 // --- V33: Import wahlweise ergänzen/zusammenführen oder vollständig ersetzen ---

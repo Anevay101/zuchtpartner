@@ -72,7 +72,7 @@ async function init() {
   // erhalten und wird auch für das Vor-/Zurück-Blättern verwendet.
   try {
     const savedSort = JSON.parse(localStorage.getItem('mdr-horse-view-sort-v5367') || 'null');
-    if (savedSort?.field && ['name','gender','breed','coat_color','gp','ext','extpct','int','hlpslp','zzl','owner','birthdate','updated_at'].includes(savedSort.field)) {
+    if (savedSort?.field && ['name','gender','breed','coat_color','gp','ext','extpct','int','hlpslp','zzl','owner','birthdate'].includes(savedSort.field)) {
       currentSort = { field: savedSort.field, dir: savedSort.dir === 'desc' ? 'desc' : 'asc' };
     }
   } catch {}
@@ -87,12 +87,12 @@ async function init() {
   wireUndoActionBar();
   wireCheckDropdowns();
   wireDeleteModal();
-  wireExportCsv();
   wireCompareAvg();
   wireFilterPresets();
   wireScrollTop();
   showFlashBanner();
-  await renderUndoActionBar();
+  // Undo wird erst nach einer Aktion als schwebender Toast eingeblendet;
+  // beim Seitenstart bleibt die Tabelle vollständig ruhig.
   try { await loadUserSettings(session); } catch (error) { console.warn('Benutzereinstellungen konnten nicht sofort geladen werden:',error); }
 
   // V54.0.36: Pferde zuerst rendern. Hinweise, Filteroptionen und Vorlagen sind
@@ -104,7 +104,7 @@ async function init() {
     console.error('Pferdedatenbank konnte nicht geladen werden:', error);
     const tbody=document.querySelector('#horse-table tbody');
     const countEl=document.querySelector('#result-count');
-    if (tbody) tbody.innerHTML=`<tr><td colspan="21" class="error">Fehler beim Laden: ${escapeHtml(error?.message || String(error))}</td></tr>`;
+    if (tbody) tbody.innerHTML=`<tr><td colspan="20" class="error">Fehler beim Laden: ${escapeHtml(error?.message || String(error))}</td></tr>`;
     if (countEl) countEl.textContent='';
   }
 
@@ -1273,7 +1273,7 @@ function updateActiveFilterChips() {
 async function loadHorses() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
-  tbody.innerHTML = '<tr><td colspan="21">Lade…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="20">Lade…</td></tr>';
   selectedIds = new Set();
   updateBulkBar();
 
@@ -1289,7 +1289,7 @@ async function loadHorses() {
   }
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="21" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="20" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     countEl.textContent = '';
     updateDatabaseFilterSummary(null);
     return;
@@ -1307,7 +1307,7 @@ async function loadHorses() {
   } catch {}
 
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="21">Keine Pferde gefunden.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="20">Keine Pferde gefunden.</td></tr>';
     countEl.textContent = '0 Pferde';
     lastRenderedRows = [];
     updateDatabaseFilterSummary(0);
@@ -1390,8 +1390,7 @@ function rowHtml(h) {
     <td data-label="EKH">${escapeHtml(ekhText)}</td>
     <td data-label="Besitzer" title="${escapeHtml(h.owner || '')}">${escapeHtml(h.owner || '')}</td>
     <td data-label="Alter">${h.birthdate ? escapeHtml(formatAge(h.birthdate)) : ''}</td>
-    <td data-label="Zuletzt bearbeitet">${h.updated_at ? escapeHtml(formatTimestamp(h.updated_at)) : ''}</td>
-    <td data-label="Aktionen" class="actions-cell">
+        <td data-label="Aktionen" class="actions-cell">
       <a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a>
       <button class="danger icon-btn" data-delete="${h.id}" title="Löschen">✗</button>
     </td>
@@ -1861,7 +1860,7 @@ async function renderUndoActionBar() {
     return;
   }
   const when = point.created_at ? new Date(point.created_at).toLocaleString('de-DE') : '';
-  label.innerHTML = `<strong>Letzte sichere Aktion:</strong> ${escapeHtml(point.label || 'Änderung')}${when ? ` <span class="muted small">· ${escapeHtml(when)}</span>` : ''}`;
+  label.innerHTML = `<strong>Letzte Aktion:</strong> ${escapeHtml(point.label || 'Änderung')}${when ? ` <span class="muted small">· ${escapeHtml(when)}</span>` : ''}`;
   bar.hidden = false;
   if (button) { button.disabled = false; button.textContent = '↶ Rückgängig'; }
 }
@@ -2214,78 +2213,3 @@ async function onBulkLearningFile(value) {
   await renderUndoActionBar();
 }
 
-// --- CSV-Export ---
-
-const CSV_COLUMNS = ['Name', 'Geschlecht', 'Rasse - Rasseanteile', 'Farbe Genetik', 'GP', 'Ext', 'Ext%', 'Int', 'Besitzer', 'Schlagwörter', 'MDR-Link'];
-
-// Semikolon statt Komma als Trennzeichen, da deutsches Excel Kommas als
-// Dezimaltrennzeichen liest und eine mit Komma getrennte CSV-Datei sonst
-// nicht automatisch in Spalten aufgeteilt würde.
-function csvEscape(value) {
-  const str = String(value ?? '');
-  return /[;"\n]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
-}
-
-// Deutsches Dezimalkomma statt Punkt - mit Punkt liest Excel (deutsches
-// Gebietsschema) Werte wie "2.10" sonst fälschlich als Datum (2. Oktober)
-// statt als Zahl.
-function deDecimal(value) {
-  return String(value).replace('.', ',');
-}
-
-function csvRowOf(h) {
-  const d = computeDerived(h);
-  const breed = normalizeBreed(h.breed) || 'Rasselos';
-  const breedCell = h.breed_composition ? `${breed} - ${h.breed_composition}` : breed;
-  const colorGeneticsCell = [h.coat_color, d.presentGenes].filter(Boolean).join(' ');
-  const mdrLink = h.external_id
-    ? `https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}`
-    : '';
-  const tagsCell = (h.tags || []).map((t) => t.note ? `${t.label}: ${t.note}` : t.label).join(', ');
-  return [
-    h.name || '',
-    h.gender || '',
-    breedCell,
-    colorGeneticsCell,
-    d.gp ?? '',
-    d.extAvg != null ? deDecimal(d.extAvg.toFixed(2)) : '',
-    d.extPercent != null ? deDecimal(d.extPercent) + '%' : '',
-    d.intAvg != null ? deDecimal(d.intAvg.toFixed(2)) : '',
-    h.owner || '',
-    tagsCell,
-    mdrLink,
-  ];
-}
-
-// Sind über die Kästchen einzelne Pferde ausgewählt, werden nur diese
-// exportiert - ohne Auswahl exportiert der Button stattdessen alle
-// aktuell gefilterten/sortierten Zeilen (lastRenderedRows, siehe
-// loadHorses), berücksichtigt also automatisch alle aktiven Filter.
-function exportCsv() {
-  const rows = selectedIds.size > 0
-    ? lastRenderedRows.filter((r) => selectedIds.has(r.id))
-    : lastRenderedRows;
-
-  if (!rows.length) {
-    alert('Keine Pferde zum Exportieren (Filter ergibt keine Treffer).');
-    return;
-  }
-
-  const lines = [CSV_COLUMNS, ...rows.map(csvRowOf)]
-    .map((row) => row.map(csvEscape).join(';'));
-  // BOM voranstellen, damit Excel die UTF-8-Kodierung (Umlaute) korrekt erkennt.
-  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `pferde_export_${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-function wireExportCsv() {
-  document.querySelector('#export-csv-btn').addEventListener('click', exportCsv);
-}

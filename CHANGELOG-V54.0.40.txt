@@ -1,0 +1,9 @@
+MDR-Datenbank V54.0.40
+
+- Zuchtplaner: MDR-Deckstationsregel ergänzt.
+- Ein Hengst aus der Zucht-/Deckstation wird nur mit einer Prämienstute als zulässiger Kandidat geführt.
+- Regel greift in beide Richtungen des Verpaarungsratgebers: Stute -> Hengste und Deckstation-Hengst -> Stuten.
+- Prämienstuten-Erkennung über HLP/SLP, z. B. "Prämienstute mit 144 Punkten" / "Ja"; "Nein" wird ausdrücklich als nicht bestanden gewertet.
+- Parser korrigiert: HLP/SLP "Nein" wird nicht mehr versehentlich als bestandene Leistungsprüfung strukturiert.
+- Kandidatenhinweis nennt ausgeblendete Deckstation-Hengste bzw. Stuten ohne Prämienstatus.
+- Cache-Version 5440.

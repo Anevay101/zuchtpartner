@@ -1,0 +1,67 @@
+V54.0.25 – verifizierte Filter-/Handling-Version + historische ZS-Snapshots
+Datum: 08.09.2026
+
+DATENBANK / FILTER
+- Vier klar getrennte Filterbereiche: Suche, Zucht, Genetik & Gesundheit, Leistungswerte.
+- Suche: Name, Besitzer, Rasse / Datenqualität, Lerndatei, Schlagwörter / Spielversion in letzter Zeile.
+- Zucht: Geschlecht, Zuchtzulassung, Zuchtstation (bestehender Bestes-Fohlen-Filter bleibt als Zuchtfunktion erhalten).
+- Leistungswerte: GP, Ext, Ext%, Int, Hauptbegabung, dynamische Unterkategorie und Cup-Stern.
+- Hauptbegabung verwendet die vorhandenen Turniergruppen; bei Western: Reining, Trail, Pleasure, Horsemanship.
+- Datenqualität enthält sichtbar nur Vollständig, Teilweise vollständig und Unvollständig; die redundante Sammelauswahl „nicht vollständig“ ist entfernt.
+- Die Ergebnisliste reagiert weiterhin direkt auf Filteränderungen; aktive Filter-Chips erscheinen bewusst erst nach dem Klick auf „Filtern“.
+- „Alle Filter löschen“ ist direkt im Filterbereich und bei aktiven Chips verfügbar.
+- Filtervorlagen bleiben erhalten.
+
+ABHÄNGIGE BESITZER-/RASSENFILTER
+- Besitzer schränkt die angebotenen Rassen auf den tatsächlich vorhandenen Bestand dieses Besitzers ein.
+- Besitzervergleich ist robust gegen Groß-/Kleinschreibung und unbeabsichtigte Leerzeichen.
+- Umgesetzt/verifiziert für Datenbank, Ø-Vergleich, Dashboard/Durchschnitt, Verpaarungslog, Zuchtplaner, Turnierplaner/Zuchtschau und Aussortierhilfe.
+- DE/EN-Rassenbezeichnungen werden NICHT zentralisiert: z.B. Thoroughbred und Vollblüter bleiben bewusst getrennt.
+
+VERPAARUNGSLOG
+- Rassenfilter folgt der ausgewählten Züchtermenge.
+- „Theoretische Spanne?“ ist als Prüfspalte sowohl aus der kompakten Vergangenheitsübersicht als auch aus den aufgeklappten Fohlendaten entfernt. Best-/Worst-Prognosewerte bleiben als eigentliche Prognosedaten erhalten.
+- DB-Bereich getroffen wird in Übersicht und Fohlendetails kompakt ausschließlich als ✓ oder ✗ dargestellt.
+- „Fohlen behalten“ besitzt drei echte Zustände: ✓ Ja / ? offen / ✗ Nein. Der offene Zustand kann trotzdem eingetragen/verknüpft und ausgewertet werden.
+
+CUPS & ERFOLGE
+- Kompakte Übersicht fokussiert auf Siege, Starts und Cup-Stern.
+- Zweite/dritte Plätze und Begabung sind aus dieser Übersicht entfernt.
+- Pferde/Disziplinen werden ab 7 Siegen sichtbar; die Tabelle zeigt nur die tatsächliche Siegzahl, ohne Wertung wie „Cup-Stern sinnvoll“.
+
+ZUCHTPLANER
+- Standard-Schwerpunkt Ext% (genetisch).
+- Standard-Sortierung Kombinierter Ausgleich (2 Kriterien).
+- Zweites Kriterium GP; Standardgewicht 80% Ext% / 20% GP.
+- Veraltete Hinweise zur ausschließlich lokalen Datenbank entfernt/aktualisiert.
+
+GUIDE
+- Größere Fragen und helle Antwort-Cards im grünen Corporate Design.
+- Inhalt erweitert um Datenpflege, abhängige Filter, Dashboard, Verpaarung, Zuchtplaner, Cups, ZS-Prognose und Aussortierhilfe.
+
+ZS – HISTORISCHER GRUNDWERT
+- Fachregel korrigiert: ZS ist historisch. Spätere Turnierpunkte/Cupsterne dürfen den ZS-Grundwert nicht verändern.
+- Neue positive ZS-Einträge speichern automatisch einen historischen Snapshot des aktuellen Turnier-/Cupstands.
+- ZS-Grundwert = ZS-Gesamtwert – Turnierbonus des Snapshots – Cupbonus des Snapshots.
+- Korrekturen nur am ZS-Gesamtwert behalten den historischen Bonus-Snapshot bei.
+- Wird der ZS-Wert gelöscht, wird auch der Snapshot entfernt.
+- Bestands-ZS ohne Snapshot werden einmalig mit dem am 08.09.2026 vorhandenen Turnier-/Cupstand eingefroren. Dies verhindert alle zukünftigen Verschiebungen, rekonstruiert aber nicht rückwirkend den früheren tatsächlichen Bonusstand.
+- Die Bestandsmigration wird als Bulk-Upsert gespeichert, damit nicht unnötig viele Einzelanfragen entstehen.
+- ZS-Snapshot wird bei Lerndatei-Exporten mitgeführt.
+- Pferdeansicht und Turnierprofil zeigen den historischen Bonusstand/Grundwert; Turnierplaner verwendet historische Boni statt aktueller Erfolge.
+
+ZS – MODELLPRÜFUNG
+- Lernziel ist nun ausschließlich der eingefrorene historische ZS-Grundwert.
+- Echte ZS-Datensätze mit 0 Turnierplatzierungen sind zulässig, wenn ihr Snapshot einen belastbaren Bonusstand 0 enthält.
+- Datensätze ohne historischen Snapshot werden nicht gelernt.
+- Pflichtmerkmale: GP, Ext, Ext%, Int; fehlende Werte werden nicht als 0 interpretiert.
+- EKH bleibt optional und wird nur bei ausreichend eindeutig bekannten Gruppen gelernt.
+- Ridge-Regression, Kreuzvalidierung und Vergleich mit einer Durchschnitts-Baseline bleiben aktiv.
+- Die tatsächliche Live-Prognosegüte ist im Turnierplaner anhand MAE/RMSE/R² und Baselinevergleich sichtbar; sie kann aus dem statischen Repository ohne Supabase-Bestand nicht seriös als feste Zahl angegeben werden.
+
+CACHE / VERIFIKATION
+- Asset-Version auf 5425 erhöht, damit GitHub Pages neue JS/CSS-Dateien statt älterer Browser-Caches lädt.
+- VERSION.txt ergänzt, damit der eingespielte Stand im Repository leicht kontrolliert werden kann.
+- JavaScript-Syntax aller Projektdateien geprüft.
+- Alle lokalen HTML-Script-/CSS-Verweise geprüft.
+- Historischer ZS-Snapshot in einem Funktionstest geprüft: nach späteren zusätzlichen Turniererfolgen blieb der Grundwert unverändert.

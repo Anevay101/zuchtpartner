@@ -1,0 +1,24 @@
+MDR-Datenbank V54.0.46
+
+Interface-Überarbeitung
+- Einheitlicheres Design-System mit kompakter, sticky Kopfzeile, ruhigeren Karten, konsistenten Abständen und klareren Fokuszuständen.
+- Tabellen optisch beruhigt: stärkere Kopfzeilen, dezente Zeilenabstufung, klarere Hover-Zustände und betonte Pferdenamen.
+- Tabs bleiben mobil einzeilig und horizontal scrollbar; die Pferdeansicht hält die Reiter beim Scrollen erreichbar.
+
+Datenbankfilter
+- Suche, Zucht, Genetik & Gesundheit sowie Leistungswerte sind eigene einklappbare Filtergruppen.
+- Suche und Zucht starten offen; Genetik und Leistung kompakt eingeklappt.
+- Geöffnete Filtergruppen werden im Browser gemerkt.
+- Aktive Filter-Chips werden jetzt sofort live angezeigt und lassen sich einzeln entfernen.
+
+Pferdeprofil
+- Kompakte Kennzahlenleiste im Profil: GP, Ext, Ext%, Int, ZS und Nachkommen.
+- ZS kennzeichnet echten Wert mit ✓, Prognose mit ≈ und fehlenden Wert mit ?.
+- Zuchtzulassung nutzt konsistent ✓ / ✗ / ?.
+
+Zuchtplaner
+- Jede Kandidatenkarte hat jetzt „ⓘ Warum angezeigt?“.
+- Aufklappbare Begründung zeigt harte Zuchtfilter, Werte-Ausgleich, Turnierzucht, Begabungswunsch sowie Grundfarben-/Appaloosa-Wunsch.
+- Einheitliche Statuslogik: ✓ sicher/erfüllt · ✗ sicher nicht · ? unbekannt · ≈ abgeleitet/geschätzt.
+
+Cache: 5446

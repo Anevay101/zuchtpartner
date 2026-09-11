@@ -96,17 +96,16 @@ function buildTournamentControls() {
 
   const owners = [...new Set(TP_HORSES.map(h => h.owner).filter(Boolean))]
     .sort((a,b) => a.localeCompare(b,'de'));
-  document.getElementById('tp-owner').innerHTML =
-    '<option value="">Alle</option>' +
-    owners.map(o => `<option value="${plannerEscape(o)}">${plannerEscape(o)}</option>`).join('');
+  const ownerRoot=document.getElementById('tp-owner-options');
+  if (ownerRoot) ownerRoot.innerHTML=owners.length
+    ? owners.map(o=>`<label><input type="checkbox" value="${plannerEscape(o)}" checked> <span>${plannerEscape(o)}</span></label>`).join('')
+    : '<span class="tiny muted">Keine Besitzer verfügbar.</span>';
 
   refreshTournamentBreedFilters();
 
-  const allBreeds = [...new Set(TP_HORSES.map(h => normalizeBreed(h.breed) || 'Rasselos'))]
-    .sort((a,b) => a.localeCompare(b,'de'));
-  document.getElementById('tp-horse-breed').innerHTML = '<option value="">Alle</option>' +
-    allBreeds.map(b => `<option value="${plannerEscape(b)}">${plannerEscape(b)}</option>`).join('');
-
+  const horseOwner=document.getElementById('tp-horse-owner');
+  if (horseOwner) horseOwner.innerHTML='<option value="">Alle</option>' + owners.map(o=>`<option value="${plannerEscape(o)}">${plannerEscape(o)}</option>`).join('');
+  refreshTournamentHorseBreedFilter();
   refreshTournamentHorseSelect();
 }
 
@@ -119,13 +118,16 @@ function setTournamentBreedOptions(id, breeds, allLabel='Alle') {
   el.value=[...el.options].some(o=>o.value===old) ? old : '';
 }
 
+function selectedTournamentOwners() {
+  return [...document.querySelectorAll('#tp-owner-options input[type="checkbox"]:checked')].map(cb=>cb.value);
+}
+
 function refreshTournamentBreedFilters() {
-  const owner=document.getElementById('tp-owner')?.value || '';
-  const rows=owner ? TP_HORSES.filter(h=>tpOwnerKey(h.owner)===tpOwnerKey(owner)) : TP_HORSES;
+  const owners=new Set(selectedTournamentOwners().map(tpOwnerKey));
+  const rows=owners.size ? TP_HORSES.filter(h=>owners.has(tpOwnerKey(h.owner))) : [];
   const breeds=[...new Set(rows.map(h=>normalizeBreed(h.breed)||'Rasselos'))]
     .sort((a,b)=>a.localeCompare(b,'de'));
   setTournamentBreedOptions('tp-breed',breeds);
-  setTournamentBreedOptions('tp-table-breed',breeds);
 }
 
 function refreshZsBreedFilter() {
@@ -206,10 +208,18 @@ function wireTurnierMainTabs() {
   });
 }
 
+function refreshTournamentHorseBreedFilter() {
+  const owner=document.getElementById('tp-horse-owner')?.value || '';
+  const rows=owner ? TP_HORSES.filter(h=>tpOwnerKey(h.owner)===tpOwnerKey(owner)) : TP_HORSES;
+  const breeds=[...new Set(rows.map(h=>normalizeBreed(h.breed)||'Rasselos'))].sort((a,b)=>a.localeCompare(b,'de'));
+  setTournamentBreedOptions('tp-horse-breed',breeds);
+}
+
 function refreshTournamentHorseSelect() {
+  const owner = document.getElementById('tp-horse-owner')?.value || '';
   const breed = document.getElementById('tp-horse-breed')?.value || '';
   const current = document.getElementById('tp-horse')?.value || '';
-  const horses = TP_HORSES.filter(h => !breed || (normalizeBreed(h.breed) || 'Rasselos') === breed);
+  const horses = TP_HORSES.filter(h => (!owner || tpOwnerKey(h.owner)===tpOwnerKey(owner)) && (!breed || (normalizeBreed(h.breed) || 'Rasselos') === breed));
 
   document.getElementById('tp-horse').innerHTML =
     '<option value="">Bitte wählen…</option>' +
@@ -228,8 +238,25 @@ function refreshTournamentHorseSelect() {
 }
 
 function wireTournamentControls() {
-  document.getElementById('tp-run').addEventListener('click', renderTournamentRanking);
-  document.getElementById('tp-reset').addEventListener('click', resetTournamentFilters);
+  document.getElementById('tp-reset')?.addEventListener('click', resetTournamentFilters);
+
+  document.querySelectorAll('[data-tp-planning-mode]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const mode=btn.dataset.tpPlanningMode;
+      document.querySelectorAll('[data-tp-planning-mode]').forEach(b=>b.classList.toggle('active',b===btn));
+      const horse=document.getElementById('tp-planning-horse');
+      const stock=document.getElementById('tp-planning-stock');
+      if (horse) horse.hidden=mode!=='horse';
+      if (stock) stock.hidden=mode!=='stock';
+      if (mode==='horse') renderHorseTournamentOptions();
+      else renderTournamentRanking();
+      try { sessionStorage.setItem('mdr-turnierplanung-mode-v47',mode); } catch {}
+    });
+  });
+  try {
+    const saved=sessionStorage.getItem('mdr-turnierplanung-mode-v47');
+    if (saved && saved!=='horse') document.querySelector(`[data-tp-planning-mode="${saved}"]`)?.click();
+  } catch {}
 
   document.getElementById('tp-secondary-threshold').addEventListener('input', (event) => {
     const threshold = tournamentSecondaryThreshold();
@@ -242,76 +269,47 @@ function wireTournamentControls() {
   });
 
   ['tp-discipline','tp-lk','tp-breed'].forEach(id => {
-    document.getElementById(id).addEventListener('change', renderTournamentRanking);
+    document.getElementById(id)?.addEventListener('change', renderTournamentRanking);
   });
-  document.getElementById('tp-owner').addEventListener('change', () => {
+  document.getElementById('tp-owner-options')?.addEventListener('change', () => {
     refreshTournamentBreedFilters();
     renderTournamentRanking();
   });
 
+  document.getElementById('tp-horse-owner')?.addEventListener('change', () => {
+    refreshTournamentHorseBreedFilter();
+    refreshTournamentHorseSelect();
+    renderHorseTournamentOptions();
+  });
   document.getElementById('tp-horse-breed').addEventListener('change', () => {
     refreshTournamentHorseSelect();
     renderHorseTournamentOptions();
   });
 
-  ['tp-points-min','tp-interior-max'].forEach(id => {
-    document.getElementById(id).addEventListener('input', renderTournamentRanking);
+  ['tp-points-min','tp-interior-max','tp-table-horse'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', renderTournamentRanking);
   });
 
   document.getElementById('tp-horse').addEventListener('change', renderHorseTournamentOptions);
-  document.getElementById('tp-horse-points-min').addEventListener('input', renderHorseTournamentOptions);
+  ['tp-horse-points-min','tp-horse-interior-max','tp-horse-discipline'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('input', renderHorseTournamentOptions);
+  });
   document.getElementById('tp-horse-lk').addEventListener('change', renderHorseTournamentOptions);
-
-  // Direkte Tabellenfilter im Einzelpferd-Rechner
-  ['tp-horse-table-discipline','tp-horse-table-points','tp-horse-table-interior'].forEach(id => {
-    document.getElementById(id).addEventListener('input', renderHorseTournamentOptions);
-  });
-  document.querySelectorAll('#tp-horse-table-lks input[type="checkbox"]').forEach(cb => {
-    cb.addEventListener('change', renderHorseTournamentOptions);
-  });
-  document.getElementById('tp-horse-table-reset').addEventListener('click', resetHorseTableFilters);
-
-  // Direkte Tabellenfilter in der Gesamtliste
-  ['tp-table-horse','tp-table-discipline','tp-table-points','tp-table-interior'].forEach(id => {
-    document.getElementById(id).addEventListener('input', renderTournamentRanking);
-  });
-  document.getElementById('tp-table-breed').addEventListener('change', renderTournamentRanking);
-  document.querySelectorAll('#tp-table-lks input[type="checkbox"]').forEach(cb => {
-    cb.addEventListener('change', renderTournamentRanking);
-  });
-  document.getElementById('tp-table-reset').addEventListener('click', resetRankingTableFilters);
-
 }
 
 
-function selectedLks(containerId) {
-  return [...document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`)]
-    .map(cb => cb.value);
-}
 
-function resetHorseTableFilters() {
-  document.getElementById('tp-horse-table-discipline').value = '';
-  document.getElementById('tp-horse-table-points').value = '';
-  document.getElementById('tp-horse-table-interior').value = '';
-  document.querySelectorAll('#tp-horse-table-lks input[type="checkbox"]').forEach(cb => cb.checked = false);
-  renderHorseTournamentOptions();
-}
 
-function resetRankingTableFilters() {
-  document.getElementById('tp-table-horse').value = '';
-  document.getElementById('tp-table-discipline').value = '';
-  document.getElementById('tp-table-points').value = '';
-  document.getElementById('tp-table-interior').value = '';
-  document.getElementById('tp-table-breed').value = '';
-  document.querySelectorAll('#tp-table-lks input[type="checkbox"]').forEach(cb => cb.checked = false);
-  renderTournamentRanking();
-}
+
+
+
 
 function resetTournamentFilters() {
   document.getElementById('tp-points-min').value = '';
   document.getElementById('tp-interior-max').value = '';
   document.getElementById('tp-lk').value = '';
-  document.getElementById('tp-owner').value = '';
+  document.getElementById('tp-table-horse').value = '';
+  document.querySelectorAll('#tp-owner-options input[type="checkbox"]').forEach(cb=>{ cb.checked=true; });
   refreshTournamentBreedFilters();
   document.getElementById('tp-breed').value = '';
   renderTournamentRanking();
@@ -571,123 +569,62 @@ function renderTournamentRanking() {
   const pointsMinRaw = document.getElementById('tp-points-min').value;
   const interiorMaxRaw = document.getElementById('tp-interior-max').value;
   const lkFilter = document.getElementById('tp-lk').value;
-  const owner = document.getElementById('tp-owner').value;
+  const owners = new Set(selectedTournamentOwners().map(tpOwnerKey));
   const breed = document.getElementById('tp-breed').value;
-
+  const horseSearch=(document.getElementById('tp-table-horse')?.value || '').trim().toLowerCase();
   const pointsMin = pointsMinRaw === '' ? null : Number(pointsMinRaw);
   const interiorMax = interiorMaxRaw === '' ? null : Number(interiorMaxRaw);
 
-  // Zusätzliche Filter direkt an der Tabelle
-  const tableHorse = document.getElementById('tp-table-horse').value.trim().toLowerCase();
-  const tableDiscipline = document.getElementById('tp-table-discipline').value.trim().toLowerCase();
-  const tablePointsRaw = document.getElementById('tp-table-points').value;
-  const tableInteriorRaw = document.getElementById('tp-table-interior').value;
-  const tablePoints = tablePointsRaw === '' ? null : Number(tablePointsRaw);
-  const tableInterior = tableInteriorRaw === '' ? null : Number(tableInteriorRaw);
-  const tableBreed = document.getElementById('tp-table-breed').value;
-  const tableLks = selectedLks('tp-table-lks');
+  let rows = TP_HORSES.map(horse => ({ horse, eval: tournamentScore(horse, disciplineName) }))
+    .filter(row => row.eval?.complete)
+    .filter(({horse, eval}) => {
+      if (!owners.size || !owners.has(tpOwnerKey(horse.owner))) return false;
+      if (breed && (normalizeBreed(horse.breed) || 'Rasselos') !== breed) return false;
+      if (pointsMin != null && eval.points < pointsMin) return false;
+      if (interiorMax != null && (eval.interior == null || eval.interior > interiorMax)) return false;
+      if (lkFilter && eval.lk !== lkFilter) return false;
+      if (horseSearch && !String(horse.name || '').toLowerCase().includes(horseSearch)) return false;
+      return true;
+    });
 
-  let rows = TP_HORSES.map(horse => ({
-    horse,
-    eval: tournamentScore(horse, disciplineName),
-  }))
-  .filter(row => row.eval?.complete);
-
-  rows = rows.filter(({horse, eval}) => {
-    if (owner && horse.owner !== owner) return false;
-    if (breed && (normalizeBreed(horse.breed) || 'Rasselos') !== breed) return false;
-    if (pointsMin != null && eval.points < pointsMin) return false;
-    if (interiorMax != null && (eval.interior == null || eval.interior > interiorMax)) return false;
-    if (lkFilter && eval.lk !== lkFilter) return false;
-
-    // Tabellenfilter wirken zusätzlich
-    if (tableHorse) {
-      const haystack = `${horse.name || ''} ${horse.owner || ''}`.toLowerCase();
-      if (!haystack.includes(tableHorse)) return false;
-    }
-    if (tableDiscipline && !eval.discipline.toLowerCase().includes(tableDiscipline)) return false;
-    if (tableBreed && (normalizeBreed(horse.breed) || 'Rasselos') !== tableBreed) return false;
-    if (tablePoints != null && eval.points < tablePoints) return false;
-    if (tableInterior != null && (eval.interior == null || eval.interior > tableInterior)) return false;
-    if (tableLks.length && !tableLks.includes(eval.lk)) return false;
-
-    return true;
-  });
-
-  // Wichtigster Faktor = Punkte.
-  // Bei Gleichstand besseres Interieur, dann bessere LK.
   rows.sort((a,b) => {
     const p = b.eval.points - a.eval.points;
     if (p) return p;
-
-    const ai = a.eval.interior ?? 99;
-    const bi = b.eval.interior ?? 99;
+    const ai = a.eval.interior == null ? Infinity : a.eval.interior;
+    const bi = b.eval.interior == null ? Infinity : b.eval.interior;
     if (ai !== bi) return ai - bi;
-
-    return plannerLKRank(a.eval.lk) - plannerLKRank(b.eval.lk);
+    const lk = plannerLKRank(a.eval.lk) - plannerLKRank(b.eval.lk);
+    if (lk) return lk;
+    return (a.horse.name || '').localeCompare(b.horse.name || '', 'de');
   });
 
-  const totalRows=rows.length;
-  if (rows.length > 1) {
-    const keep=Math.ceil(rows.length/2);
-    const cutoffPoints=Number(rows[keep-1]?.eval?.points);
-    let end=keep;
-    while (end < rows.length && Number(rows[end]?.eval?.points) === cutoffPoints) end++;
-    rows=rows.slice(0,end);
-  }
+  const title=document.getElementById('tp-title');
+  const count=document.getElementById('tp-count');
+  if (title) title.textContent=disciplineName ? `${disciplineName} · Bestandsvergleich` : 'Bestandsvergleich';
+  if (count) count.textContent=`${rows.length} Pferd${rows.length===1?'':'e'}`;
 
-  document.getElementById('tp-title').textContent =
-    `Turnierwerte – ${disciplineName || 'Disziplin'}`;
-
-  document.getElementById('tp-count').textContent = totalRows
-    ? `${rows.length} von ${totalRows} · obere 50 %${rows.length > Math.ceil(totalRows/2) ? ' inkl. Gleichstand' : ''}`
-    : '0 Pferde';
-
-  // Ab mehr als 20 Treffern bekommt nur die sichtbare Rangliste eine Scrollbar.
-  const scrollBox = document.getElementById('tp-ranking-scroll');
-  scrollBox.classList.toggle('tournament-scroll-20', rows.length > 20);
-
-  const tbody = document.getElementById('tp-ranking-body');
-
+  const body=document.getElementById('tp-ranking-body');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="muted">Keine Pferde für diese Filter gefunden.</td></tr>';
+    body.innerHTML='<tr><td colspan="7" class="muted">Keine Pferde entsprechen den gewählten Filtern.</td></tr>';
     return;
   }
-
-  tbody.innerHTML = rows.map(({horse, eval}, index) => {
-    const reference = TP_TOURNAMENT_REFERENCES[eval.discipline] || null;
-    const proof = plannerTournamentProof(horse, eval.discipline);
-    const suitability = plannerTournamentSuitability(eval, reference, tournamentSecondaryThreshold(), {
-      isMainGroup: eval.isMainGroup === true,
-      mainMin: MDR_TOURNAMENT_MAIN_MIN,
-      proof,
-    });
-    const provenText = proof.proven ? ' · bewährt' : '';
-    let label = '';
-    if (eval.isMainGroup && suitability.suitable) {
-      label = `<span class="planner-badge tournament-main-badge">Hauptdisziplin · geeignet${provenText}</span>`;
-    } else if (eval.isMainGroup) {
-      label = `<span class="muted small">Hauptdisziplin · ${plannerEscape(suitability.reason)} (${Math.round(suitability.minimum)} P.)</span>`;
-    } else if (suitability.suitable) {
-      label = `<span class="planner-badge tournament-secondary-badge">geeignete Option${provenText}</span>`;
-    } else {
-      label = `<span class="muted small">${plannerEscape(suitability.reason)} (${Math.round(suitability.minimum)} P.)</span>`;
-    }
-
-    return `
-      <tr>
-        <td>${index + 1}</td>
-        <td>
-          <a href="view.html?id=${encodeURIComponent(horse.id)}"><strong>${plannerEscape(horse.name || '(ohne Name)')}</strong></a> ${tournamentDataQualityBadge(horse)}
-          <br><span class="muted small">${plannerEscape(horse.breed || 'ohne Rasse')} · ${plannerEscape(horse.game_version || 'DE')}${horse.owner ? ` · ${plannerEscape(horse.owner)}` : ''}</span>
-        </td>
-        <td>${plannerEscape(eval.discipline)}</td>
-        <td><strong>${Math.round(eval.points)}</strong></td>
-        <td>${eval.interior == null ? '–' : eval.interior.toFixed(2)}</td>
-        <td>${plannerEscape(eval.lk || '–')}</td>
-        <td>${label}</td>
-      </tr>
-    `;
+  body.innerHTML=rows.map(({horse,eval:row},index)=>{
+    const mainGroup=detectHorseMainGroup(horse);
+    const isMain=mainGroup && row.group===mainGroup;
+    const classification=isMain
+      ? '✓ Hauptgruppe'
+      : row.points >= tournamentSecondaryThreshold()
+        ? '✓ geeignet'
+        : '≈ unter Nebengrenze';
+    return `<tr>
+      <td>${index+1}</td>
+      <td><a href="view.html?id=${encodeURIComponent(horse.id)}"><strong>${plannerEscape(horse.name || '(ohne Name)')}</strong></a><br><span class="tiny muted">${plannerEscape(horse.owner || '')} · ${plannerEscape(horse.breed || '')}</span></td>
+      <td>${plannerEscape(row.discipline)}</td>
+      <td><strong>${Math.round(row.points)}</strong></td>
+      <td>${row.interior == null ? '?' : row.interior.toFixed(2)}</td>
+      <td>${plannerEscape(row.lk || '?')}</td>
+      <td>${classification} · ${tournamentRelativeHtml(row)}</td>
+    </tr>`;
   }).join('');
 }
 
@@ -762,12 +699,9 @@ function renderHorseTournamentOptions() {
   const lkFilter = document.getElementById('tp-horse-lk').value;
   const pointsMin = pointsMinRaw === '' ? null : Number(pointsMinRaw);
 
-  const tableDiscipline = document.getElementById('tp-horse-table-discipline').value.trim().toLowerCase();
-  const tablePointsRaw = document.getElementById('tp-horse-table-points').value;
-  const tableInteriorRaw = document.getElementById('tp-horse-table-interior').value;
-  const tablePoints = tablePointsRaw === '' ? null : Number(tablePointsRaw);
-  const tableInterior = tableInteriorRaw === '' ? null : Number(tableInteriorRaw);
-  const tableLks = selectedLks('tp-horse-table-lks');
+  const disciplineFilter = (document.getElementById('tp-horse-discipline')?.value || '').trim().toLowerCase();
+  const interiorRaw = document.getElementById('tp-horse-interior-max')?.value || '';
+  const interiorMax = interiorRaw === '' ? null : Number(interiorRaw);
 
   const profile = plannerAnalyzeTournamentProfile(horse, TP_ALL_HORSES, tournamentScore, {
     absoluteMin: tournamentSecondaryThreshold(),
@@ -789,17 +723,15 @@ function renderHorseTournamentOptions() {
   const profileRows = allRows.filter(r => {
     if (pointsMin != null && r.points < pointsMin) return false;
     if (lkFilter && r.lk !== lkFilter) return false;
-    if (tableDiscipline && !r.discipline.toLowerCase().includes(tableDiscipline)) return false;
-    if (tablePoints != null && r.points < tablePoints) return false;
-    if (tableInterior != null && (r.interior == null || r.interior > tableInterior)) return false;
-    if (tableLks.length && !tableLks.includes(r.lk)) return false;
+    if (disciplineFilter && !r.discipline.toLowerCase().includes(disciplineFilter)) return false;
+    if (interiorMax != null && (r.interior == null || r.interior > interiorMax)) return false;
     return true;
   });
   const visibleProfile = tournamentProfileSubset(profile, profileRows);
   const rows = profileRows;
 
   const best = visibleProfile.best;
-  const topFilterActive = pointsMin != null || Boolean(lkFilter) || Boolean(tableDiscipline) || tablePoints != null || tableInterior != null || tableLks.length > 0;
+  const topFilterActive = pointsMin != null || Boolean(lkFilter) || Boolean(disciplineFilter) || interiorMax != null;
   const bestLabel = topFilterActive ? 'Beste gefilterte Disziplin' : 'Beste Disziplin';
   const mainLabel = visibleProfile.mainGroup || 'unbekannt';
   const alt = visibleProfile.alternatives[0] || null;
@@ -812,7 +744,7 @@ function renderHorseTournamentOptions() {
       <div class="tournament-recommendation-head">
         <div>
           <h3><a href="view.html?id=${encodeURIComponent(horse.id)}">${plannerEscape(horse.name || '(ohne Name)')}</a></h3>
-          <p class="tournament-recommendation-line"><strong>Empfehlung:</strong> ${plannerEscape(visibleProfile.recommendation)}</p>
+          <p class="tournament-recommendation-line"><strong>✓ Empfehlung:</strong> ${plannerEscape(visibleProfile.recommendation)}</p>
         </div>
         <button type="button" class="secondary small" id="tp-copy-recommendation">Für Notizen kopieren</button>
       </div>
@@ -832,6 +764,7 @@ function renderHorseTournamentOptions() {
 
   const suitableRows = visibleProfile.suitableRows.length
     ? visibleProfile.suitableRows.map(r => `<tr>
+        <td>✓</td>
         <th>${plannerEscape(r.discipline)}${r.proven ? ' <span class="planner-badge tournament-secondary-badge">bewährt</span>' : ''}</th>
         <td>${plannerEscape(r.group)}</td>
         <td><strong>${Math.round(r.points)}</strong></td>
@@ -839,16 +772,16 @@ function renderHorseTournamentOptions() {
         <td>${plannerEscape(r.lk || '–')}</td>
         <td>${tournamentRelativeHtml(r)}</td>
       </tr>`).join('')
-    : '<tr><td colspan="6" class="muted">Keine geeignete Disziplin erkannt.</td></tr>';
+    : '<tr><td colspan="7" class="muted">Keine geeignete Disziplin erkannt.</td></tr>';
 
   const fullRows = rows.length
     ? rows.map((r, index) => {
         let label = '';
         const proofText = r.proven ? ' · bewährt' : '';
         const refText = plannerEscape(plannerReferenceLabel(r.reference));
-        if (r.suitable && r.group === visibleProfile.mainGroup) label = `<span class="planner-badge tournament-main-badge">geeignet · Hauptdisziplin${proofText}</span><br><span class="tiny muted">${refText}</span>`;
-        else if (r.suitable) label = `<span class="planner-badge tournament-secondary-badge">geeignet${proofText}</span><br><span class="tiny muted">${refText}</span>`;
-        else label = `<span class="muted small">${plannerEscape(r.suitability?.reason || 'nicht geeignet')} (${Math.round(r.suitability?.minimum || 0)} P.)</span><br><span class="tiny muted">${refText}</span>`;
+        if (r.suitable && r.group === visibleProfile.mainGroup) label = `<span class="planner-badge tournament-main-badge">✓ geeignet · Hauptdisziplin${proofText}</span><br><span class="tiny muted">${refText}</span>`;
+        else if (r.suitable) label = `<span class="planner-badge tournament-secondary-badge">✓ geeignet${proofText}</span><br><span class="tiny muted">${refText}</span>`;
+        else label = `<span class="muted small">✗ ${plannerEscape(r.suitability?.reason || 'nicht geeignet')} (${Math.round(r.suitability?.minimum || 0)} P.)</span><br><span class="tiny muted">${refText}</span>`;
         return `<tr>
           <td>${index + 1}</td>
           <th>${plannerEscape(r.discipline)}</th>
@@ -874,7 +807,7 @@ function renderHorseTournamentOptions() {
     <section class="tournament-compact-section selectable-copy-area">
       <div class="tournament-section-head"><h3>Geeignete Disziplinen</h3><button type="button" class="secondary small" id="tp-copy-suitable">Geeignete Disziplinen kopieren</button></div>
       <div class="table-wrap"><table class="detail-table tournament-suitable-table">
-        <thead><tr><th>Disziplin</th><th>Gruppe</th><th>Punkte</th><th>Int</th><th>LK</th><th>Relative Stärke <span class="tp-info-dot" title="P72 = höher als etwa 72 % der Hauptbegabungs-Referenz derselben LK">i</span></th></tr></thead>
+        <thead><tr><th></th><th>Disziplin</th><th>Gruppe</th><th>Punkte</th><th>Int</th><th>LK</th><th>Relative Stärke <span class="tp-info-dot" title="P72 = höher als etwa 72 % der Hauptbegabungs-Referenz derselben LK">i</span></th></tr></thead>
         <tbody>${suitableRows}</tbody>
       </table></div>
     </section>
@@ -922,22 +855,16 @@ function cupRegistrationDate(cupDate) {
   return d;
 }
 
-function cupUpcomingDays(limit=10, refDate=new Date()) {
+function cupUpcomingDays(dayWindow=6, refDate=new Date()) {
   const now=cupLocalDateOnly(refDate);
-  const cursor=new Date(now);
   const rows=[];
-  let guard=0;
-  while (rows.length < limit && guard < 75) {
+  for (let offset=0; offset<dayWindow; offset++) {
+    const cursor=new Date(now);
+    cursor.setDate(cursor.getDate()+offset);
     const day=cursor.getDate();
     if (day >= 1 && day <= MDR_CUP_DISCIPLINE_ORDER.length) {
-      rows.push({
-        date:new Date(cursor),
-        day,
-        discipline:MDR_CUP_DISCIPLINE_ORDER[day-1],
-      });
+      rows.push({ date:new Date(cursor), day, discipline:MDR_CUP_DISCIPLINE_ORDER[day-1] });
     }
-    cursor.setDate(cursor.getDate()+1);
-    guard++;
   }
   return rows;
 }
@@ -985,7 +912,7 @@ function renderCupCalendar() {
   if (!root) return;
   const now=new Date();
   const today=cupLocalDateOnly(now);
-  const rows=cupUpcomingDays(10,now);
+  const rows=cupUpcomingDays(6,now);
   if (!rows.length) {
     root.innerHTML='<p class="muted">Kein Cup-Termin berechenbar.</p>';
     return;
@@ -1056,7 +983,23 @@ function cupAchievementRows() {
   return rows;
 }
 
+function renderCupSummary() {
+  const root=document.getElementById('tp-cup-summary');
+  if (!root) return;
+  const rows=cupAchievementRows();
+  const starredIds=new Set(rows.filter(r=>r.result?.cup_star).map(r=>String(r.horse.id)));
+  const nearIds=new Set(rows.filter(r=>!r.result?.cup_star && Number(r.result?.first || 0)>=7 && Number(r.result?.first || 0)<15).map(r=>String(r.horse.id)));
+  const upcoming=cupUpcomingDays(6,new Date());
+  const next=upcoming[0];
+  root.innerHTML=`<div class="tp-summary-pills">
+    <span>⭐ <strong>${starredIds.size}</strong> Cup-Pferde</span>
+    <span>≈ <strong>${nearIds.size}</strong> mit 7–14 Siegen</span>
+    <span>📅 ${next ? `<strong>${plannerEscape(next.discipline)}</strong> · ${cupFormatDate(next.date)}` : 'kein Cup in den nächsten 6 Tagen'}</span>
+  </div>`;
+}
+
 function renderCupAchievements() {
+  renderCupSummary();
   const body=document.getElementById('tp-cup-body');
   if (!body) return;
   const q=(document.getElementById('tp-cup-search')?.value || '').trim().toLowerCase();
