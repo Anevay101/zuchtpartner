@@ -1,0 +1,13 @@
+FUTTERABO V54.0.54
+
+Rechenprinzip:
+- Jedes Pferd benötigt 1 Einheit Kraftfutter pro Tag.
+- Ein Sack enthält 30 Einheiten.
+- Bedarf = Pferde x Tage.
+- Zu kaufen = ceil(max(0, Bedarf - Restbestand) / 30).
+- Rest danach = Rest vorher + gekaufte Säcke x 30 - Bedarf.
+- Derselbe Mechanismus gilt für Heu/Stroh in Pferdetagen (30 je Ballen).
+
+Die Tabelle trennt deshalb bewusst Bedarf, Restbestand und tatsächliche
+Bestellmenge. Restmengen werden nach Bestätigung der Bestellung für den
+nächsten Termin gespeichert.

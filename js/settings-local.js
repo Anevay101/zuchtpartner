@@ -100,13 +100,22 @@ async function wireFeedPlanSettings() {
     rhythm.disabled=!enabled.checked;
     if (openLink) openLink.hidden=!enabled.checked;
     const current=await localGet(LOCAL_STORES.userSettings, dbKey) || {key:dbKey};
+    const nextRhythm=rhythm.value === 'monthly' ? 'monthly' : 'weekly';
+    const nextOwner=String(ownerInput.value||'').trim();
+    const previousOwner=String(current.owner_name || config.owner_name || '').trim();
+    const previousRhythm=(current.rhythm === 'monthly' || current.rhythm === 'weekly') ? current.rhythm : (config.rhythm === 'monthly' ? 'monthly' : 'weekly');
+    const planBasisChanged=previousOwner !== nextOwner || previousRhythm !== nextRhythm;
     const next={
       ...current,
       key:dbKey,
       enabled:enabled.checked,
-      rhythm:rhythm.value === 'monthly' ? 'monthly' : 'weekly',
-      owner_name:String(ownerInput.value||'').trim(),
-      last_completed_at:current.last_completed_at || config.last_completed_at || null,
+      rhythm:nextRhythm,
+      owner_name:nextOwner,
+      // Restbestand ist an Besitzer + Rhythmus gekoppelt. Wird einer davon
+      // geaendert, startet die Erinnerung bewusst neu statt Altbestand falsch
+      // auf einen anderen Plan zu uebertragen.
+      last_completed_at:planBasisChanged ? null : (current.last_completed_at || config.last_completed_at || null),
+      carry_units:planBasisChanged ? {} : (current.carry_units || config.carry_units || {}),
       updated_at:new Date().toISOString(),
     };
     await localPut(LOCAL_STORES.userSettings,next);

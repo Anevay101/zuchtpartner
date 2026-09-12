@@ -108,21 +108,26 @@ function feedBuildModel(horses,config) {
   }
 
   const rows=[];
+  const carry=config?.carry_units && typeof config.carry_units === 'object' ? config.carry_units : {};
   for (const product of MDR_FEED_PRODUCTS) {
     let horseCount=active.length;
-    let quantity=0;
-    if (product.unit === 'bag') {
-      horseCount=(groups.get(product.id) || []).length;
-      // MDR: 1 Sack Kraftfutter enthält 30 Einheiten. Ein Pferd braucht
-      // 1 Einheit pro Tag, also deckt 1 Sack 30 Pferdetage.
-      quantity=Math.ceil(horseCount * days / 30);
-    } else {
-      // MDR: 1 Ballen Heu/Stroh reicht für 1 Pferd 30 Tage = 30 Pferdetage.
-      quantity=Math.ceil(active.length * days / 30);
-    }
+    if (product.unit === 'bag') horseCount=(groups.get(product.id) || []).length;
+
+    // Ein Pferd verbraucht pro Tag genau eine Einheit seines Kraftfutters.
+    // Bei Heu/Stroh rechnen wir in Pferdetagen. Ein Sack/Ballen deckt jeweils
+    // 30 solcher Einheiten/Pferdetage.
+    const requiredUnits=horseCount * days;
+    const carryBefore=Math.max(0,Math.floor(Number(carry[product.id]) || 0));
+    const uncoveredUnits=Math.max(0,requiredUnits - carryBefore);
+    const quantity=Math.ceil(uncoveredUnits / 30);
+    const carryAfter=Math.max(0,carryBefore + quantity * 30 - requiredUnits);
+
     rows.push({
       ...product,
       horseCount,
+      requiredUnits,
+      carryBefore,
+      carryAfter,
       quantity,
       cost:quantity * product.price,
       horses:product.unit === 'bag' ? (groups.get(product.id) || []) : active,
@@ -165,13 +170,17 @@ function feedRenderTable(model) {
   const body=document.getElementById('feed-plan-body');
   if (!body) return;
   body.innerHTML=model.rows.map(row=>{
-    const unit=row.unit === 'bale' ? feedUiText('Ballen','bales') : feedUiText('Säcke','bags');
+    const buyUnit=row.unit === 'bale' ? feedUiText('Ballen','bales') : feedUiText('Säcke','bags');
+    const needUnit=row.unit === 'bale' ? feedUiText('Pferdetage','horse-days') : feedUiText('Einheiten','units');
     return `<tr>
       <td><strong>${feedEsc(feedProductName(row))}</strong></td>
       <td>${feedNumber(row.horseCount)}</td>
-      <td>${feedNumber(row.quantity)} ${feedEsc(unit)}</td>
+      <td>${feedNumber(row.requiredUnits)} ${feedEsc(needUnit)}</td>
+      <td>${feedNumber(row.carryBefore)} ${feedEsc(needUnit)}</td>
+      <td><strong>${feedNumber(row.quantity)} ${feedEsc(buyUnit)}</strong></td>
       <td>${feedNumber(row.price)} DD</td>
       <td><strong>${feedNumber(row.cost)} DD</strong></td>
+      <td>${feedNumber(row.carryAfter)} ${feedEsc(needUnit)}</td>
     </tr>`;
   }).join('');
   const total=document.getElementById('feed-plan-total');
@@ -234,11 +243,28 @@ async function feedMarkCompleted() {
   try {
     const dbKey=typeof feedPlanDbKey === 'function' ? feedPlanDbKey() : 'feed_plan_v1';
     const current=await localGet(LOCAL_STORES.userSettings,dbKey) || {key:dbKey};
+    const config=typeof normalizeFeedPlanConfig === 'function'
+      ? normalizeFeedPlanConfig(current)
+      : current;
+    const due=typeof feedPlanIsDue === 'function' ? feedPlanIsDue(config) : true;
+    if (!due) return;
+
+    const horses=await localGetAll(LOCAL_STORES.horses);
+    const model=feedBuildModel(horses,config);
+    const nextCarry={};
+    for (const row of model.rows) {
+      if (row.carryAfter > 0) nextCarry[row.id]=row.carryAfter;
+    }
+
     const next={
       ...current,
       key:dbKey,
       enabled:true,
-      rhythm:current.rhythm === 'monthly' ? 'monthly' : 'weekly',
+      rhythm:config.rhythm === 'monthly' ? 'monthly' : 'weekly',
+      owner_name:config.owner_name || '',
+      // Nach der bestaetigten Bestellung merken wir den rechnerischen Rest,
+      // der nach Verbrauch dieses Intervalls fuer den NAECHSTEN Termin bleibt.
+      carry_units:nextCarry,
       last_completed_at:new Date().toISOString(),
       updated_at:new Date().toISOString(),
     };
@@ -248,7 +274,11 @@ async function feedMarkCompleted() {
   } catch (error) {
     alert(feedUiText('Erinnerung konnte nicht aktualisiert werden: ','Reminder could not be updated: ') + error.message);
   } finally {
-    if (button) button.disabled=false;
+    if (button) {
+      const latest=typeof getFeedPlanConfig === 'function' ? getFeedPlanConfig() : null;
+      const stillDue=typeof feedPlanIsDue === 'function' ? feedPlanIsDue(latest) : true;
+      button.disabled=!stillDue;
+    }
   }
 }
 
@@ -280,12 +310,19 @@ async function renderFeedPlanPage() {
   feedRenderRules();
 
   const due=typeof feedPlanIsDue === 'function' ? feedPlanIsDue(config) : true;
+  const completeButton=document.getElementById('feed-plan-complete');
+  if (completeButton) {
+    completeButton.disabled=!due;
+    completeButton.title=due
+      ? ''
+      : feedUiText('Die aktuelle Bestellung wurde bereits bestätigt. Die Tabelle zeigt eine Vorschau für den nächsten Termin.','The current order has already been confirmed. The table shows a preview for the next due date.');
+  }
   const reminder=document.getElementById('feed-plan-reminder');
   if (reminder) {
     reminder.classList.toggle('feed-plan-reminder-due',due);
     reminder.innerHTML=due
-      ? `<strong>🔔 ${feedUiText('Futterbestellung ist fällig.','Feed order is due.')}</strong> ${feedUiText('Prüfe die Mengen unten und markiere die Bestellung anschließend als erledigt.','Review the quantities below and then mark the order as completed.')}`
-      : `<strong>✅ ${feedUiText('Aktueller Rhythmus läuft.','Current schedule is on track.')}</strong> ${feedUiText('Nächste Erinnerung:','Next reminder:')} ${feedEsc(feedReminderLabel(config))}`;
+      ? `<strong>🔔 ${feedUiText('Futterbestellung ist fällig.','Feed order is due.')}</strong> ${feedUiText('Prüfe unter „Kaufen“ die tatsächlich zu bestellenden Säcke/Ballen. Bedarf und Restbestand dienen nur der nachvollziehbaren Rechnung.','Check “Buy” for the bags/bales you actually need to order. Requirement and carry-over are shown only to make the calculation transparent.')}`
+      : `<strong>✅ ${feedUiText('Aktueller Rhythmus läuft.','Current schedule is on track.')}</strong> ${feedUiText('Nächste Erinnerung:','Next reminder:')} ${feedEsc(feedReminderLabel(config))}. ${feedUiText('Die Tabelle ist bereits die Vorschau für den nächsten Termin und berücksichtigt den rechnerischen Restbestand.','The table already previews the next due date and includes the calculated carry-over.')}`;
   }
 }
 

@@ -1,0 +1,15 @@
+MDR Pferdedatenbank V54.0.54
+
+Futterabo – Restbestandslogik korrigiert
+
+- Bedarf und tatsächliche Bestellung werden getrennt angezeigt.
+- 1 Sack Kraftfutter = 30 Einheiten; gekauft werden Säcke, nicht Bedarfseinheiten.
+- 1 Ballen Heu/Stroh = 30 Pferdetage.
+- Im Wochenmodus wird rechnerischer Restbestand aus angebrochenen Säcken/Ballen
+  zum nächsten Bestelltermin mitgenommen.
+- Beispiel: 8 Sportpferde brauchen in 7 Tagen 56 Einheiten. Bei 0 Rest werden
+  2 Säcke (60 Einheiten) gekauft; 4 Einheiten werden auf den nächsten Termin
+  übertragen.
+- Besitzer- oder Rhythmuswechsel startet den Restbestand bewusst neu, damit
+  kein Bestand zwischen unterschiedlichen Plänen vermischt wird.
+- DE/EN und Supabase-Egress-Optimierung bleiben erhalten.

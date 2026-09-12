@@ -223,7 +223,7 @@ function mdrPersonalSettingKey(base, session=LOCAL_SESSION) {
   return `${base}:${slug}`;
 }
 
-// V54.0.52: persönliches, optionales Futterabo / Rhythmus-Erinnerung.
+// V54.0.54: persönliches, optionales Futterabo / Rhythmus-Erinnerung.
 // Die Einstellung wird pro Login in user_settings gespeichert und zusätzlich
 // lokal gespiegelt. Der Futterbedarf wird NICHT aus den aktiven Züchtern
 // abgeleitet, sondern ausschließlich aus dem je Login hinterlegten MDR-Namen.
@@ -250,6 +250,16 @@ function feedPlanDefaultOwnerName(session=LOCAL_SESSION) {
   return '';
 }
 
+function normalizeFeedPlanCarryUnits(value) {
+  const source=value && typeof value === 'object' ? value : {};
+  const out={};
+  for (const [key,raw] of Object.entries(source)) {
+    const n=Math.floor(Number(raw));
+    if (Number.isFinite(n) && n > 0) out[key]=n;
+  }
+  return out;
+}
+
 function normalizeFeedPlanConfig(value, session=LOCAL_SESSION) {
   const row=value && typeof value === 'object' ? value : {};
   const explicitOwner=String(row.owner_name || row.mdr_username || '').trim();
@@ -258,6 +268,9 @@ function normalizeFeedPlanConfig(value, session=LOCAL_SESSION) {
     rhythm: row.rhythm === 'monthly' ? 'monthly' : 'weekly',
     last_completed_at: row.last_completed_at || null,
     owner_name: explicitOwner || feedPlanDefaultOwnerName(session),
+    // Rechnerischer Restbestand am BEGINN des naechsten Bestellintervalls.
+    // Einheit: Portionen/Pferdetage; 30 davon entsprechen einem Sack/Ballen.
+    carry_units: normalizeFeedPlanCarryUnits(row.carry_units),
   };
 }
 
