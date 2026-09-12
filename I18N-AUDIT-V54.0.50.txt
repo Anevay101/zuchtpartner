@@ -1,0 +1,20 @@
+MDR-Datenbank V54.0.50 – DE/EN Audit
+
+Geprüft
+- 12 HTML-Seiten laden js/i18n.js?v=5450.
+- 649 eindeutige statische UI-Textfragmente wurden gegen die englische Übersetzungsschicht geprüft.
+- 48 title-/placeholder-/aria-label-Texte wurden geprüft.
+- Repräsentative dynamische Texte wurden per Node-Smoke-Test geprüft (Zähler, Fehler, Filtervorlagen, Verpaarung, ZS-Modell, Include/Exclude-Tooltips).
+- Alle JavaScript-Dateien bestehen node --check.
+- Alle lokalen Script-/CSS-/Bildreferenzen der HTML-Seiten wurden auf vorhandene Dateien geprüft.
+- EN-Parser-Smoke-Test bestanden: EN-Erkennung, Mare→Stute intern, Datum, ZZL, Performance-Test, COI und Nachkommen; Rasse/Fellfarbe bleiben im Original.
+- Kein HTML-Verweis auf den alten Cache-Buster ?v=5449 verblieben.
+
+Absichtlich nicht übersetzt / nicht verändert
+- Pferdenamen, Besitzernamen, Notizen und andere Nutzereingaben.
+- Rasse- und Fellfarbenwerte aus der jeweiligen MDR-Spielversion; DE- und EN-Rassen/Farben bleiben getrennte Originalwerte.
+- Interne deutsche Kanon-Schlüssel, die Berechnungen, Filter und bestehende gespeicherte Daten stabil halten.
+- Fachkürzel und Kennzahlen wie GP, Ext, Ext%, Int, LK, MAE, RMSE, R² und λ.
+
+Testhinweis
+- Headless-Chromium-DOM-Dumps waren in dieser Containerumgebung nicht zuverlässig verwendbar. Deshalb erfolgte die Abschlussprüfung mit statischer DOM-/Dateireferenzanalyse sowie Node-basierten Parser- und i18n-Smoke-Tests.

@@ -5842,3 +5842,11 @@ summary:focus-visible {
   .zp-compare-candidate-grid { grid-template-columns: 1fr; }
   .tp-owner-multi-field { grid-column: auto; }
 }
+
+/* V54.0.50 – DE/EN language switch */
+.mdr-language-switch{display:inline-flex;align-items:center;gap:.28rem;margin-left:auto;padding:.22rem .3rem;border:1px solid var(--border,#c9c9c9);border-radius:999px;background:var(--card,#fff);white-space:nowrap}
+.mdr-language-label{font-size:.78rem;opacity:.72;margin:0 .16rem 0 .2rem}
+.mdr-language-btn{min-width:2.35rem;padding:.28rem .5rem;border-radius:999px;border:0;background:transparent;color:inherit;font-weight:700;cursor:pointer}
+.mdr-language-btn.active{background:var(--accent,#4f6f52);color:#fff}
+.mdr-login-card>.mdr-language-switch{align-self:flex-end;margin:0 0 .6rem auto}
+@media(max-width:760px){.mdr-language-label{display:none}.mdr-language-switch{margin-left:0}.topbar .mdr-language-switch{order:3}}
