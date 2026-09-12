@@ -12,6 +12,7 @@ async function initSettings() {
   await renderPresetManager();
   await renderDashboardTileManager();
   await wireOverviewDisplaySettings();
+  await wireFeedPlanSettings();
   await renderActiveBreedersManager();
   await ensureTagConfigInitialized();
   renderTagManager();
@@ -32,6 +33,66 @@ async function wireOverviewDisplaySettings() {
       updated_at:new Date().toISOString(),
     });
   });
+}
+
+
+function settingsFeedText(de,en) {
+  return window.MDR_I18N?.language === 'en' ? en : de;
+}
+
+async function wireFeedPlanSettings() {
+  const enabled=document.getElementById('settings-feed-plan-enabled');
+  const rhythm=document.getElementById('settings-feed-plan-rhythm');
+  const status=document.getElementById('settings-feed-plan-status');
+  const openLink=document.getElementById('settings-feed-plan-open');
+  if (!enabled || !rhythm) return;
+
+  const dbKey=typeof feedPlanDbKey === 'function' ? feedPlanDbKey() : 'feed_plan_v1';
+  const row=await localGet(LOCAL_STORES.userSettings, dbKey);
+  const config=typeof normalizeFeedPlanConfig === 'function'
+    ? normalizeFeedPlanConfig(row || (typeof getFeedPlanConfig === 'function' ? getFeedPlanConfig() : null))
+    : {enabled:row?.enabled === true,rhythm:row?.rhythm === 'monthly' ? 'monthly' : 'weekly',last_completed_at:row?.last_completed_at || null};
+
+  enabled.checked=config.enabled;
+  rhythm.value=config.rhythm;
+  rhythm.disabled=!config.enabled;
+  if (openLink) openLink.hidden=!config.enabled;
+
+  const updateStatus=()=>{
+    if (!status) return;
+    if (!enabled.checked) {
+      status.textContent=settingsFeedText('Futterabo ist ausgeschaltet.','Feed plan is disabled.');
+      return;
+    }
+    const label=rhythm.value === 'monthly'
+      ? settingsFeedText('monatlich (30 Tage)','monthly (30 days)')
+      : settingsFeedText('wöchentlich (7 Tage)','weekly (7 days)');
+    status.textContent=settingsFeedText(
+      `Futterabo aktiv · Rhythmus: ${label}. Die Berechnung verwendet automatisch die aktiven Züchter.`,
+      `Feed plan active · interval: ${label}. The calculation automatically uses the active breeders.`
+    );
+  };
+
+  const save=async()=>{
+    rhythm.disabled=!enabled.checked;
+    if (openLink) openLink.hidden=!enabled.checked;
+    const current=await localGet(LOCAL_STORES.userSettings, dbKey) || {key:dbKey};
+    const next={
+      ...current,
+      key:dbKey,
+      enabled:enabled.checked,
+      rhythm:rhythm.value === 'monthly' ? 'monthly' : 'weekly',
+      last_completed_at:current.last_completed_at || config.last_completed_at || null,
+      updated_at:new Date().toISOString(),
+    };
+    await localPut(LOCAL_STORES.userSettings,next);
+    if (typeof persistFeedPlanLocal === 'function') persistFeedPlanLocal(next);
+    updateStatus();
+  };
+
+  enabled.addEventListener('change',save);
+  rhythm.addEventListener('change',save);
+  updateStatus();
 }
 
 function settingsEsc(value) {

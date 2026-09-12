@@ -223,6 +223,64 @@ function mdrPersonalSettingKey(base, session=LOCAL_SESSION) {
   return `${base}:${slug}`;
 }
 
+// V54.0.51: persönliches, optionales Futterabo / Rhythmus-Erinnerung.
+// Die Einstellung wird wie die aktiven Züchter pro Login in user_settings
+// gespeichert und zusätzlich lokal gespiegelt. MDR selbst wird dabei nicht
+// automatisiert bedient; die App berechnet nur Bedarf und Erinnerungszeitpunkt.
+const MDR_FEED_PLAN_SETTING_BASE = 'feed_plan_v1';
+const MDR_FEED_PLAN_STORAGE_PREFIX = 'mdr-feed-plan-v1';
+
+function feedPlanDbKey(session=LOCAL_SESSION) {
+  return mdrPersonalSettingKey(MDR_FEED_PLAN_SETTING_BASE, session);
+}
+
+function feedPlanStorageKey(session=LOCAL_SESSION) {
+  const mail=String(session?.user?.email || '').trim().toLowerCase();
+  const slug=(mail.split('@')[0] || 'unknown').replace(/[^a-z0-9_-]+/g,'-');
+  return `${MDR_FEED_PLAN_STORAGE_PREFIX}:${slug}`;
+}
+
+function normalizeFeedPlanConfig(value) {
+  const row=value && typeof value === 'object' ? value : {};
+  return {
+    enabled: row.enabled === true,
+    rhythm: row.rhythm === 'monthly' ? 'monthly' : 'weekly',
+    last_completed_at: row.last_completed_at || null,
+  };
+}
+
+function getFeedPlanConfig(session=LOCAL_SESSION) {
+  try {
+    const raw=localStorage.getItem(feedPlanStorageKey(session));
+    return normalizeFeedPlanConfig(raw ? JSON.parse(raw) : null);
+  } catch {
+    return normalizeFeedPlanConfig(null);
+  }
+}
+
+function feedPlanIntervalDays(config=getFeedPlanConfig()) {
+  return config?.rhythm === 'monthly' ? 30 : 7;
+}
+
+function feedPlanNextDueAt(config=getFeedPlanConfig()) {
+  if (!config?.enabled || !config?.last_completed_at) return null;
+  const base=new Date(config.last_completed_at);
+  if (Number.isNaN(base.getTime())) return null;
+  return new Date(base.getTime() + feedPlanIntervalDays(config) * 86400000);
+}
+
+function feedPlanIsDue(config=getFeedPlanConfig()) {
+  if (!config?.enabled) return false;
+  const next=feedPlanNextDueAt(config);
+  return !next || Date.now() >= next.getTime();
+}
+
+function persistFeedPlanLocal(config, session=LOCAL_SESSION) {
+  const normalized=normalizeFeedPlanConfig(config);
+  try { localStorage.setItem(feedPlanStorageKey(session), JSON.stringify(normalized)); } catch {}
+  return normalized;
+}
+
 function wireLogout() {
   if (mdrAccountUiWired) return;
   const doWire=()=>{
@@ -544,6 +602,14 @@ async function syncConfiguredHorseTagsFromDatabase() {
       localStorage.setItem(breederStorageKey, JSON.stringify(breeders.owners));
     } else if (typeof mdrPersonalOwnerNames === 'function') {
       localStorage.setItem(breederStorageKey, JSON.stringify(mdrPersonalOwnerNames()));
+    }
+
+
+    const feedRow = await localGet(LOCAL_STORES.userSettings, feedPlanDbKey());
+    if (feedRow && typeof feedRow === 'object') {
+      persistFeedPlanLocal(feedRow);
+    } else {
+      persistFeedPlanLocal({ enabled:false, rhythm:'weekly', last_completed_at:null });
     }
   } catch (error) {
     console.warn('Einstellungen konnten beim Start nicht vollständig synchronisiert werden:', error);
@@ -1771,6 +1837,25 @@ async function renderSharedNav() {
   const nav = document.querySelector('.topbar nav');
   if (!nav || nav.dataset.localNavReady === '1') return;
   nav.dataset.localNavReady = '1';
+
+  // V54.0.51: Der optionale Futterabo-Bereich erscheint nur, wenn er in
+  // den persönlichen Einstellungen aktiviert ist. Dadurch bleibt das Feature
+  // vollständig ein-/ausschaltbar, ohne alle statischen Navigationen zu duplizieren.
+  const feedConfig = getFeedPlanConfig();
+  if (feedConfig.enabled && !nav.querySelector('[data-feed-plan-nav]')) {
+    const link=document.createElement('a');
+    link.className='btn secondary';
+    link.href='futterabo.html';
+    link.dataset.feedPlanNav='1';
+    link.textContent='🌾 Futterabo';
+    if (feedPlanIsDue(feedConfig)) {
+      link.classList.add('feed-plan-nav-due');
+      link.title='Futterbestellung fällig';
+    }
+    const settingsLink=[...nav.querySelectorAll('a[href]')].find(a=>String(a.getAttribute('href')||'').split(/[?#]/)[0].endsWith('einstellungen.html'));
+    if (settingsLink) nav.insertBefore(link,settingsLink);
+    else nav.appendChild(link);
+  }
 
   // V54.0.47: Die Hauptnavigation steht bereits statisch identisch in allen
   // App-Seiten. Hier wird nur noch der aktive Bereich markiert. Dadurch

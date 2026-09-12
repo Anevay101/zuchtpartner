@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <title>Futterabo – MDR Pferdedatenbank</title>
+  <link rel="stylesheet" href="css/style.css?v=5451" />
+</head>
+<body>
+<header class="topbar">
+  <h1>🌾 Futterabo</h1>
+  <nav class="app-main-nav">
+      <a class="btn secondary" href="index.html">🐴 Datenbank</a>
+      <a class="btn app-nav-add-horse" href="horse.html">➕ Neues Pferd</a>
+      <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
+      <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
+      <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
+      <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
+      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
+      <a class="btn secondary" href="guide.html">📖 Guide</a>
+      <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
+    </nav>
+</header>
+
+<main class="container feed-plan-page">
+  <div id="feed-plan-disabled" class="notice" hidden>
+    <strong>Futterabo ist ausgeschaltet.</strong> Aktiviere es unter <a href="einstellungen.html">Einstellungen</a>, um Bedarf und Rhythmus-Erinnerung zu verwenden.
+  </div>
+
+  <div id="feed-plan-content" hidden>
+    <section class="card feed-plan-hero">
+      <div>
+        <h2>Futterbedarf &amp; Rhythmus-Erinnerung</h2>
+        <p class="small muted">Die Berechnung verwendet automatisch nur Pferde der aktiven Züchter. Es wird nichts automatisch auf Morning Dust Ranch bestellt.</p>
+      </div>
+      <div class="actions"><button id="feed-plan-complete" type="button">✓ Bestellung als erledigt markieren</button></div>
+    </section>
+
+    <div id="feed-plan-reminder" class="notice feed-plan-reminder"></div>
+    <div id="feed-plan-summary" class="settings-overview-grid feed-plan-summary"></div>
+
+    <section class="card">
+      <h2>Empfohlene Bestellmenge</h2>
+      <p class="small muted">Kraftfutter: 1 Einheit je Pferd und Tag. Heu und Stroh: 1 Ballen = 30 Pferdetage; Ballenmengen werden immer aufgerundet.</p>
+      <div class="table-wrap">
+        <table class="feed-plan-table">
+          <thead><tr><th>Futterart</th><th>Pferde</th><th>Bestellmenge</th><th>Preis je Einheit</th><th>Kosten</th></tr></thead>
+          <tbody id="feed-plan-body"></tbody>
+          <tfoot><tr><th colspan="4">Gesamtkosten</th><th id="feed-plan-total">–</th></tr></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Zuordnung der Pferde</h2>
+      <p class="small muted">Hier kannst du prüfen, welche Pferde welcher Futterregel zugeordnet wurden.</p>
+      <div id="feed-plan-assignments"></div>
+    </section>
+
+    <section class="card">
+      <h2>Verwendete Futterregeln</h2>
+      <div id="feed-plan-rules" class="feed-plan-rules"></div>
+    </section>
+  </div>
+
+  <p id="feed-plan-error" class="error"></p>
+</main>
+
+<script src="js/i18n.js?v=5451"></script>
+<script src="js/supabase-loader.js?v=5451"></script>
+<script src="js/supabase-config.js?v=5451"></script>
+<script src="js/database-local.js?v=5451"></script>
+<script src="js/local-app.js?v=5451"></script>
+<script src="js/learning-file.js?v=5451"></script>
+<script src="js/parser.js?v=5451"></script>
+<script src="js/planer-common.js?v=5451"></script>
+<script src="js/futterabo.js?v=5451"></script>
+</body>
+</html>

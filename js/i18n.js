@@ -1,4 +1,4 @@
-// MDR V54.0.50 – bilingual UI layer (DE/EN)
+// MDR V54.0.51 – bilingual UI layer (DE/EN)
 // Internal database/parser keys intentionally remain unchanged.
 (() => {
   'use strict';
@@ -27,6 +27,7 @@
     '📖 Guide':'📖 Guide',
     '📖 MDR-Guide':'📖 MDR guide',
     '⚙️ Einstellungen':'⚙️ Settings',
+    '🌾 Futterabo':'🌾 Feed plan',
     'Anmelden':'Sign in',
     'Abmelden':'Sign out',
     'Zurück':'Back',
@@ -38,6 +39,7 @@
     'Pferd ansehen – MDR Pferdedatenbank – Lokal':'View horse – MDR Horse Database – Local',
     'Dashboard – MDR Pferdedatenbank':'Dashboard – MDR Horse Database',
     'Einstellungen – MDR Pferdedatenbank':'Settings – MDR Horse Database',
+    'Futterabo – MDR Pferdedatenbank':'Feed plan – MDR Horse Database',
     'Anmelden – MDR Pferdedatenbank':'Sign in – MDR Horse Database',
     'Guide – MDR Pferdedatenbank':'Guide – MDR Horse Database',
     'Zuchtplaner – MDR Lokal':'Breeding planner – MDR Local',
@@ -79,6 +81,26 @@
     'Mit ZZL':'With licence', 'Ohne ZZL':'Without licence',
     'Decktaxe':'Stud fee', 'Leer = kostenlos':'Blank = free', 'Leer bedeutet kostenlos.':'Blank means free.',
     'kostenlos':'free', 'leer = kostenlos':'blank = free', 'HLP/SLP':'Performance test', 'ICO (%)':'COI (%)',
+
+    // Feed plan / Futterabo
+    'Futterabo':'Feed plan', 'Futterabo aktivieren':'Enable feed plan', '🌾 Futterabo öffnen':'🌾 Open feed plan',
+    'Bestellrhythmus':'Order interval', 'Wöchentlich (7 Tage)':'Weekly (7 days)', 'Monatlich (30 Tage)':'Monthly (30 days)',
+    'Futterbedarf & Rhythmus-Erinnerung':'Feed requirements & schedule reminder',
+    '✓ Bestellung als erledigt markieren':'✓ Mark order as completed',
+    'Empfohlene Bestellmenge':'Recommended order quantity', 'Futterart':'Feed type', 'Bestellmenge':'Order quantity',
+    'Preis je Einheit':'Price per unit', 'Kosten':'Cost', 'Gesamtkosten':'Total cost',
+    'Zuordnung der Pferde':'Horse assignments', 'Verwendete Futterregeln':'Feed rules used',
+    'Aktive Züchter':'Active breeders', 'Berücksichtigte Pferde':'Included horses', 'Nächste Erinnerung':'Next reminder',
+    'Fohlen Standard':'Foal Standard', 'Aufzucht Futter':'Youngstock', 'Zuchtstuten Standard':'Broodmare Standard',
+    'Deckhengste Standard':'Stallion Standard', 'Kombifutter Turnier':'Combo Competition', 'Sportpferde Gold':'Performance Gold',
+    'Heu':'Hay', 'Stroh':'Straw', 'Ballen':'bales', 'Einheiten':'units', 'Heute fällig':'Due now',
+    'Futterbestellung fällig':'Feed order due', 'Futterabo ist ausgeschaltet.':'Feed plan is disabled.',
+    'Optionale Rhythmus-Erinnerung für den Futterbedarf der aktiven Züchter. Die MDR-Seite wird nicht automatisch bedient; die Datenbank berechnet nur die benötigten Mengen und erinnert an die nächste Bestellung.':'Optional schedule reminder for the feed requirements of active breeders. The MDR site is not controlled automatically; the database only calculates the required quantities and reminds you about the next order.',
+    'Berücksichtigt automatisch nur Pferde der in den Einstellungen aktiven Züchter.':'Automatically includes only horses belonging to breeders selected as active in Settings.',
+    'Die Berechnung verwendet automatisch nur Pferde der aktiven Züchter. Es wird nichts automatisch auf Morning Dust Ranch bestellt.':'The calculation automatically uses only horses belonging to active breeders. Nothing is ordered automatically on Morning Dust Ranch.',
+    'Kraftfutter: 1 Einheit je Pferd und Tag. Heu und Stroh: 1 Ballen = 30 Pferdetage; Ballenmengen werden immer aufgerundet.':'Concentrated feed: 1 unit per horse per day. Hay and straw: 1 bale = 30 horse-days; bale quantities are always rounded up.',
+    'Hier kannst du prüfen, welche Pferde welcher Futterregel zugeordnet wurden.':'Here you can check which horses were assigned to which feed rule.',
+    'Aktiviere es unter Einstellungen, um Bedarf und Rhythmus-Erinnerung zu verwenden.':'Enable it under Settings to use requirements and schedule reminders.',
 
     // Filters / database
     '🔎 Filter ·':'🔎 Filters ·', 'Suche':'Search', 'Suche…':'Search…',

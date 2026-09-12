@@ -1,0 +1,52 @@
+MDR-Datenbank V54.0.51 – Futterabo / Feed plan
+
+AKTIVIERUNG
+- Einstellungen -> Futterabo -> aktivieren.
+- Rhythmus: wöchentlich (7 Tage) oder monatlich (30 Tage).
+- Danach erscheint der Navigationspunkt "Futterabo / Feed plan".
+- Das Feature bestellt NICHT automatisch auf Morning Dust Ranch.
+
+BERÜCKSICHTIGTER BESTAND
+- Nur Pferde der in Einstellungen ausgewählten aktiven Züchter.
+- Lerndatei-/Archivbestand wird nicht als aktueller Bestand mitgerechnet.
+
+FUTTER-PRIORITÄT
+1. Hengst + bestätigter Cupstern (>=50 Gesamtstarts UND >=15 Siege in mindestens einer Disziplin)
+   -> Kombifutter Turnier / Combo Competition
+2. Stute + ZZL
+   -> Zuchtstuten Standard / Broodmare Standard
+3. Hengst + ZZL
+   -> Deckhengste Standard / Stallion Standard
+4. unter 2 Spieljahren
+   -> Fohlen Standard / Foal Standard
+5. 2 bis einschließlich 4 Spieljahre
+   -> Aufzucht Futter / Youngstock
+6. über 4 Spieljahre
+   -> Sportpferde Gold / Performance Gold
+
+BEDARF
+- Kraftfutter: 1 Einheit pro Pferd und Tag.
+- Heu: 1 Ballen = 30 Pferdetage.
+- Stroh: 1 Ballen = 30 Pferdetage.
+- Ballenmengen werden auf ganze Ballen aufgerundet.
+
+PREISE
+- Fohlen Standard: 60 DD
+- Aufzucht Futter: 125 DD
+- Zuchtstuten Standard: 140 DD
+- Deckhengste Standard: 90 DD
+- Kombifutter Turnier: 330 DD
+- Sportpferde Gold: 215 DD
+- Heu: 60 DD
+- Stroh: 30 DD
+
+ERINNERUNG
+- Nach erstmaligem Aktivieren ist die Bestellung sofort fällig.
+- "Bestellung als erledigt markieren" startet das Intervall neu.
+- Wöchentlich: nächste Erinnerung nach 7 Tagen.
+- Monatlich: nächste Erinnerung nach 30 Tagen.
+
+SUPABASE
+- Keine neue Tabelle, kein Trigger und keine SQL-Migration erforderlich.
+- Persönliche Futterabo-Einstellungen werden im vorhandenen user_settings-Store gespeichert.
+- Die Egress-Optimierung aus V54.0.49 bleibt unverändert aktiv.

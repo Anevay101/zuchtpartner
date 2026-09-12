@@ -1,0 +1,12 @@
+MDR-Datenbank V54.0.51
+
+- Optionales Futterabo / Feed plan eingeführt.
+- Ein-/Ausschalter und Rhythmus (wöchentlich 7 Tage / monatlich 30 Tage) in den Einstellungen.
+- Berechnung verwendet automatisch nur Pferde der aktiven Züchter.
+- Futterpriorität: bestätigter Cupstern-Hengst -> Kombifutter Turnier; Stute mit ZZL -> Zuchtstuten Standard; Hengst mit ZZL -> Deckhengste Standard; unter 2 -> Fohlen Standard; 2 bis einschließlich 4 -> Aufzucht Futter; über 4 -> Sportpferde Gold.
+- Bestätigter Cupstern für die Futterregel: mindestens 50 Gesamtstarts und mindestens 15 Siege in wenigstens einer Disziplin.
+- Heu und Stroh: 1 Ballen = 30 Pferdetage, Bestellmenge wird auf ganze Ballen aufgerundet.
+- Rhythmus-Erinnerung mit "Bestellung als erledigt markieren"; erste Bestellung ist nach Aktivierung sofort fällig.
+- Vollständig DE/EN: Feed plan, Foal Standard, Youngstock, Broodmare Standard, Stallion Standard, Combo Competition, Performance Gold, Hay, Straw.
+- Keine neue Supabase-Tabelle oder SQL-Migration nötig; Einstellungen werden im bestehenden user_settings-Store pro Login gespeichert.
+- Egress-Optimierung aus V54.0.49 und DE/EN-Schicht aus V54.0.50 bleiben erhalten.
