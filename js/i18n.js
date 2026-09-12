@@ -1,4 +1,4 @@
-// MDR V54.0.55 – bilingual UI layer (DE/EN)
+// MDR V54.0.57 – bilingual UI layer (DE/EN)
 // Internal database/parser keys intentionally remain unchanged.
 (() => {
   'use strict';
@@ -144,6 +144,11 @@
     'potenzielle Partner':'potential partners', 'davon mit ZZL':'licensed', 'direkt konfliktfrei':'directly conflict-free', 'mit Konflikthinweis':'with conflict warning',
     'Beste konfliktfreie Optionen':'Best conflict-free options', 'Verwandtschaft':'Relatedness',
     'Aussagesicherheit':'Confidence',
+    'Linienvielfalt':'Line diversity', 'Qualität':'Quality', 'Zuchtpartner':'Breeding partners', 'Pedigree-Sicherheit':'Pedigree confidence',
+    'Angezeigt werden nur Ahnen/Linien, die in deinem eigenen rassespezifischen Bestand bereits vorkommen. Eltern werden am stärksten, danach Großeltern sowie 3. und 4. Generation gewichtet.':'Only ancestors/lines already represented in your own breed-specific stock are shown. Parents are weighted most strongly, followed by grandparents and the 3rd and 4th generations.',
+    'Rassespezifischer Vergleich mit deinem eigenen Bestand. Die Ampel basiert auf dem Perzentil des Kandidaten.':'Breed-specific comparison with your own stock. The traffic light is based on the candidate percentile.',
+    'Ampel':'Traffic light',
+    'Gezählt werden nur potenzielle Partner derselben Rasse und des passenden Geschlechts, bei denen im erfassten Pedigree keine gemeinsame Linie erkannt wird.':'Only potential partners of the same breed and appropriate sex are counted when no shared line is detected in the recorded pedigree.',
 
     // Filters / database
     '🔎 Filter ·':'🔎 Filters ·', 'Suche':'Search', 'Suche…':'Search…',
@@ -962,8 +967,15 @@
     });
     const topbar = document.querySelector('.topbar');
     const loginCard = document.querySelector('.mdr-login-card');
-    if (topbar) topbar.appendChild(wrap);
-    else if (loginCard) loginCard.prepend(wrap);
+    if (topbar) {
+      let tools = topbar.querySelector('.mdr-topbar-tools');
+      if (!tools) {
+        tools = document.createElement('div');
+        tools.className = 'mdr-topbar-tools';
+        topbar.appendChild(tools);
+      }
+      tools.appendChild(wrap);
+    } else if (loginCard) loginCard.prepend(wrap);
     else document.body.prepend(wrap);
   }
 

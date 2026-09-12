@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Ankaufsberatung – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5455" />
+  <link rel="stylesheet" href="css/style.css?v=5457" />
 </head>
 <body class="purchase-advisor-page">
   <header class="topbar">
@@ -17,10 +17,10 @@
       <a class="btn app-nav-add-horse" href="horse.html">➕ Neues Pferd</a>
       <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
       <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
-      <a class="btn secondary" href="ankaufsberatung.html">🛒 Ankaufsberatung</a>
       <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
       <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
       <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
+      <a class="btn secondary" href="ankaufsberatung.html">🛒 Ankaufsberatung</a>
       <a class="btn secondary" href="guide.html">📖 Guide</a>
       <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
     </nav>
@@ -70,42 +70,32 @@
         </div>
       </div>
 
-      <div class="purchase-score-grid">
-        <article class="card purchase-verdict-card">
-          <div class="purchase-score-label">Ankaufsurteil</div>
-          <div id="purchase-verdict" class="purchase-verdict">–</div>
-          <div id="purchase-score" class="purchase-score">–</div>
-          <div id="purchase-confidence" class="small muted"></div>
-        </article>
-        <article class="card">
-          <div class="purchase-score-label">Linienerweiterung eigener Bestand</div>
-          <div id="purchase-line-score" class="purchase-score-small">–</div>
-          <p id="purchase-line-summary" class="small"></p>
-        </article>
-        <article class="card">
-          <div class="purchase-score-label">Qualität innerhalb der Rasse</div>
-          <div id="purchase-quality-score" class="purchase-score-small">–</div>
-          <p id="purchase-quality-summary" class="small"></p>
-        </article>
-        <article class="card">
-          <div class="purchase-score-label">Nutzbare eigene Zuchtpartner</div>
-          <div id="purchase-partner-score" class="purchase-score-small">–</div>
-          <p id="purchase-partner-summary" class="small"></p>
-        </article>
-      </div>
-
-      <section class="card">
-        <h2>Warum dieses Urteil?</h2>
-        <div id="purchase-reasons" class="purchase-reason-grid"></div>
+      <section class="card purchase-quick-card">
+        <div class="purchase-quick-verdict">
+          <span id="purchase-verdict-light" class="purchase-light purchase-light-neutral">●</span>
+          <div>
+            <div class="purchase-score-label">Ankaufsurteil</div>
+            <div id="purchase-verdict" class="purchase-verdict">–</div>
+            <div id="purchase-confidence" class="small muted"></div>
+          </div>
+        </div>
+        <div class="purchase-traffic-grid">
+          <div class="purchase-traffic-item"><span id="purchase-line-light" class="purchase-light purchase-light-neutral">●</span><div><strong>Linienvielfalt</strong><span id="purchase-line-summary">–</span></div></div>
+          <div class="purchase-traffic-item"><span id="purchase-quality-light" class="purchase-light purchase-light-neutral">●</span><div><strong>Qualität</strong><span id="purchase-quality-summary">–</span></div></div>
+          <div class="purchase-traffic-item"><span id="purchase-partner-light" class="purchase-light purchase-light-neutral">●</span><div><strong>Zuchtpartner</strong><span id="purchase-partner-summary">–</span></div></div>
+          <div class="purchase-traffic-item"><span id="purchase-pedigree-light" class="purchase-light purchase-light-neutral">●</span><div><strong>Pedigree-Sicherheit</strong><span id="purchase-pedigree-summary">–</span></div></div>
+        </div>
+        <p id="purchase-short-verdict" class="purchase-short-verdict"></p>
+        <p id="purchase-overall-reference" class="small muted"></p>
       </section>
 
       <section class="card">
         <h2>Linien- &amp; Pedigreevergleich</h2>
-        <p class="small muted">Exakte Ahnen-Namen werden gewichtet: Eltern sehr stark, Großeltern stark, 3. und 4. Generation zunehmend schwächer. „Eigener Bestand“ meint ausschließlich Pferde deines MDR-Namens; „Gesamtbestand“ alle nicht als Lerndatei markierten Pferde derselben Rasse.</p>
-        <div id="purchase-parent-lines" class="purchase-parent-lines"></div>
-        <div class="table-wrap">
+        <p class="small muted">Angezeigt werden nur Ahnen/Linien, die in deinem eigenen rassespezifischen Bestand bereits vorkommen. Eltern werden am stärksten, danach Großeltern sowie 3. und 4. Generation gewichtet.</p>
+        <div id="purchase-no-overlap" class="notice small" hidden></div>
+        <div id="purchase-lines-wrap" class="table-wrap">
           <table>
-            <thead><tr><th>Linie / Ahne</th><th>Generation</th><th>Eigener Bestand</th><th>Gesamtbestand</th><th>Einordnung</th></tr></thead>
+            <thead><tr><th>Linie / Ahne</th><th>Generation</th><th>Eigener Bestand</th></tr></thead>
             <tbody id="purchase-lines-body"></tbody>
           </table>
         </div>
@@ -114,10 +104,10 @@
 
       <section class="card">
         <h2>Qualität im Verhältnis zum Bestand</h2>
-        <p class="small muted">Verglichen wird nur innerhalb derselben Rasse. Das Perzentil sagt, wie viel Prozent des Vergleichsbestands der Kandidat beim jeweiligen Wert erreicht oder übertrifft. Bei Ext und Int ist ein niedrigerer Wert besser.</p>
+        <p class="small muted">Rassespezifischer Vergleich mit deinem eigenen Bestand. Die Ampel basiert auf dem Perzentil des Kandidaten.</p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Merkmal</th><th>Kandidat</th><th>Median eigener Bestand</th><th>Perzentil eigener Bestand</th><th>Perzentil Gesamtbestand</th></tr></thead>
+            <thead><tr><th>Merkmal</th><th>Kandidat</th><th>Perzentil eigener Bestand</th><th>Ampel</th></tr></thead>
             <tbody id="purchase-quality-body"></tbody>
           </table>
         </div>
@@ -126,29 +116,23 @@
 
       <section class="card">
         <h2>Zuchtpartner im eigenen Bestand</h2>
-        <p class="small muted">Geprüft werden Pferde derselben Rasse und des passenden Geschlechts aus deinem eigenen Bestand. Für „direkt nutzbar“ wird eine vorhandene Zuchtzulassung verlangt. Gemeinsame sichtbare Ahnen, gemeinsames Erbkrankheitsrisiko und Overo × Overo werden als Konflikt gewertet.</p>
-        <div id="purchase-partner-stats" class="purchase-stat-strip"></div>
-        <div id="purchase-best-partners"></div>
-      </section>
-
-      <section class="card">
-        <h2>Einordnung im Gesamtbestand</h2>
-        <div id="purchase-global-summary"></div>
+        <p class="small muted">Gezählt werden nur potenzielle Partner derselben Rasse und des passenden Geschlechts, bei denen im erfassten Pedigree keine gemeinsame Linie erkannt wird.</p>
+        <div id="purchase-partner-stats" class="purchase-stat-strip purchase-partner-compact"></div>
       </section>
     </section>
 
     <p id="purchase-error" class="error"></p>
   </main>
 
-  <script src="js/i18n.js?v=5455"></script>
-  <script src="js/supabase-loader.js?v=5455"></script>
-  <script src="js/supabase-config.js?v=5455"></script>
-  <script src="js/database-local.js?v=5455"></script>
-  <script src="js/local-app.js?v=5455"></script>
-  <script src="js/learning-file.js?v=5455"></script>
-  <script src="js/parser.js?v=5455"></script>
-  <script src="js/planer-common.js?v=5455"></script>
-  <script src="js/breeding-original.js?v=5455"></script>
-  <script src="js/ankaufsberatung.js?v=5455"></script>
+  <script src="js/i18n.js?v=5457"></script>
+  <script src="js/supabase-loader.js?v=5457"></script>
+  <script src="js/supabase-config.js?v=5457"></script>
+  <script src="js/database-local.js?v=5457"></script>
+  <script src="js/local-app.js?v=5457"></script>
+  <script src="js/learning-file.js?v=5457"></script>
+  <script src="js/parser.js?v=5457"></script>
+  <script src="js/planer-common.js?v=5457"></script>
+  <script src="js/breeding-original.js?v=5457"></script>
+  <script src="js/ankaufsberatung.js?v=5457"></script>
 </body>
 </html>

@@ -5873,39 +5873,72 @@ summary:focus-visible {
 .feed-plan-nav-due{box-shadow:0 0 0 2px color-mix(in srgb,#d89a16 60%,transparent)}
 @media(max-width:720px){.feed-horse-list{grid-template-columns:1fr}.feed-horse-list span{margin-bottom:.35rem}}
 
-/* V54.0.55 – Ankaufsberatung */
-.purchase-advisor-main { display: grid; gap: 1rem; }
-.purchase-advisor-main > section { min-width: 0; }
-.purchase-advisor-actions { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; margin-top: .75rem; }
+/* V54.0.57 – kompakte Ankaufsberatung mit Ampelsystem */
+.purchase-advisor-main { display:grid; gap:1rem; }
+.purchase-advisor-main > section { min-width:0; }
+.purchase-advisor-actions { display:flex; flex-wrap:wrap; gap:.65rem; align-items:center; margin-top:.75rem; }
 .purchase-existing-action { display:flex; align-items:flex-end; }
-.purchase-advisor-heading-row { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem; }
+.purchase-advisor-heading-row { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:.75rem; }
 .purchase-advisor-heading-row h2 { margin-bottom:.2rem; }
-.purchase-score-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; margin-bottom:1rem; }
-.purchase-score-grid .card { margin:0; }
-.purchase-score-label { font-size:.9rem; color:var(--muted); font-weight:600; }
-.purchase-verdict { font-size:1.35rem; font-weight:700; margin:.35rem 0; }
-.purchase-score { font-size:2rem; font-weight:700; color:var(--accent); }
-.purchase-score-small { font-size:1.65rem; font-weight:700; color:var(--accent); margin:.35rem 0; }
-.purchase-reason-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
-.purchase-reason-grid h3 { margin-top:0; }
-.purchase-reason-grid ul { margin:.35rem 0 0; padding-left:1.25rem; }
-.purchase-parent-lines { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; margin:.75rem 0 1rem; }
-.purchase-parent-card { display:grid; gap:.2rem; padding:.75rem; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
-.purchase-parent-card span { color:var(--accent-dark); font-weight:600; }
-.purchase-parent-card small { color:var(--muted); }
-.purchase-stat-strip, .purchase-global-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; margin:.75rem 0 1rem; }
-.purchase-stat-strip > div, .purchase-global-grid > div { padding:.75rem; border:1px solid var(--border); border-radius:var(--radius); display:grid; gap:.15rem; background:var(--surface); }
-.purchase-stat-strip strong, .purchase-global-grid strong { font-size:1.35rem; color:var(--accent); }
-.purchase-stat-strip span, .purchase-global-grid span { font-size:.85rem; color:var(--muted); }
-.purchase-partner-list { display:grid; gap:.5rem; }
-.purchase-partner-row { display:flex; justify-content:space-between; gap:1rem; padding:.65rem .75rem; border:1px solid var(--border); border-radius:var(--radius); text-decoration:none; background:var(--surface); }
-.purchase-partner-row span { color:var(--muted); font-weight:400; }
 .purchase-advisor-page #purchase-raw-text { width:100%; min-height:15rem; }
-@media (max-width: 1100px) {
-  .purchase-score-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .purchase-stat-strip, .purchase-global-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.purchase-quick-card { display:grid; gap:.85rem; }
+.purchase-quick-verdict { display:flex; align-items:center; gap:.75rem; }
+.purchase-score-label { font-size:.88rem; color:var(--muted); font-weight:600; }
+.purchase-verdict { font-size:1.3rem; font-weight:750; margin:.15rem 0; }
+.purchase-light { font-size:1.45rem; line-height:1; flex:0 0 auto; }
+.purchase-traffic-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.55rem; }
+.purchase-traffic-item { display:flex; gap:.55rem; align-items:flex-start; padding:.62rem .7rem; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface-softer); }
+.purchase-traffic-item > div { display:grid; gap:.08rem; min-width:0; }
+.purchase-traffic-item strong { font-size:.9rem; }
+.purchase-traffic-item span:not(.purchase-light) { font-size:.82rem; color:var(--muted); line-height:1.25; }
+.purchase-short-verdict { margin:.05rem 0 0; font-weight:600; line-height:1.45; }
+.purchase-stat-strip { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.65rem; margin:.65rem 0 0; }
+.purchase-stat-strip > div { padding:.7rem .8rem; border:1px solid var(--border); border-radius:var(--radius); display:grid; gap:.12rem; background:var(--surface); }
+.purchase-stat-strip strong { font-size:1.4rem; color:var(--accent); }
+.purchase-stat-strip span { font-size:.85rem; color:var(--muted); }
+.purchase-table-light { text-align:center; font-size:1.05rem; }
+@media (max-width:900px) { .purchase-traffic-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:720px) {
+  .purchase-traffic-grid, .purchase-stat-strip { grid-template-columns:1fr; }
+  .purchase-advisor-heading-row { flex-direction:column; }
 }
-@media (max-width: 720px) {
-  .purchase-score-grid, .purchase-reason-grid, .purchase-parent-lines, .purchase-stat-strip, .purchase-global-grid { grid-template-columns:1fr; }
-  .purchase-advisor-heading-row, .purchase-partner-row { flex-direction:column; }
+
+/* ============================================================
+   V54.0.56 – kompakter Desktop-Header
+   Login/Logout und Sprachumschalter bilden rechts eine gemeinsame
+   Werkzeuggruppe. Dadurch entsteht keine zweite leere Header-Zeile.
+   ============================================================ */
+.mdr-topbar-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .55rem;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.mdr-topbar-tools .mdr-account-controls {
+  margin-left: 0;
+  flex-basis: auto;
+}
+.mdr-topbar-tools .mdr-language-switch {
+  margin-left: 0;
+}
+@media (min-width: 761px) {
+  .topbar {
+    grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
+  }
+  .topbar > .mdr-topbar-tools {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    align-self: center;
+  }
+}
+@media (max-width: 760px) {
+  .mdr-topbar-tools {
+    flex-basis: 100%;
+    width: 100%;
+    justify-content: flex-end;
+    order: 3;
+  }
 }

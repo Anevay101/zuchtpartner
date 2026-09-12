@@ -1,0 +1,9 @@
+MDR Pferdedatenbank V54.0.57 – kompakte Ankaufsberatung
+
+- Ampel-Schnellübersicht für Gesamturteil, Linienvielfalt, Qualität, Zuchtpartner und Pedigree-Sicherheit.
+- Linien-/Pedigreevergleich zeigt nur Linien, die im eigenen rassespezifischen Bestand bereits vorkommen.
+- Qualitätsvergleich kompakter: Kandidatenwert, Perzentil im eigenen Bestand, Ampel.
+- Zuchtpartner kompakter: nur potenzielle inzuchtfreie Partner und davon Partner mit ZZL; keine Partnerlisten oder Konfliktlisten.
+- Gesamturteil und Kurzfazit deutlich verdichtet.
+- Keine zusätzlichen Supabase-Abfragen: Analyse nutzt weiterhin den bereits lokal synchronisierten Pferdebestand.
+- DE/EN aktualisiert.

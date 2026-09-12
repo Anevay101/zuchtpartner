@@ -1,0 +1,9 @@
+MDR Pferdedatenbank V54.0.56
+
+Kleine Layout-Anpassung
+
+- Loginname und „Abmelden“ stehen im Desktop-Header jetzt rechts direkt vor dem DE/EN-Sprachschalter.
+- Dadurch entfällt die bisherige zweite, weitgehend leere Header-Zeile.
+- „🛒 Ankaufsberatung“ wurde in der Hauptnavigation direkt hinter „🧹 Aussortierhilfe“ verschoben.
+- Mobile Darstellung bleibt responsiv; Login/Logout und Sprache bilden dort gemeinsam eine rechte Werkzeugzeile.
+- Keine Änderung an Datenmodell, Supabase-Synchronisation, Futterabo oder Ankaufslogik.

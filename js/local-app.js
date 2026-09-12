@@ -312,10 +312,18 @@ function wireLogout() {
     if (mdrAccountUiWired) return;
     const topbar=document.querySelector('.topbar');
     if (!topbar) return;
+    let tools=topbar.querySelector('.mdr-topbar-tools');
+    if (!tools) {
+      tools=document.createElement('div');
+      tools.className='mdr-topbar-tools';
+      topbar.appendChild(tools);
+    }
     const wrap=document.createElement('div');
     wrap.className='mdr-account-controls';
     wrap.innerHTML=`<span class="mdr-account-name">${mdrDisplayNameFromSession()}</span><button type="button" class="btn secondary mdr-logout-btn">Abmelden</button>`;
-    topbar.appendChild(wrap);
+    const languageSwitch=tools.querySelector('.mdr-language-switch');
+    if (languageSwitch) tools.insertBefore(wrap, languageSwitch);
+    else tools.appendChild(wrap);
     wrap.querySelector('.mdr-logout-btn')?.addEventListener('click',async()=>{
       try {
         if (typeof mdrClearCachedCloudData === 'function') await mdrClearCachedCloudData();

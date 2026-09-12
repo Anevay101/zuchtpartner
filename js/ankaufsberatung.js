@@ -1,4 +1,4 @@
-// MDR V54.0.55 – Ankaufsberatung
+// MDR V54.0.57 – kompakte Ankaufsberatung mit Ampelsystem
 // Kaufkandidaten werden nur im Browser analysiert. Es wird kein Datensatz
 // geschrieben, bis der Nutzer ausdrücklich „Gekauft – in Datenbank übernehmen“
 // wählt und das Pferd anschließend in horse.html speichert.
@@ -216,28 +216,23 @@
 
   function computePartners(candidate, ownBreed, totalReal) {
     const role = genderRole(candidate);
-    if (!role) return { role:null, potential:[], licensed:[], safe:[], conflicts:[], score:null };
+    if (!role) return { role:null, potential:[], inbreedingFree:[], licensedInbreedingFree:[], score:null };
     const wanted = role === 'female' ? 'male' : 'female';
     const potential = ownBreed.filter(h => genderRole(h) === wanted && !sameCandidate(candidate,h));
-    const licensed = potential.filter(h => h.breeding_allowed === true);
-    const evaluated = licensed.map(horse => {
+    const evaluated = potential.map(horse => {
       const relations = typeof findRelations === 'function' ? findRelations(candidate,horse) : [];
-      const diseaseRisks = typeof sharedDiseaseRisks === 'function' ? sharedDiseaseRisks(candidate,horse) : [];
-      const overo = typeof hasOveroGene === 'function' ? hasOveroGene(candidate) && hasOveroGene(horse) : false;
       const relatedness = typeof estimateRelatedness === 'function' ? estimateRelatedness(candidate,horse,totalReal,4) : null;
-      return { horse, relations, diseaseRisks, overo, relatedness, safe:relations.length===0 && diseaseRisks.length===0 && !overo };
+      return { horse, relations, relatedness, inbreedingFree: relations.length === 0 };
     });
-    const safe = evaluated.filter(x=>x.safe).sort((a,b)=>
-      Number(a.relatedness ?? 0)-Number(b.relatedness ?? 0) || totalWins(b.horse)-totalWins(a.horse) || String(a.horse.name||'').localeCompare(String(b.horse.name||''),'de')
-    );
-    const conflicts = evaluated.filter(x=>!x.safe);
+    const inbreedingFree = evaluated.filter(x=>x.inbreedingFree);
+    const licensedInbreedingFree = inbreedingFree.filter(x=>x.horse?.breeding_allowed === true);
     let score = 0;
-    if (licensed.length) {
-      const ratio = safe.length / licensed.length;
-      const absolute = Math.min(1, safe.length / 10);
-      score = Math.round((ratio * 0.65 + absolute * 0.35) * 100);
-    } else if (potential.length) score = 15;
-    return { role, potential, licensed, safe, conflicts, score };
+    if (potential.length) {
+      const freeRatio = inbreedingFree.length / potential.length;
+      const licensedFactor = Math.min(1, licensedInbreedingFree.length / 8);
+      score = Math.round((freeRatio * 0.55 + licensedFactor * 0.45) * 100);
+    }
+    return { role, potential, inbreedingFree, licensedInbreedingFree, score };
   }
 
   function pedigreeCompleteness(candidate) {
@@ -302,59 +297,80 @@
     return ({1:t('Eltern','Parents'),2:t('Großeltern','Grandparents'),3:t('3. Generation','3rd generation'),4:t('4. Generation','4th generation')})[generation] || String(generation);
   }
 
-  function renderReasons(candidate, analysis) {
-    const positives=[];
-    const cautions=[];
-    const father=analysis.lines.rows.find(r=>r.role==='Vater');
-    const mother=analysis.lines.rows.find(r=>r.role==='Mutter');
-    if (father && father.ownCount===0) positives.push(t(`Vaterlinie „${father.name}“ ist in deinem Bestand neu.`,`Sire line “${father.name}” is new to your stock.`));
-    if (mother && mother.ownCount===0) positives.push(t(`Mutterlinie „${mother.name}“ ist in deinem Bestand neu.`,`Dam line “${mother.name}” is new to your stock.`));
-    if (analysis.lines.ownNovelty >= 80) positives.push(t('Hohe Linienerweiterung im eigenen Bestand.','High line diversity gain for your own stock.'));
-    if (analysis.quality.score >= 75) positives.push(t('Der Kandidat liegt bei den verfügbaren Kernwerten deutlich über deinem rassespezifischen Vergleich.','The candidate ranks clearly above your breed-specific comparison on the available core values.'));
-    if (analysis.partners.safe.length >= 8) positives.push(t(`${analysis.partners.safe.length} direkt nutzbare, konfliktfreie eigene Zuchtpartner gefunden.`,`${analysis.partners.safe.length} directly usable, conflict-free breeding partners found in your stock.`));
+  function trafficLevel(value, green=70, yellow=45) {
+    if (value == null || !Number.isFinite(Number(value))) return 'neutral';
+    return Number(value) >= green ? 'green' : Number(value) >= yellow ? 'yellow' : 'red';
+  }
 
-    if (father && father.ownCount >= Math.max(3,Math.ceil(analysis.ownBreed.length*0.2))) cautions.push(t(`Vaterlinie „${father.name}“ ist bereits ${father.ownCount}× in deinem rassespezifischen Bestand vertreten.`,`Sire line “${father.name}” already occurs ${father.ownCount} times in your breed-specific stock.`));
-    if (mother && mother.ownCount >= Math.max(3,Math.ceil(analysis.ownBreed.length*0.2))) cautions.push(t(`Mutterlinie „${mother.name}“ ist bereits ${mother.ownCount}× vertreten.`,`Dam line “${mother.name}” already occurs ${mother.ownCount} times.`));
-    if (analysis.quality.score != null && analysis.quality.score < 45) cautions.push(t('Die verfügbaren Kernwerte liegen eher unter deinem rassespezifischen Bestand.','The available core values rank rather below your breed-specific stock.'));
-    if (analysis.partners.role && analysis.partners.safe.length===0) cautions.push(t('Kein direkt nutzbarer konfliktfreier eigener Zuchtpartner mit ZZL gefunden.','No directly usable, conflict-free licensed breeding partner was found in your stock.'));
-    if (analysis.pedigree.percent < 60) cautions.push(t(`Stammbaum nur zu ${analysis.pedigree.percent}% der sichtbaren 14 Plätze erfasst; die Linienbewertung ist entsprechend unsicher.`,`Only ${analysis.pedigree.percent}% of the 14 visible pedigree positions are known; line analysis is therefore less certain.`));
-    if (!analysis.ownerName) cautions.push(t('Für diesen Login ist kein MDR-Name hinterlegt; der Vergleich mit dem eigenen Bestand ist deshalb nicht möglich.','No MDR username is configured for this login, so comparison with your own stock is unavailable.'));
-    if (analysis.ownBreed.length < 3) cautions.push(t(`Nur ${analysis.ownBreed.length} eigene Vergleichspferde derselben Rasse vorhanden; Qualitätsperzentile sind nur eingeschränkt belastbar.`,`Only ${analysis.ownBreed.length} own comparison horses of the same breed are available; quality percentiles are less robust.`));
+  function trafficSymbol(level) {
+    return level === 'green' ? '🟢' : level === 'yellow' ? '🟡' : level === 'red' ? '🔴' : '⚪';
+  }
 
-    const root=document.getElementById('purchase-reasons');
-    root.innerHTML=`
-      <div class="purchase-reason-positive"><h3>${t('Dafür spricht','Strengths')}</h3>${positives.length?`<ul>${positives.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:`<p class="muted">${t('Kein klarer Zusatzvorteil aus den vorhandenen Daten ableitbar.','No clear additional advantage can be derived from the available data.')}</p>`}</div>
-      <div class="purchase-reason-caution"><h3>${t('Zu beachten','Considerations')}</h3>${cautions.length?`<ul>${cautions.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:`<p class="muted">${t('Keine wesentliche Einschränkung erkannt.','No major limitation detected.')}</p>`}</div>`;
+  function setTrafficLight(id, level) {
+    const el=document.getElementById(id);
+    if (!el) return;
+    el.textContent=trafficSymbol(level);
+    el.className=`purchase-light purchase-light-${level}`;
+  }
+
+  function overallTraffic(analysis) {
+    return trafficLevel(analysis.score, 68, 45);
+  }
+
+  function qualityTraffic(percentileValue) {
+    return trafficLevel(percentileValue, 67, 40);
+  }
+
+  function buildShortVerdict(analysis) {
+    const parts=[];
+    const overlaps=analysis.lines.rows.filter(r=>r.ownCount>0);
+    if (!overlaps.length) parts.push(t('keine vorhandene Linie im eigenen Bestand erkannt','no existing line detected in your own stock'));
+    else {
+      const nearest=Math.min(...overlaps.map(r=>r.generation));
+      parts.push(t(`${overlaps.length} vorhandene Linienüberschneidung${overlaps.length===1?'':'en'}, nächste in ${generationLabel(nearest)}`,`${overlaps.length} existing line overlap${overlaps.length===1?'':'s'}, nearest in ${generationLabel(nearest)}`));
+    }
+    if (analysis.quality.score != null) {
+      if (analysis.quality.score >= 67) parts.push(t('Qualität überdurchschnittlich','quality above average'));
+      else if (analysis.quality.score >= 40) parts.push(t('Qualität im Mittelfeld','quality around the middle'));
+      else parts.push(t('Qualität eher unter dem eigenen Vergleich','quality rather below your own comparison'));
+    }
+    if (analysis.partners.role) parts.push(t(`${analysis.partners.inbreedingFree.length} inzuchtfreie Partner, davon ${analysis.partners.licensedInbreedingFree.length} mit ZZL`,`${analysis.partners.inbreedingFree.length} inbreeding-free partners, ${analysis.partners.licensedInbreedingFree.length} of them licensed`));
+    return parts.length ? parts.join(' · ') + '.' : t('Für eine belastbare Kurzbewertung fehlen Vergleichsdaten.','Comparison data is insufficient for a reliable quick assessment.');
   }
 
   function renderLineAnalysis(analysis) {
-    const lines=analysis.lines.rows.slice().sort((a,b)=>a.generation-b.generation || b.ownCount-a.ownCount || String(a.name).localeCompare(String(b.name),'de'));
-    const father=lines.find(r=>r.role==='Vater');
-    const mother=lines.find(r=>r.role==='Mutter');
-    const parentRoot=document.getElementById('purchase-parent-lines');
-    const parentCard=(label,row)=> row ? `<div class="purchase-parent-card"><strong>${esc(label)}: ${esc(row.name)}</strong><span>${row.ownCount===0?t('neu im eigenen Bestand','new in your stock'):t(`${row.ownCount}× im eigenen Bestand`,`${row.ownCount}× in your stock`)}</span><small>${t('Gesamtbestand', 'Overall database')}: ${row.totalCount}×</small></div>` : '';
-    parentRoot.innerHTML=parentCard(t('Vaterlinie','Sire line'),father)+parentCard(t('Mutterlinie','Dam line'),mother);
-
-    document.getElementById('purchase-lines-body').innerHTML = lines.length ? lines.map(row=>{
-      let status=t('neu','new');
-      if (row.ownCount >= Math.max(3,Math.ceil(analysis.ownBreed.length*0.2))) status=t('häufig vertreten','frequent');
-      else if (row.ownCount>0) status=t('bereits vertreten','already represented');
-      return `<tr><td>${esc(row.name)}</td><td>${esc(generationLabel(row.generation))}</td><td>${row.ownCount}</td><td>${row.totalCount}</td><td>${esc(status)}</td></tr>`;
-    }).join('') : `<tr><td colspan="5" class="muted">${t('Keine auswertbaren Ahnen erkannt.','No usable ancestors detected.')}</td></tr>`;
+    const overlaps=analysis.lines.rows
+      .filter(row=>row.ownCount>0)
+      .sort((a,b)=>a.generation-b.generation || b.ownCount-a.ownCount || String(a.name).localeCompare(String(b.name),'de'));
+    const noOverlap=document.getElementById('purchase-no-overlap');
+    const wrap=document.getElementById('purchase-lines-wrap');
+    if (!overlaps.length) {
+      noOverlap.hidden=false;
+      noOverlap.textContent=t('🟢 Keine relevanten Linienüberschneidungen im eigenen Bestand erkannt.','🟢 No relevant line overlaps detected in your own stock.');
+      wrap.hidden=true;
+      document.getElementById('purchase-lines-body').innerHTML='';
+    } else {
+      noOverlap.hidden=true;
+      wrap.hidden=false;
+      document.getElementById('purchase-lines-body').innerHTML=overlaps.map(row=>
+        `<tr><td>${esc(row.name)}</td><td>${esc(generationLabel(row.generation))}</td><td>${row.ownCount}×</td></tr>`
+      ).join('');
+    }
     document.getElementById('purchase-pedigree-quality').textContent=t(
-      `Pedigree-Datenqualität: ${analysis.pedigree.known}/14 sichtbare Ahnenplätze (${analysis.pedigree.percent}%). Linien-Neuheit eigener Bestand: ${analysis.lines.ownNovelty ?? '–'}/100 · Gesamtbestand: ${analysis.lines.totalNovelty ?? '–'}/100.`,
-      `Pedigree data quality: ${analysis.pedigree.known}/14 visible ancestor positions (${analysis.pedigree.percent}%). Line novelty in your stock: ${analysis.lines.ownNovelty ?? '–'}/100 · overall database: ${analysis.lines.totalNovelty ?? '–'}/100.`
+      `Pedigree-Datenqualität: ${analysis.pedigree.known}/14 sichtbare Ahnenplätze (${analysis.pedigree.percent}%).`,
+      `Pedigree data quality: ${analysis.pedigree.known}/14 visible ancestor positions (${analysis.pedigree.percent}%).`
     );
   }
 
   function renderQuality(analysis) {
     document.getElementById('purchase-quality-body').innerHTML=analysis.quality.rows.map(row=>{
       const format=(v)=>fmt(v,row.digits,row.suffix||'');
-      return `<tr><td>${esc(row.label)}</td><td>${format(row.value)}</td><td>${format(row.ownMedian)}</td><td>${row.ownPercentile==null?'–':row.ownPercentile+'%'}</td><td>${row.totalPercentile==null?'–':row.totalPercentile+'%'}</td></tr>`;
+      const level=qualityTraffic(row.ownPercentile);
+      return `<tr><td>${esc(row.label)}</td><td>${format(row.value)}</td><td>${row.ownPercentile==null?'–':row.ownPercentile+'%'}</td><td class="purchase-table-light">${trafficSymbol(level)}</td></tr>`;
     }).join('');
     document.getElementById('purchase-reference-note').textContent=t(
-      `Vergleichsbasis: ${analysis.ownBreed.length} eigene und ${analysis.totalBreed.length} Pferde im Gesamtbestand derselben Rasse.`,
-      `Reference base: ${analysis.ownBreed.length} of your own horses and ${analysis.totalBreed.length} horses in the overall database of the same breed.`
+      `Vergleichsbasis: ${analysis.ownBreed.length} eigene Pferde derselben Rasse. Gesamtbestand derselben Rasse: ${analysis.totalBreed.length}.`,
+      `Reference base: ${analysis.ownBreed.length} of your own horses of the same breed. Overall database of the same breed: ${analysis.totalBreed.length}.`
     );
   }
 
@@ -363,36 +379,11 @@
     const stats=document.getElementById('purchase-partner-stats');
     if (!p.role) {
       stats.innerHTML=`<div class="notice small">${t('Für dieses Geschlecht ist keine Zuchtpartneranalyse möglich.','Breeding-partner analysis is not available for this sex.')}</div>`;
-      document.getElementById('purchase-best-partners').innerHTML='';
       return;
     }
     stats.innerHTML=`
-      <div><strong>${p.potential.length}</strong><span>${t('potenzielle Partner','potential partners')}</span></div>
-      <div><strong>${p.licensed.length}</strong><span>${t('davon mit ZZL','licensed')}</span></div>
-      <div><strong>${p.safe.length}</strong><span>${t('direkt konfliktfrei','directly conflict-free')}</span></div>
-      <div><strong>${p.conflicts.length}</strong><span>${t('mit Konflikthinweis','with conflict warning')}</span></div>`;
-    const root=document.getElementById('purchase-best-partners');
-    if (!p.safe.length) {
-      root.innerHTML=`<p class="muted">${t('Keine direkt nutzbaren konfliktfreien Partner gefunden.','No directly usable, conflict-free partners found.')}</p>`;
-      return;
-    }
-    root.innerHTML=`<h3>${t('Beste konfliktfreie Optionen','Best conflict-free options')}</h3><div class="purchase-partner-list">${p.safe.slice(0,5).map(row=>{
-      const rel=row.relatedness==null?'–':fmt(row.relatedness,1,'%');
-      const gp=horseMetrics(row.horse).gp;
-      return `<a class="purchase-partner-row" href="view.html?id=${encodeURIComponent(row.horse.id)}"><strong>${esc(row.horse.name||'–')}</strong><span>${esc(row.horse.gender||'')} · GP ${gp??'–'} · ${t('Verwandtschaft','Relatedness')} ${rel}</span></a>`;
-    }).join('')}</div>`;
-  }
-
-  function renderGlobal(candidate,analysis) {
-    const globalQuality=analysis.quality.rows.filter(r=>r.totalPercentile!=null);
-    const avg=globalQuality.length?Math.round(globalQuality.reduce((s,r)=>s+r.totalPercentile,0)/globalQuality.length):null;
-    document.getElementById('purchase-global-summary').innerHTML=`
-      <div class="purchase-global-grid">
-        <div><strong>${analysis.totalBreed.length}</strong><span>${t('Vergleichspferde derselben Rasse','comparison horses of the same breed')}</span></div>
-        <div><strong>${analysis.lines.totalNovelty==null?'–':analysis.lines.totalNovelty+'/100'}</strong><span>${t('Linien-Seltenheit im Gesamtbestand','line rarity in the overall database')}</span></div>
-        <div><strong>${avg==null?'–':avg+'%'}</strong><span>${t('Ø Qualitätsperzentil im Gesamtbestand','avg. quality percentile in overall database')}</span></div>
-      </div>
-      <p class="small muted">${t('Diese Ebene ist nur Zusatzinformation. Für die Kaufempfehlung wird dein eigener Zuchtbestand stärker gewichtet.','This level is additional information only. Your own breeding stock is weighted more strongly for the purchase recommendation.')}</p>`;
+      <div><strong>${p.inbreedingFree.length}</strong><span>${t('potenzielle inzuchtfreie Partner','potential inbreeding-free partners')}</span></div>
+      <div><strong>${p.licensedInbreedingFree.length}</strong><span>${t('davon mit ZZL','of them licensed')}</span></div>`;
   }
 
   function renderAnalysis(candidate,analysis) {
@@ -400,20 +391,35 @@
     document.getElementById('purchase-candidate-heading').textContent=`${candidate.name || t('Kaufkandidat','Purchase candidate')}`;
     document.getElementById('purchase-candidate-meta').textContent=[candidate.gender,candidate.breed,candidate.owner?`${t('aktueller Besitzer','current owner')}: ${candidate.owner}`:''].filter(Boolean).join(' · ');
     document.getElementById('purchase-verdict').textContent=analysis.verdict;
-    document.getElementById('purchase-score').textContent=analysis.score==null?'–':`${analysis.score}/100`;
     const confLabel=analysis.confidence==='high'?t('hoch','high'):analysis.confidence==='medium'?t('mittel','medium'):t('niedrig','low');
     document.getElementById('purchase-confidence').textContent=t(`Aussagesicherheit: ${confLabel}`,`Confidence: ${confLabel}`);
-    document.getElementById('purchase-line-score').textContent=analysis.lines.ownNovelty==null?'–':`${analysis.lines.ownNovelty}/100`;
-    document.getElementById('purchase-line-summary').textContent=t(`${analysis.ownBreed.length} eigene Vergleichspferde derselben Rasse.`,`${analysis.ownBreed.length} own comparison horses of the same breed.`);
-    document.getElementById('purchase-quality-score').textContent=analysis.quality.score==null?'–':`${analysis.quality.score}/100`;
-    document.getElementById('purchase-quality-summary').textContent=t('GP, Ext, Ext% und Int werden rassespezifisch eingeordnet.','GP, conformation, conformation % and temperament are ranked within the breed.');
-    document.getElementById('purchase-partner-score').textContent=analysis.partners.score==null?'–':`${analysis.partners.safe.length}`;
-    document.getElementById('purchase-partner-summary').textContent=t(`${analysis.partners.safe.length} direkt nutzbare konfliktfreie Partner mit ZZL.`,`${analysis.partners.safe.length} directly usable, conflict-free licensed partners.`);
-    renderReasons(candidate,analysis);
+
+    const overlapCount=analysis.lines.rows.filter(r=>r.ownCount>0).length;
+    document.getElementById('purchase-line-summary').textContent=overlapCount===0
+      ? t('keine vorhandene Linie','no existing line')
+      : t(`${overlapCount} Überschneidung${overlapCount===1?'':'en'}`,`${overlapCount} overlap${overlapCount===1?'':'s'}`);
+    document.getElementById('purchase-quality-summary').textContent=analysis.quality.score==null
+      ? '–'
+      : t(`Ø ${analysis.quality.score}. Perzentil`,`avg. ${analysis.quality.score}th percentile`);
+    document.getElementById('purchase-partner-summary').textContent=analysis.partners.role
+      ? t(`${analysis.partners.inbreedingFree.length} inzuchtfrei · ${analysis.partners.licensedInbreedingFree.length} mit ZZL`,`${analysis.partners.inbreedingFree.length} inbreeding-free · ${analysis.partners.licensedInbreedingFree.length} licensed`)
+      : '–';
+    document.getElementById('purchase-pedigree-summary').textContent=`${analysis.pedigree.percent}%`;
+    document.getElementById('purchase-short-verdict').textContent=buildShortVerdict(analysis);
+    document.getElementById('purchase-overall-reference').textContent=t(
+      `Eigener rassespezifischer Vergleich: ${analysis.ownBreed.length} Pferde · Gesamtbestand derselben Rasse: ${analysis.totalBreed.length}.`,
+      `Own breed-specific comparison: ${analysis.ownBreed.length} horses · overall database of the same breed: ${analysis.totalBreed.length}.`
+    );
+
+    setTrafficLight('purchase-verdict-light',overallTraffic(analysis));
+    setTrafficLight('purchase-line-light',trafficLevel(analysis.lines.ownNovelty,75,50));
+    setTrafficLight('purchase-quality-light',qualityTraffic(analysis.quality.score));
+    setTrafficLight('purchase-partner-light',trafficLevel(analysis.partners.score,70,40));
+    setTrafficLight('purchase-pedigree-light',trafficLevel(analysis.pedigree.percent,80,55));
+
     renderLineAnalysis(analysis);
     renderQuality(analysis);
     renderPartners(analysis);
-    renderGlobal(candidate,analysis);
 
     const adopt=document.getElementById('purchase-adopt-btn');
     const open=document.getElementById('purchase-open-existing');
