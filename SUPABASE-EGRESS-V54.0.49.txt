@@ -1,0 +1,25 @@
+MDR-Datenbank V54.0.49 – Supabase-Egress-Optimierung
+
+Was muss in Supabase geändert werden?
+- Nichts. Kein SQL, kein neuer Index, keine neue Tabelle, kein Trigger und kein RPC erforderlich.
+- Die bestehende Tabelle mdr_records und ihr Primärschlüssel (store_name, record_key) reichen aus.
+
+Was ändert sich im Browser?
+- IndexedDB wurde intern von Version 2 auf Version 3 angehoben.
+- Neu ist ein lokaler Metadaten-Store __mdr_sync_meta.
+- Nach dem Update erfolgt pro verwendetem Store einmalig ein sicherer Vollabgleich.
+- Danach gilt ein persistentes 5-Minuten-Syncfenster auch über Seitenwechsel hinweg.
+- Nach Ablauf des Fensters werden zunächst nur record_key und updated_at aus Supabase geladen.
+- Nur neue/geänderte Datensätze werden anschließend mit vollständigem payload übertragen.
+- Cloud-Löschungen werden am fehlenden record_key erkannt und lokal nachvollzogen.
+
+Wichtig zum Supabase-Verbrauch:
+- Bereits verbrauchter Egress im laufenden Abrechnungszeitraum wird nicht rückwirkend reduziert.
+- Das Update reduziert den künftigen Datenverkehr.
+- Abmelden löscht aus Datenschutzgründen weiterhin den lokalen Cloud-Cache; der nächste Login benötigt daher wieder einen einmaligen Vollabgleich.
+
+Deployment:
+1. Alle Dateien dieser Version auf GitHub Pages/den bestehenden Webspace übernehmen.
+2. Keine SQL-Migration ausführen.
+3. Anwendung neu laden. Der Cache-Buster wurde auf 5449 erhöht.
+4. In Supabase unter Usage -> Egress in den Folgetagen beobachten.

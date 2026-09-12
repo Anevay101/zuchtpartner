@@ -2,7 +2,7 @@
 // Die bekannten local* Funktionen bleiben erhalten, damit die bestehende App
 // nicht auf eine zweite Datenzugriffsschicht umgebaut werden muss.
 const LOCAL_DB_NAME = 'mdr-datenbank-local';
-const LOCAL_DB_VERSION = 2;
+const LOCAL_DB_VERSION = 3;
 
 const LOCAL_STORES = {
   horses: 'horses',
@@ -17,15 +17,18 @@ const LOCAL_STORES = {
 const MDR_CLOUD_BUILD = true;
 const MDR_CLOUD_TABLE = 'mdr_records';
 const MDR_CLOUD_PAGE_SIZE = 1000;
+const MDR_CLOUD_DELTA_CHUNK_SIZE = 100;
+const MDR_SYNC_META_STORE = '__mdr_sync_meta';
 const MDR_LAST_UNDO_KEY = 'last_undo_action';
 const MDR_LOCAL_ONLY_SETTINGS = new Set(['backup_directory_handle', MDR_LAST_UNDO_KEY]);
 
-// V54.0.18 Performance: pro Seitenaufruf wird jeder Store nur einmal
-// blockierend aus Supabase geladen. Weitere Leser verwenden den gemeinsamen
-// Arbeitsspeicher-Cache; nach kurzer Zeit wird im Hintergrund aktualisiert.
-// Dadurch bleiben Filter/Ansichten sofort reaktionsfähig, ohne Supabase als
-// maßgeblichen gemeinsamen Datenbestand abzulösen.
-const MDR_MEMORY_CACHE_STALE_MS = 20_000;
+// V54.0.49 Egress-Schutz: IndexedDB bleibt der sofortige Lesecache.
+// Ein persistenter Cloud-Manifest-Stand (record_key + updated_at) verhindert,
+// dass jeder Seitenwechsel erneut sämtliche JSON-Payloads aus Supabase lädt.
+// Nach fünf Minuten wird nur das kleine Manifest geprüft; anschließend werden
+// ausschließlich geänderte/neue Datensätze nachgeladen und Löschungen lokal
+// nachvollzogen. Beim ersten Lauf nach dem Update erfolgt einmalig ein Vollsync.
+const MDR_MEMORY_CACHE_STALE_MS = 5 * 60_000;
 const MDR_CLOUD_READ_TIMEOUT_MS = 6_500;
 
 function mdrWithTimeout(promiseLike, timeoutMs=MDR_CLOUD_READ_TIMEOUT_MS, label='Cloud-Abfrage') {
@@ -49,6 +52,7 @@ function mdrWithTimeout(promiseLike, timeoutMs=MDR_CLOUD_READ_TIMEOUT_MS, label=
 }
 
 const MDR_MEMORY_CACHE = new Map();
+const MDR_SYNC_META_MEMORY = new Map();
 const MDR_GET_ALL_INFLIGHT = new Map();
 const MDR_STORE_EPOCH = new Map();
 let MDR_MEMORY_CACHE_VERSION = 0;
@@ -88,6 +92,7 @@ function openLocalDatabase() {
       if (!db.objectStoreNames.contains(LOCAL_STORES.userSettings)) db.createObjectStore(LOCAL_STORES.userSettings,{keyPath:'key'});
       if (!db.objectStoreNames.contains(LOCAL_STORES.filterPresets)) db.createObjectStore(LOCAL_STORES.filterPresets,{keyPath:'id',autoIncrement:true});
       if (!db.objectStoreNames.contains(LOCAL_STORES.tagSuggestions)) db.createObjectStore(LOCAL_STORES.tagSuggestions,{keyPath:'id',autoIncrement:true});
+      if (!db.objectStoreNames.contains(MDR_SYNC_META_STORE)) db.createObjectStore(MDR_SYNC_META_STORE,{keyPath:'storeName'});
     };
   });
   return MDR_IDB_PROMISE;
@@ -142,6 +147,101 @@ async function idbDelete(storeName,key) {
 async function idbClear(storeName) {
   const db=await openLocalDatabase();
   return new Promise((resolve,reject)=>{const req=db.transaction(storeName,'readwrite').objectStore(storeName).clear();req.onsuccess=()=>resolve();req.onerror=()=>reject(req.error);});
+}
+
+async function idbDeleteMany(storeName, keys) {
+  const list=Array.isArray(keys)?keys:[];
+  if (!list.length) return;
+  const db=await openLocalDatabase();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(storeName,'readwrite');
+    const store=tx.objectStore(storeName);
+    for (const key of list) store.delete(key);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+    tx.onabort=()=>reject(tx.error || new Error(`IndexedDB-Löschung abgebrochen (${storeName}).`));
+  });
+}
+
+async function idbGetSyncMeta(storeName) {
+  if (MDR_SYNC_META_MEMORY.has(storeName)) return MDR_SYNC_META_MEMORY.get(storeName);
+  const db=await openLocalDatabase();
+  const row=await new Promise((resolve,reject)=>{
+    const req=db.transaction(MDR_SYNC_META_STORE,'readonly').objectStore(MDR_SYNC_META_STORE).get(storeName);
+    req.onsuccess=()=>resolve(req.result || null);
+    req.onerror=()=>reject(req.error);
+  });
+  MDR_SYNC_META_MEMORY.set(storeName,row);
+  return row;
+}
+
+async function idbPutSyncMeta(row) {
+  if (!row?.storeName) return;
+  const db=await openLocalDatabase();
+  await new Promise((resolve,reject)=>{
+    const req=db.transaction(MDR_SYNC_META_STORE,'readwrite').objectStore(MDR_SYNC_META_STORE).put(row);
+    req.onsuccess=()=>resolve();
+    req.onerror=()=>reject(req.error);
+  });
+  MDR_SYNC_META_MEMORY.set(row.storeName,row);
+}
+
+async function idbClearSyncMeta() {
+  const db=await openLocalDatabase();
+  await new Promise((resolve,reject)=>{
+    const req=db.transaction(MDR_SYNC_META_STORE,'readwrite').objectStore(MDR_SYNC_META_STORE).clear();
+    req.onsuccess=()=>resolve();
+    req.onerror=()=>reject(req.error);
+  });
+  MDR_SYNC_META_MEMORY.clear();
+}
+
+function mdrTimestampToken(value) {
+  const time=Date.parse(String(value || ''));
+  return Number.isFinite(time) ? time : 0;
+}
+
+function mdrManifestFromRows(rows) {
+  const manifest={};
+  for (const row of (rows || [])) {
+    if (row?.record_key == null) continue;
+    manifest[String(row.record_key)]=mdrTimestampToken(row.updated_at);
+  }
+  return manifest;
+}
+
+function mdrPlanManifestDelta(localManifest={}, remoteManifest={}) {
+  const changedKeys=[];
+  for (const [key,updatedAt] of Object.entries(remoteManifest || {})) {
+    if (!(key in (localManifest || {})) || Number(localManifest[key])!==Number(updatedAt)) changedKeys.push(key);
+  }
+  const deletedKeys=Object.keys(localManifest || {}).filter(key=>!(key in (remoteManifest || {})));
+  return {changedKeys,deletedKeys};
+}
+
+async function mdrSaveSyncMeta(storeName, manifest, checkedAt=Date.now()) {
+  const row={storeName,checkedAt:Number(checkedAt)||Date.now(),manifest:manifest || {}};
+  await idbPutSyncMeta(row).catch(error=>console.warn('Sync-Metadaten konnten nicht gespeichert werden:',storeName,error));
+  return row;
+}
+
+async function mdrPatchSyncMetaRecords(storeName, records) {
+  const current=await idbGetSyncMeta(storeName).catch(()=>null);
+  if (!current?.manifest) return; // kein Teilmanifest erzeugen; der nächste Bootstrap stellt den Vollstand her
+  const manifest={...current.manifest};
+  for (const row of (records || [])) {
+    if (row?.recordKey == null) continue;
+    manifest[String(row.recordKey)]=mdrTimestampToken(row.updatedAt);
+  }
+  await mdrSaveSyncMeta(storeName,manifest,current.checkedAt);
+}
+
+async function mdrRemoveSyncMetaRecords(storeName, keys) {
+  const current=await idbGetSyncMeta(storeName).catch(()=>null);
+  if (!current?.manifest) return;
+  const manifest={...current.manifest};
+  for (const key of (keys || [])) delete manifest[String(key)];
+  await mdrSaveSyncMeta(storeName,manifest,current.checkedAt);
 }
 
 function mdrStoreEpoch(storeName) {
@@ -243,7 +343,7 @@ async function mdrCloudGetAll(storeName) {
     const { data, error } = await mdrWithTimeout(
       client
         .from(MDR_CLOUD_TABLE)
-        .select('record_key,payload')
+        .select('record_key,payload,updated_at')
         .eq('store_name', storeName)
         .order('record_key', { ascending: true })
         .range(from, to),
@@ -252,8 +352,53 @@ async function mdrCloudGetAll(storeName) {
     );
     if (error) throw error;
     const rows = Array.isArray(data) ? data : [];
-    out.push(...rows.map(row => row.payload));
+    out.push(...rows);
     if (rows.length < MDR_CLOUD_PAGE_SIZE) break;
+  }
+  return out;
+}
+
+async function mdrCloudGetManifest(storeName) {
+  const client=mdrCloudClient();
+  const out=[];
+  for (let from=0;;from+=MDR_CLOUD_PAGE_SIZE) {
+    const to=from+MDR_CLOUD_PAGE_SIZE-1;
+    const {data,error}=await mdrWithTimeout(
+      client
+        .from(MDR_CLOUD_TABLE)
+        .select('record_key,updated_at')
+        .eq('store_name',storeName)
+        .order('record_key',{ascending:true})
+        .range(from,to),
+      MDR_CLOUD_READ_TIMEOUT_MS,
+      `Supabase-Abgleich (${storeName})`
+    );
+    if (error) throw error;
+    const rows=Array.isArray(data)?data:[];
+    out.push(...rows);
+    if (rows.length<MDR_CLOUD_PAGE_SIZE) break;
+  }
+  return out;
+}
+
+async function mdrCloudGetByKeys(storeName, recordKeys) {
+  const keys=[...new Set((recordKeys || []).map(key=>String(key)))];
+  if (!keys.length) return [];
+  const client=mdrCloudClient();
+  const out=[];
+  for (let i=0;i<keys.length;i+=MDR_CLOUD_DELTA_CHUNK_SIZE) {
+    const chunk=keys.slice(i,i+MDR_CLOUD_DELTA_CHUNK_SIZE);
+    const {data,error}=await mdrWithTimeout(
+      client
+        .from(MDR_CLOUD_TABLE)
+        .select('record_key,payload,updated_at')
+        .eq('store_name',storeName)
+        .in('record_key',chunk),
+      MDR_CLOUD_READ_TIMEOUT_MS,
+      `Supabase-Delta (${storeName})`
+    );
+    if (error) throw error;
+    if (Array.isArray(data)) out.push(...data);
   }
   return out;
 }
@@ -286,23 +431,67 @@ async function mdrRefreshStore(storeName) {
   if (MDR_GET_ALL_INFLIGHT.has(storeName)) return MDR_GET_ALL_INFLIGHT.get(storeName);
   const startEpoch=mdrStoreEpoch(storeName);
   const promise=(async()=>{
-    const cloudRows=await mdrCloudGetAll(storeName);
-    // Falls während des Cloud-Lesens lokal gespeichert/gelöscht wurde,
-    // darf die ältere Antwort den gerade geschriebenen Stand nicht wieder
-    // überschreiben. Der nächste Hintergrundlauf holt dann den neuen Stand.
-    if (mdrStoreEpoch(storeName)!==startEpoch) {
-      return mdrMemoryRows(storeName) || cloudRows;
+    const previousMeta=await idbGetSyncMeta(storeName).catch(()=>null);
+
+    // Einmaliger Bootstrap nach V54.0.49 (oder nach gelöschtem Browsercache):
+    // vollständigen Stand laden und dabei das persistente Änderungsmanifest anlegen.
+    if (!previousMeta?.manifest) {
+      const cloudRecords=await mdrCloudGetAll(storeName);
+      if (mdrStoreEpoch(storeName)!==startEpoch) return mdrMemoryRows(storeName) || cloudRecords.map(row=>row.payload);
+      const cloudRows=cloudRecords.map(row=>row.payload);
+      const keepLocal=await mdrSyncCacheStore(storeName,cloudRows).catch(error=>{
+        console.warn('Lokaler Lesecache konnte nicht aktualisiert werden:',storeName,error);
+        return null;
+      });
+      if (mdrStoreEpoch(storeName)!==startEpoch) return mdrMemoryRows(storeName) || cloudRows;
+      await mdrSaveSyncMeta(storeName,mdrManifestFromRows(cloudRecords),Date.now());
+      const merged=await mdrMergeLocalOnlyRows(storeName,cloudRows,keepLocal);
+      mdrSetMemoryCache(storeName,merged,Date.now());
+      try { window.dispatchEvent(new CustomEvent('mdr:store-refreshed',{detail:{storeName,rows:merged.length,mode:'bootstrap',changed:cloudRows.length,deleted:0}})); } catch {}
+      return merged;
     }
-    const keepLocal=await mdrSyncCacheStore(storeName,cloudRows).catch(error=>{
-      console.warn('Lokaler Lesecache konnte nicht aktualisiert werden:',storeName,error);
-      return null;
-    });
-    if (mdrStoreEpoch(storeName)!==startEpoch) {
-      return mdrMemoryRows(storeName) || cloudRows;
+
+    // Normalfall: nur record_key + updated_at übertragen. Das ist um Größenordnungen
+    // kleiner als die JSON-Payloads und reicht, um Änderungen/Löschungen zu erkennen.
+    const remoteManifestRows=await mdrCloudGetManifest(storeName);
+    if (mdrStoreEpoch(storeName)!==startEpoch) return mdrMemoryRows(storeName) || await idbGetAll(storeName).catch(()=>[]);
+    const remoteManifest=mdrManifestFromRows(remoteManifestRows);
+    const localManifest=previousMeta.manifest || {};
+    const {changedKeys,deletedKeys}=mdrPlanManifestDelta(localManifest,remoteManifest);
+
+    if (!changedKeys.length && !deletedKeys.length) {
+      await mdrSaveSyncMeta(storeName,remoteManifest,Date.now());
+      const current=mdrMemoryRows(storeName) || await idbGetAll(storeName).catch(()=>[]);
+      mdrSetMemoryCache(storeName,current,Date.now());
+      return current;
     }
-    const merged=await mdrMergeLocalOnlyRows(storeName,cloudRows,keepLocal);
+
+    const changedRecords=await mdrCloudGetByKeys(storeName,changedKeys);
+    if (mdrStoreEpoch(storeName)!==startEpoch) return mdrMemoryRows(storeName) || await idbGetAll(storeName).catch(()=>[]);
+
+    const payloads=changedRecords.map(row=>row.payload).filter(Boolean);
+    if (payloads.length) await idbPutMany(storeName,payloads).catch(error=>console.warn('Delta-Cache konnte nicht aktualisiert werden:',storeName,error));
+    if (deletedKeys.length) {
+      // record_key liegt in Supabase als Text vor; IndexedDB verwendet bei den
+      // meisten Stores numerische id-Schlüssel. Deshalb den tatsächlichen lokalen
+      // Primärschlüssel ermitteln, statt z.B. Zahl 49 mit String "49" zu löschen.
+      const currentRows=mdrMemoryRows(storeName) || await idbGetAll(storeName).catch(()=>[]);
+      const byRecordKey=new Map(currentRows.map(row=>[mdrRecordKey(storeName,row),row]));
+      const localDeleteKeys=deletedKeys.map(key=>{
+        const row=byRecordKey.get(String(key));
+        if (!row) return key;
+        return storeName===LOCAL_STORES.userSettings ? row.key : row.id;
+      });
+      await idbDeleteMany(storeName,localDeleteKeys).catch(error=>console.warn('Gelöschte Cloud-Datensätze konnten lokal nicht entfernt werden:',storeName,error));
+    }
+
+    // Falls ein Datensatz zwischen Manifest- und Delta-Abfrage gelöscht wurde, beim
+    // nächsten Manifestlauf korrigieren; jetzt keine möglicherweise neue lokale Zeile löschen.
+    await mdrSaveSyncMeta(storeName,remoteManifest,Date.now());
+    const localRows=await idbGetAll(storeName).catch(()=>[]);
+    const merged=await mdrMergeLocalOnlyRows(storeName,localRows);
     mdrSetMemoryCache(storeName,merged,Date.now());
-    try { window.dispatchEvent(new CustomEvent('mdr:store-refreshed',{detail:{storeName,rows:merged.length}})); } catch {}
+    try { window.dispatchEvent(new CustomEvent('mdr:store-refreshed',{detail:{storeName,rows:merged.length,mode:'delta',changed:payloads.length,deleted:deletedKeys.length}})); } catch {}
     return merged;
   })();
   MDR_GET_ALL_INFLIGHT.set(storeName,promise);
@@ -324,12 +513,17 @@ async function localGetAll(storeName) {
 
   // V54.0.36: IndexedDB ist der sofortige Lesestand – auch wenn der Store
   // tatsächlich leer ist. Ein leerer lokaler Hilfs-Store (z.B. Filtervorlagen)
-  // darf den kompletten Seitenstart nicht mehr blockieren. Supabase wird immer
-  // parallel nachgezogen und meldet einen erfolgreichen Refresh per Event.
+  // darf den kompletten Seitenstart nicht mehr blockieren. Supabase wird nur nach
+  // Ablauf des persistenten 5-Minuten-Fensters abgeglichen und meldet Änderungen
+  // anschließend per Event.
   try {
-    const localRows=await idbGetAll(storeName);
-    mdrSetMemoryCache(storeName,localRows,0);
-    if (!MDR_GET_ALL_INFLIGHT.has(storeName)) {
+    const [localRows,syncMeta]=await Promise.all([
+      idbGetAll(storeName),
+      idbGetSyncMeta(storeName).catch(()=>null),
+    ]);
+    const lastChecked=Number(syncMeta?.checkedAt || 0);
+    mdrSetMemoryCache(storeName,localRows,lastChecked);
+    if (Date.now()-lastChecked>MDR_MEMORY_CACHE_STALE_MS && !MDR_GET_ALL_INFLIGHT.has(storeName)) {
       mdrRefreshStore(storeName).catch(error=>console.warn(`Supabase-Hintergrundaktualisierung fehlgeschlagen (${storeName}):`,error));
     }
     return [...localRows];
@@ -369,7 +563,9 @@ async function localGet(storeName, key) {
   try {
     const localHit=await idbGet(storeName,key);
     if (localHit != null) {
-      if (!MDR_GET_ALL_INFLIGHT.has(storeName)) mdrRefreshStore(storeName).catch(()=>{});
+      const syncMeta=await idbGetSyncMeta(storeName).catch(()=>null);
+      const lastChecked=Number(syncMeta?.checkedAt || 0);
+      if (Date.now()-lastChecked>MDR_MEMORY_CACHE_STALE_MS && !MDR_GET_ALL_INFLIGHT.has(storeName)) mdrRefreshStore(storeName).catch(()=>{});
       return localHit;
     }
   } catch (error) {
@@ -380,7 +576,9 @@ async function localGet(storeName, key) {
   // Die Hintergrundsynchronisierung füllt sie später nach, ohne den Seitenstart
   // zu blockieren. Pferde-Einzelaufrufe dürfen dagegen kurz auf die Cloud warten.
   if (storeName !== LOCAL_STORES.horses) {
-    if (!MDR_GET_ALL_INFLIGHT.has(storeName)) mdrRefreshStore(storeName).catch(()=>{});
+    const syncMeta=await idbGetSyncMeta(storeName).catch(()=>null);
+    const lastChecked=Number(syncMeta?.checkedAt || 0);
+    if (Date.now()-lastChecked>MDR_MEMORY_CACHE_STALE_MS && !MDR_GET_ALL_INFLIGHT.has(storeName)) mdrRefreshStore(storeName).catch(()=>{});
     return null;
   }
 
@@ -388,7 +586,7 @@ async function localGet(storeName, key) {
     const { data, error } = await mdrWithTimeout(
       mdrCloudClient()
         .from(MDR_CLOUD_TABLE)
-        .select('payload')
+        .select('payload,updated_at')
         .eq('store_name',storeName)
         .eq('record_key',recordKey)
         .maybeSingle(),
@@ -399,9 +597,11 @@ async function localGet(storeName, key) {
     if (data?.payload != null) {
       await idbPut(storeName,data.payload).catch(()=>{});
       mdrPatchMemoryPut(storeName,data.payload);
+      await mdrPatchSyncMetaRecords(storeName,[{recordKey,updatedAt:data.updated_at}]);
     } else {
       await idbDelete(storeName,key).catch(()=>{});
       mdrPatchMemoryDelete(storeName,key);
+      await mdrRemoveSyncMetaRecords(storeName,[recordKey]);
     }
     return data?.payload ?? null;
   } catch (error) {
@@ -453,6 +653,7 @@ async function mdrCloudUpsert(storeName, value) {
   if (error) throw error;
   await idbPut(storeName,payload).catch(()=>{});
   mdrPatchMemoryPut(storeName,payload);
+  await mdrPatchSyncMetaRecords(storeName,[{recordKey,updatedAt:now}]);
   return payload;
 }
 
@@ -473,16 +674,18 @@ async function localAdd(storeName, value) {
   }
   const recordKey = mdrRecordKey(storeName,payload);
   const user = await mdrCurrentUser();
+  const now=new Date().toISOString();
   const { error } = await mdrCloudClient().from(MDR_CLOUD_TABLE).insert({
     store_name:storeName,
     record_key:recordKey,
     payload,
-    updated_at:new Date().toISOString(),
+    updated_at:now,
     updated_by:user?.id || null,
   });
   if (error) throw error;
   await idbPut(storeName,payload).catch(()=>{});
   mdrPatchMemoryPut(storeName,payload);
+  await mdrPatchSyncMetaRecords(storeName,[{recordKey,updatedAt:now}]);
   localNotifyDataChanged(storeName);
   return storeName === LOCAL_STORES.userSettings ? payload.key : payload.id;
 }
@@ -513,6 +716,7 @@ async function localDelete(storeName, key) {
   if (error) throw error;
   await idbDelete(storeName,key).catch(()=>{});
   mdrPatchMemoryDelete(storeName,key);
+  await mdrRemoveSyncMetaRecords(storeName,[recordKey]);
   localNotifyDataChanged(storeName);
 }
 
@@ -524,6 +728,7 @@ async function localClear(storeName) {
   await idbClear(storeName);
   if (localOnlyRows.length) await idbPutMany(storeName,localOnlyRows).catch(()=>{});
   mdrSetMemoryCache(storeName,[...localOnlyRows],Date.now());
+  await mdrSaveSyncMeta(storeName,{},Date.now());
   localNotifyDataChanged(storeName);
 }
 
@@ -616,7 +821,7 @@ async function mdrUndoLastHorseAction() {
 }
 
 
-console.log('MDR V54.0.29 Supabase-Datenbank mit optimiertem Lesecache wurde geladen.');
+console.log('MDR V54.0.49 Supabase-Datenbank mit persistentem Delta-Lesecache wurde geladen.');
 
 // Für vollständige JSON-Importe: Datensätze in kleinen Paketen übertragen,
 // damit ein Erstimport nicht hunderte einzelne HTTP-Anfragen erzeugt.
@@ -677,6 +882,7 @@ async function localBulkPut(storeName, values, chunkSize=100) {
     if(error) throw error;
     await idbPutMany(storeName,chunk.map(item=>item.payload)).catch(error=>console.warn('Bulk-Cache konnte nicht vollständig aktualisiert werden:',storeName,error));
     chunk.forEach(item=>mdrPatchMemoryPut(storeName,item.payload));
+    await mdrPatchSyncMetaRecords(storeName,chunk.map(item=>({recordKey:item.recordKey,updatedAt:now})));
   }
   localNotifyDataChanged(storeName);
   return [
@@ -687,6 +893,8 @@ async function localBulkPut(storeName, values, chunkSize=100) {
 
 async function mdrClearCachedCloudData() {
   MDR_MEMORY_CACHE.clear();
+  MDR_SYNC_META_MEMORY.clear();
+  await idbClearSyncMeta().catch(()=>{});
   for (const storeName of Object.values(LOCAL_STORES)) {
     mdrBumpStoreEpoch(storeName);
     const keepLocal = storeName === LOCAL_STORES.userSettings ? await mdrReadLocalOnlySettings() : [];

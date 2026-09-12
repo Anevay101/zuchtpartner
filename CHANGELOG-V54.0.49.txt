@@ -1,0 +1,13 @@
+MDR-Datenbank V54.0.49
+
+Supabase-Egress-Optimierung
+- Persistenter IndexedDB-Sync-Metadatenspeicher (__mdr_sync_meta) ergänzt; IndexedDB-Version auf 3 erhöht.
+- Das bisherige 20-Sekunden-Frischefenster wurde durch ein persistentes 5-Minuten-Syncfenster ersetzt.
+- Seitenwechsel lösen innerhalb dieses Fensters keinen erneuten Cloud-Download mehr aus.
+- Nach Ablauf des Fensters wird zunächst nur ein kleines Manifest aus record_key + updated_at geladen.
+- Nur neue oder geänderte Datensätze werden anschließend mit vollständigem payload nachgeladen.
+- In Supabase gelöschte Datensätze werden über den Manifestvergleich erkannt und aus dem lokalen IndexedDB-Cache entfernt.
+- Eigene Adds/Updates/Deletes/Bulk-Imports aktualisieren das lokale Sync-Manifest mit, um unnötige Rückdownloads zu vermeiden.
+- Beim ersten Start nach dem Update (bzw. nach Abmelden/Cache-Löschen) erfolgt einmalig ein Vollsync zur sicheren Initialisierung des Manifests.
+- Keine Supabase-Schema-, SQL-, RPC- oder Indexänderung für diese Optimierung erforderlich.
+- Asset-Cache-Buster auf 5449 erhöht.
