@@ -85,6 +85,8 @@
     // Feed plan / Futterabo
     'Futterabo':'Feed plan', 'Futterabo aktivieren':'Enable feed plan', '🌾 Futterabo öffnen':'🌾 Open feed plan',
     'Bestellrhythmus':'Order interval', 'Wöchentlich (7 Tage)':'Weekly (7 days)', 'Monatlich (30 Tage)':'Monthly (30 days)',
+    'Mein MDR-Name':'My MDR username', 'Wird pro Supabase-Login gespeichert. Du kannst einen vorhandenen Besitzer auswählen oder einen neuen Namen frei eintragen.':'Saved separately for each Supabase login. You can select an existing owner or freely enter a new name.',
+    'z. B. Anevay':'e.g. Anevay',
     'Futterbedarf & Rhythmus-Erinnerung':'Feed requirements & schedule reminder',
     '✓ Bestellung als erledigt markieren':'✓ Mark order as completed',
     'Empfohlene Bestellmenge':'Recommended order quantity', 'Futterart':'Feed type', 'Bestellmenge':'Order quantity',
@@ -95,12 +97,14 @@
     'Deckhengste Standard':'Stallion Standard', 'Kombifutter Turnier':'Combo Competition', 'Sportpferde Gold':'Performance Gold',
     'Heu':'Hay', 'Stroh':'Straw', 'Ballen':'bales', 'Einheiten':'units', 'Heute fällig':'Due now',
     'Futterbestellung fällig':'Feed order due', 'Futterabo ist ausgeschaltet.':'Feed plan is disabled.',
-    'Optionale Rhythmus-Erinnerung für den Futterbedarf der aktiven Züchter. Die MDR-Seite wird nicht automatisch bedient; die Datenbank berechnet nur die benötigten Mengen und erinnert an die nächste Bestellung.':'Optional schedule reminder for the feed requirements of active breeders. The MDR site is not controlled automatically; the database only calculates the required quantities and reminds you about the next order.',
-    'Berücksichtigt automatisch nur Pferde der in den Einstellungen aktiven Züchter.':'Automatically includes only horses belonging to breeders selected as active in Settings.',
-    'Die Berechnung verwendet automatisch nur Pferde der aktiven Züchter. Es wird nichts automatisch auf Morning Dust Ranch bestellt.':'The calculation automatically uses only horses belonging to active breeders. Nothing is ordered automatically on Morning Dust Ranch.',
+    'Optionale Rhythmus-Erinnerung für deinen eigenen MDR-Bestand. Das Futterabo ist an den aktuellen Login gebunden und unabhängig von der Auswahl „Aktive Züchter“. Die MDR-Seite wird nicht automatisch bedient.':'Optional schedule reminder for your own MDR horses. The feed plan is tied to the current login and independent of the “Active breeders” selection. The MDR site is not controlled automatically.',
+    'Berücksichtigt ausschließlich Pferde, deren Besitzer deinem unten hinterlegten MDR-Namen entspricht.':'Includes only horses whose owner matches the MDR username configured below.',
+    'Die Berechnung verwendet ausschließlich Pferde des MDR-Namens, der für deinen aktuellen Login in den Einstellungen hinterlegt ist. Die Auswahl „Aktive Züchter“ hat darauf keinen Einfluss. Es wird nichts automatisch auf Morning Dust Ranch bestellt.':'The calculation uses only horses belonging to the MDR username configured for your current login. The “Active breeders” selection has no effect on the feed plan. Nothing is ordered automatically on Morning Dust Ranch.',
     'Kraftfutter: 1 Einheit je Pferd und Tag. Heu und Stroh: 1 Ballen = 30 Pferdetage; Ballenmengen werden immer aufgerundet.':'Concentrated feed: 1 unit per horse per day. Hay and straw: 1 bale = 30 horse-days; bale quantities are always rounded up.',
     'Hier kannst du prüfen, welche Pferde welcher Futterregel zugeordnet wurden.':'Here you can check which horses were assigned to which feed rule.',
     'Aktiviere es unter Einstellungen, um Bedarf und Rhythmus-Erinnerung zu verwenden.':'Enable it under Settings to use requirements and schedule reminders.',
+
+    'Benutzername oder E-Mail':'Username or email',
 
     // Filters / database
     '🔎 Filter ·':'🔎 Filters ·', 'Suche':'Search', 'Suche…':'Search…',

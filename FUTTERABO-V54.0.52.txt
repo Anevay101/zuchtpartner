@@ -1,0 +1,24 @@
+Futterabo / Feed plan – V54.0.52
+
+Das Futterabo ist eine lokale Berechnungs- und Erinnerungsfunktion und bestellt nichts automatisch bei Morning Dust Ranch.
+
+Besitzer-Zuordnung
+- Unter Einstellungen -> Futterabo wird pro Supabase-Login „Mein MDR-Name“ gespeichert.
+- Nur Pferde mit exakt diesem Besitzer werden berücksichtigt.
+- Die Einstellung „Aktive Züchter“ ist vollständig unabhängig davon.
+- Anevay wird beim Upgrade auf Anevay vorbelegt; Wilder Wolf wird bewusst nicht mitgerechnet.
+- Saeculume wird auf Saeculume vorbelegt.
+- Neue Nutzer können einen vorhandenen Besitzer aus der Vorschlagsliste wählen oder einen Namen frei eintragen.
+
+Futterregeln
+1. Hengst mit bestätigtem Cupstern (mindestens 50 Starts und mindestens 15 Siege in mindestens einer Disziplin): Kombifutter Turnier / Combo Competition.
+2. Stute mit ZZL: Zuchtstuten Standard / Broodmare Standard.
+3. Hengst mit ZZL: Deckhengste Standard / Stallion Standard.
+4. Unter 2 Jahre: Fohlen Standard / Foal Standard.
+5. 2 bis einschließlich 4 Jahre: Aufzucht / Youngstock.
+6. Über 4 Jahre: Sportpferde Gold / Performance Gold.
+7. Zusätzlich Heu und Stroh: 1 Ballen = 30 Pferdetage, auf volle Ballen aufgerundet.
+
+Rhythmus
+- Wöchentlich: 7 Tage.
+- Monatlich: 30 Tage.

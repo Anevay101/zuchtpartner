@@ -31,8 +31,7 @@
   form?.addEventListener('submit',async(event)=>{
     event.preventDefault();
     errorBox.textContent='';
-    const name=mdrNormalizeUsername(username?.value);
-    const email=MDR_LOGIN_USERS[name];
+    const email=typeof mdrResolveLoginEmail==='function' ? mdrResolveLoginEmail(username?.value) : '';
     if(!email){errorBox.textContent='Benutzername oder Passwort ist nicht korrekt.';return;}
     if(!password?.value){errorBox.textContent='Bitte Passwort eingeben.';return;}
 

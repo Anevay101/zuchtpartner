@@ -43,33 +43,56 @@ function settingsFeedText(de,en) {
 async function wireFeedPlanSettings() {
   const enabled=document.getElementById('settings-feed-plan-enabled');
   const rhythm=document.getElementById('settings-feed-plan-rhythm');
+  const ownerInput=document.getElementById('settings-feed-plan-owner');
+  const ownerList=document.getElementById('settings-feed-plan-owner-list');
   const status=document.getElementById('settings-feed-plan-status');
   const openLink=document.getElementById('settings-feed-plan-open');
-  if (!enabled || !rhythm) return;
+  if (!enabled || !rhythm || !ownerInput) return;
+
+  // Besitzer aus dem gemeinsamen Pferdebestand nur als komfortable Vorschläge.
+  // Freie Eingabe bleibt möglich, damit ein neuer Account schon vor dem ersten
+  // Pferdeimport korrekt konfiguriert werden kann.
+  try {
+    const horses=await localGetAll(LOCAL_STORES.horses);
+    const owners=[...new Set(horses.map(h=>String(h?.owner||'').trim()).filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b,'de'));
+    if (ownerList) ownerList.innerHTML=owners.map(owner=>`<option value="${settingsEsc(owner)}"></option>`).join('');
+  } catch (error) {
+    console.warn('MDR-Namen konnten für das Futterabo nicht vorgeschlagen werden:',error);
+  }
 
   const dbKey=typeof feedPlanDbKey === 'function' ? feedPlanDbKey() : 'feed_plan_v1';
   const row=await localGet(LOCAL_STORES.userSettings, dbKey);
   const config=typeof normalizeFeedPlanConfig === 'function'
     ? normalizeFeedPlanConfig(row || (typeof getFeedPlanConfig === 'function' ? getFeedPlanConfig() : null))
-    : {enabled:row?.enabled === true,rhythm:row?.rhythm === 'monthly' ? 'monthly' : 'weekly',last_completed_at:row?.last_completed_at || null};
+    : {enabled:row?.enabled === true,rhythm:row?.rhythm === 'monthly' ? 'monthly' : 'weekly',last_completed_at:row?.last_completed_at || null,owner_name:String(row?.owner_name||'').trim()};
 
   enabled.checked=config.enabled;
   rhythm.value=config.rhythm;
+  ownerInput.value=config.owner_name || '';
   rhythm.disabled=!config.enabled;
   if (openLink) openLink.hidden=!config.enabled;
 
   const updateStatus=()=>{
     if (!status) return;
+    const owner=String(ownerInput.value||'').trim();
     if (!enabled.checked) {
       status.textContent=settingsFeedText('Futterabo ist ausgeschaltet.','Feed plan is disabled.');
+      return;
+    }
+    if (!owner) {
+      status.textContent=settingsFeedText(
+        'Bitte zuerst deinen MDR-Namen eintragen. Ohne Zuordnung wird kein Pferd für das Futterabo berücksichtigt.',
+        'Please enter your MDR username first. Without this mapping, no horses are included in the feed plan.'
+      );
       return;
     }
     const label=rhythm.value === 'monthly'
       ? settingsFeedText('monatlich (30 Tage)','monthly (30 days)')
       : settingsFeedText('wöchentlich (7 Tage)','weekly (7 days)');
     status.textContent=settingsFeedText(
-      `Futterabo aktiv · Rhythmus: ${label}. Die Berechnung verwendet automatisch die aktiven Züchter.`,
-      `Feed plan active · interval: ${label}. The calculation automatically uses the active breeders.`
+      `Futterabo aktiv · MDR-Name: ${owner} · Rhythmus: ${label}. Berücksichtigt werden ausschließlich Pferde mit diesem Besitzer.`,
+      `Feed plan active · MDR username: ${owner} · interval: ${label}. Only horses with this owner are included.`
     );
   };
 
@@ -82,6 +105,7 @@ async function wireFeedPlanSettings() {
       key:dbKey,
       enabled:enabled.checked,
       rhythm:rhythm.value === 'monthly' ? 'monthly' : 'weekly',
+      owner_name:String(ownerInput.value||'').trim(),
       last_completed_at:current.last_completed_at || config.last_completed_at || null,
       updated_at:new Date().toISOString(),
     };
@@ -92,6 +116,8 @@ async function wireFeedPlanSettings() {
 
   enabled.addEventListener('change',save);
   rhythm.addEventListener('change',save);
+  ownerInput.addEventListener('change',save);
+  ownerInput.addEventListener('blur',save);
   updateStatus();
 }
 

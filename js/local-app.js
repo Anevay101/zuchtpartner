@@ -223,10 +223,11 @@ function mdrPersonalSettingKey(base, session=LOCAL_SESSION) {
   return `${base}:${slug}`;
 }
 
-// V54.0.51: persönliches, optionales Futterabo / Rhythmus-Erinnerung.
-// Die Einstellung wird wie die aktiven Züchter pro Login in user_settings
-// gespeichert und zusätzlich lokal gespiegelt. MDR selbst wird dabei nicht
-// automatisiert bedient; die App berechnet nur Bedarf und Erinnerungszeitpunkt.
+// V54.0.52: persönliches, optionales Futterabo / Rhythmus-Erinnerung.
+// Die Einstellung wird pro Login in user_settings gespeichert und zusätzlich
+// lokal gespiegelt. Der Futterbedarf wird NICHT aus den aktiven Züchtern
+// abgeleitet, sondern ausschließlich aus dem je Login hinterlegten MDR-Namen.
+// MDR selbst wird dabei nicht automatisiert bedient.
 const MDR_FEED_PLAN_SETTING_BASE = 'feed_plan_v1';
 const MDR_FEED_PLAN_STORAGE_PREFIX = 'mdr-feed-plan-v1';
 
@@ -240,21 +241,32 @@ function feedPlanStorageKey(session=LOCAL_SESSION) {
   return `${MDR_FEED_PLAN_STORAGE_PREFIX}:${slug}`;
 }
 
-function normalizeFeedPlanConfig(value) {
+function feedPlanDefaultOwnerName(session=LOCAL_SESSION) {
+  const mail=String(session?.user?.email || '').trim().toLowerCase();
+  // Bestehende Accounts bekommen beim Upgrade eine sichere, eindeutige
+  // Voreinstellung. Wilder Wolf gehört bewusst NICHT mehr zum Anevay-Futterabo.
+  if (mail === 'anevay@mdr.invalid') return 'Anevay';
+  if (mail === 'saeculume@mdr.invalid') return 'Saeculume';
+  return '';
+}
+
+function normalizeFeedPlanConfig(value, session=LOCAL_SESSION) {
   const row=value && typeof value === 'object' ? value : {};
+  const explicitOwner=String(row.owner_name || row.mdr_username || '').trim();
   return {
     enabled: row.enabled === true,
     rhythm: row.rhythm === 'monthly' ? 'monthly' : 'weekly',
     last_completed_at: row.last_completed_at || null,
+    owner_name: explicitOwner || feedPlanDefaultOwnerName(session),
   };
 }
 
 function getFeedPlanConfig(session=LOCAL_SESSION) {
   try {
     const raw=localStorage.getItem(feedPlanStorageKey(session));
-    return normalizeFeedPlanConfig(raw ? JSON.parse(raw) : null);
+    return normalizeFeedPlanConfig(raw ? JSON.parse(raw) : null, session);
   } catch {
-    return normalizeFeedPlanConfig(null);
+    return normalizeFeedPlanConfig(null, session);
   }
 }
 
@@ -276,7 +288,7 @@ function feedPlanIsDue(config=getFeedPlanConfig()) {
 }
 
 function persistFeedPlanLocal(config, session=LOCAL_SESSION) {
-  const normalized=normalizeFeedPlanConfig(config);
+  const normalized=normalizeFeedPlanConfig(config, session);
   try { localStorage.setItem(feedPlanStorageKey(session), JSON.stringify(normalized)); } catch {}
   return normalized;
 }
@@ -609,7 +621,7 @@ async function syncConfiguredHorseTagsFromDatabase() {
     if (feedRow && typeof feedRow === 'object') {
       persistFeedPlanLocal(feedRow);
     } else {
-      persistFeedPlanLocal({ enabled:false, rhythm:'weekly', last_completed_at:null });
+      persistFeedPlanLocal({ enabled:false, rhythm:'weekly', last_completed_at:null, owner_name:feedPlanDefaultOwnerName() });
     }
   } catch (error) {
     console.warn('Einstellungen konnten beim Start nicht vollständig synchronisiert werden:', error);

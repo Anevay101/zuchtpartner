@@ -1,0 +1,10 @@
+MDR Pferdedatenbank V54.0.52
+
+- Futterabo logisch korrigiert: Es verwendet nicht mehr die Auswahl „Aktive Züchter“.
+- Pro Supabase-Login gibt es jetzt „Mein MDR-Name / My MDR username“.
+- Das Futterabo berücksichtigt ausschließlich Pferde, deren Besitzer exakt diesem MDR-Namen entspricht.
+- Bestehende Accounts werden beim Upgrade sinnvoll vorbelegt: Anevay -> Anevay, Saeculume -> Saeculume. Wilder Wolf wird nicht in Anevays Futterabo einbezogen.
+- Der MDR-Name kann aus vorhandenen Besitzern gewählt oder frei eingegeben werden. Dadurch funktionieren auch zukünftige Accounts ohne neue Futterabo-Codeänderung.
+- Login erweitert: bestehende Kurz-Logins bleiben erhalten; neue, für MDR freigeschaltete Supabase-Nutzer können sich auch mit ihrer Supabase-E-Mail anmelden. Bei name@mdr.invalid kann weiterhin nur „name“ eingegeben werden.
+- Futterregeln, DE/EN-Switch und die Egress-Optimierung aus V54.0.49 bleiben unverändert erhalten.
+- Keine Supabase-Schema-Migration nötig.

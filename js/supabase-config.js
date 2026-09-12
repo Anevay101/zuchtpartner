@@ -13,6 +13,17 @@ function mdrNormalizeUsername(value) {
   return String(value || '').trim().toLocaleLowerCase('de-DE');
 }
 
+function mdrResolveLoginEmail(value) {
+  const raw=String(value || '').trim();
+  if (!raw) return '';
+  // Neue Supabase-Nutzer können sich direkt mit ihrer E-Mail anmelden.
+  if (raw.includes('@')) return raw.toLowerCase();
+  const name=mdrNormalizeUsername(raw);
+  // Bestehende Kurz-Logins bleiben kompatibel. Für neue kurze Logins gilt
+  // das gleiche mdr.invalid-Schema, sofern der Account so angelegt wurde.
+  return MDR_LOGIN_USERS[name] || `${name}@mdr.invalid`;
+}
+
 function mdrCreateSupabaseClient() {
   if (!globalThis.supabase?.createClient) {
     throw new Error('Supabase-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung prüfen.');

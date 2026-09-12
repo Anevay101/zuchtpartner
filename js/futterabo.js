@@ -90,13 +90,14 @@ function feedProductName(product) {
   return feedUiText(product.de,product.en);
 }
 
-function feedActiveHorses(horses) {
-  if (typeof activeOwnedHorses === 'function') return activeOwnedHorses(horses);
-  return (horses || []).filter(h => typeof isActiveBreeder !== 'function' || isActiveBreeder(h?.owner));
+function feedLoginOwnedHorses(horses,config) {
+  const wanted=String(config?.owner_name || '').trim().toLocaleLowerCase('de');
+  if (!wanted) return [];
+  return (horses || []).filter(h => String(h?.owner || '').trim().toLocaleLowerCase('de') === wanted);
 }
 
 function feedBuildModel(horses,config) {
-  const active=feedActiveHorses(horses);
+  const active=feedLoginOwnedHorses(horses,config);
   const days=typeof feedPlanIntervalDays === 'function' ? feedPlanIntervalDays(config) : (config.rhythm === 'monthly' ? 30 : 7);
   const groups=new Map(MDR_FEED_PRODUCTS.filter(p=>p.unit === 'feed').map(p=>[p.id,[]]));
   const unassigned=[];
@@ -146,16 +147,12 @@ function feedReminderLabel(config) {
 function feedRenderSummary(model,config) {
   const root=document.getElementById('feed-plan-summary');
   if (!root) return;
-  const configured=typeof getActiveBreeders === 'function' ? getActiveBreeders() : null;
-  const owners=(configured == null
-    ? [...new Set(model.active.map(h=>String(h?.owner || '').trim()).filter(Boolean))]
-    : configured
-  ).sort((a,b)=>a.localeCompare(b,'de'));
+  const owner=String(config?.owner_name || '').trim();
   const rhythm=config.rhythm === 'monthly'
     ? feedUiText('Monatlich · 30 Tage','Monthly · 30 days')
     : feedUiText('Wöchentlich · 7 Tage','Weekly · 7 days');
   root.innerHTML=`
-    <div class="settings-stat"><span>${feedUiText('Aktive Züchter','Active breeders')}</span><strong>${owners.length ? owners.map(feedEsc).join(', ') : '–'}</strong></div>
+    <div class="settings-stat"><span>${feedUiText('Mein MDR-Name','My MDR username')}</span><strong>${owner ? feedEsc(owner) : '–'}</strong></div>
     <div class="settings-stat"><span>${feedUiText('Berücksichtigte Pferde','Included horses')}</span><strong>${feedNumber(model.active.length)}</strong></div>
     <div class="settings-stat"><span>${feedUiText('Bestellrhythmus','Order interval')}</span><strong>${feedEsc(rhythm)}</strong></div>
     <div class="settings-stat"><span>${feedUiText('Nächste Erinnerung','Next reminder')}</span><strong>${feedEsc(feedReminderLabel(config))}</strong></div>
@@ -201,7 +198,7 @@ function feedRenderAssignments(model) {
       <div class="feed-horse-list">${model.unassigned.map(h=>`<a href="view.html?id=${encodeURIComponent(h.id)}">${feedEsc(h.name || '(ohne Name)')}</a><span>${feedEsc(h.owner || '')}</span>`).join('')}</div>
     </details>`);
   }
-  root.innerHTML=sections.join('') || `<p class="muted">${feedUiText('Keine aktiven Pferde vorhanden.','No active horses available.')}</p>`;
+  root.innerHTML=sections.join('') || `<p class="muted">${feedUiText('Keine Pferde für den hinterlegten MDR-Namen gefunden.','No horses found for the configured MDR username.')}</p>`;
 }
 
 function feedRenderRules() {
@@ -264,6 +261,14 @@ async function renderFeedPlanPage() {
   }
   if (disabled) disabled.hidden=true;
   if (content) content.hidden=false;
+
+  const ownerName=String(config.owner_name || '').trim();
+  const errorRoot=document.getElementById('feed-plan-error');
+  if (!ownerName) {
+    if (errorRoot) errorRoot.innerHTML=`${feedUiText('Bitte hinterlege unter Einstellungen zuerst deinen MDR-Namen.','Please set your MDR username under Settings first.')} <a href="einstellungen.html">${feedUiText('Zu den Einstellungen','Open Settings')}</a>`;
+    return;
+  }
+  if (errorRoot) errorRoot.textContent='';
 
   const horses=await localGetAll(LOCAL_STORES.horses);
   const model=feedBuildModel(horses,config);

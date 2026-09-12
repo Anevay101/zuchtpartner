@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Einstellungen – MDR Pferdedatenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5451" />
+  <link rel="stylesheet" href="css/style.css?v=5452" />
 </head>
 <body>
 <header class="topbar">
@@ -60,12 +60,18 @@
 
   <section class="card settings-section">
     <h2>🌾 Futterabo</h2>
-    <p class="small muted">Optionale Rhythmus-Erinnerung für den Futterbedarf der aktiven Züchter. Die MDR-Seite wird nicht automatisch bedient; die Datenbank berechnet nur die benötigten Mengen und erinnert an die nächste Bestellung.</p>
+    <p class="small muted">Optionale Rhythmus-Erinnerung für deinen eigenen MDR-Bestand. Das Futterabo ist an den aktuellen Login gebunden und unabhängig von der Auswahl „Aktive Züchter“. Die MDR-Seite wird nicht automatisch bedient.</p>
     <label class="settings-toggle-row settings-toggle-card">
       <input type="checkbox" id="settings-feed-plan-enabled" />
-      <span class="settings-toggle-copy"><strong>Futterabo aktivieren</strong><small>Berücksichtigt automatisch nur Pferde der in den Einstellungen aktiven Züchter.</small></span>
+      <span class="settings-toggle-copy"><strong>Futterabo aktivieren</strong><small>Berücksichtigt ausschließlich Pferde, deren Besitzer deinem unten hinterlegten MDR-Namen entspricht.</small></span>
     </label>
     <div class="form-grid feed-plan-settings-grid">
+      <div>
+        <label for="settings-feed-plan-owner">Mein MDR-Name</label>
+        <input id="settings-feed-plan-owner" list="settings-feed-plan-owner-list" autocomplete="off" placeholder="z. B. Anevay" />
+        <datalist id="settings-feed-plan-owner-list"></datalist>
+        <p class="small muted">Wird pro Supabase-Login gespeichert. Du kannst einen vorhandenen Besitzer auswählen oder einen neuen Namen frei eintragen.</p>
+      </div>
       <div>
         <label for="settings-feed-plan-rhythm">Bestellrhythmus</label>
         <select id="settings-feed-plan-rhythm">
@@ -134,14 +140,14 @@
   <p id="settings-error" class="error"></p>
 </main>
 
-<script src="js/i18n.js?v=5451"></script>
-  <script src="js/supabase-loader.js?v=5451"></script>
-<script src="js/supabase-config.js?v=5451"></script>
-<script src="js/database-local.js?v=5451"></script>
-<script src="js/local-app.js?v=5451"></script>
-<script src="js/learning-file.js?v=5451"></script>
-<script src="js/parser.js?v=5451"></script>
-<script src="js/planer-common.js?v=5451"></script>
-<script src="js/settings-local.js?v=5451"></script>
+<script src="js/i18n.js?v=5452"></script>
+  <script src="js/supabase-loader.js?v=5452"></script>
+<script src="js/supabase-config.js?v=5452"></script>
+<script src="js/database-local.js?v=5452"></script>
+<script src="js/local-app.js?v=5452"></script>
+<script src="js/learning-file.js?v=5452"></script>
+<script src="js/parser.js?v=5452"></script>
+<script src="js/planer-common.js?v=5452"></script>
+<script src="js/settings-local.js?v=5452"></script>
 </body>
 </html>
