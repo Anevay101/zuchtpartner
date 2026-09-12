@@ -1,0 +1,10 @@
+MDR-Datenbank V54.0.61
+
+- Dashboard: Zuchtschau-Entwicklung um einen kompakten Button „Datensatz einlesen“ ergänzt.
+- Import erkennt deutsche und englische MDR-Ergebnislisten automatisch (Rasse + Körung/Prämierung bzw. Stallions/Mares).
+- Hengste und Stuten bleiben strikt getrennte Benchmarks.
+- Leere Schautage werden ignoriert; überlappende Re-Imports ersetzen denselben Schautag statt ihn doppelt zu zählen.
+- Dashboard zeigt je Rasse das aktuelle Meldeniveau, Podiumsniveau und Siegniveau als Median der letzten bis zu 50 besetzten Schauen.
+- Gespeichert werden nur Datum + Punktelisten, nicht der komplette Seitentext, Pferdenamen oder Besitzer.
+- Daten bleiben ausschließlich browserlokal (localStorage); der Import erzeugt keinen zusätzlichen Supabase-Traffic.
+- Bestehende eigene Zuchtschau-Entwicklung der letzten fünf Monate bleibt darunter erhalten.

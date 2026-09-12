@@ -5974,3 +5974,35 @@ summary:focus-visible {
   .tp-eval-chip { white-space: normal; }
   .tp-int, .tp-int .tiny { white-space: normal; }
 }
+
+/* V54.0.61 – kompakter Zuchtschau-Benchmark-Import im Dashboard */
+.dashboard-zs-controls-spacer { flex: 1 1 auto; }
+.dashboard-zs-import-panel {
+  margin: .55rem 0 .8rem;
+  padding: .75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--surface-softer, rgba(255,255,255,.72));
+}
+.dashboard-zs-import-panel textarea { width: 100%; min-height: 8.5rem; margin-top: .4rem; }
+.dashboard-zs-import-actions { margin-top: .45rem; gap: .4rem; }
+.dashboard-zs-import-status { margin: .45rem 0 0; min-height: 1.2em; }
+.dashboard-zs-import-status.success { color: var(--accent-dark); font-weight: 700; }
+.dashboard-zs-import-status.error { color: var(--danger); font-weight: 700; }
+.dashboard-zs-benchmark-head,
+.dashboard-zs-trend-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .65rem;
+  flex-wrap: wrap;
+  margin: .75rem 0 .35rem;
+}
+.dashboard-zs-benchmark-table th,
+.dashboard-zs-benchmark-table td { white-space: nowrap; text-align: center; }
+.dashboard-zs-benchmark-table tbody th { text-align: left; }
+#zs-benchmark-dashboard { margin-bottom: .75rem; }
+@media (max-width: 760px) {
+  .dashboard-zs-controls-spacer { display:none; }
+  #zs-import-toggle { margin-left:0; }
+}

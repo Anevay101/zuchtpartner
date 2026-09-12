@@ -1,0 +1,19 @@
+Zuchtschau-Benchmark V54.0.61
+
+Ablauf:
+1. Dashboard -> Zuchtschau-Entwicklung öffnen.
+2. Stuten oder Hengste auswählen.
+3. „Datensatz einlesen“ öffnen, kompletten MDR-Text einer Ergebnisliste einfügen und einlesen.
+4. Die App erkennt Rasse und Schautyp automatisch.
+
+Benchmark:
+- Meldeniveau = Median aller Punkte der jüngsten bis zu 50 besetzten Schauen.
+- Podium = Median des 3. Platzes aller Schauen mit mindestens drei Meldungen.
+- Siegniveau = Median des 1. Platzes.
+- Leere Schautage zählen nicht.
+- Hengste und Stuten werden getrennt gespeichert und ausgewertet.
+
+Datenschutz / Traffic:
+- Nur Schaudatum und Punktelisten werden lokal im Browser gespeichert.
+- Kein Importtext, Pferdename oder Besitzer wird gespeichert.
+- Keine zusätzlichen Supabase-Lese- oder Schreiboperationen.

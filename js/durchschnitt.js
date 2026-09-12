@@ -23,6 +23,7 @@ async function init() {
   document.querySelector('#d-tag-drop .checkdrop-panel').addEventListener('change', calculate);
   await populateCompareHorseOptions();
   await renderSavedDashboardTiles();
+  window.addEventListener('mdr:breeding-show-benchmark-changed', calculate);
   await calculate();
 }
 
@@ -175,6 +176,10 @@ function renderBreedingShowTrend(rows) {
   const monthKeys=new Set(months.map(m=>m.key));
   const activeRows=(rows||[]).filter(h=>normalizeBreed(h?.breed));
   const breeds=[...new Set(activeRows.map(h=>normalizeBreed(h?.breed)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+  const benchmarkRoot=document.getElementById('zs-benchmark-dashboard');
+  if (window.MDR_BREEDING_SHOW_BENCHMARK?.render) {
+    window.MDR_BREEDING_SHOW_BENCHMARK.render(benchmarkRoot,{gender:DASHBOARD_ZS_GENDER,breeds});
+  }
   if (!breeds.length) {
     root.innerHTML='<p class="muted small">Keine aktive Rasse im aktuellen Filter.</p>';
     return;

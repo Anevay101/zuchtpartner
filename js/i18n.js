@@ -1,4 +1,4 @@
-// MDR V54.0.58 – bilingual UI layer (DE/EN)
+// MDR V54.0.61 – bilingual UI layer (DE/EN)
 // Internal database/parser keys intentionally remain unchanged.
 (() => {
   'use strict';
@@ -278,6 +278,18 @@
     'Gespeicherte Kacheln':'Saved tiles', 'Dashboard-Kacheln':'Dashboard tiles', 'Kachel hinzufügen':'Add tile',
     'Bestands-Durchschnitt':'Stock average', 'Pferd vs. eigener Rassedurchschnitt':'Horse vs. own breed average',
     '📈 Zuchtschau-Entwicklung':'📈 Breeding show trend', '📈 Zuchtschau-Entwicklung:':'📈 Breeding show trend:',
+    'Datensatz einlesen':'Import dataset', 'MDR-Ergebnisliste einfügen':'Paste MDR results list',
+    'Kopierten Text der MDR-Ergebnisseite hier einfügen…':'Paste the copied text from the MDR results page here…',
+    'Schließen':'Close', 'Aktuelles Schau-Niveau':'Current show level', 'Eigene ZS-Entwicklung':'Own breeding-show trend',
+    'Meldeniveau':'Entry level', 'Podium':'Podium', 'Siegniveau':'Winning level', 'Datengrundlage':'Data basis',
+    'Schauen':'shows', 'Meldungen':'entries', 'besetzte Schauen':'completed shows', 'eingelesen':'imported',
+    'Median der letzten bis zu 50 besetzten Schauen':'Median of the latest up to 50 completed shows',
+    'Noch keine passende Ergebnisliste eingelesen.':'No matching results list has been imported yet.',
+    'Meldeniveau = Median aller Meldungen; Podium = typischer 3. Platz; Siegniveau = typischer Gewinner. Leere Schautage werden ignoriert.':'Entry level = median of all entries; podium = typical 3rd place; winning level = typical winner. Empty show days are ignored.',
+    'Aktuelles Schau-Niveau aus eingelesenen MDR-Ergebnislisten und Ø Gewinnwert des eigenen Bestands in den letzten fünf Monaten. Stuten und Hengste werden getrennt ausgewertet.':'Current show level from imported MDR result lists plus the average winning value of your own stock over the last five months. Mares and stallions are analysed separately.',
+    'Die App erkennt Rasse sowie Körung/Prämierung bzw. Stallions/Mares automatisch. Gespeichert werden nur Punktelisten je Schautag – ausschließlich lokal in diesem Browser.':'The app automatically detects breed and stallion/mare show type. Only point lists per show day are stored, exclusively locally in this browser.',
+    'Ø Gewinnwert · letzte 5 Monate':'Average winning value · last 5 months',
+
     '📊 Zuchtbestand & Turnierausrichtung':'📊 Breeding stock & competition focus',
     '👥 Aktive Züchter':'👥 Active breeders', 'Aktive Züchter':'Active breeders', 'Aktive Züchter speichern':'Save active breeders',
 
