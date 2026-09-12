@@ -135,23 +135,23 @@ async function renderHorseTournamentProfile(horse, allHorsesArg = null) {
 
   const mainBest=profile.bestMain;
   const secondaryMention=[...profile.recommendedSecondaryRows,...profile.situationalSecondaryRows]
-    .sort((a,b)=>(Number(b.percentile)||-1)-(Number(a.percentile)||-1)||Number(b.points)-Number(a.points));
+    .sort((a,b)=>(Number(b.recommendationScore)||-1)-(Number(a.recommendationScore)||-1)||(Number(b.percentile)||-1)-(Number(a.percentile)||-1)||Number(b.points)-Number(a.points));
   const secondaryBest=secondaryMention[0]||null;
 
   const mainRows=profile.mainRows.length?profile.mainRows.map(r=>`<tr>
       <td>${plannerTournamentTrafficHtml(r)}</td><th>${plannerEscape(r.discipline)}${r.proven?' <span class="planner-badge tournament-secondary-badge">bewährt</span>':''}</th>
-      <td>${Math.round(r.points)}</td><td>${plannerEscape(r.lk||'–')}</td><td><strong>${plannerTournamentRelativeHtml(r)}</strong></td><td>${plannerTournamentInteriorHtml(r)}</td>
+      <td>${Math.round(r.points)}</td><td>${plannerEscape(r.lk||'–')}</td><td><strong>${plannerTournamentRecommendationHtml(r)}</strong></td><td>${plannerTournamentInteriorHtml(r)}</td>
     </tr>`).join(''):'<tr><td colspan="6" class="muted">Keine auswertbare Disziplin in der Hauptbegabung.</td></tr>';
 
   const secondaryRows=secondaryMention.length?secondaryMention.map(r=>`<tr>
       <td>${plannerTournamentTrafficHtml(r)}</td><th>${plannerEscape(r.discipline)}${r.proven?' <span class="planner-badge tournament-secondary-badge">bewährt</span>':''}</th>
-      <td>${plannerEscape(r.group)}</td><td>${Math.round(r.points)}</td><td>${plannerEscape(r.lk||'–')}</td><td><strong>${plannerTournamentRelativeHtml(r)}</strong></td><td>${plannerTournamentInteriorHtml(r)}</td>
-    </tr>`).join(''):'<tr><td colspan="7" class="muted">Keine Nebenbegabung ab P45 erkannt.</td></tr>';
+      <td>${plannerEscape(r.group)}</td><td>${Math.round(r.points)}</td><td>${plannerEscape(r.lk||'–')}</td><td><strong>${plannerTournamentRecommendationHtml(r)}</strong></td><td>${plannerTournamentInteriorHtml(r)}</td>
+    </tr>`).join(''):'<tr><td colspan="7" class="muted">Keine Nebenbegabung mit Empfehlung ab 45/100 erkannt.</td></tr>';
 
   const grouped=MDR_TOURNAMENT_GROUP_ORDER.map(group=>({group,rows:profile.rows.filter(r=>r.group===group)})).filter(x=>x.rows.length);
   const allDetails=grouped.map(g=>`<div class="group-heading">${plannerEscape(g.group)}</div><div class="table-wrap"><table class="detail-table compact-tournament-table tournament-all-table">
-      <thead><tr><th>Disziplin</th><th>Punkte</th><th>LK</th><th>Pxx</th><th>INT</th><th>Einordnung / Referenz</th></tr></thead><tbody>${g.rows.map(r=>`<tr>
-        <th>${plannerEscape(r.discipline)}</th><td>${Math.round(r.points)}</td><td>${plannerEscape(r.lk||'–')}</td><td>${plannerTournamentRelativeHtml(r)}</td><td>${plannerTournamentInteriorHtml(r)}</td>
+      <thead><tr><th>Disziplin</th><th>Punkte</th><th>LK</th><th>Empfehlung</th><th>INT</th><th>Einordnung / Referenz</th></tr></thead><tbody>${g.rows.map(r=>`<tr>
+        <th>${plannerEscape(r.discipline)}</th><td>${Math.round(r.points)}</td><td>${plannerEscape(r.lk||'–')}</td><td>${plannerTournamentRecommendationHtml(r)}</td><td>${plannerTournamentInteriorHtml(r)}</td>
         <td>${plannerTournamentTrafficHtml(r)}<br><span class="tiny muted">${plannerEscape(plannerReferenceLabel(r.reference))}</span></td>
       </tr>`).join('')}</tbody></table></div>`).join('');
 
@@ -161,17 +161,17 @@ async function renderHorseTournamentProfile(horse, allHorsesArg = null) {
         <p class="tournament-recommendation-line"><strong>Hauptbegabung:</strong> ${plannerEscape(mainGroup||'–')} ${mainBest?'· '+plannerTournamentTrafficHtml(mainBest):''}</p>
         <p class="small"><strong>Begabung:</strong> ${plannerEscape(talent||'–')}</p>
       </div><button type="button" class="secondary small" id="horse-copy-tournament">Für Notizen kopieren</button></div>
-      ${mainBest?`<p><strong>Stärkste Hauptdisziplin:</strong> ${plannerEscape(mainBest.discipline)} · ${Math.round(mainBest.points)} P. · ${plannerEscape(mainBest.lk||'LK –')} · ${plannerTournamentRelativeHtml(mainBest)} · INT ${plannerTournamentInteriorHtml(mainBest)}</p>`:''}
-      <p class="small"><strong>Beste Nebenbegabung:</strong> ${secondaryBest?`${plannerEscape(secondaryBest.discipline)} · ${plannerTournamentRelativeHtml(secondaryBest)} · ${plannerTournamentTrafficHtml(secondaryBest)}`:'<span class="muted">keine auffällige ab P45</span>'}</p>
-      <details class="tp-relative-help tp-relative-help-inline"><summary><span class="tp-info-dot">i</span> Pxx &amp; INT</summary><p class="tiny">Pxx vergleicht exakt dieselbe Disziplin und LK mit allen vollständig auswertbaren Pferden der lokalen Datenbank. Bei kleiner Stichprobe wird auf Gruppe+LK bzw. LK gesamt zurückgefallen. Hauptbegabung: P80+ sehr stark, P65–79 gut, P45–64 durchschnittlich. Nebenbegabung: P80+ Beritt sehr interessant, P65–79 interessant, P45–64 situativ. INT: ≤2,00 sehr gut, 2,01–2,50 gut machbar, &gt;2,50 mühsamer.</p></details>
+      ${mainBest?`<p><strong>Stärkste Hauptdisziplin:</strong> ${plannerEscape(mainBest.discipline)} · ${Math.round(mainBest.points)} P. · ${plannerEscape(mainBest.lk||'LK –')} · Empf. ${plannerTournamentRecommendationHtml(mainBest)} · INT ${plannerTournamentInteriorHtml(mainBest)}</p>`:''}
+      <p class="small"><strong>Beste Nebenbegabung:</strong> ${secondaryBest?`${plannerEscape(secondaryBest.discipline)} · Empf. ${plannerTournamentRecommendationHtml(secondaryBest)} · ${plannerTournamentTrafficHtml(secondaryBest)}`:'<span class="muted">keine auffällige ab 45/100</span>'}</p>
+      <details class="tp-relative-help tp-relative-help-inline"><summary><span class="tp-info-dot">i</span> Empfehlung &amp; INT</summary><p class="tiny">Der sichtbare Empfehlungswert 0–100 kombiniert die relative Pxx-Stärke mit einer weichen realistischen Turnierkurve: LK10 ab 155, LK9 ab 190, LK8 ab 200 Punkten. Pxx bleibt intern die Vergleichsbasis aus derselben Disziplin + LK; bei kleiner Stichprobe wird auf Gruppe+LK bzw. LK gesamt zurückgefallen. INT bleibt separat: ≤2,00 sehr gut, 2,01–2,50 gut machbar, &gt;2,50 mühsamer.</p></details>
     </div>
 
     <section class="tournament-compact-section selectable-copy-area"><h3>Hauptbegabung · ${plannerEscape(mainGroup||'–')}</h3>
-      <div class="table-wrap"><table class="detail-table tournament-suitable-table"><thead><tr><th>Ampel</th><th>Disziplin</th><th>Punkte</th><th>LK</th><th>Pxx</th><th>INT</th></tr></thead><tbody>${mainRows}</tbody></table></div>
+      <div class="table-wrap"><table class="detail-table tournament-suitable-table"><thead><tr><th>Ampel</th><th>Disziplin</th><th>Punkte</th><th>LK</th><th>Empfehlung</th><th>INT</th></tr></thead><tbody>${mainRows}</tbody></table></div>
     </section>
 
-    <section class="tournament-compact-section selectable-copy-area"><div class="tournament-section-head"><div><h3>Nebenbegabungen · Beritt prüfen</h3><p class="tiny muted">Nur P45+ wird hervorgehoben.</p></div><button type="button" class="secondary small" id="horse-copy-suitable">Empfehlungen kopieren</button></div>
-      <div class="table-wrap"><table class="detail-table tournament-suitable-table"><thead><tr><th>Ampel</th><th>Disziplin</th><th>Gruppe</th><th>Punkte</th><th>LK</th><th>Pxx</th><th>INT</th></tr></thead><tbody>${secondaryRows}</tbody></table></div>
+    <section class="tournament-compact-section selectable-copy-area"><div class="tournament-section-head"><div><h3>Nebenbegabungen · Beritt prüfen</h3><p class="tiny muted">Nur Empfehlungen ab 45/100 werden hervorgehoben.</p></div><button type="button" class="secondary small" id="horse-copy-suitable">Empfehlungen kopieren</button></div>
+      <div class="table-wrap"><table class="detail-table tournament-suitable-table"><thead><tr><th>Ampel</th><th>Disziplin</th><th>Gruppe</th><th>Punkte</th><th>LK</th><th>Empfehlung</th><th>INT</th></tr></thead><tbody>${secondaryRows}</tbody></table></div>
     </section>
 
     <details class="horse-all-disciplines tournament-all-details"><summary>Alle 28 Disziplinen anzeigen</summary>${allDetails}</details>`;

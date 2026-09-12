@@ -1,0 +1,22 @@
+V54.0.59 – Turnier-Empfehlungswert + Datenbankspalten
+
+- Turnierberatung zeigt jetzt nur noch EINEN sichtbaren Empfehlungswert von 0–100.
+- Interne Basis bleibt Pxx: Vergleich mit allen vollständig auswertbaren Pferden derselben Disziplin + LK; Fallback bei kleiner Stichprobe bleibt unverändert.
+- Pxx wird mit einer weichen absoluten Turnierkurve kombiniert, damit relativ hohe P-Werte bei absolut zu niedrigen Turnierpunkten nicht mehr zu optimistisch bewertet werden.
+- Erfahrungsbasierte Startbereiche der Kurve:
+  - LK10: 155 Punkte
+  - LK9: 190 Punkte
+  - LK8: 200 Punkte
+- Die Startbereiche sind keine harten Cutoffs. Die Kurve steigt weich von deutlich unterhalb bis deutlich oberhalb des Startwerts an.
+- Beispiel: LK9, 171 Punkte, internes P74 ergibt nur ca. 24/100 und damit keine Beritt-/Turnierempfehlung.
+- Ampel/Interpretation des EINEN Empfehlungswerts:
+  - 80–100: sehr stark / Beritt sehr interessant
+  - 65–79: gut / Beritt interessant
+  - 45–64: durchschnittlich / situativ
+  - 25–44: eher schwach / Beritt eher nicht sinnvoll
+  - 0–24: schwach / Beritt nicht empfohlen
+- INT bleibt separat: <=2,00 sehr gut; 2,01–2,50 gut machbar; >2,50 mühsamer.
+- Bestandsvergleich sortiert LK-übergreifend nach dem neuen Empfehlungswert.
+- Keine zusätzlichen Supabase-Abfragen: Pxx, Kurve und Empfehlungswert werden lokal aus dem bereits synchronisierten Bestand berechnet.
+- Datenbanktabelle: „Alter“ und „Besitzer“ getauscht; Besitzer ist jetzt die letzte Informationsspalte direkt vor Aktionen.
+- Cache-Buster auf 5459 erhöht.

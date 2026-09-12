@@ -428,9 +428,12 @@ function tournamentRelativeHtml(evalRow) {
 }
 
 function tournamentTrafficHtml(row, compact=false) {
-  const p=Number(row?.percentile ?? tournamentRelativePercentile(row));
+  const relP=Number(row?.percentile ?? tournamentRelativePercentile(row));
+  const recommendation=Number.isFinite(Number(row?.recommendationScore))
+    ? {score:Number(row.recommendationScore)}
+    : plannerTournamentRecommendationScore(row,relP);
   const isMain=Boolean(row?.isMainGroup);
-  const info=row?.interpretation || plannerTournamentInterpretation(p,isMain);
+  const info=row?.interpretation || plannerTournamentInterpretation(recommendation.score,isMain);
   const cls=`tp-eval-chip tp-eval-${info.traffic || 'neutral'}`;
   const prefix=info.traffic==='green'?'🟢':info.traffic==='yellow'?'🟡':info.traffic==='orange'?'🟠':info.traffic==='red'?'🔴':'⚪';
   return `<span class="${cls}">${prefix} ${compact ? plannerEscape(info.label) : plannerEscape(info.label)}</span>`;
@@ -497,17 +500,23 @@ function renderTournamentRanking() {
       return true;
     });
 
-  // V54.0.58: LK-übergreifend nach relativer Stärke sortieren, nicht nach rohen Punkten.
-  // Die Pxx-Referenz wird aus dem bereits geladenen lokalen Gesamtbestand gebildet.
+  // V54.0.59: LK-übergreifend nach EINEM Empfehlungswert sortieren.
+  // Pxx bleibt die relative interne Basis; die absolute Turnierkurve (LK10 155 / LK9 190 / LK8 200)
+  // verhindert, dass ein relativ gutes, absolut aber chancenloses Pferd zu hoch empfohlen wird.
   rows.forEach(({horse,eval:row})=>{
     const mainGroup=detectHorseMainGroup(horse);
     const isMain=Boolean(mainGroup && row.group===mainGroup);
     const rel=plannerTournamentRelative(row,TP_TOURNAMENT_REFERENCES);
+    const recommendation=plannerTournamentRecommendationScore(row,rel.percentile);
     row.percentile=rel.percentile; row.reference=rel.reference; row.isMainGroup=isMain;
-    row.interpretation=plannerTournamentInterpretation(rel.percentile,isMain);
+    row.recommendationScore=recommendation.score; row.recommendation=recommendation;
+    row.interpretation=plannerTournamentInterpretation(recommendation.score,isMain);
     row.interiorAssessment=plannerTournamentInteriorAssessment(row.interior);
   });
   rows.sort((a,b) => {
+    const as=Number.isFinite(Number(a.eval.recommendationScore))?Number(a.eval.recommendationScore):-1;
+    const bs=Number.isFinite(Number(b.eval.recommendationScore))?Number(b.eval.recommendationScore):-1;
+    if (bs!==as) return bs-as;
     const ap=Number.isFinite(Number(a.eval.percentile))?Number(a.eval.percentile):-1;
     const bp=Number.isFinite(Number(b.eval.percentile))?Number(b.eval.percentile):-1;
     if (bp!==ap) return bp-ap;
@@ -538,7 +547,7 @@ function renderTournamentRanking() {
       <td><strong>${Math.round(row.points)}</strong></td>
       <td>${tournamentInteriorHtml(row)}</td>
       <td>${plannerEscape(row.lk || '?')}</td>
-      <td>${tournamentRelativeHtml(row)} · ${classification}</td>
+      <td><strong>${plannerTournamentRecommendationHtml(row)}</strong> · ${classification}</td>
     </tr>`;
   }).join('');
 }
@@ -546,22 +555,23 @@ function renderTournamentRanking() {
 function tournamentProfileSubset(profile, subsetRows) {
   const rows=Array.isArray(subsetRows)?subsetRows:[];
   const mainGroup=profile?.mainGroup||null;
-  const mainRows=rows.filter(r=>r.group===mainGroup).sort((a,b)=>(Number(b.percentile)||-1)-(Number(a.percentile)||-1)||Number(b.points)-Number(a.points));
-  const secondaryRows=rows.filter(r=>r.group!==mainGroup).sort((a,b)=>(Number(b.percentile)||-1)-(Number(a.percentile)||-1)||Number(b.points)-Number(a.points));
-  const recommendedSecondaryRows=secondaryRows.filter(r=>Number(r.percentile)>=MDR_TOURNAMENT_P_GOOD);
-  const situationalSecondaryRows=secondaryRows.filter(r=>Number(r.percentile)>=MDR_TOURNAMENT_P_AVERAGE && Number(r.percentile)<MDR_TOURNAMENT_P_GOOD);
-  const suitableRows=[...mainRows.filter(r=>r.suitable),...recommendedSecondaryRows];
+  const byRecommendation=(a,b)=>(Number(b.recommendationScore)||-1)-(Number(a.recommendationScore)||-1)||(Number(b.percentile)||-1)-(Number(a.percentile)||-1)||Number(b.points)-Number(a.points);
+  const mainRows=rows.filter(r=>r.group===mainGroup).sort(byRecommendation);
+  const secondaryRows=rows.filter(r=>r.group!==mainGroup).sort(byRecommendation);
+  const recommendedSecondaryRows=secondaryRows.filter(r=>Number(r.recommendationScore)>=MDR_TOURNAMENT_P_GOOD);
+  const situationalSecondaryRows=secondaryRows.filter(r=>Number(r.recommendationScore)>=MDR_TOURNAMENT_P_AVERAGE && Number(r.recommendationScore)<MDR_TOURNAMENT_P_GOOD);
+  const suitableRows=[...mainRows.filter(r=>r.suitable),...recommendedSecondaryRows].sort(byRecommendation);
   const groups=(MDR_TOURNAMENT_GROUP_ORDER||[]).map(group=>{
-    const allRows=rows.filter(r=>r.group===group);
+    const allRows=rows.filter(r=>r.group===group).sort(byRecommendation);
     if(!allRows.length)return null;
     const good=allRows.filter(r=>r.suitable);
     return {group,rows:good,allRows,count:good.length,isMain:group===mainGroup,best:allRows[0]||null,provenCount:allRows.filter(r=>r.proven).length};
   }).filter(Boolean);
   const main=groups.find(g=>g.group===mainGroup)||{group:mainGroup,rows:[],allRows:mainRows,count:0,isMain:true,best:mainRows[0]||null,provenCount:0};
-  const alternatives=groups.filter(g=>g.group!==mainGroup&&g.rows.some(r=>Number(r.percentile)>=MDR_TOURNAMENT_P_GOOD));
+  const alternatives=groups.filter(g=>g.group!==mainGroup&&g.rows.some(r=>Number(r.recommendationScore)>=MDR_TOURNAMENT_P_GOOD));
   const bestMain=mainRows[0]||null, bestSecondary=secondaryRows[0]||null;
-  let recommendation=bestMain?.interpretation?.label?`Hauptbegabung ${bestMain.interpretation.label}`:'Keine belastbare relative Einordnung';
-  if(bestSecondary&&Number(bestSecondary.percentile)>=MDR_TOURNAMENT_P_GOOD) recommendation+=` · Nebenbegabung ${bestSecondary.interpretation.label.toLowerCase()}`;
+  let recommendation=bestMain?.interpretation?.label?`Hauptbegabung ${bestMain.interpretation.label}`:'Keine belastbare Turniereinordnung';
+  if(bestSecondary&&Number(bestSecondary.recommendationScore)>=MDR_TOURNAMENT_P_GOOD) recommendation+=` · Nebenbegabung ${bestSecondary.interpretation.label.toLowerCase()}`;
   return {...profile,rows,mainRows,secondaryRows,recommendedSecondaryRows,situationalSecondaryRows,suitableRows,groups,main,alternatives,singleAlternatives:[],recommendation,best:rows[0]||null,bestMain,bestSecondary,bestSuitable:suitableRows[0]||null};
 }
 
@@ -594,11 +604,11 @@ function renderHorseTournamentOptions() {
   const mainBest=visible.bestMain;
   const secondaryBest=visible.bestSecondary;
   const secondaryMention=[...visible.recommendedSecondaryRows,...visible.situationalSecondaryRows]
-    .sort((a,b)=>(Number(b.percentile)||-1)-(Number(a.percentile)||-1)||Number(b.points)-Number(a.points));
+    .sort((a,b)=>(Number(b.recommendationScore)||-1)-(Number(a.recommendationScore)||-1)||(Number(b.percentile)||-1)-(Number(a.percentile)||-1)||Number(b.points)-Number(a.points));
 
   const mainTraffic=mainBest?tournamentTrafficHtml(mainBest,true):'<span class="muted">–</span>';
-  const secondarySummary=secondaryBest&&Number(secondaryBest.percentile)>=MDR_TOURNAMENT_P_AVERAGE
-    ? `${plannerEscape(secondaryBest.discipline)} · ${tournamentRelativeHtml(secondaryBest)} · ${tournamentTrafficHtml(secondaryBest,true)}`
+  const secondarySummary=secondaryBest&&Number(secondaryBest.recommendationScore)>=MDR_TOURNAMENT_P_AVERAGE
+    ? `${plannerEscape(secondaryBest.discipline)} · ${plannerTournamentRecommendationHtml(secondaryBest)} · ${tournamentTrafficHtml(secondaryBest,true)}`
     : '<span class="muted">keine auffällige Nebenbegabung</span>';
 
   summary.innerHTML=`
@@ -610,25 +620,25 @@ function renderHorseTournamentOptions() {
         </div>
         <button type="button" class="secondary small" id="tp-copy-recommendation">Für Notizen kopieren</button>
       </div>
-      ${mainBest?`<p><strong>Stärkste Hauptdisziplin:</strong> ${plannerEscape(mainBest.discipline)} · ${Math.round(mainBest.points)} P. · ${plannerEscape(mainBest.lk||'LK –')} · ${tournamentRelativeHtml(mainBest)} · INT ${tournamentInteriorHtml(mainBest)}</p>`:'<p class="muted">Keine Hauptdisziplin entspricht den Filtern.</p>'}
+      ${mainBest?`<p><strong>Stärkste Hauptdisziplin:</strong> ${plannerEscape(mainBest.discipline)} · ${Math.round(mainBest.points)} P. · ${plannerEscape(mainBest.lk||'LK –')} · Empf. ${plannerTournamentRecommendationHtml(mainBest)} · INT ${tournamentInteriorHtml(mainBest)}</p>`:'<p class="muted">Keine Hauptdisziplin entspricht den Filtern.</p>'}
       <p class="small"><strong>Beste Nebenbegabung:</strong> ${secondarySummary}</p>
-      <details class="tp-relative-help tp-relative-help-inline"><summary><span class="tp-info-dot">i</span> Pxx &amp; INT</summary><p class="tiny">P72 bedeutet: besser als etwa 72 % aller vollständig auswertbaren Pferde in derselben Disziplin und derselben LK. Bei kleiner Stichprobe wird auf Gruppe+LK bzw. LK gesamt zurückgefallen. INT wird separat bewertet: ≤2,00 sehr gut, 2,01–2,50 gut machbar, &gt;2,50 mühsamer.</p></details>
+      <details class="tp-relative-help tp-relative-help-inline"><summary><span class="tp-info-dot">i</span> Empfehlung &amp; INT</summary><p class="tiny">Der Empfehlungswert 0–100 kombiniert die relative Pxx-Stärke mit einer weichen realistischen Turnierkurve: LK10 ab 155, LK9 ab 190, LK8 ab 200 Punkten. Pxx wird weiterhin aus derselben Disziplin + LK berechnet und bei kleiner Stichprobe auf Gruppe+LK bzw. LK gesamt zurückgeführt. INT bleibt separat: ≤2,00 sehr gut, 2,01–2,50 gut machbar, &gt;2,50 mühsamer.</p></details>
     </div>`;
 
   const mainRows=visible.mainRows.length?visible.mainRows.map(r=>`<tr>
       <td>${tournamentTrafficHtml(r,true)}</td><th>${plannerEscape(r.discipline)}</th><td>${Math.round(r.points)}</td>
-      <td>${plannerEscape(r.lk||'–')}</td><td><strong>${tournamentRelativeHtml(r)}</strong></td><td>${tournamentInteriorHtml(r)}</td>
+      <td>${plannerEscape(r.lk||'–')}</td><td><strong>${plannerTournamentRecommendationHtml(r)}</strong></td><td>${tournamentInteriorHtml(r)}</td>
       <td>${plannerEscape(r.interpretation?.label||'–')}</td>
     </tr>`).join(''):'<tr><td colspan="7" class="muted">Keine Hauptdisziplin entspricht den gewählten Filtern.</td></tr>';
 
   const secondaryRows=secondaryMention.length?secondaryMention.map(r=>`<tr>
       <td>${tournamentTrafficHtml(r,true)}</td><th>${plannerEscape(r.discipline)}</th><td>${plannerEscape(r.group)}</td><td>${Math.round(r.points)}</td>
-      <td>${plannerEscape(r.lk||'–')}</td><td><strong>${tournamentRelativeHtml(r)}</strong></td><td>${tournamentInteriorHtml(r)}</td>
-    </tr>`).join(''):'<tr><td colspan="7" class="muted">Keine Nebenbegabung ab P45 in der aktuellen Auswahl.</td></tr>';
+      <td>${plannerEscape(r.lk||'–')}</td><td><strong>${plannerTournamentRecommendationHtml(r)}</strong></td><td>${tournamentInteriorHtml(r)}</td>
+    </tr>`).join(''):'<tr><td colspan="7" class="muted">Keine Nebenbegabung mit Empfehlung ab 45/100 in der aktuellen Auswahl.</td></tr>';
 
   const fullRows=filtered.length?filtered.map((r,index)=>`<tr>
       <td>${index+1}</td><th>${plannerEscape(r.discipline)}</th><td>${plannerEscape(r.group)}</td><td>${Math.round(r.points)}</td>
-      <td>${plannerEscape(r.lk||'–')}</td><td>${tournamentRelativeHtml(r)}</td><td>${tournamentInteriorHtml(r)}</td>
+      <td>${plannerEscape(r.lk||'–')}</td><td>${plannerTournamentRecommendationHtml(r)}</td><td>${tournamentInteriorHtml(r)}</td>
       <td>${tournamentTrafficHtml(r,true)}<br><span class="tiny muted">${plannerEscape(plannerReferenceLabel(r.reference))}</span></td>
     </tr>`).join(''):'<tr><td colspan="8" class="muted">Keine Disziplin entspricht den gewählten Filtern.</td></tr>';
 
@@ -636,20 +646,20 @@ function renderHorseTournamentOptions() {
     <section class="tournament-compact-section selectable-copy-area">
       <div class="tournament-section-head"><h3>Hauptbegabung · ${plannerEscape(visible.mainGroup||'–')}</h3><button type="button" class="secondary small" id="tp-copy-suitable">Empfehlungen kopieren</button></div>
       <div class="table-wrap"><table class="detail-table tournament-suitable-table">
-        <thead><tr><th>Ampel</th><th>Disziplin</th><th>Punkte</th><th>LK</th><th>Pxx</th><th>INT</th><th>Einordnung</th></tr></thead><tbody>${mainRows}</tbody>
+        <thead><tr><th>Ampel</th><th>Disziplin</th><th>Punkte</th><th>LK</th><th>Empfehlung</th><th>INT</th><th>Einordnung</th></tr></thead><tbody>${mainRows}</tbody>
       </table></div>
     </section>
     <section class="tournament-compact-section selectable-copy-area">
       <h3>Nebenbegabungen · Beritt prüfen</h3>
-      <p class="tiny muted">Angezeigt werden nur Nebenbegabungen ab P45: P80+ sehr interessant · P65–79 interessant · P45–64 situativ.</p>
+      <p class="tiny muted">Angezeigt werden nur Nebenbegabungen ab 45/100: 80+ sehr interessant · 65–79 interessant · 45–64 situativ.</p>
       <div class="table-wrap"><table class="detail-table tournament-suitable-table">
-        <thead><tr><th>Ampel</th><th>Disziplin</th><th>Gruppe</th><th>Punkte</th><th>LK</th><th>Pxx</th><th>INT</th></tr></thead><tbody>${secondaryRows}</tbody>
+        <thead><tr><th>Ampel</th><th>Disziplin</th><th>Gruppe</th><th>Punkte</th><th>LK</th><th>Empfehlung</th><th>INT</th></tr></thead><tbody>${secondaryRows}</tbody>
       </table></div>
     </section>
     <details class="tournament-all-details">
       <summary>Alle ${filtered.length} gefilterten Disziplinen anzeigen</summary>
       <div class="table-wrap"><table class="detail-table tournament-all-table">
-        <thead><tr><th>#</th><th>Disziplin</th><th>Gruppe</th><th>Punkte</th><th>LK</th><th>Pxx</th><th>INT</th><th>Einordnung / Referenz</th></tr></thead><tbody>${fullRows}</tbody>
+        <thead><tr><th>#</th><th>Disziplin</th><th>Gruppe</th><th>Punkte</th><th>LK</th><th>Empfehlung</th><th>INT</th><th>Einordnung / Referenz</th></tr></thead><tbody>${fullRows}</tbody>
       </table></div>
     </details>`;
 

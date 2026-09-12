@@ -1,0 +1,50 @@
+Turniermodell V54.0.59
+
+1. Relative Basis (internes Pxx)
+Für jede Disziplin wird der Turnierwert gegen alle vollständig auswertbaren Pferde derselben Disziplin und derselben LK verglichen. Ob diese Disziplin beim Referenzpferd Haupt- oder Nebenbegabung ist, ist egal.
+
+Bei zu kleiner exakter Stichprobe gilt weiterhin:
+1) gleiche Disziplingruppe + LK
+2) gesamte LK
+Unter n=5 wird kein scheinpräzises Pxx verwendet.
+
+2. Realistische Punktekurve
+Erfahrungsbasierter Startbereich realer Turnierchancen:
+- LK10: 155 Punkte
+- LK9: 190 Punkte
+- LK8: 200 Punkte
+
+Der Startwert ist bewusst keine harte Grenze. Die Kurve arbeitet mit folgenden Multiplikatoren relativ zum Startwert:
+- 40+ Punkte darunter: 0,10
+- 20 Punkte darunter: 0,30
+- am Startwert: 0,72
+- 20 Punkte darüber: 0,90
+- 40+ Punkte darüber: 1,00
+Dazwischen wird linear geglättet.
+
+3. Ein sichtbarer Empfehlungswert
+Empfehlung = gerundetes internes Pxx × Kurvenfaktor, begrenzt auf 0–100.
+
+Dadurch bleibt die relative Stärke wichtig, aber ein Pferd mit absolut zu niedrigen Punkten kann trotz hohem Pxx keine starke Turnierempfehlung erhalten.
+
+Beispiel:
+LK9 · 171 Punkte · internes P74
+Start LK9 = 190, also 19 Punkte darunter.
+Kurvenfaktor ca. 0,321.
+Empfehlung = 74 × 0,321 ≈ 24/100 → rot, Beritt nicht empfohlen.
+
+4. Ampel
+80–100: grün, sehr stark / Beritt sehr interessant
+65–79: grün, gut / Beritt interessant
+45–64: gelb, durchschnittlich / situativ
+25–44: orange, eher schwach / Beritt eher nicht sinnvoll
+0–24: rot, schwach / Beritt nicht empfohlen
+
+5. INT
+INT fließt NICHT in den Empfehlungswert ein und bleibt separat sichtbar:
+<=2,00: sehr gut
+2,01–2,50: gut machbar
+>2,50: mühsamer
+
+6. Supabase-Traffic
+Die Berechnung verwendet ausschließlich den bereits lokal synchronisierten Pferdebestand. Wechsel von Pferd, Disziplin oder Filter erzeugt keine zusätzliche Supabase-Abfrage für das Turniermodell.

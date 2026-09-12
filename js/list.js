@@ -1388,8 +1388,8 @@ function rowHtml(h) {
     <td data-label="HLP/SLP">${escapeHtml(hlpSlpDisplay(h.hlp_slp))}</td>
     <td data-label="ZZL">${zzlDisplay(h.breeding_allowed)}</td>
     <td data-label="EKH">${escapeHtml(ekhText)}</td>
-    <td data-label="Besitzer" title="${escapeHtml(h.owner || '')}">${escapeHtml(h.owner || '')}</td>
     <td data-label="Alter">${h.birthdate ? escapeHtml(formatAge(h.birthdate)) : ''}</td>
+    <td data-label="Besitzer" title="${escapeHtml(h.owner || '')}">${escapeHtml(h.owner || '')}</td>
         <td data-label="Aktionen" class="actions-cell">
       <a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a>
       <button class="danger icon-btn" data-delete="${h.id}" title="Löschen">✗</button>
