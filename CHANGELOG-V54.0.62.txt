@@ -1,0 +1,11 @@
+MDR-Datenbank V54.0.62
+
+- Zuchtschau-Benchmarks werden jetzt gemeinsam über Supabase synchronisiert.
+- Eigener kleiner Store breeding_show_benchmarks im bestehenden mdr_records-System; keine neue Supabase-Tabelle oder Migration nötig.
+- Pro Rasse + Geschlecht exakt ein Datensatz.
+- Cloud-Payload bewusst kompakt: nur Rasse, Geschlecht und maximal 50 belegte Schautage mit Datum + Punkteliste.
+- Keine Pferdenamen, Besitzer oder kopierten MDR-Seitentexte werden gespeichert.
+- Import macht vor dem Upsert einen kleinen Delta-Abgleich und schreibt danach genau den betroffenen Benchmark-Datensatz.
+- Vorhandene lokale V54.0.61-Benchmarks werden einmalig in den gemeinsamen Store migriert und danach aus localStorage entfernt.
+- IndexedDB-Version auf 4 erhöht; neuer lokaler Cache-Store breeding_show_benchmarks.
+- Bestehender 5-Minuten-Delta-/Manifest-Egress-Schutz bleibt erhalten.

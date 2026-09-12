@@ -2,7 +2,7 @@
 // Die bekannten local* Funktionen bleiben erhalten, damit die bestehende App
 // nicht auf eine zweite Datenzugriffsschicht umgebaut werden muss.
 const LOCAL_DB_NAME = 'mdr-datenbank-local';
-const LOCAL_DB_VERSION = 3;
+const LOCAL_DB_VERSION = 4;
 
 const LOCAL_STORES = {
   horses: 'horses',
@@ -11,7 +11,8 @@ const LOCAL_STORES = {
   foalReferenceData: 'foal_reference_data',
   userSettings: 'user_settings',
   filterPresets: 'filter_presets',
-  tagSuggestions: 'tag_suggestions'
+  tagSuggestions: 'tag_suggestions',
+  breedingShowBenchmarks: 'breeding_show_benchmarks'
 };
 
 const MDR_CLOUD_BUILD = true;
@@ -92,6 +93,7 @@ function openLocalDatabase() {
       if (!db.objectStoreNames.contains(LOCAL_STORES.userSettings)) db.createObjectStore(LOCAL_STORES.userSettings,{keyPath:'key'});
       if (!db.objectStoreNames.contains(LOCAL_STORES.filterPresets)) db.createObjectStore(LOCAL_STORES.filterPresets,{keyPath:'id',autoIncrement:true});
       if (!db.objectStoreNames.contains(LOCAL_STORES.tagSuggestions)) db.createObjectStore(LOCAL_STORES.tagSuggestions,{keyPath:'id',autoIncrement:true});
+      if (!db.objectStoreNames.contains(LOCAL_STORES.breedingShowBenchmarks)) db.createObjectStore(LOCAL_STORES.breedingShowBenchmarks,{keyPath:'id'});
       if (!db.objectStoreNames.contains(MDR_SYNC_META_STORE)) db.createObjectStore(MDR_SYNC_META_STORE,{keyPath:'storeName'});
     };
   });

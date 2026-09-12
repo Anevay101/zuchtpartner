@@ -1,0 +1,15 @@
+Zuchtschau-Benchmark – gemeinsame Synchronisierung
+
+Speicherprinzip:
+- Supabase: bestehende Tabelle public.mdr_records, store_name=breeding_show_benchmarks.
+- Kein neues SQL-Schema erforderlich.
+- Pro Rasse/Geschlecht genau ein record_key.
+- Payload: id, b (Rasse), g (Stute/Hengst), e ([[Datum,[Punkte...]], ...]).
+- Maximal 50 belegte Schauen je Datensatz, passend zum verwendeten Benchmarkfenster.
+- Namen/Besitzer/Seitentext werden nicht übertragen.
+
+Traffic:
+- Dashboard liest den Store über den bestehenden IndexedDB-/Delta-Cache.
+- Manifest-Abgleich höchstens nach Ablauf des bestehenden 5-Minuten-Fensters.
+- Nur neue/geänderte Benchmark-Datensätze werden nachgeladen.
+- Beim Import wird einmal der kleine Store abgeglichen und danach exakt ein Datensatz hochgeladen.
