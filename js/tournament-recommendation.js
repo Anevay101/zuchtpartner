@@ -1,4 +1,4 @@
-/* V54.0.59 – LK-relative Turnierberatung mit realistischer Turnierkurve
+/* V54.0.60 – LK-relative Turnierberatung mit realistischer Turnierkurve
    Kernprinzip:
    - Pxx bleibt die relative Basis: exakt dieselbe Disziplin + dieselbe LK.
    - Referenz = alle lokal vorhandenen, vollständig auswertbaren Pferde; Haupt-/Nebenbegabung
@@ -474,5 +474,5 @@ function plannerTournamentInteriorHtml(row) {
   const esc=typeof plannerEscape==='function'?plannerEscape:(v=>String(v??''));
   const value=row?.interior==null?'–':Number(row.interior).toFixed(2);
   const prefix=a.traffic==='green'?'🟢':a.traffic==='yellow'?'🟡':a.traffic==='red'?'🔴':'⚪';
-  return `<span class="tp-int tp-int-${a.traffic}">${value} <span class="tiny">${prefix} ${esc(a.label)}</span></span>`;
+  return `<span class="tp-int tp-int-${a.traffic}" title="${esc(a.label)}">${value} <span class="tiny">${prefix}</span></span>`;
 }

@@ -443,7 +443,7 @@ function tournamentInteriorHtml(row) {
   const a=row?.interiorAssessment || plannerTournamentInteriorAssessment(row?.interior);
   const value=row?.interior == null ? '–' : Number(row.interior).toFixed(2);
   const prefix=a.traffic==='green'?'🟢':a.traffic==='yellow'?'🟡':a.traffic==='red'?'🔴':'⚪';
-  return `<span class="tp-int tp-int-${a.traffic}">${value} <span class="tiny">${prefix} ${plannerEscape(a.label)}</span></span>`;
+  return `<span class="tp-int tp-int-${a.traffic}" title="${plannerEscape(a.label)}">${value} <span class="tiny">${prefix}</span></span>`;
 }
 
 function renderTournamentStats() {

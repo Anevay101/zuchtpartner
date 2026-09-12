@@ -1,0 +1,8 @@
+V54.0.60 – INT-Anzeige kompakter
+
+- Turnieransichten zeigen beim INT nur noch den Zahlenwert plus Ampelpunkt.
+- Die wiederholten Texte „sehr gut“, „gut machbar“ und „mühsamer“ wurden aus den Tabellen entfernt.
+- Die Bedeutung bleibt per Tooltip und im Info-Hinweis verfügbar.
+- INT-Grenzen unverändert: <= 2,00 grün; 2,01–2,50 gelb; > 2,50 rot.
+- Keine Änderung an Turnierberechnung, Pxx, Empfehlungskurve oder Supabase-Synchronisation.
+- Cache-Buster auf 5460 angehoben.
