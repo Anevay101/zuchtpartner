@@ -89,7 +89,7 @@
     'z. B. Anevay':'e.g. Anevay',
     'Futterbedarf & Rhythmus-Erinnerung':'Feed requirements & schedule reminder',
     '✓ Bestellung als erledigt markieren':'✓ Mark order as completed',
-    'Empfohlene Bestellmenge':'Recommended order quantity', 'Futterart':'Feed type', 'Bestellmenge':'Order quantity',
+    'Empfohlene Bestellmenge':'Recommended order quantity', 'Futterart':'Feed type', 'Bestellmenge':'Order quantity', 'Preis je Sack/Ballen':'Price per bag/bale',
     'Preis je Einheit':'Price per unit', 'Kosten':'Cost', 'Gesamtkosten':'Total cost',
     'Zuordnung der Pferde':'Horse assignments', 'Verwendete Futterregeln':'Feed rules used',
     'Aktive Züchter':'Active breeders', 'Berücksichtigte Pferde':'Included horses', 'Nächste Erinnerung':'Next reminder',
@@ -100,7 +100,7 @@
     'Optionale Rhythmus-Erinnerung für deinen eigenen MDR-Bestand. Das Futterabo ist an den aktuellen Login gebunden und unabhängig von der Auswahl „Aktive Züchter“. Die MDR-Seite wird nicht automatisch bedient.':'Optional schedule reminder for your own MDR horses. The feed plan is tied to the current login and independent of the “Active breeders” selection. The MDR site is not controlled automatically.',
     'Berücksichtigt ausschließlich Pferde, deren Besitzer deinem unten hinterlegten MDR-Namen entspricht.':'Includes only horses whose owner matches the MDR username configured below.',
     'Die Berechnung verwendet ausschließlich Pferde des MDR-Namens, der für deinen aktuellen Login in den Einstellungen hinterlegt ist. Die Auswahl „Aktive Züchter“ hat darauf keinen Einfluss. Es wird nichts automatisch auf Morning Dust Ranch bestellt.':'The calculation uses only horses belonging to the MDR username configured for your current login. The “Active breeders” selection has no effect on the feed plan. Nothing is ordered automatically on Morning Dust Ranch.',
-    'Kraftfutter: 1 Einheit je Pferd und Tag. Heu und Stroh: 1 Ballen = 30 Pferdetage; Ballenmengen werden immer aufgerundet.':'Concentrated feed: 1 unit per horse per day. Hay and straw: 1 bale = 30 horse-days; bale quantities are always rounded up.',
+    'Kraftfutter: 1 Sack = 30 Einheiten = 30 Pferdetage. Heu und Stroh: 1 Ballen = 30 Pferdetage. Bestellmengen werden immer auf volle Säcke bzw. Ballen aufgerundet.':'Concentrated feed: 1 bag = 30 units = 30 horse-days. Hay and straw: 1 bale = 30 horse-days. Order quantities are always rounded up to whole bags or bales.',
     'Hier kannst du prüfen, welche Pferde welcher Futterregel zugeordnet wurden.':'Here you can check which horses were assigned to which feed rule.',
     'Aktiviere es unter Einstellungen, um Bedarf und Rhythmus-Erinnerung zu verwenden.':'Enable it under Settings to use requirements and schedule reminders.',
 

@@ -1,0 +1,18 @@
+Futterabo / Feed plan – V54.0.53
+
+Korrekte Mengeneinheiten
+- Ein Pferd braucht 1 Kraftfutter-Einheit pro Tag.
+- Ein Sack Kraftfutter enthält 30 Einheiten.
+- Damit deckt 1 Sack genau 30 Pferdetage.
+- Bestellmenge Kraftfutter: ceil(Anzahl Pferde x Tage / 30).
+- Heu und Stroh: 1 Ballen = 30 Pferdetage; gleiche Berechnungslogik.
+- Preise werden je Sack bzw. Ballen gerechnet.
+
+Beispiel
+- 10 Fohlen, monatlich (30 Tage): 10 Säcke Fohlen Standard, nicht 300 einzelne Einheiten.
+- 10 Fohlen, wöchentlich (7 Tage): ceil(10 x 7 / 30) = 3 Säcke.
+
+Hinweis zum Wochenrhythmus
+- Da nur ganze Säcke bestellt werden können, wird immer aufgerundet. Ohne Inventar-/Restbestandsabgleich kann dadurch bei häufigen Wochenbestellungen ein Restbestand entstehen.
+
+Alle bisherigen Futterregeln und die Login->MDR-Name-Zuordnung bleiben unverändert.

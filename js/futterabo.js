@@ -1,12 +1,12 @@
 document.addEventListener('DOMContentLoaded', initFeedPlanPage);
 
 const MDR_FEED_PRODUCTS = [
-  { id:'foal_standard', de:'Fohlen Standard', en:'Foal Standard', price:60, unit:'feed' },
-  { id:'youngstock', de:'Aufzucht Futter', en:'Youngstock', price:125, unit:'feed' },
-  { id:'broodmare_standard', de:'Zuchtstuten Standard', en:'Broodmare Standard', price:140, unit:'feed' },
-  { id:'stallion_standard', de:'Deckhengste Standard', en:'Stallion Standard', price:90, unit:'feed' },
-  { id:'combo_competition', de:'Kombifutter Turnier', en:'Combo Competition', price:330, unit:'feed' },
-  { id:'performance_gold', de:'Sportpferde Gold', en:'Performance Gold', price:215, unit:'feed' },
+  { id:'foal_standard', de:'Fohlen Standard', en:'Foal Standard', price:60, unit:'bag' },
+  { id:'youngstock', de:'Aufzucht Futter', en:'Youngstock', price:125, unit:'bag' },
+  { id:'broodmare_standard', de:'Zuchtstuten Standard', en:'Broodmare Standard', price:140, unit:'bag' },
+  { id:'stallion_standard', de:'Deckhengste Standard', en:'Stallion Standard', price:90, unit:'bag' },
+  { id:'combo_competition', de:'Kombifutter Turnier', en:'Combo Competition', price:330, unit:'bag' },
+  { id:'performance_gold', de:'Sportpferde Gold', en:'Performance Gold', price:215, unit:'bag' },
   { id:'hay', de:'Heu', en:'Hay', price:60, unit:'bale' },
   { id:'straw', de:'Stroh', en:'Straw', price:30, unit:'bale' },
 ];
@@ -99,7 +99,7 @@ function feedLoginOwnedHorses(horses,config) {
 function feedBuildModel(horses,config) {
   const active=feedLoginOwnedHorses(horses,config);
   const days=typeof feedPlanIntervalDays === 'function' ? feedPlanIntervalDays(config) : (config.rhythm === 'monthly' ? 30 : 7);
-  const groups=new Map(MDR_FEED_PRODUCTS.filter(p=>p.unit === 'feed').map(p=>[p.id,[]]));
+  const groups=new Map(MDR_FEED_PRODUCTS.filter(p=>p.unit === 'bag').map(p=>[p.id,[]]));
   const unassigned=[];
   for (const horse of active) {
     const id=feedClassifyHorse(horse);
@@ -111,11 +111,13 @@ function feedBuildModel(horses,config) {
   for (const product of MDR_FEED_PRODUCTS) {
     let horseCount=active.length;
     let quantity=0;
-    if (product.unit === 'feed') {
+    if (product.unit === 'bag') {
       horseCount=(groups.get(product.id) || []).length;
-      quantity=horseCount * days;
+      // MDR: 1 Sack Kraftfutter enthält 30 Einheiten. Ein Pferd braucht
+      // 1 Einheit pro Tag, also deckt 1 Sack 30 Pferdetage.
+      quantity=Math.ceil(horseCount * days / 30);
     } else {
-      // MDR: 1 Ballen reicht für 1 Pferd 30 Tage = 30 Pferdetage.
+      // MDR: 1 Ballen Heu/Stroh reicht für 1 Pferd 30 Tage = 30 Pferdetage.
       quantity=Math.ceil(active.length * days / 30);
     }
     rows.push({
@@ -123,7 +125,7 @@ function feedBuildModel(horses,config) {
       horseCount,
       quantity,
       cost:quantity * product.price,
-      horses:product.unit === 'feed' ? (groups.get(product.id) || []) : active,
+      horses:product.unit === 'bag' ? (groups.get(product.id) || []) : active,
     });
   }
 
@@ -163,7 +165,7 @@ function feedRenderTable(model) {
   const body=document.getElementById('feed-plan-body');
   if (!body) return;
   body.innerHTML=model.rows.map(row=>{
-    const unit=row.unit === 'bale' ? feedUiText('Ballen','bales') : feedUiText('Einheiten','units');
+    const unit=row.unit === 'bale' ? feedUiText('Ballen','bales') : feedUiText('Säcke','bags');
     return `<tr>
       <td><strong>${feedEsc(feedProductName(row))}</strong></td>
       <td>${feedNumber(row.horseCount)}</td>
@@ -180,7 +182,7 @@ function feedRenderAssignments(model) {
   const root=document.getElementById('feed-plan-assignments');
   if (!root) return;
   const sections=[];
-  for (const product of MDR_FEED_PRODUCTS.filter(p=>p.unit === 'feed')) {
+  for (const product of MDR_FEED_PRODUCTS.filter(p=>p.unit === 'bag')) {
     const horses=model.groups.get(product.id) || [];
     if (!horses.length) continue;
     sections.push(`<details class="feed-assignment-group">

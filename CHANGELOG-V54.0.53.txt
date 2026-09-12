@@ -1,0 +1,10 @@
+MDR Pferdedatenbank V54.0.53
+
+- Futterabo-Mengenberechnung korrigiert: 1 Sack Kraftfutter enthält 30 Einheiten und deckt damit 30 Pferdetage.
+- Kraftfutter-Bestellmenge = ceil(Pferde x Tage / 30), statt Pferde x Tage.
+- Preise werden korrekt je Sack berechnet, nicht je einzelner Futtereinheit.
+- Anzeige verwendet für Kraftfutter jetzt „Säcke / bags“ und „Preis je Sack/Ballen“.
+- Heu/Stroh bleiben unverändert: 1 Ballen = 30 Pferdetage.
+- Bei monatlichem 30-Tage-Rhythmus entspricht die Sack-/Ballenmenge exakt der Zahl der Pferde in der jeweiligen Gruppe.
+- Login-Zuordnung, DE/EN-Switch und Supabase-Egress-Optimierung bleiben unverändert.
+- Keine Supabase-Migration nötig.
