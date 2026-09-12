@@ -1,4 +1,4 @@
-// MDR V54.0.57 – bilingual UI layer (DE/EN)
+// MDR V54.0.58 – bilingual UI layer (DE/EN)
 // Internal database/parser keys intentionally remain unchanged.
 (() => {
   'use strict';
@@ -758,7 +758,34 @@
 
   const EXACT_REVERSE = Object.fromEntries(Object.entries(EN).map(([de,en]) => [en,de]));
 
+
+  // V54.0.58 – LK-relative Turnierberatung
+  Object.assign(EN, {
+    'Pxx / Einordnung':'Pxx / assessment', 'Pxx':'Pxx', 'Ampel':'Traffic light',
+    'Hauptbegabung':'Main talent', 'Stärkste Hauptdisziplin:':'Strongest main discipline:',
+    'Beste Nebenbegabung:':'Best secondary talent:', 'Nebenbegabungen · Beritt prüfen':'Secondary talents · consider training',
+    'Einordnung / Referenz':'Assessment / reference', 'Nach Disziplin + LK':'By discipline + level',
+    'Auswertungen n':'Evaluations n', 'sehr stark':'very strong', 'gut':'good',
+    'durchschnittlich':'average', 'eher schwach':'rather weak', 'schwach':'weak',
+    'Beritt sehr interessant':'training highly worthwhile', 'Beritt interessant':'training worthwhile',
+    'situativ':'situational', 'Beritt eher nicht sinnvoll':'training probably not worthwhile',
+    'Beritt nicht empfohlen':'training not recommended', 'zu wenig Referenzdaten':'insufficient reference data',
+    'sehr gut':'very good', 'gut machbar':'manageable', 'mühsamer':'more laborious', 'INT unbekannt':'INT unknown',
+    'keine auffällige Nebenbegabung':'no notable secondary talent', 'keine auffällige ab P45':'none notable from P45',
+    'Nur P45+ wird hervorgehoben.':'Only P45+ is highlighted.',
+    'Empfehlungen kopieren':'Copy recommendations',
+    'Keine Nebenbegabung ab P45 erkannt.':'No secondary talent at P45 or above detected.',
+    'Keine Nebenbegabung ab P45 in der aktuellen Auswahl.':'No secondary talent at P45 or above in the current selection.',
+    'Referenz sind alle lokal vorhandenen Pferde, für die die jeweilige Disziplin vollständig berechnet werden kann. Haupt- und Nebenbegabung der Referenzpferde werden gleich behandelt.':'The reference includes all locally available horses for which the discipline can be calculated completely. Main and secondary talents of reference horses are treated equally.',
+    'Wie stark ist das Pferd innerhalb seiner tatsächlichen LK? Pxx vergleicht jede Disziplin mit allen vollständig auswertbaren Pferden derselben Disziplin und LK. Nebenbegabungen ab P45 werden separat hervorgehoben.':'How strong is the horse within its actual level? Pxx compares each discipline with all fully evaluable horses in the same discipline and level. Secondary talents from P45 are highlighted separately.',
+    'Welche Pferde sind relativ zu ihrer LK in dieser Disziplin am stärksten? Die Rangliste sortiert LK-übergreifend primär nach Pxx; Rohpunkte und INT bleiben sichtbar.':'Which horses are strongest in this discipline relative to their level? Across levels, the ranking is sorted primarily by Pxx; raw points and INT remain visible.',
+    'P72 = stärker als etwa 72 % der Vergleichswerte. Primär zählt exakt dieselbe Disziplin + LK. Bei weniger als 15 Vergleichswerten fällt die Berechnung auf Hauptgruppe + LK und danach auf die gesamte LK zurück. Die Empfehlung basiert auf Pxx; INT wird separat bewertet.':'P72 means stronger than about 72% of the comparison values. The primary reference is the exact same discipline + level. With fewer than 15 comparison values, the calculation falls back to main group + level and then the entire level. Recommendations are based on Pxx; INT is assessed separately.'
+  });
+
   const DYNAMIC_EN = [
+    [/^Hauptbegabung (sehr stark|gut|durchschnittlich|eher schwach|schwach)$/s, (m,x) => `Main talent ${EN[x] || x}`],
+    [/^Hauptbegabung (sehr stark|gut|durchschnittlich|eher schwach|schwach) · Nebenbegabung (.+)$/s, (m,a,b) => `Main talent ${EN[a] || a} · secondary talent ${EN[b] || b}`],
+    [/^(\d+) Pferde · (\d+) auswertbare Disziplin\/LK-Werte · Pxx primär aus exakt gleicher Disziplin \+ LK\. Berechnung vollständig lokal aus dem bereits synchronisierten Bestand\.$/s, '$1 horses · $2 evaluable discipline/level values · Pxx primarily from the exact same discipline + level. Calculated entirely locally from the already synchronised stock.'],
     [/^Das gefundene Pferd hat bereits folgende Schlagwörter: (.+?)\.\n\nOK = behalten und mit den neu angehakten zusammenführen\.\nAbbrechen = entfernen, nur die im Formular angehakten Schlagwörter übernehmen\.$/s, 'The matched horse already has these tags: $1.\n\nOK = keep them and merge with the newly selected tags.\nCancel = remove them and keep only the tags selected in the form.'],
     [/^„(.+?)“ wirklich rückgängig machen\?$/s, 'Really undo “$1”?'],
     [/^⚠️ Dieses manuelle Backup enthält 0 Pferde\.[\s\S]*Möchtest du die 0-Pferde-Datei trotzdem nur als Download erstellen\?$/s, '⚠️ This manual backup contains 0 horses.\n\nAutomatic backup would NOT overwrite a valid state with this for safety reasons. Do you still want to create the 0-horse file as a download only?'],

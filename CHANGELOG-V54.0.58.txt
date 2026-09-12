@@ -1,0 +1,15 @@
+V54.0.58 – LK-relative Turnierberatung
+
+- Feste Empfehlungsgrenzen von 180 Punkten (Haupt) / 150 Punkten (Neben) als Entscheidungslogik entfernt.
+- Pxx ist jetzt die zentrale Turniereinordnung.
+- Referenz je Disziplin: alle lokal vorhandenen, vollständig auswertbaren Pferde mit exakt derselben Disziplin + derselben LK.
+- Haupt- oder Nebenbegabung des Referenzpferdes spielt für die Referenz keine Rolle.
+- Fallback bei kleiner Stichprobe (<15): Hauptgruppe + LK, danach gesamte LK; unter n=5 keine scheinpräzise Einordnung.
+- P-Ampel: P80+ sehr stark, P65–79 gut, P45–64 durchschnittlich, P25–44 eher schwach, darunter schwach.
+- Nebenbegabungen werden separat interpretiert: P80+ Beritt sehr interessant, P65–79 interessant, P45–64 situativ; darunter nicht hervorgehoben.
+- INT bleibt unabhängig vom Pxx: <=2,00 sehr gut; 2,01–2,50 gut machbar; >2,50 mühsamer.
+- Bestandsvergleich sortiert LK-übergreifend primär nach Pxx statt nach Rohpunkten.
+- Referenzwerte-Tab zeigt nun die tatsächlichen Disziplin+LK-Stichproben.
+- Pferdeseite/Turnierprofil auf dieselbe relative Logik umgestellt.
+- Keine zusätzlichen Supabase-Abfragen für die Turnierberechnung: Referenzmatrix entsteht lokal aus dem bereits synchronisierten Pferdebestand.
+- Cache-Buster auf 5458 erhöht.

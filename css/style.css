@@ -5942,3 +5942,35 @@ summary:focus-visible {
     order: 3;
   }
 }
+
+/* V54.0.58 – relative Turnierampel (Disziplin + LK) */
+.tp-eval-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .16rem .42rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: .8rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  background: var(--surface-softer);
+}
+.tp-eval-green { border-color: color-mix(in srgb, #4d9a55 55%, var(--border)); }
+.tp-eval-yellow { border-color: color-mix(in srgb, #c9a227 55%, var(--border)); }
+.tp-eval-orange { border-color: color-mix(in srgb, #dd8b2c 60%, var(--border)); }
+.tp-eval-red { border-color: color-mix(in srgb, #c84c4c 60%, var(--border)); }
+.tp-eval-neutral { opacity: .8; }
+.tp-p-green { color: #397b42; }
+.tp-p-yellow { color: #8a6b00; }
+.tp-p-orange { color: #a75f0d; }
+.tp-p-red { color: #a43b3b; }
+.tp-int { white-space: nowrap; }
+.tp-int .tiny { white-space: nowrap; }
+.tournament-suitable-table td,
+.tournament-suitable-table th { vertical-align: middle; }
+@media (max-width: 720px) {
+  .tp-eval-chip { white-space: normal; }
+  .tp-int, .tp-int .tiny { white-space: normal; }
+}

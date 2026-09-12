@@ -1,0 +1,43 @@
+Turniermodell V54.0.58
+
+1. Turnierwert
+Der bestehende Rohwert bleibt unverändert:
+  3 × Potenzial der gewählten Disziplin + 6 weitere relevante Potenziale.
+Die LK ergibt sich weiterhin aus dem niedrigsten der 7 relevanten Potenzialwerte.
+
+2. Relative Stärke Pxx
+Für jede Disziplin wird das Pferd primär mit allen vollständig auswertbaren Pferden verglichen,
+die in exakt derselben Disziplin dieselbe LK haben. Dabei ist egal, ob diese Disziplin beim
+Referenzpferd Haupt- oder Nebenbegabung ist.
+
+Fallback bei kleiner Referenz:
+- n >= 15: exakt Disziplin + LK
+- exakt n < 15: Hauptgruppe + LK, wenn dort n >= 15
+- sonst gesamte LK, wenn dort n >= 15
+- wenn keine Ebene n >= 15 erreicht: spezifischste Ebene ab n >= 5 als kleine Basis
+- unter n=5: kein Pxx
+
+3. Interpretation
+Hauptbegabung:
+- P80–100: sehr stark
+- P65–79: gut
+- P45–64: durchschnittlich
+- P25–44: eher schwach
+- P0–24: schwach
+
+Nebenbegabung:
+- P80–100: Beritt sehr interessant
+- P65–79: Beritt interessant
+- P45–64: situativ
+- P25–44: Beritt eher nicht sinnvoll
+- P0–24: Beritt nicht empfohlen
+
+4. Interieur (separat, nicht Bestandteil des Pxx)
+- <= 2,00: sehr gut
+- 2,01–2,50: gut machbar
+- > 2,50: mühsamer
+
+5. Supabase-Traffic
+Die Turnierseite lädt den Pferdebestand wie bisher einmal über localGetAll/Delta-Sync.
+Die Disziplin/LK-Referenzmatrix und alle Pxx-Werte werden danach im Browser berechnet.
+Das Wechseln von Pferden, Disziplinen oder Filtern erzeugt keine zusätzliche Supabase-Abfrage.
