@@ -1,0 +1,46 @@
+MDR V54.0.55 – Ankaufsberatung
+
+Ziel
+- Kaufkandidaten züchterisch einordnen, bevor sie als eigenes Pferd gespeichert werden.
+- Hauptvergleich: eigener Bestand des für den Login hinterlegten MDR-Namens.
+- Zusatzvergleich: realer Gesamtbestand derselben Rasse (Lerndatei ausgenommen).
+
+Linienanalyse
+- Exakte Ahnen-Namen werden verglichen.
+- Eltern: sehr hohe Gewichtung.
+- Großeltern: hohe Gewichtung.
+- 3. Generation: reduzierte Gewichtung.
+- 4. Generation: geringere Gewichtung; wird ergänzt, soweit gespeicherte Vorfahren
+  über ihre Namen auflösbar sind.
+- Ein einzelner Treffer in einer nahen Linie zählt im eigenen Bestand bereits
+  deutlich als Redundanz; häufige Wiederholung verstärkt sie weiter.
+
+Qualitätsvergleich
+- Ausschließlich innerhalb derselben gespeicherten Rasse.
+- GP: höher ist besser.
+- Ext: niedriger ist besser.
+- Ext%: höher ist besser.
+- Int: niedriger ist besser.
+- Anzeige von Median und Perzentil für eigenen Bestand und Gesamtbestand.
+
+Zuchtpartner
+- Eigener Bestand, gleiche Rasse, passendes Geschlecht.
+- Für „direkt nutzbar“ muss der Partner ZZL haben.
+- Gemeinsame sichtbare Ahnen, gemeinsames bestätigtes EKH-Risiko und Overo × Overo
+  gelten als Konflikthinweis.
+- Bis zu fünf konfliktfreie Optionen werden direkt verlinkt.
+
+Gesamturteil
+- Transparente Heuristik, keine Black-Box-KI:
+  40 % Linienerweiterung eigener Bestand
+  30 % rassespezifische Kernwerte
+  25 % nutzbare eigene Zuchtpartner
+   5 % Pedigree-Datenqualität
+- Bei kleiner Vergleichsgruppe oder unvollständigem Pedigree wird die Aussage-
+  sicherheit sichtbar herabgesetzt.
+
+Datensicherheit
+- Die Analyse selbst schreibt NICHT in Supabase und NICHT in den Pferdebestand.
+- „Gekauft – in Datenbank übernehmen“ übergibt nur den kopierten Originaltext an
+  horse.html. Erst der normale Speichern-Vorgang dort legt/aktualisiert ein Pferd.
+- Keine neue Supabase-Tabelle und keine Migration notwendig.

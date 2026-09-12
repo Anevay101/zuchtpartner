@@ -1,4 +1,4 @@
-// MDR V54.0.51 – bilingual UI layer (DE/EN)
+// MDR V54.0.55 – bilingual UI layer (DE/EN)
 // Internal database/parser keys intentionally remain unchanged.
 (() => {
   'use strict';
@@ -28,6 +28,7 @@
     '📖 MDR-Guide':'📖 MDR guide',
     '⚙️ Einstellungen':'⚙️ Settings',
     '🌾 Futterabo':'🌾 Feed plan',
+    '🛒 Ankaufsberatung':'🛒 Purchase advisor',
     'Anmelden':'Sign in',
     'Abmelden':'Sign out',
     'Zurück':'Back',
@@ -40,6 +41,7 @@
     'Dashboard – MDR Pferdedatenbank':'Dashboard – MDR Horse Database',
     'Einstellungen – MDR Pferdedatenbank':'Settings – MDR Horse Database',
     'Futterabo – MDR Pferdedatenbank':'Feed plan – MDR Horse Database',
+    'Ankaufsberatung – MDR Pferdedatenbank':'Purchase advisor – MDR Horse Database',
     'Anmelden – MDR Pferdedatenbank':'Sign in – MDR Horse Database',
     'Guide – MDR Pferdedatenbank':'Guide – MDR Horse Database',
     'Zuchtplaner – MDR Lokal':'Breeding planner – MDR Local',
@@ -54,7 +56,7 @@
     'Auswählen':'Select', 'Speichern':'Save', 'Eintragen':'Add', 'Anwenden':'Apply',
     'Abbrechen':'Cancel', 'Löschen':'Delete', 'Entfernen':'Remove', 'Hinzufügen':'Add',
     'Zurücksetzen':'Reset', 'Berechnen':'Calculate', 'Auslesen':'Parse',
-    'Automatisch auslesen':'Parse automatically', 'Neu einlesen':'Re-read',
+    'Automatisch auslesen':'Parse automatically', '🛒 Als Kaufkandidat analysieren':'🛒 Analyse as purchase candidate', 'Neu einlesen':'Re-read',
     'Pferd neu einlesen':'Re-read horse', 'Überspringen':'Skip', 'Rückgängig':'Undo',
     '↶ Rückgängig':'↶ Undo', 'Sortieren':'Sort', 'aufsteigend':'ascending', 'absteigend':'descending',
     'größer als':'greater than', 'kleiner als':'less than', 'mindestens':'at least', 'unter':'below',
@@ -87,6 +89,7 @@
     'Bestellrhythmus':'Order interval', 'Wöchentlich (7 Tage)':'Weekly (7 days)', 'Monatlich (30 Tage)':'Monthly (30 days)',
     'Mein MDR-Name':'My MDR username', 'Wird pro Supabase-Login gespeichert. Du kannst einen vorhandenen Besitzer auswählen oder einen neuen Namen frei eintragen.':'Saved separately for each Supabase login. You can select an existing owner or freely enter a new name.',
     'z. B. Anevay':'e.g. Anevay',
+    'Diese persönliche Zuordnung wird auch von der Ankaufsberatung verwendet – unabhängig davon, ob das Futterabo aktiviert ist.':'This personal mapping is also used by the purchase advisor, regardless of whether the feed plan is enabled.',
     'Futterbedarf & Rhythmus-Erinnerung':'Feed requirements & schedule reminder',
     '✓ Bestellung als erledigt markieren':'✓ Mark order as completed',
     'Empfohlene Bestellmenge':'Recommended order quantity', 'Futterart':'Feed type', 'Bestellmenge':'Order quantity', 'Bedarf':'Requirement', 'Rest vorher':'Carry-over before', 'Kaufen':'Buy', 'Rest danach':'Carry-over after', 'Preis je Sack/Ballen':'Price per bag/bale',
@@ -105,6 +108,42 @@
     'Aktiviere es unter Einstellungen, um Bedarf und Rhythmus-Erinnerung zu verwenden.':'Enable it under Settings to use requirements and schedule reminders.',
 
     'Benutzername oder E-Mail':'Username or email',
+
+
+    // Purchase advisor / Ankaufsberatung
+    'Zuchtnutzen vor dem Kauf prüfen':'Assess breeding value before purchase',
+    'Der Kandidat wird nur im Browser analysiert und nicht als eigenes Pferd gespeichert. Die Hauptbewertung vergleicht ihn mit den Pferden deines für den Login hinterlegten MDR-Namens; der Gesamtbestand derselben Rasse dient als zusätzliche Einordnung.':'The candidate is analysed only in your browser and is not saved as your horse. The main assessment compares it with the horses belonging to the MDR username configured for your login; the overall database of the same breed provides additional context.',
+    'Kaufkandidat einlesen':'Import purchase candidate',
+    'Wie bei „Neues Pferd“: vollständigen Text der MDR-Pferdeseite einfügen. Für eine belastbare Linienanalyse den Stammbaum möglichst vollständig mitkopieren.':'As with “New horse”: paste the complete text of the MDR horse page. For a reliable line analysis, include as much of the pedigree as possible.',
+    'Hier den kopierten Seitentext des Kaufkandidaten einfügen…':'Paste the copied horse-page text of the purchase candidate here…',
+    '🛒 Kandidat analysieren':'🛒 Analyse candidate',
+    'Bereits gespeichertes Pferd analysieren':'Analyse an already saved horse',
+    'Optional: ein vorhandenes Pferd aus der gemeinsamen Datenbank aus Ankaufssicht prüfen, ohne Daten zu verändern.':'Optional: assess an existing horse from the shared database from a purchase perspective without changing any data.',
+    'Gespeichertes Pferd':'Saved horse',
+    'Analysieren':'Analyse',
+    'Kaufkandidat':'Purchase candidate',
+    '✓ Gekauft – in Datenbank übernehmen':'✓ Purchased – transfer to database',
+    '🐴 Pferd öffnen':'🐴 Open horse',
+    'Ankaufsurteil':'Purchase verdict',
+    'Linienerweiterung eigener Bestand':'Line diversity gain in your stock',
+    'Qualität innerhalb der Rasse':'Quality within the breed',
+    'Nutzbare eigene Zuchtpartner':'Usable breeding partners in your stock',
+    'Warum dieses Urteil?':'Why this verdict?',
+    'Linien- & Pedigreevergleich':'Line & pedigree comparison',
+    'Exakte Ahnen-Namen werden gewichtet: Eltern sehr stark, Großeltern stark, 3. und 4. Generation zunehmend schwächer. „Eigener Bestand“ meint ausschließlich Pferde deines MDR-Namens; „Gesamtbestand“ alle nicht als Lerndatei markierten Pferde derselben Rasse.':'Exact ancestor names are weighted: parents very strongly, grandparents strongly, and the 3rd and 4th generations progressively less. “Your stock” includes only horses belonging to your MDR username; “Overall database” includes all same-breed horses not marked as learning-file records.',
+    'Linie / Ahne':'Line / ancestor', 'Generation':'Generation', 'Eigener Bestand':'Your stock', 'Gesamtbestand':'Overall database', 'Einordnung':'Assessment',
+    'Qualität im Verhältnis zum Bestand':'Quality relative to the stock',
+    'Verglichen wird nur innerhalb derselben Rasse. Das Perzentil sagt, wie viel Prozent des Vergleichsbestands der Kandidat beim jeweiligen Wert erreicht oder übertrifft. Bei Ext und Int ist ein niedrigerer Wert besser.':'Comparison is restricted to the same breed. The percentile shows what percentage of the reference stock the candidate matches or exceeds for each metric. Lower values are better for conformation and temperament.',
+    'Merkmal':'Metric', 'Kandidat':'Candidate', 'Median eigener Bestand':'Median of your stock', 'Perzentil eigener Bestand':'Percentile in your stock', 'Perzentil Gesamtbestand':'Percentile in overall database',
+    'Zuchtpartner im eigenen Bestand':'Breeding partners in your stock',
+    'Geprüft werden Pferde derselben Rasse und des passenden Geschlechts aus deinem eigenen Bestand. Für „direkt nutzbar“ wird eine vorhandene Zuchtzulassung verlangt. Gemeinsame sichtbare Ahnen, gemeinsames Erbkrankheitsrisiko und Overo × Overo werden als Konflikt gewertet.':'Same-breed horses of the appropriate sex from your own stock are checked. A breeding licence is required to count as “directly usable”. Shared visible ancestors, shared hereditary-disease risk and Overo × Overo are treated as conflicts.',
+    'Einordnung im Gesamtbestand':'Context in the overall database',
+    'Dafür spricht':'Strengths', 'Zu beachten':'Considerations', 'Vaterlinie':'Sire line', 'Mutterlinie':'Dam line',
+    'Eltern':'Parents', 'Großeltern':'Grandparents', '3. Generation':'3rd generation', '4. Generation':'4th generation',
+    'neu':'new', 'häufig vertreten':'frequent', 'bereits vertreten':'already represented',
+    'potenzielle Partner':'potential partners', 'davon mit ZZL':'licensed', 'direkt konfliktfrei':'directly conflict-free', 'mit Konflikthinweis':'with conflict warning',
+    'Beste konfliktfreie Optionen':'Best conflict-free options', 'Verwandtschaft':'Relatedness',
+    'Aussagesicherheit':'Confidence',
 
     // Filters / database
     '🔎 Filter ·':'🔎 Filters ·', 'Suche':'Search', 'Suche…':'Search…',
@@ -283,6 +322,7 @@
 
     // Guide / help headings
     'Wie ist die Datenbank aufgebaut?':'How is the database structured?',
+    'Kaufkandidaten vor dem Speichern gegen den eigenen rassespezifischen Bestand und den Gesamtbestand prüfen. Linien, Kernwerte und direkt nutzbare Zuchtpartner werden getrennt ausgewertet.':'Assess purchase candidates before saving them against your own breed-specific stock and the overall database. Lines, core values and directly usable breeding partners are analysed separately.',
     'Wie nutze ich den Zuchtplaner?':'How do I use the breeding planner?',
     'Wie funktioniert das Verpaarungs-Log?':'How does the pairing log work?',
     'Wie funktioniert die Aussortierhilfe?':'How does the selection helper work?',
@@ -300,7 +340,7 @@
     'Filtervorlage':'Filter preset', 'Gespeicherte Filter-Vorlage laden':'Load saved filter preset',
     'Modellwahl:':'Model choice:', 'ℹ️ Modell & Diagnose':'ℹ️ Model & diagnostics', 'Prognose:':'Forecast:',
     'Referenzwerte':'Reference values', '📊 Referenzwerte':'📊 Reference values',
-    'Pferdedatenbank:':'Horse database:', 'Zuchtplaner:':'Breeding planner:', 'Dashboard:':'Dashboard:',
+    'Pferdedatenbank:':'Horse database:', 'Zuchtplaner:':'Breeding planner:', 'Ankaufsberatung:':'Purchase advisor:', 'Dashboard:':'Dashboard:',
     'Verpaarungs-Log:':'Pairing log:', 'Turnier & Leistung:':'Competition & performance:',
     'Bitte ein Pferd auswählen.':'Please select a horse.', 'Keine Pferde gefunden.':'No horses found.',
     'Keine Pferde im aktuellen Filter.':'No horses in the current filter.',

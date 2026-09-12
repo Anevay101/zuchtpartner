@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <title>Ankaufsberatung – MDR Pferdedatenbank</title>
+  <link rel="stylesheet" href="css/style.css?v=5455" />
+</head>
+<body class="purchase-advisor-page">
+  <header class="topbar">
+    <h1>🛒 Ankaufsberatung</h1>
+    <nav class="app-main-nav">
+      <a class="btn secondary" href="index.html">🐴 Datenbank</a>
+      <a class="btn app-nav-add-horse" href="horse.html">➕ Neues Pferd</a>
+      <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
+      <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
+      <a class="btn secondary" href="ankaufsberatung.html">🛒 Ankaufsberatung</a>
+      <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
+      <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
+      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
+      <a class="btn secondary" href="guide.html">📖 Guide</a>
+      <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
+    </nav>
+  </header>
+
+  <main class="container purchase-advisor-main">
+    <section class="card purchase-advisor-intro">
+      <h2>Zuchtnutzen vor dem Kauf prüfen</h2>
+      <p>Der Kandidat wird nur im Browser analysiert und <strong>nicht</strong> als eigenes Pferd gespeichert. Die Hauptbewertung vergleicht ihn mit den Pferden deines für den Login hinterlegten MDR-Namens; der Gesamtbestand derselben Rasse dient als zusätzliche Einordnung.</p>
+      <div id="purchase-owner-note" class="notice small"></div>
+    </section>
+
+    <section class="card">
+      <h2>Kaufkandidat einlesen</h2>
+      <p class="small muted">Wie bei „Neues Pferd“: vollständigen Text der MDR-Pferdeseite einfügen. Für eine belastbare Linienanalyse den Stammbaum möglichst vollständig mitkopieren.</p>
+      <textarea id="purchase-raw-text" rows="12" placeholder="Hier den kopierten Seitentext des Kaufkandidaten einfügen…"></textarea>
+      <div class="purchase-advisor-actions">
+        <button type="button" id="purchase-analyze-btn">🛒 Kandidat analysieren</button>
+        <button type="button" id="purchase-reset-btn" class="secondary">Zurücksetzen</button>
+        <span id="purchase-parse-status" class="small muted"></span>
+      </div>
+    </section>
+
+    <section class="card purchase-existing-card">
+      <details>
+        <summary><strong>Bereits gespeichertes Pferd analysieren</strong></summary>
+        <p class="small muted">Optional: ein vorhandenes Pferd aus der gemeinsamen Datenbank aus Ankaufssicht prüfen, ohne Daten zu verändern.</p>
+        <div class="form-grid">
+          <div>
+            <label for="purchase-existing-select">Gespeichertes Pferd</label>
+            <select id="purchase-existing-select"><option value="">Bitte wählen…</option></select>
+          </div>
+          <div class="purchase-existing-action"><button type="button" id="purchase-existing-btn" class="secondary">Analysieren</button></div>
+        </div>
+      </details>
+    </section>
+
+    <section id="purchase-result" hidden>
+      <div class="purchase-advisor-heading-row">
+        <div>
+          <h2 id="purchase-candidate-heading">Kaufkandidat</h2>
+          <p id="purchase-candidate-meta" class="muted"></p>
+        </div>
+        <div class="purchase-advisor-actions">
+          <button type="button" id="purchase-adopt-btn" hidden>✓ Gekauft – in Datenbank übernehmen</button>
+          <a id="purchase-open-existing" class="btn secondary" href="#" hidden>🐴 Pferd öffnen</a>
+        </div>
+      </div>
+
+      <div class="purchase-score-grid">
+        <article class="card purchase-verdict-card">
+          <div class="purchase-score-label">Ankaufsurteil</div>
+          <div id="purchase-verdict" class="purchase-verdict">–</div>
+          <div id="purchase-score" class="purchase-score">–</div>
+          <div id="purchase-confidence" class="small muted"></div>
+        </article>
+        <article class="card">
+          <div class="purchase-score-label">Linienerweiterung eigener Bestand</div>
+          <div id="purchase-line-score" class="purchase-score-small">–</div>
+          <p id="purchase-line-summary" class="small"></p>
+        </article>
+        <article class="card">
+          <div class="purchase-score-label">Qualität innerhalb der Rasse</div>
+          <div id="purchase-quality-score" class="purchase-score-small">–</div>
+          <p id="purchase-quality-summary" class="small"></p>
+        </article>
+        <article class="card">
+          <div class="purchase-score-label">Nutzbare eigene Zuchtpartner</div>
+          <div id="purchase-partner-score" class="purchase-score-small">–</div>
+          <p id="purchase-partner-summary" class="small"></p>
+        </article>
+      </div>
+
+      <section class="card">
+        <h2>Warum dieses Urteil?</h2>
+        <div id="purchase-reasons" class="purchase-reason-grid"></div>
+      </section>
+
+      <section class="card">
+        <h2>Linien- &amp; Pedigreevergleich</h2>
+        <p class="small muted">Exakte Ahnen-Namen werden gewichtet: Eltern sehr stark, Großeltern stark, 3. und 4. Generation zunehmend schwächer. „Eigener Bestand“ meint ausschließlich Pferde deines MDR-Namens; „Gesamtbestand“ alle nicht als Lerndatei markierten Pferde derselben Rasse.</p>
+        <div id="purchase-parent-lines" class="purchase-parent-lines"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Linie / Ahne</th><th>Generation</th><th>Eigener Bestand</th><th>Gesamtbestand</th><th>Einordnung</th></tr></thead>
+            <tbody id="purchase-lines-body"></tbody>
+          </table>
+        </div>
+        <p id="purchase-pedigree-quality" class="small muted"></p>
+      </section>
+
+      <section class="card">
+        <h2>Qualität im Verhältnis zum Bestand</h2>
+        <p class="small muted">Verglichen wird nur innerhalb derselben Rasse. Das Perzentil sagt, wie viel Prozent des Vergleichsbestands der Kandidat beim jeweiligen Wert erreicht oder übertrifft. Bei Ext und Int ist ein niedrigerer Wert besser.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Merkmal</th><th>Kandidat</th><th>Median eigener Bestand</th><th>Perzentil eigener Bestand</th><th>Perzentil Gesamtbestand</th></tr></thead>
+            <tbody id="purchase-quality-body"></tbody>
+          </table>
+        </div>
+        <p id="purchase-reference-note" class="small muted"></p>
+      </section>
+
+      <section class="card">
+        <h2>Zuchtpartner im eigenen Bestand</h2>
+        <p class="small muted">Geprüft werden Pferde derselben Rasse und des passenden Geschlechts aus deinem eigenen Bestand. Für „direkt nutzbar“ wird eine vorhandene Zuchtzulassung verlangt. Gemeinsame sichtbare Ahnen, gemeinsames Erbkrankheitsrisiko und Overo × Overo werden als Konflikt gewertet.</p>
+        <div id="purchase-partner-stats" class="purchase-stat-strip"></div>
+        <div id="purchase-best-partners"></div>
+      </section>
+
+      <section class="card">
+        <h2>Einordnung im Gesamtbestand</h2>
+        <div id="purchase-global-summary"></div>
+      </section>
+    </section>
+
+    <p id="purchase-error" class="error"></p>
+  </main>
+
+  <script src="js/i18n.js?v=5455"></script>
+  <script src="js/supabase-loader.js?v=5455"></script>
+  <script src="js/supabase-config.js?v=5455"></script>
+  <script src="js/database-local.js?v=5455"></script>
+  <script src="js/local-app.js?v=5455"></script>
+  <script src="js/learning-file.js?v=5455"></script>
+  <script src="js/parser.js?v=5455"></script>
+  <script src="js/planer-common.js?v=5455"></script>
+  <script src="js/breeding-original.js?v=5455"></script>
+  <script src="js/ankaufsberatung.js?v=5455"></script>
+</body>
+</html>

@@ -14,6 +14,11 @@ const JSONB_KEYS = [
 // mitgespeichert.
 const IMPORTED_PROFILE_SCALAR_KEYS = ['offspring_count'];
 
+// V54.0.55: Übergabe zwischen normalem Pferdeimport und Ankaufsberatung.
+// Kandidaten bleiben bis zum ausdrücklichen Speichern ausschließlich in sessionStorage.
+const MDR_PURCHASE_ADVISOR_RAW_KEY = 'mdr-purchase-advisor-raw-v1';
+const MDR_PURCHASE_CANDIDATE_RAW_KEY = 'mdr-purchase-candidate-raw-v1';
+
 let extraData = {};
 let currentParsedPregnancy = null;
 let editingId = null;
@@ -265,6 +270,15 @@ async function init() {
   editingId = params.get('id');
 
   document.getElementById('parse-btn').addEventListener('click', onParse);
+  document.getElementById('purchase-advisor-from-horse')?.addEventListener('click', () => {
+    const raw = document.getElementById('raw-text')?.value || '';
+    if (!raw.trim()) {
+      document.getElementById('parse-status').textContent = 'Bitte zuerst Text einfügen.';
+      return;
+    }
+    try { sessionStorage.setItem(MDR_PURCHASE_ADVISOR_RAW_KEY, raw); } catch {}
+    location.href = 'ankaufsberatung.html';
+  });
   document.getElementById('horse-form').addEventListener('submit', onSave);
   document.getElementById('delete-btn').addEventListener('click', onDelete);
   document.getElementById('purebred_pct').addEventListener('input', updateBreedCompositionVisibility);
@@ -296,6 +310,22 @@ async function init() {
     // Bearbeiten eines bestehenden Pferds gibt es ja nur genau eines).
     document.getElementById('save-and-new-btn').hidden = false;
     document.getElementById('save-and-new-btn').addEventListener('click', onSaveAndNew);
+
+    // Aus der Ankaufsberatung übernommener Kandidat: Text wieder in die
+    // gewohnte Eingabemaske einsetzen und automatisch auslesen. Erst der
+    // normale Speichern-Button legt anschließend wirklich einen Datensatz an.
+    if (params.get('purchase') === '1') {
+      let purchaseRaw = '';
+      try {
+        purchaseRaw = sessionStorage.getItem(MDR_PURCHASE_CANDIDATE_RAW_KEY) || '';
+        sessionStorage.removeItem(MDR_PURCHASE_CANDIDATE_RAW_KEY);
+      } catch {}
+      if (purchaseRaw) {
+        document.getElementById('raw-text').value = purchaseRaw;
+        await onParse();
+        document.getElementById('parse-status').textContent += ' · Aus Ankaufsberatung übernommen – bitte prüfen und erst dann speichern.';
+      }
+    }
   }
 }
 

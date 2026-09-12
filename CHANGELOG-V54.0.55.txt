@@ -1,0 +1,20 @@
+MDR Pferdedatenbank V54.0.55
+
+Ankaufsberatung / Purchase Advisor
+
+- Neuer eigener Haupttab „🛒 Ankaufsberatung“ zwischen Zuchtplaner und Verpaarungslog.
+- Kaufkandidaten können wie gewohnt über den kopierten MDR-Pferdeseitentext eingelesen werden.
+- Kandidaten werden während der Beratung NICHT in Supabase bzw. der Pferdedatenbank gespeichert.
+- Hauptvergleich gegen den Bestand des für den Login hinterlegten MDR-Namens.
+- Zusätzliche Einordnung gegen alle realen (nicht Lerndatei) Pferde derselben Rasse im Gesamtbestand.
+- Linienanalyse: Eltern sehr stark, Großeltern stark, 3. und 4. Generation zunehmend schwächer gewichtet.
+- Zeigt, wie häufig einzelne Ahnen/Linien im eigenen Bestand und Gesamtbestand vertreten sind.
+- Rassespezifischer Qualitätsvergleich über GP, Ext, Ext% und Int mit Medianen und Perzentilen.
+- Zuchtpartneranalyse: gleiche Rasse, passendes Geschlecht, direkte Nutzbarkeit mit ZZL;
+  sichtbare Verwandtschaft, gemeinsames EKH-Risiko und Overo × Overo werden als Konflikt gewertet.
+- Gesamturteil mit transparenter Aufschlüsselung statt Black-Box-Score.
+- „Gekauft – in Datenbank übernehmen“ übergibt den Kandidaten erst dann an die normale Pferdemaske;
+  gespeichert wird weiterhin erst nach der normalen Prüfung und dem Speichern dort.
+- Auf „Neues Pferd“ kann eingefügter Text direkt an die Ankaufsberatung übergeben werden.
+- Bereits gespeicherte Pferde können optional ebenfalls aus Ankaufssicht analysiert werden.
+- DE/EN, Futterabo-Restbestandslogik und Supabase-Egress-Optimierung bleiben erhalten.
