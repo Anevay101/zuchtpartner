@@ -1,10 +1,16 @@
-// MDR V54.0.62 – gemeinsame, egress-sparsame Zuchtschau-Benchmarks.
-// Pro Rasse + Geschlecht liegt genau ein kompakter Datensatz in mdr_records.
-// Gespeichert werden ausschließlich Datum + Punkteliste der letzten 50 belegten Schauen.
+// MDR V54.0.63 – gemeinsame, egress-sparsame Zuchtschau-Benchmarks.
+// Cloudseitig wird bewusst KEIN neuer store_name angelegt: Die kompakten Shared-Datensätze
+// liegen unter einem reservierten Key-Präfix im bereits erlaubten user_settings-Store.
+// Pro Rasse + Geschlecht existiert genau ein Datensatz; gespeichert werden ausschließlich
+// Datum + Punkteliste der letzten 50 belegten Schauen.
 (() => {
   'use strict';
 
-  const STORE_NAME = (typeof LOCAL_STORES !== 'undefined' && LOCAL_STORES.breedingShowBenchmarks)
+  const STORE_NAME = (typeof LOCAL_STORES !== 'undefined' && LOCAL_STORES.userSettings)
+    ? LOCAL_STORES.userSettings
+    : 'user_settings';
+  const ROW_KEY_PREFIX = 'shared_zs_benchmark_v1::';
+  const LEGACY_LOCAL_STORE = (typeof LOCAL_STORES !== 'undefined' && LOCAL_STORES.breedingShowBenchmarks)
     ? LOCAL_STORES.breedingShowBenchmarks
     : 'breeding_show_benchmarks';
   const LEGACY_STORAGE_KEY = 'mdr-breeding-show-benchmarks-v1';
@@ -118,14 +124,19 @@
     return `${normalizeBreedName(breed).toLocaleLowerCase('de')}::${gender === 'Stute' ? 'm' : 's'}`;
   }
 
-  // Kompaktes Cloudformat: b=Rasse, g=Geschlecht, e=[[Datum,[Punkte...]], ...].
+  function rowKey(breed, gender) { return `${ROW_KEY_PREFIX}${datasetId(breed, gender)}`; }
+  function isBenchmarkRow(row) { return String(row?.key || '').startsWith(ROW_KEY_PREFIX); }
+  function benchmarkRowsOnly(rows) { return (Array.isArray(rows) ? rows : []).filter(isBenchmarkRow); }
+
+  // Kompaktes Cloudformat innerhalb user_settings:
+  // key=reservierter Shared-Key, b=Rasse, g=Geschlecht, e=[[Datum,[Punkte...]], ...].
   function packDataset(dataset) {
     const events = (dataset?.events || [])
       .filter(e => e?.date && Array.isArray(e?.scores) && e.scores.length)
       .sort((a,b) => b.date.localeCompare(a.date))
       .slice(0, MAX_STORED_SHOWS_PER_DATASET)
       .map(e => [e.date, e.scores.map(Number).filter(Number.isFinite).map(n => Number.isInteger(n) ? n : Number(n.toFixed(2)))]);
-    return { id: datasetId(dataset.breed, dataset.gender), b: normalizeBreedName(dataset.breed), g: dataset.gender, e: events };
+    return { key: rowKey(dataset.breed, dataset.gender), b: normalizeBreedName(dataset.breed), g: dataset.gender, e: events };
   }
 
   function unpackDataset(row) {
@@ -188,7 +199,7 @@
   }
 
   function applyRows(rows) {
-    sharedRows = Array.isArray(rows) ? rows.filter(Boolean) : [];
+    sharedRows = benchmarkRowsOnly(rows);
     loaded = true;
     return sharedRows;
   }
@@ -216,19 +227,26 @@
     let legacy = null;
     try { legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || 'null'); } catch {}
     const legacyDatasets = legacy?.datasets && typeof legacy.datasets === 'object' ? Object.values(legacy.datasets) : [];
-    if (!legacyDatasets.length) return;
 
-    // Vor dem einmaligen Merge den kleinen Benchmark-Store aktuell holen, damit kein Partner-Datensatz überschrieben wird.
+    // Falls V54.0.62 trotz abweichender Supabase-Constraint lokal Daten hinterlassen hat,
+    // werden auch diese einmalig in das erlaubte user_settings-Namespace übernommen.
+    let v62Rows = [];
+    try { if (typeof idbGetAll === 'function' && LEGACY_LOCAL_STORE !== STORE_NAME) v62Rows = await idbGetAll(LEGACY_LOCAL_STORE); } catch {}
+    const v62Datasets = (v62Rows || []).map(unpackDataset).filter(Boolean);
+    const incomingLegacy = [...legacyDatasets, ...v62Datasets];
+    if (!incomingLegacy.length) return;
+
+    // Vor dem einmaligen Merge user_settings aktuell holen, damit kein Partner-Datensatz überschrieben wird.
     const rows = typeof mdrRefreshStore === 'function' ? await mdrRefreshStore(STORE_NAME) : (initialRows || []);
-    const byId = new Map((rows || []).map(row => [String(row.id), row]));
+    const byId = new Map(benchmarkRowsOnly(rows).map(row => [String(row.key), row]));
     const changed = [];
-    for (const legacyDataset of legacyDatasets) {
+    for (const legacyDataset of incomingLegacy) {
       if (!legacyDataset?.breed || !legacyDataset?.gender || !Array.isArray(legacyDataset.events)) continue;
-      const id = datasetId(legacyDataset.breed, legacyDataset.gender);
-      const previous = unpackDataset(byId.get(id));
+      const key = rowKey(legacyDataset.breed, legacyDataset.gender);
+      const previous = unpackDataset(byId.get(key));
       const merged = mergeDatasets(previous, legacyDataset);
       const packed = packDataset(merged);
-      byId.set(id, packed);
+      byId.set(key, packed);
       changed.push(packed);
     }
     if (changed.length) {
@@ -237,18 +255,19 @@
       applyRows([...byId.values()]);
     }
     try { localStorage.removeItem(LEGACY_STORAGE_KEY); } catch {}
+    try { if (typeof idbClear === 'function' && LEGACY_LOCAL_STORE !== STORE_NAME) await idbClear(LEGACY_LOCAL_STORE); } catch {}
   }
 
   async function mergeBreedingShowDataset(parsed) {
     // Ein Import ist selten. Hier erzwingen wir einmal den kleinen Delta-Abgleich,
     // damit parallele Importe verschiedener Nutzer keine vorhandenen Tage verlieren.
     await refreshSharedRows({force:true});
-    const id = datasetId(parsed.breed, parsed.gender);
-    const previousRow = sharedRows.find(row => String(row?.id) === id);
+    const key = rowKey(parsed.breed, parsed.gender);
+    const previousRow = sharedRows.find(row => String(row?.key) === key);
     const merged = mergeDatasets(unpackDataset(previousRow), parsed);
     const packed = packDataset(merged);
-    await localPut(STORE_NAME, packed); // exakt ein kleiner Supabase-Upsert
-    const next = sharedRows.filter(row => String(row?.id) !== id);
+    await localPut(STORE_NAME, packed); // exakt ein kleiner Upsert im bereits erlaubten user_settings-Store
+    const next = sharedRows.filter(row => String(row?.key) !== key);
     next.push(packed);
     applyRows(next);
     return merged;
@@ -312,7 +331,7 @@
     if (typeof localGetAll === 'function') localGetAll(STORE_NAME).then(rows=>{applyRows(rows);rerender();}).catch(()=>{});
   });
 
-  window.MDR_BREEDING_SHOW_BENCHMARK = { STORE_NAME, BENCHMARK_WINDOW, parse:parseBreedingShowDataset, merge:mergeBreedingShowDataset, getBenchmarks, benchmarkFromDataset, render:renderBenchmarkDashboard, refresh:refreshSharedRows };
+  window.MDR_BREEDING_SHOW_BENCHMARK = { STORE_NAME, ROW_KEY_PREFIX, BENCHMARK_WINDOW, parse:parseBreedingShowDataset, merge:mergeBreedingShowDataset, getBenchmarks, benchmarkFromDataset, render:renderBenchmarkDashboard, refresh:refreshSharedRows };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wireImportUi,{once:true});else wireImportUi();
 })();

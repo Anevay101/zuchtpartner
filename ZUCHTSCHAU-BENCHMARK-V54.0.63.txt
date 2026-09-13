@@ -1,0 +1,9 @@
+Zuchtschau-Benchmark V54.0.63
+
+Gemeinsame Speicherung ohne Schemaänderung:
+- Cloud-Store: bestehendes user_settings in public.mdr_records.
+- Reserviertes Key-Präfix: shared_zs_benchmark_v1::.
+- Pro Rasse + Geschlecht ein Datensatz.
+- Payload: nur Rasse, Geschlecht und maximal 50 belegte Schautage als Datum + Punkteliste.
+- Keine Pferdenamen, Besitzer oder kopierten MDR-Seitentexte.
+- Dashboard filtert ausschließlich die reservierten Benchmark-Keys.

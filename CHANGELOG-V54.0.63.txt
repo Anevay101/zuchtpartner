@@ -1,0 +1,8 @@
+MDR-Datenbank V54.0.63
+
+- Fix: Zuchtschau-Benchmark-Import verletzte auf bestehenden Supabase-Projekten die Constraint mdr_records_store_name_check.
+- Keine SQL-/Supabase-Migration mehr nötig: gemeinsame Benchmarks liegen mit reserviertem Key-Präfix im bereits erlaubten user_settings-Store.
+- Weiterhin pro Rasse + Geschlecht genau ein kompakter Datensatz mit maximal 50 belegten Schautagen.
+- Benchmark-Zeilen werden strikt über shared_zs_benchmark_v1:: gefiltert und beeinflussen persönliche Einstellungen nicht.
+- Eventuelle lokale V54.0.61/V54.0.62-Benchmarkdaten werden einmalig migriert.
+- Kein zusätzlicher Store-Name in public.mdr_records; bestehende Supabase-Check-Constraint bleibt unverändert.
