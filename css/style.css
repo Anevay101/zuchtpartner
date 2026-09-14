@@ -6006,3 +6006,170 @@ summary:focus-visible {
   .dashboard-zs-controls-spacer { display:none; }
   #zs-import-toggle { margin-left:0; }
 }
+
+
+/* ============================================================
+   V54.0.64 – Turniertabellen neu geordnet + Mobile-Pass
+   Basisreihenfolge: Ampel · Gruppe · Disziplin · Punkte · INT · LK · Empfehlung.
+   Auf schmalen Displays werden Turnierzeilen zu gut lesbaren Karten.
+   ============================================================ */
+.tournament-suitable-table,
+.tournament-all-table {
+  width: 100%;
+}
+.tournament-suitable-table th,
+.tournament-suitable-table td,
+.tournament-all-table th,
+.tournament-all-table td {
+  vertical-align: middle;
+}
+
+@media (max-width: 760px) {
+  /* Auf Mobilgeräten nicht zusätzlich auf 80 % verkleinern: Browser-Viewport
+     und Touch-Ziele bleiben dadurch in ihrer natürlichen Größe. */
+  html { zoom: 1; }
+  body { background-attachment: scroll; }
+  main.container { padding: .65rem; }
+
+  /* Kopfzeile: Navigation horizontal wischbar statt mehrzeilig gequetscht. */
+  .topbar {
+    position: sticky;
+    top: 0;
+    flex-direction: column;
+    padding: .5rem .65rem;
+    gap: .45rem;
+    align-items: stretch;
+  }
+  .topbar h1 { font-size: 1.18rem; }
+  .topbar nav,
+  .app-main-nav {
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding: .08rem 0 .18rem;
+  }
+  .topbar nav .btn,
+  .topbar nav button,
+  .app-main-nav .btn {
+    flex: 0 0 auto;
+    min-height: 2.35rem;
+    white-space: nowrap;
+  }
+  .mdr-topbar-tools {
+    width: 100%;
+    flex-basis: auto;
+    justify-content: flex-end;
+    gap: .4rem;
+  }
+  .mdr-topbar-tools .mdr-account-controls { flex-basis: auto; }
+
+  /* Turnier-Summary darf sauber umbrechen; kein horizontaler Überlauf. */
+  .tournament-recommendation-card,
+  .tournament-recommendation-line,
+  .tournament-compact-section,
+  .tournament-section-head { min-width: 0; }
+  .tournament-recommendation-card p { overflow-wrap: anywhere; }
+  .tournament-recommendation-head,
+  .tournament-section-head {
+    align-items: flex-start;
+    gap: .55rem;
+    flex-wrap: wrap;
+  }
+
+  /* Sichtbare Turniertabellen werden auf Mobilgeräten zu Karten. */
+  .tournament-compact-section .table-wrap,
+  .tournament-all-details .table-wrap {
+    overflow: visible;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .tournament-suitable-table,
+  .tournament-suitable-table tbody,
+  .tournament-all-table,
+  .tournament-all-table tbody {
+    display: block;
+    width: 100%;
+  }
+  .tournament-suitable-table thead,
+  .tournament-all-table thead { display: none; }
+  .tournament-suitable-table tr,
+  .tournament-all-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .38rem .55rem;
+    margin: 0 0 .55rem;
+    padding: .65rem .7rem;
+    border: 1px solid color-mix(in srgb, var(--border) 82%, var(--accent) 18%);
+    border-radius: .7rem;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .tournament-suitable-table tr:last-child,
+  .tournament-all-table tr:last-child { margin-bottom: 0; }
+  .tournament-suitable-table th,
+  .tournament-suitable-table td,
+  .tournament-all-table th,
+  .tournament-all-table td {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .12rem;
+    width: auto !important;
+    padding: .18rem 0;
+    border: 0;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+  .tournament-suitable-table th::before,
+  .tournament-suitable-table td::before,
+  .tournament-all-table th::before,
+  .tournament-all-table td::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--muted);
+    font-size: .7rem;
+    font-weight: 700;
+    line-height: 1.1;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+  }
+  .tournament-suitable-table [data-field="traffic"],
+  .tournament-all-table [data-field="traffic"] {
+    grid-column: 1 / -1;
+    padding-bottom: .3rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .tournament-suitable-table [data-field="traffic"]::before,
+  .tournament-all-table [data-field="traffic"]::before { display: none; }
+  .tournament-suitable-table [data-field="group"],
+  .tournament-suitable-table [data-field="discipline"],
+  .tournament-all-table [data-field="group"],
+  .tournament-all-table [data-field="discipline"] {
+    font-size: .98rem;
+  }
+  .tournament-suitable-table [data-field="recommendation"],
+  .tournament-all-table [data-field="recommendation"] { font-weight: 800; }
+  .tournament-all-table [data-field="reference"] { grid-column: 1 / -1; }
+
+  /* Touch-Bedienung für Formulare und Aktionsbuttons etwas großzügiger. */
+  input, select, textarea { font-size: 16px; }
+  button, .btn { min-height: 2.45rem; }
+}
+
+@media (max-width: 440px) {
+  .tournament-suitable-table tr,
+  .tournament-all-table tr { grid-template-columns: 1fr; }
+  .tournament-suitable-table [data-field="traffic"],
+  .tournament-all-table [data-field="traffic"],
+  .tournament-all-table [data-field="reference"] { grid-column: auto; }
+  .mdr-topbar-tools { justify-content: space-between; }
+  .mdr-account-name { max-width: 42vw; overflow: hidden; text-overflow: ellipsis; }
+}

@@ -1,0 +1,9 @@
+MDR Pferdedatenbank V54.0.64
+
+- Turnierprofil: Empf. steht in der Zusammenfassung hinter INT.
+- Haupt- und Nebenbegabungstabellen einheitlich geordnet: Ampel | Gruppe | Disziplin | Punkte | INT | LK | Empfehlung.
+- Hauptbegabung zeigt die Gruppe nun ebenfalls explizit an.
+- Detailtabellen folgen derselben Grundreihenfolge; Referenzinformationen stehen danach.
+- Mobile-Pass: Turniertabellen werden auf schmalen Displays zu lesbaren Karten, Navigation ist horizontal wischbar, Formfelder bleiben ohne iOS-Autozoom bedienbar.
+- DE/EN: mobile data-label-Beschriftungen werden ebenfalls übersetzt.
+- Keine Änderungen an Supabase-Sync, Turnierformel, Pxx oder Empfehlungsberechnung.

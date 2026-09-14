@@ -1,0 +1,5 @@
+V54.0.64 – Mobile Turnieransicht
+
+Unter 760 px werden die Turniertabellen als zweispaltige Karten dargestellt.
+Unter 440 px wechseln sie auf eine Spalte. Die Hauptnavigation bleibt horizontal wischbar, damit der Header nicht unnötig viele Zeilen einnimmt.
+Die Desktopansicht bleibt unverändert.

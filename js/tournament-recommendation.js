@@ -366,7 +366,7 @@ function plannerAnalyzeTournamentProfile(horse, horses, scoreFn, options = {}) {
 function plannerFormatTournamentOption(row, includeGroup = false) {
   if (!row) return '';
   const score=Number.isFinite(Number(row.recommendationScore)) ? `Empf. ${Math.round(Number(row.recommendationScore))}/100` : 'Empf. –';
-  const bits=[`${row.discipline} ${Math.round(Number(row.points))}`,score,`Int ${row.interior==null?'–':Number(row.interior).toFixed(2)}`,row.lk||'LK –'];
+  const bits=[`${row.discipline} ${Math.round(Number(row.points))}`,`INT ${row.interior==null?'–':Number(row.interior).toFixed(2)}`,row.lk||'LK –',score];
   const base=bits.join(' / ');
   return includeGroup ? `${base} (${row.group})` : base;
 }

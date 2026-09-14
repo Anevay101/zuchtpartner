@@ -962,7 +962,7 @@
     }
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     const el = node;
-    for (const attr of ['title','placeholder','aria-label']) {
+    for (const attr of ['title','placeholder','aria-label','data-label']) {
       if (!el.hasAttribute(attr)) continue;
       const before = el.getAttribute(attr);
       const after = translateAttributeValue(before);
@@ -984,7 +984,7 @@
     });
     observer.observe(document.documentElement, {
       subtree:true, childList:true, characterData:true, attributes:true,
-      attributeFilter:['title','placeholder','aria-label']
+      attributeFilter:['title','placeholder','aria-label','data-label']
     });
   }
 

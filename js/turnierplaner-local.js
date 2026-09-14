@@ -608,7 +608,7 @@ function renderHorseTournamentOptions() {
 
   const mainTraffic=mainBest?tournamentTrafficHtml(mainBest,true):'<span class="muted">–</span>';
   const secondarySummary=secondaryBest&&Number(secondaryBest.recommendationScore)>=MDR_TOURNAMENT_P_AVERAGE
-    ? `${plannerEscape(secondaryBest.discipline)} · ${plannerTournamentRecommendationHtml(secondaryBest)} · ${tournamentTrafficHtml(secondaryBest,true)}`
+    ? `${plannerEscape(secondaryBest.discipline)} · INT ${tournamentInteriorHtml(secondaryBest)} · Empf. ${plannerTournamentRecommendationHtml(secondaryBest)} · ${tournamentTrafficHtml(secondaryBest,true)}`
     : '<span class="muted">keine auffällige Nebenbegabung</span>';
 
   summary.innerHTML=`
@@ -620,46 +620,45 @@ function renderHorseTournamentOptions() {
         </div>
         <button type="button" class="secondary small" id="tp-copy-recommendation">Für Notizen kopieren</button>
       </div>
-      ${mainBest?`<p><strong>Stärkste Hauptdisziplin:</strong> ${plannerEscape(mainBest.discipline)} · ${Math.round(mainBest.points)} P. · ${plannerEscape(mainBest.lk||'LK –')} · Empf. ${plannerTournamentRecommendationHtml(mainBest)} · INT ${tournamentInteriorHtml(mainBest)}</p>`:'<p class="muted">Keine Hauptdisziplin entspricht den Filtern.</p>'}
+      ${mainBest?`<p><strong>Stärkste Hauptdisziplin:</strong> ${plannerEscape(mainBest.discipline)} · ${Math.round(mainBest.points)} P. · ${plannerEscape(mainBest.lk||'LK –')} · INT ${tournamentInteriorHtml(mainBest)} · Empf. ${plannerTournamentRecommendationHtml(mainBest)}</p>`:'<p class="muted">Keine Hauptdisziplin entspricht den Filtern.</p>'}
       <p class="small"><strong>Beste Nebenbegabung:</strong> ${secondarySummary}</p>
       <details class="tp-relative-help tp-relative-help-inline"><summary><span class="tp-info-dot">i</span> Empfehlung &amp; INT</summary><p class="tiny">Der Empfehlungswert 0–100 kombiniert die relative Pxx-Stärke mit einer weichen realistischen Turnierkurve: LK10 ab 155, LK9 ab 190, LK8 ab 200 Punkten. Pxx wird weiterhin aus derselben Disziplin + LK berechnet und bei kleiner Stichprobe auf Gruppe+LK bzw. LK gesamt zurückgeführt. INT bleibt separat: ≤2,00 sehr gut, 2,01–2,50 gut machbar, &gt;2,50 mühsamer.</p></details>
     </div>`;
 
   const mainRows=visible.mainRows.length?visible.mainRows.map(r=>`<tr>
-      <td>${tournamentTrafficHtml(r,true)}</td><th>${plannerEscape(r.discipline)}</th><td>${Math.round(r.points)}</td>
-      <td>${plannerEscape(r.lk||'–')}</td><td><strong>${plannerTournamentRecommendationHtml(r)}</strong></td><td>${tournamentInteriorHtml(r)}</td>
-      <td>${plannerEscape(r.interpretation?.label||'–')}</td>
+      <td data-field="traffic" data-label="Ampel">${tournamentTrafficHtml(r,true)}</td><td data-field="group" data-label="Gruppe">${plannerEscape(r.group)}</td><th data-field="discipline" data-label="Disziplin">${plannerEscape(r.discipline)}</th><td data-field="points" data-label="Punkte">${Math.round(r.points)}</td>
+      <td data-field="int" data-label="INT">${tournamentInteriorHtml(r)}</td><td data-field="lk" data-label="LK">${plannerEscape(r.lk||'–')}</td><td data-field="recommendation" data-label="Empfehlung"><strong>${plannerTournamentRecommendationHtml(r)}</strong></td>
     </tr>`).join(''):'<tr><td colspan="7" class="muted">Keine Hauptdisziplin entspricht den gewählten Filtern.</td></tr>';
 
   const secondaryRows=secondaryMention.length?secondaryMention.map(r=>`<tr>
-      <td>${tournamentTrafficHtml(r,true)}</td><th>${plannerEscape(r.discipline)}</th><td>${plannerEscape(r.group)}</td><td>${Math.round(r.points)}</td>
-      <td>${plannerEscape(r.lk||'–')}</td><td><strong>${plannerTournamentRecommendationHtml(r)}</strong></td><td>${tournamentInteriorHtml(r)}</td>
+      <td data-field="traffic" data-label="Ampel">${tournamentTrafficHtml(r,true)}</td><td data-field="group" data-label="Gruppe">${plannerEscape(r.group)}</td><th data-field="discipline" data-label="Disziplin">${plannerEscape(r.discipline)}</th><td data-field="points" data-label="Punkte">${Math.round(r.points)}</td>
+      <td data-field="int" data-label="INT">${tournamentInteriorHtml(r)}</td><td data-field="lk" data-label="LK">${plannerEscape(r.lk||'–')}</td><td data-field="recommendation" data-label="Empfehlung"><strong>${plannerTournamentRecommendationHtml(r)}</strong></td>
     </tr>`).join(''):'<tr><td colspan="7" class="muted">Keine Nebenbegabung mit Empfehlung ab 45/100 in der aktuellen Auswahl.</td></tr>';
 
   const fullRows=filtered.length?filtered.map((r,index)=>`<tr>
-      <td>${index+1}</td><th>${plannerEscape(r.discipline)}</th><td>${plannerEscape(r.group)}</td><td>${Math.round(r.points)}</td>
-      <td>${plannerEscape(r.lk||'–')}</td><td>${plannerTournamentRecommendationHtml(r)}</td><td>${tournamentInteriorHtml(r)}</td>
-      <td>${tournamentTrafficHtml(r,true)}<br><span class="tiny muted">${plannerEscape(plannerReferenceLabel(r.reference))}</span></td>
-    </tr>`).join(''):'<tr><td colspan="8" class="muted">Keine Disziplin entspricht den gewählten Filtern.</td></tr>';
+      <td data-field="rank" data-label="#">${index+1}</td><td data-field="traffic" data-label="Ampel">${tournamentTrafficHtml(r,true)}</td><td data-field="group" data-label="Gruppe">${plannerEscape(r.group)}</td><th data-field="discipline" data-label="Disziplin">${plannerEscape(r.discipline)}</th><td data-field="points" data-label="Punkte">${Math.round(r.points)}</td>
+      <td data-field="int" data-label="INT">${tournamentInteriorHtml(r)}</td><td data-field="lk" data-label="LK">${plannerEscape(r.lk||'–')}</td><td data-field="recommendation" data-label="Empfehlung">${plannerTournamentRecommendationHtml(r)}</td>
+      <td data-field="reference" data-label="Einordnung / Referenz"><span class="tiny muted">${plannerEscape(plannerReferenceLabel(r.reference))}</span></td>
+    </tr>`).join(''):'<tr><td colspan="9" class="muted">Keine Disziplin entspricht den gewählten Filtern.</td></tr>';
 
   root.innerHTML=`
     <section class="tournament-compact-section selectable-copy-area">
       <div class="tournament-section-head"><h3>Hauptbegabung · ${plannerEscape(visible.mainGroup||'–')}</h3><button type="button" class="secondary small" id="tp-copy-suitable">Empfehlungen kopieren</button></div>
       <div class="table-wrap"><table class="detail-table tournament-suitable-table">
-        <thead><tr><th>Ampel</th><th>Disziplin</th><th>Punkte</th><th>LK</th><th>Empfehlung</th><th>INT</th><th>Einordnung</th></tr></thead><tbody>${mainRows}</tbody>
+        <thead><tr><th>Ampel</th><th>Gruppe</th><th>Disziplin</th><th>Punkte</th><th>INT</th><th>LK</th><th>Empfehlung</th></tr></thead><tbody>${mainRows}</tbody>
       </table></div>
     </section>
     <section class="tournament-compact-section selectable-copy-area">
       <h3>Nebenbegabungen · Beritt prüfen</h3>
       <p class="tiny muted">Angezeigt werden nur Nebenbegabungen ab 45/100: 80+ sehr interessant · 65–79 interessant · 45–64 situativ.</p>
       <div class="table-wrap"><table class="detail-table tournament-suitable-table">
-        <thead><tr><th>Ampel</th><th>Disziplin</th><th>Gruppe</th><th>Punkte</th><th>LK</th><th>Empfehlung</th><th>INT</th></tr></thead><tbody>${secondaryRows}</tbody>
+        <thead><tr><th>Ampel</th><th>Gruppe</th><th>Disziplin</th><th>Punkte</th><th>INT</th><th>LK</th><th>Empfehlung</th></tr></thead><tbody>${secondaryRows}</tbody>
       </table></div>
     </section>
     <details class="tournament-all-details">
       <summary>Alle ${filtered.length} gefilterten Disziplinen anzeigen</summary>
       <div class="table-wrap"><table class="detail-table tournament-all-table">
-        <thead><tr><th>#</th><th>Disziplin</th><th>Gruppe</th><th>Punkte</th><th>LK</th><th>Empfehlung</th><th>INT</th><th>Einordnung / Referenz</th></tr></thead><tbody>${fullRows}</tbody>
+        <thead><tr><th>#</th><th>Ampel</th><th>Gruppe</th><th>Disziplin</th><th>Punkte</th><th>INT</th><th>LK</th><th>Empfehlung</th><th>Einordnung / Referenz</th></tr></thead><tbody>${fullRows}</tbody>
       </table></div>
     </details>`;
 
