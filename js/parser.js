@@ -141,7 +141,12 @@ const EN_TO_INTERNAL_EXACT = {
   'Achievements': 'Erfolge',
   'Competitions': 'Turniere',
   'Placements': 'Platzierungen',
+  'Placings': 'Platzierungen',
   'Statistics': 'Statistik',
+  'Records': 'Erfolge',
+  '1st Place': '1. Platz',
+  '2nd Place': '2. Platz',
+  '3rd Place': '3. Platz',
   'MDR Cup qualification': 'MDR-Cup Qualifikation',
   'MDR-Cup qualification': 'MDR-Cup Qualifikation',
   'Prize money': 'Gewinnsumme',
@@ -708,7 +713,7 @@ function parseHorseText(rawText) {
   const unnamedFoal = (
     trimmedName === 'Unbekannt' ||
     /^(?:Unknown|Unbekannt)$/i.test(trimmedName) ||
-    /Namen geben\?|Name geben\?|Rename\?/i.test(trimmedName) ||
+    /Namen geben\?|Name geben\?|Name horse\??|Name foal\??|Give (?:the )?horse (?:a )?name\??|Rename\?/i.test(trimmedName) ||
     knownBreederMarkOnly ||
     hadUnnamedPrompt ||
     (hadRenamePrompt && (decoratedBreederMarkOnly || knownBreederMarkOnly || !trimmedName))
@@ -729,7 +734,7 @@ function parseHorseText(rawText) {
     result?.tournament_potential?.Begabung ||
     result?.tournament_potential?.['Begabung'] ||
     null;
-  const automaticGoal = breedingGoalFromTalent(talentForGoal);
+  const automaticGoal = breedingGoalFromTalent(normalizeTournamentDisciplineName(talentForGoal));
   if (automaticGoal) {
     result.breeding_goal = automaticGoal;
     result.breeding_goal_source = 'automatisch aus Begabung';
@@ -798,11 +803,17 @@ function extractHeaderBlock(lines) {
       rawName = rawName.slice(idMatch[0].length).trim();
     }
 
-    if (/Namen geben\?|Name geben\?/i.test(rawName)) out._header_name_action = 'give-name';
+    // Unbenannte Fohlen zeigen in der englischen MDR-Version je nach
+    // Ansicht nicht "Unknown", sondern nur den Aktionslink "Name horse?".
+    // Das ist kein Pferdename, sondern genau wie DE "Namen geben?" ein
+    // eindeutiger Hinweis darauf, dass der Fohlenname noch fehlt.
+    const giveNamePrompt = /(?:Namen geben|Name geben|Name horse|Name foal|Give (?:the )?horse (?:a )?name)\??\s*$/i;
+    if (giveNamePrompt.test(rawName)) out._header_name_action = 'give-name';
     else if (/Rename\?/i.test(rawName)) out._header_name_action = 'rename';
 
     rawName = rawName
-      .replace(/(?:Ändern\?|Namen geben\?|Name geben\?|Rename\?)\s*$/i, '')
+      .replace(/(?:Ändern\?|Rename\?)\s*$/i, '')
+      .replace(giveNamePrompt, '')
       .trim();
     if (rawName) out.name = rawName;
   }
@@ -916,24 +927,44 @@ function findLineIndex(lines, label, fromIdx = 0) {
 // einzigen Prozentwert (Potenzial) an - auch das wird hier erkannt, statt
 // diese Einträge komplett zu verlieren.
 function extractPercentGroups(lines, startIdx, endIdx) {
-  const percentRe = /^\d+(\.\d+)?\s*%$/;
+  const percentRe = /^\d+(?:[.,]\d+)?\s*%$/;
   const result = {};
   let currentGroup = null;
 
-  for (let i = startIdx; i < endIdx; i++) {
-    const line = lines[i];
-    if (!line) continue;
-    const p1 = lines[i + 1];
-    const p2 = lines[i + 2];
+  // Die englische MDR-Seite erzeugt beim Kopieren je nach Browser deutlich
+  // mehr Leerzeilen als die deutsche Ansicht. Deshalb wird dieser Bereich
+  // als Folge nichtleerer Tokens ausgewertet. So bleiben auch die zwei
+  // Prozentwerte (aktueller Wert + Potenzial) zuverlässig dem richtigen
+  // Disziplin-/Eigenschaftsnamen zugeordnet.
+  const tokens = lines
+    .slice(startIdx, endIdx)
+    .map((line) => String(line || '').trim())
+    .filter(Boolean);
+
+  for (let i = 0; i < tokens.length; i++) {
+    const line = tokens[i];
+    const p1 = tokens[i + 1];
+    const p2 = tokens[i + 2];
     if (p1 && percentRe.test(p1) && p2 && percentRe.test(p2)) {
       if (!currentGroup) currentGroup = 'Allgemein';
-      (result[currentGroup] ||= []).push({ name: line, current: parseFloat(p1), potential: parseFloat(p2) });
+      (result[currentGroup] ||= []).push({
+        name: line,
+        current: parseFloat(p1.replace(',', '.')),
+        potential: parseFloat(p2.replace(',', '.')),
+      });
       i += 2;
     } else if (p1 && percentRe.test(p1)) {
       if (!currentGroup) currentGroup = 'Allgemein';
-      (result[currentGroup] ||= []).push({ name: line, current: null, potential: parseFloat(p1) });
+      (result[currentGroup] ||= []).push({
+        name: line,
+        current: null,
+        potential: parseFloat(p1.replace(',', '.')),
+      });
       i += 1;
-    } else {
+    } else if (!percentRe.test(line)) {
+      // Einzelne Prozent-Tokens dürfen niemals versehentlich zur
+      // Gruppenüberschrift werden. Das war bei EN-Kopien mit Leerzeilen
+      // bislang die Ursache für Gruppen wie "23 %".
       currentGroup = line;
     }
   }
@@ -988,18 +1019,24 @@ function parseTournamentPotential(lines) {
   if (startIdx === -1) return {};
   const result = {};
   const knownLabels = ['Begabung', 'Disziplinen', 'Gesamtpotenzial', 'Grundlagen'];
-  for (let i = startIdx + 1; i < Math.min(startIdx + 6, lines.length); i++) {
-    const line = lines[i];
-    if (!line) continue;
+  const tokens = lines.slice(startIdx + 1, Math.min(startIdx + 18, lines.length)).filter(Boolean);
+  for (let i = 0; i < tokens.length; i++) {
+    const line = tokens[i];
     const parts = line.split('\t');
     for (const part of parts) {
       const m = part.match(/^([^:]+):\s*(.+)$/);
       if (m && knownLabels.includes(m[1].trim())) {
-        result[m[1].trim()] = m[2].trim();
+        const label = m[1].trim();
+        let value = m[2].trim();
+        // EN-Turnierdisziplinen intern auf dieselben deutschen Schlüssel
+        // normalisieren wie alle übrigen Leistungsdaten. Das ist wichtig
+        // für Hauptbegabung, Turnierprofil und Zuchtziel.
+        if (label === 'Begabung') value = normalizeTournamentDisciplineName(value);
+        result[label] = value;
       }
     }
-    if (line === 'Erfahrung' && lines[i + 1] && /%$/.test(lines[i + 1])) {
-      result['Erfahrung'] = lines[i + 1];
+    if (line === 'Erfahrung' && tokens[i + 1] && /%$/.test(tokens[i + 1])) {
+      result['Erfahrung'] = tokens[i + 1];
       break;
     }
   }
@@ -1025,7 +1062,12 @@ function tournamentDisciplineSet() {
 }
 
 function parseTournamentPlacements(lines) {
-  const startIdx = findLineIndex(lines, 'Platzierungen');
+  let startIdx = findLineIndex(lines, 'Platzierungen');
+  // Zusätzlicher Fallback für bereits gespeicherte/ältere EN-Rohtexte, die
+  // vor der Normalisierung noch die MDR-Überschrift "Placings" enthalten.
+  if (startIdx === -1) {
+    startIdx = lines.findIndex((line) => /^(?:Placings|Placements)$/i.test(String(line || '').trim()));
+  }
   if (startIdx === -1) return {};
   const endCandidates = [
     findLineIndex(lines, 'Statistik', startIdx + 1),
@@ -1038,9 +1080,13 @@ function parseTournamentPlacements(lines) {
 
   // Desktop-Kopie: Tabellenzeile als Tab-getrennte Zellen.
   for (let i = startIdx + 1; i < endIdx; i++) {
-    const line = lines[i];
-    if (!line || !line.includes('\t')) continue;
-    const parts = line.split('\t').map((x) => x.trim()).filter(Boolean);
+    const line = String(lines[i] || '').trim();
+    if (!line) continue;
+    const parts = line.includes('\t')
+      ? line.split('\t').map((x) => x.trim()).filter(Boolean)
+      : (/^\|.*\|$/.test(line)
+        ? line.slice(1, -1).split('|').map((x) => x.trim().replace(/^\*\*|\*\*$/g, '')).filter(Boolean)
+        : []);
     if (parts.length < 4) continue;
     const discipline = normalizeTournamentDisciplineName(parts[0]);
     if (!known.has(discipline)) continue;

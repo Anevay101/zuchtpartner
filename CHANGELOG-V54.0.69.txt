@@ -1,0 +1,9 @@
+V54.0.69 – EN-Turnierdaten vollständig erkennen
+
+- Englische MDR-Überschrift "Placings" wird jetzt wie "Platzierungen" erkannt.
+- 1./2./3.-Plätze pro Disziplin werden auch bei englischen Pferdeseiten korrekt übernommen.
+- Englische Hauptbegabungen (z.B. Trot Racing, Steeplechasing) werden beim Turnierpotenzial sofort auf die internen Disziplinschlüssel normalisiert.
+- EN-Leistungswerte sind robuster gegen die zusätzlichen Leerzeilen der englischen MDR-Seite; Prozentwerte werden nicht mehr fälschlich als Gruppenüberschriften interpretiert.
+- Damit stehen Disziplinpotenziale, Traits, LK/Turnierprofil und die Turniererfolge auch für englische Pferde vollständig zur Verfügung.
+- Zusätzliche Fallbacks für Records/Placings sowie pipe-formatierte Tabellenkopien.
+- Keine Änderung am Supabase-Sync oder Datenmodell.

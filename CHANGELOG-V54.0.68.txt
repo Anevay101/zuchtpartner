@@ -1,0 +1,7 @@
+V54.0.68 – EN-Fohlen: "Name horse?" erkennen
+
+- Englische unbenannte Fohlen werden jetzt auch erkannt, wenn MDR im Kopfbereich nur "Name horse?" anzeigt.
+- Der Aktionslink wird niemals als Pferdename gespeichert.
+- Wie bei "Unknown", "Namen geben?" und einem bloßen Zuchtkürzel wird automatisch der Elternname gebildet: Foal_<Mutter> X <Vater>.
+- Zusätzliche tolerante Varianten: "Name horse", "Name foal?" und "Give horse a name?".
+- Keine Änderung an Supabase-Sync oder Datenmodell; reine Parser-Korrektur.
