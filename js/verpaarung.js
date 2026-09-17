@@ -509,7 +509,7 @@ function pairingPredictionDetailsHtml(pairing) {
         <p class="tiny muted">„damals n“ gehört zum gespeicherten Prognose-Snapshot; „heute n“ zeigt die aktuelle Lernbasis. Die historische Prognose wird nicht rückwirkend verändert.</p>
         <p class="tiny muted">Der typische DB-Bereich umfasst den zentralen 80%-Bereich der bisher beobachteten Fehler der Datenbank-Schätzung.</p>
         ${actualRecord
-          ? `<p class="small"><strong>Vergleich vorhanden.</strong> Bei behaltenen Fohlen werden die tatsächlichen Werte aus dem aktuell verknüpften Pferdedatensatz gelesen – spätere Ergänzungen am Pferd erscheinen also auch hier.</p>`
+          ? `<p class="small"><strong>Vergleich vorhanden.</strong> Bei als Pferd erfassten Fohlen werden die tatsächlichen Werte aus dem aktuell verknüpften Pferdedatensatz gelesen – spätere Ergänzungen am Pferd erscheinen also auch hier.</p>`
           : `<p class="small muted">Sobald das Fohlen über „Fohlen eintragen“ erfasst wurde, erscheint hier automatisch der Soll-Ist-Vergleich.</p>`
         }
       </div>
@@ -1495,14 +1495,20 @@ async function onLinkExistingFoal() {
 // Damit lassen sich z.B. Fohlen wiedererkennen, die zuerst automatisch
 // als "Fohlen_Mutter X Vater" angelegt und später unter ihrem echten
 // Namen erneut eingetragen wurden.
-async function findPedigreeCandidate(stallion, mare, excludeName) {
+async function findPedigreeCandidate(stallion, mare, excludeName, expectedBirthdate = null) {
   const data = await localGetAll(LOCAL_STORES.horses);
   const norm = (s) => (s || '').trim().toLowerCase();
   return data.find((h) => {
     if (norm(h.name) === norm(excludeName)) return false;
     const ancestors = Array.isArray(h.pedigree) ? h.pedigree.slice(1) : (h.pedigree?.ancestors || []);
-    return norm(ancestors[0]?.name) === norm(stallion) && norm(ancestors[1]?.name) === norm(mare)
+    const sameParents = norm(ancestors[0]?.name) === norm(stallion) && norm(ancestors[1]?.name) === norm(mare)
       && norm(stallion) && norm(mare);
+    if (!sameParents) return false;
+    // Dieselben Eltern können in verschiedenen Jahren mehrfach verpaart
+    // werden. Wenn ein Abfohldatum bekannt ist, ist nur ein Pferd mit exakt
+    // demselben Geburtstag ein echter Dubletten-Kandidat.
+    if (expectedBirthdate) return String(h.birthdate || '').slice(0, 10) === String(expectedBirthdate).slice(0, 10);
+    return true;
   }) || null;
 }
 
@@ -1547,6 +1553,7 @@ async function onSaveFoal() {
       if (extraData[k] !== undefined) payload[k] = extraData[k];
     }
     payload.raw_text = null;
+    if (!payload.birthdate && currentPairing?.pairing_date) payload.birthdate = currentPairing.pairing_date;
     ensurePairingPedigree(payload, currentPairing);
     if (typeof mdrLearningFileForSave === 'function') mdrLearningFileForSave(payload);
 
@@ -1554,64 +1561,70 @@ async function onSaveFoal() {
     let foalHorseId = null;
     let foalReferenceId = null;
 
-    if (currentPairing.keep_foal) {
-      const horses = await localGetAll(LOCAL_STORES.horses);
-      const norm = (s) => (s || '').trim().toLowerCase();
-      const existingByName = horses.find((h) => norm(h.name) === norm(formData.name)) || null;
+    // V54.0.65: Ein im Verpaarungslog erfasstes reales Fohlen gehört immer
+    // in dieselbe Pferdedatenbank wie ein normal importiertes Pferd. Die
+    // Entscheidung "behalten / nicht behalten / offen" bleibt ausschließlich
+    // an der Verpaarung hängen und entscheidet nicht mehr, in welchem Store
+    // das Tier landet. Dadurch gibt es keinen zweiten Schatten-Datensatz in
+    // foal_reference_data mehr und das Fohlen ist sofort über die Datenbank
+    // auffindbar.
+    const horses = await localGetAll(LOCAL_STORES.horses);
+    const norm = (s) => (s || '').trim().toLowerCase();
+    const existingByName = horses.find((h) => norm(h.name) === norm(formData.name)) || null;
 
-      let targetId = existingByName?.id || null;
-      let existingRecord = existingByName || null;
+    let targetId = existingByName?.id || null;
+    let existingRecord = existingByName || null;
 
-      if (!targetId) {
-        const candidate = await findPedigreeCandidate(
-          currentPairing.stallion,
-          currentPairing.mare,
-          formData.name
-        );
-        if (candidate) {
-          const isSame = await askIsSameHorse(candidate.name);
-          if (isSame) {
-            targetId = candidate.id;
-            existingRecord = await localGet(LOCAL_STORES.horses, targetId);
-          }
+    if (!targetId) {
+      const candidate = await findPedigreeCandidate(
+        currentPairing.stallion,
+        currentPairing.mare,
+        formData.name,
+        payload.birthdate || currentPairing.pairing_date || null
+      );
+      if (candidate) {
+        const isSame = await askIsSameHorse(candidate.name);
+        if (isSame) {
+          targetId = candidate.id;
+          existingRecord = await localGet(LOCAL_STORES.horses, targetId);
         }
       }
+    }
 
-      const now = new Date().toISOString();
-      if (targetId) {
-        if (existingRecord) {
-          for (const key of Object.keys(payload)) {
-            payload[key] = mergeFieldValue(key, existingRecord[key], payload[key]);
-          }
+    const now = new Date().toISOString();
+    if (targetId) {
+      if (existingRecord) {
+        for (const key of Object.keys(payload)) {
+          payload[key] = mergeFieldValue(key, existingRecord[key], payload[key]);
         }
-        if (typeof mdrLearningFileForSave === 'function') mdrLearningFileForSave(payload);
-        await localPut(LOCAL_STORES.horses, {
-          ...(existingRecord || {}),
-          ...payload,
-          id: targetId,
-          updated_at: now,
-        });
-        foalHorseId = targetId;
-        savedActualRecord = await localGet(LOCAL_STORES.horses, targetId);
-      } else {
-        foalHorseId = await localAdd(LOCAL_STORES.horses, {
-          ...payload,
-          user_id: session.user.id,
-          created_at: now,
-          updated_at: now,
-        });
-        savedActualRecord = await localGet(LOCAL_STORES.horses, foalHorseId);
       }
+      if (typeof mdrLearningFileForSave === 'function') mdrLearningFileForSave(payload);
+      await localPut(LOCAL_STORES.horses, {
+        ...(existingRecord || {}),
+        ...payload,
+        id: targetId,
+        created_at: existingRecord?.created_at || now,
+        updated_at: now,
+      });
+      foalHorseId = targetId;
+      savedActualRecord = await localGet(LOCAL_STORES.horses, targetId);
     } else {
-      foalReferenceId = await localAdd(LOCAL_STORES.foalReferenceData, {
+      foalHorseId = await localAdd(LOCAL_STORES.horses, {
         ...payload,
         user_id: session.user.id,
-        kept: false,
-        pairing_id: currentPairing.id,
-        created_at: new Date().toISOString(),
+        created_at: now,
+        updated_at: now,
       });
-      savedActualRecord = await localGet(LOCAL_STORES.foalReferenceData, foalReferenceId);
+      savedActualRecord = await localGet(LOCAL_STORES.horses, foalHorseId);
     }
+
+    // Falls diese Verpaarung aus einer älteren Version noch auf einen
+    // foal_reference_data-Datensatz zeigt, ist dieser nach der echten
+    // Pferde-Verknüpfung redundant und würde Lernwerte doppelt zählen.
+    if (currentPairing.foal_reference_id != null) {
+      await localDelete(LOCAL_STORES.foalReferenceData, currentPairing.foal_reference_id).catch(() => {});
+    }
+    foalReferenceId = null;
 
     // Prognose notfalls noch VOR der Ist-Verknüpfung erzeugen. Für neue
     // Verpaarungen existiert sie bereits; das ist nur eine Sicherheitsleine

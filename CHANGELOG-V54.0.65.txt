@@ -1,0 +1,15 @@
+V54.0.65 – EN-Fohlen & Verpaarungslog vereinheitlicht
+
+- Englische Pferdeseiten: "Rename?" wird nie mehr als Teil des Pferdenamens gespeichert.
+- Die MDR-ID direkt vor dem Namen (z. B. "ID 216203") wird beim Textparser als external_id erkannt.
+- Headerparser ist toleranter gegen Leerzeilen zwischen Alter, Geschlecht, Rasse und Reinrassigkeit.
+- Unbenannte englische Fohlen mit reinem Zuchtkürzel (z. B. *ANE) erhalten automatisch einen Elternnamen:
+  Foal_<Mutter> X <Vater>.
+- DE-Verhalten bleibt: Fohlen_<Mutter> X <Vater>.
+- Ein im Verpaarungslog erfasstes tatsächliches Fohlen wird jetzt IMMER in horses gespeichert – unabhängig von "behalten / offen / nicht behalten".
+  Die Behaltensentscheidung bleibt ausschließlich am Verpaarungsdatensatz.
+- Alte foal_reference_data-Einträge werden bei erfolgreicher echter Pferde-Verknüpfung für genau diese Verpaarung entfernt, damit Lernwerte nicht doppelt zählen.
+- Wird ein junges Fohlen normal über "Neues Pferd" gespeichert, sucht die App nach einer eindeutigen Verpaarung mit exakt Vater + Mutter + Geburtstag=Abfohldatum und verknüpft das Fohlen automatisch als Ergebnis.
+- Gibt es noch keinen passenden Log-Eintrag, wird für Fohlen eines aktiven Züchters automatisch eine kleine Verpaarung aus Vater + Mutter + Geburtstag angelegt und direkt mit dem Pferd verknüpft. Fremde Referenzpferde erzeugen keine Log-Einträge.
+- Kein Massenabgleich: nur junge Fohlen mit Geburtstag und beiden Eltern lösen diese kleine Pairing-Prüfung aus.
+- Supabase-Traffic bleibt gering: bei einem Treffer wird genau ein kleiner Pairing-Datensatz aktualisiert; die Suche nutzt den bestehenden lokalen/Delta-Cache.

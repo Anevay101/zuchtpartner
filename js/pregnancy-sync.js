@@ -170,3 +170,147 @@ async function syncPregnancyPairingFromSavedHorse(mare, pregnancy, sessionUserId
     record: { ...record, id },
   };
 }
+
+
+// V54.0.65 – Ein in der normalen Pferdedatenbank gespeichertes Fohlen
+// automatisch mit dem Verpaarungslog verbinden. Es wird nur ein wirklich
+// sicherer Treffer verwendet: Vater + Mutter aus dem Stammbaum UND das
+// gespeicherte Abfohldatum müssen zum Geburtstag des Fohlens passen.
+// Dadurch entstehen keine heuristischen Fehlverknüpfungen bei wiederholten
+// Verpaarungen derselben Eltern. Die Suche läuft auf dem lokalen/delta-
+// gecachten Pairing-Store; bei Treffer wird genau ein kleiner Pairing-
+// Datensatz aktualisiert.
+function mdrFoalParentNames(horse) {
+  const ancestors = Array.isArray(horse?.pedigree)
+    ? horse.pedigree.slice(1)
+    : (horse?.pedigree?.ancestors || []);
+  return {
+    sire: String(ancestors[0]?.name || '').trim(),
+    dam: String(ancestors[1]?.name || '').trim(),
+  };
+}
+
+function mdrFoalExactPairingMatch(pairing, horse, parents) {
+  if (!pairing || !horse || !parents?.sire || !parents?.dam || !horse.birthdate) return false;
+  return (
+    mdrPregnancyNormalizeName(pairing.stallion) === mdrPregnancyNormalizeName(parents.sire) &&
+    mdrPregnancyNormalizeName(pairing.mare) === mdrPregnancyNormalizeName(parents.dam) &&
+    String(pairing.pairing_date || '').slice(0, 10) === String(horse.birthdate || '').slice(0, 10)
+  );
+}
+
+function mdrFoalLooksYoung(horse) {
+  const gender = String(horse?.gender || '').toLowerCase();
+  if (/fohlen|foal|colt|filly/.test(gender)) return true;
+  const raw = String(horse?.birthdate || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
+  const birth = new Date(`${raw}T12:00:00`);
+  if (Number.isNaN(birth.getTime())) return false;
+  const days = (Date.now() - birth.getTime()) / 86400000;
+  // MDR altert deutlich schneller als Echtzeit; dieser großzügige Bereich
+  // deckt junge Fohlen ab, ohne bei jedem beliebigen Altpferd den Pairing-
+  // Store anzufragen.
+  return days >= -2 && days <= 75;
+}
+
+async function syncFoalPairingFromSavedHorse(horse, sessionUserId = null) {
+  const parents = mdrFoalParentNames(horse);
+  if (!horse?.id || !horse?.birthdate || !parents.sire || !parents.dam) {
+    return { action: 'none', reason: 'missing-id-birthdate-or-parents' };
+  }
+  if (!mdrFoalLooksYoung(horse)) {
+    return { action: 'none', reason: 'not-young-foal' };
+  }
+
+  const pairings = await localGetAll(LOCAL_STORES.pairings);
+  const matches = (pairings || []).filter((pairing) => mdrFoalExactPairingMatch(pairing, horse, parents));
+  if (matches.length > 1) {
+    return { action: 'none', reason: 'ambiguous-exact-pairing', matches: matches.length };
+  }
+
+  const actualSnapshot = typeof foalActualMetricSnapshot === 'function'
+    ? {
+        name: horse.name || null,
+        ...foalActualMetricSnapshot(horse),
+        captured_at: new Date().toISOString(),
+      }
+    : null;
+  const now = new Date().toISOString();
+
+  if (matches.length === 1) {
+    const pairing = matches[0];
+    if (pairing.foal_horse_id != null && String(pairing.foal_horse_id) !== String(horse.id)) {
+      return {
+        action: 'none',
+        reason: 'pairing-already-linked-to-other-horse',
+        pairing_id: pairing.id,
+      };
+    }
+
+    const oldReferenceId = pairing.foal_reference_id ?? null;
+    await localUpdate(LOCAL_STORES.pairings, pairing.id, {
+      prediction_snapshot: pairing.prediction_snapshot || null,
+      foal_horse_id: horse.id,
+      foal_reference_id: null,
+      foal_name: horse.name || null,
+      actual_foal_snapshot: actualSnapshot,
+      foal_recorded_at: pairing.foal_recorded_at || now,
+      updated_at: now,
+    });
+
+    // Ein alter Referenzdatensatz aus früheren Versionen ist nach der echten
+    // Pferde-Verknüpfung redundant und würde sonst in Lernstatistiken doppelt
+    // zählen. Nur den direkt an dieser Verpaarung hängenden Datensatz löschen.
+    if (oldReferenceId != null) {
+      await localDelete(LOCAL_STORES.foalReferenceData, oldReferenceId).catch(() => {});
+    }
+
+    return {
+      action: 'linked',
+      pairing_id: pairing.id,
+      foal_horse_id: horse.id,
+      foal_name: horse.name || null,
+      sire: parents.sire,
+      mare: parents.dam,
+      birthdate: horse.birthdate,
+      removed_reference_id: oldReferenceId,
+    };
+  }
+
+  // Gibt es noch keinen Log-Eintrag, darf ein Fohlen aus dem eigenen/
+  // aktiv gepflegten Zuchtbestand den Verpaarungslog automatisch ergänzen.
+  // Fremde junge Pferde, die nur als Referenz in die große Datenbank
+  // aufgenommen werden, erzeugen dagegen bewusst KEINE Verpaarungen.
+  const activeOwner = typeof isActiveBreeder === 'function' && isActiveBreeder(horse.owner);
+  if (!activeOwner) {
+    return { action: 'none', reason: 'no-exact-pairing-and-owner-not-active' };
+  }
+
+  const record = {
+    user_id: sessionUserId || horse.user_id || null,
+    owner: horse.owner || null,
+    stallion: parents.sire,
+    mare: parents.dam,
+    pairing_date: String(horse.birthdate).slice(0, 10),
+    keep_foal: null,
+    notes: '🐴 Automatisch aus gespeichertem Fohlen übernommen.',
+    prediction_snapshot: null,
+    foal_horse_id: horse.id,
+    foal_reference_id: null,
+    foal_name: horse.name || null,
+    actual_foal_snapshot: actualSnapshot,
+    foal_recorded_at: now,
+    created_at: now,
+    updated_at: now,
+  };
+  const id = await localAdd(LOCAL_STORES.pairings, record);
+  return {
+    action: 'created',
+    pairing_id: id,
+    foal_horse_id: horse.id,
+    foal_name: horse.name || null,
+    sire: parents.sire,
+    mare: parents.dam,
+    birthdate: horse.birthdate,
+  };
+}

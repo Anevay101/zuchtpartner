@@ -25,7 +25,7 @@ const BREED_ABBREVIATIONS = {
 // eigentlichen Namensgebung markieren (z.B. "~VL~ Namen geben?"). Steht nur
 // das Kürzel allein als Name, ist das Fohlen ebenso unbenannt wie bei
 // "Unbekannt" oder "Namen geben?" - siehe parseHorseText.
-const ZUCHTKUERZEL = ['~VL~', '-Cookie-', '°Sol°', '*Iced*', "Lucky's", '~Ts~', '4Leafs', 'Van Het Dok'];
+const ZUCHTKUERZEL = ['~VL~', '-Cookie-', '°Sol°', '*Iced*', '*ANE', "Lucky's", '~Ts~', '4Leafs', 'Van Het Dok'];
 
 
 // --- V17: DE/EN-Spielversion ------------------------------------------------
@@ -701,16 +701,26 @@ function parseHorseText(rawText) {
   // Reihenfolge (siehe parsePedigree/PEDIGREE_SECTION_LABELS: "Eltern des
   // Vaters" kommt vor "Eltern der Mutter").
   const trimmedName = (result.name || '').trim();
-  if (
+  const hadUnnamedPrompt = result._header_name_action === 'give-name';
+  const hadRenamePrompt = result._header_name_action === 'rename';
+  const decoratedBreederMarkOnly = /^[~*°'._-]+[A-Za-z0-9]{1,10}[~*°'._-]*$/.test(trimmedName);
+  const knownBreederMarkOnly = ZUCHTKUERZEL.some((mark) => mark.toLowerCase() === trimmedName.toLowerCase());
+  const unnamedFoal = (
     trimmedName === 'Unbekannt' ||
-    /Namen geben\?/i.test(trimmedName) ||
-    ZUCHTKUERZEL.includes(trimmedName)
-  ) {
+    /^(?:Unknown|Unbekannt)$/i.test(trimmedName) ||
+    /Namen geben\?|Name geben\?|Rename\?/i.test(trimmedName) ||
+    knownBreederMarkOnly ||
+    hadUnnamedPrompt ||
+    (hadRenamePrompt && (decoratedBreederMarkOnly || knownBreederMarkOnly || !trimmedName))
+  );
+  if (unnamedFoal) {
     const ancestors = result.pedigree.ancestors || [];
     const vater = ancestors[0]?.name || 'Unbekannt';
     const mutter = ancestors[1]?.name || 'Unbekannt';
-    result.name = `Fohlen_${mutter} X ${vater}`;
+    const prefix = gameVersion === 'EN' ? 'Foal_' : 'Fohlen_';
+    result.name = `${prefix}${mutter} X ${vater}`;
   }
+  delete result._header_name_action;
 
   // Zuchtziel automatisch aus der Begabung ableiten.
   // Die Begabung ist eine der vier Disziplinen einer Hauptdisziplin.
@@ -776,19 +786,43 @@ function extractHeaderBlock(lines) {
   while (nameIdx >= 0 && !lines[nameIdx]) nameIdx--;
 
   const out = {};
-  // Bei eigenen Pferden hängt das Spiel direkt (ohne Leerzeichen) einen
-  // "Ändern?"-Link an den Namen an, z.B. "4Leafs Prisma Secret
-  // RoyaltyÄndern?" - wird beim Auslesen des Namens entfernt.
-  if (nameIdx >= 0) out.name = lines[nameIdx].replace(/Ändern\?\s*$/, '').trim();
+  if (nameIdx >= 0) {
+    // Eigene Pferde können vor dem Namen die MDR-ID und hinter dem Namen
+    // einen Aktionslink tragen. DE: "Ändern?" / "Namen geben?",
+    // EN: "Rename?". Diese UI-Texte sind niemals Teil des Pferdenamens.
+    // Gerade bei unbenannten EN-Fohlen steht z.B. "ID 216203 *ANE Rename?".
+    let rawName = String(lines[nameIdx] || '').trim();
+    const idMatch = rawName.match(/^ID\s*:?[\s#]*(\d+)\b/i);
+    if (idMatch) {
+      out.external_id = idMatch[1];
+      rawName = rawName.slice(idMatch[0].length).trim();
+    }
 
-  const genderLine = lines[ageIdx + 1];
+    if (/Namen geben\?|Name geben\?/i.test(rawName)) out._header_name_action = 'give-name';
+    else if (/Rename\?/i.test(rawName)) out._header_name_action = 'rename';
+
+    rawName = rawName
+      .replace(/(?:Ändern\?|Namen geben\?|Name geben\?|Rename\?)\s*$/i, '')
+      .trim();
+    if (rawName) out.name = rawName;
+  }
+
+  // Beim Kopieren aus EN bzw. mobilen Ansichten können zwischen Alter,
+  // Geschlecht, Rasse und Reinrassigkeit Leerzeilen liegen. Deshalb nicht
+  // mehr mit starren +1/+2/+3-Indizes arbeiten.
+  const after = [];
+  for (let i = ageIdx + 1; i < lines.length && after.length < 3; i++) {
+    if (lines[i]) after.push(lines[i]);
+  }
+
+  const genderLine = after[0];
   if (genderLine && /^(Stute|Hengst|Wallach|Hengstfohlen|Stutfohlen|Fohlen)$/i.test(genderLine)) {
     out.gender = genderLine;
   }
-  const breedLine = lines[ageIdx + 2];
+  const breedLine = after[1];
   if (breedLine) out.breed = normalizeBreed(breedLine);
 
-  const purebredLine = lines[ageIdx + 3] || '';
+  const purebredLine = after[2] || '';
   const pm = purebredLine.match(/([\d.,]+)\s*%\s*Reinrassig/i);
   if (pm) out.purebred_pct = parseFloat(pm[1].replace(',', '.'));
 

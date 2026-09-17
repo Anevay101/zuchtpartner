@@ -1772,6 +1772,7 @@ async function performSave(formData, payload, session, targetId, beforeRecord) {
   appaloosaReferenceCache = null;
 
   let pregnancyPairingResult = { action: 'none' };
+  let foalPairingResult = { action: 'none' };
   const savedHorseId = targetId || insertedId;
   if (currentChangeSource === 'importiert' && typeof mdrStoreHorseUndoPoint === 'function') {
     await mdrStoreHorseUndoPoint({
@@ -1800,6 +1801,20 @@ async function performSave(formData, payload, session, targetId, beforeRecord) {
         foaling_date: currentParsedPregnancy?.foaling_date || null,
       };
       console.error('Automatische Tragend?-Übernahme fehlgeschlagen:', error);
+    }
+  }
+
+  // Neu gespeicherte Fohlen automatisch als Ergebnis einer bereits
+  // vorhandenen Verpaarung eintragen. Der Helfer verknüpft nur bei einem
+  // eindeutigen Exakttreffer aus Vater + Mutter + Geburtstag/Abfohldatum.
+  // Ohne diese drei Merkmale erfolgt keinerlei Pairing-Abfrage/Schreibzugriff.
+  if (typeof syncFoalPairingFromSavedHorse === 'function') {
+    try {
+      const savedFoal = await localGet(LOCAL_STORES.horses, localHorseKey(savedHorseId));
+      foalPairingResult = await syncFoalPairingFromSavedHorse(savedFoal, session.user.id);
+    } catch (error) {
+      foalPairingResult = { action: 'error', message: error.message };
+      console.error('Automatische Fohlen-Verknüpfung fehlgeschlagen:', error);
     }
   }
 
@@ -1840,6 +1855,7 @@ async function performSave(formData, payload, session, targetId, beforeRecord) {
       flaxenWarnings: flaxenResult.warnings,
       zzlJustApproved,
       pregnancyPairing: pregnancyPairingResult,
+      foalPairing: foalPairingResult,
     }));
   }
   if (saveRedirect === null) {

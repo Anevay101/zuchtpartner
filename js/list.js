@@ -551,6 +551,14 @@ function showFlashBanner() {
     text += ` ⚠️ Die Stute wurde gespeichert, aber die automatische Verpaarung konnte nicht angelegt werden: ${flash.pregnancyPairing.message || 'unbekannter Fehler'}.`;
   }
 
+  if (flash.foalPairing?.action === 'linked' || flash.foalPairing?.action === 'created') {
+    text += flash.foalPairing.action === 'created'
+      ? ` 🐴 Fohlen automatisch als neue Verpaarung „${flash.foalPairing.sire || 'Vater'} × ${flash.foalPairing.mare || 'Mutter'}“ ins Verpaarungslog übernommen.`
+      : ` 🐴 Fohlen automatisch mit der passenden Verpaarung „${flash.foalPairing.sire || 'Vater'} × ${flash.foalPairing.mare || 'Mutter'}“ verknüpft.`;
+  } else if (flash.foalPairing?.action === 'error') {
+    text += ` ⚠️ Das Pferd wurde gespeichert, aber die automatische Verknüpfung mit dem Verpaarungslog ist fehlgeschlagen: ${flash.foalPairing.message || 'unbekannter Fehler'}.`;
+  }
+
   banner.textContent = text;
   banner.hidden = false;
 

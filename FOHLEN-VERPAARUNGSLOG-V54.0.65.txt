@@ -1,0 +1,26 @@
+Fohlen / Verpaarungslog – V54.0.65
+
+Ziel
+----
+Es gibt nur noch einen echten Pferdedatensatz pro erfasstem Fohlen. Das Verpaarungslog verweist auf diesen Datensatz, statt für nicht behaltene/offene Fohlen einen separaten Schatten-Datensatz anzulegen.
+
+Normaler Pferdeimport -> Verpaarungslog
+--------------------------------------
+Nach dem Speichern wird nur bei jungen Pferden mit Geburtstag und mindestens Vater+Mutter im Stammbaum geprüft, ob genau eine Verpaarung existiert mit:
+- Deckhengst = Vater
+- Stute = Mutter
+- Abfohldatum = Geburtstag
+Bei genau einem Exakttreffer wird automatisch verknüpft. Gibt es keinen Treffer und gehört das Fohlen einem aktiven Züchter, wird die Verpaarung automatisch aus Vater + Mutter + Geburtstag angelegt. Fremde Referenzpferde erzeugen keine Log-Einträge.
+
+Verpaarungslog -> Pferdedatenbank
+---------------------------------
+"Fohlen eintragen" speichert das reale Fohlen immer im Store horses. "Fohlen behalten?" beeinflusst nur die Zuchtentscheidung im Log, nicht die Sichtbarkeit in der Pferdedatenbank.
+
+EN-Parser
+---------
+"Rename?" ist UI-Text und wird entfernt. Ein unbenanntes EN-Fohlen, dessen verbleibender Name nur ein Zuchtkürzel ist (z. B. *ANE), erhält automatisch:
+Foal_<Mutter> X <Vater>
+
+Bestandsschutz
+--------------
+Alte foal_reference_data bleiben lesbar. Sobald eine solche Verpaarung erfolgreich mit einem echten Pferdedatensatz verbunden wird, wird nur der zugehörige alte Referenzdatensatz entfernt, um Doppelzählungen zu vermeiden.
