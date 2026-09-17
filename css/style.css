@@ -6243,3 +6243,55 @@ summary:focus-visible {
   .dashboard-zs-benchmark-table tr { grid-template-columns: 1fr; }
   .dashboard-zs-benchmark-table td:last-child { grid-column: auto; }
 }
+
+/* --- V54.0.67 Zuchtplaner: Mindestanforderungen --- */
+.zp-advisor-layout {
+  grid-template-areas:
+    "core side"
+    "minimum side";
+}
+.zp-core-options { grid-area: core; }
+.zp-option-stack { grid-area: side; }
+.zp-minimum-requirements {
+  grid-area: minimum;
+  margin-top: 0;
+  min-width: 0;
+}
+.zp-minimum-requirements > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+.zp-minimum-requirements > summary::-webkit-details-marker { display: none; }
+.zp-minimum-requirements > summary strong {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+}
+.zp-minimum-fields {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: .7rem;
+}
+.zp-minimum-actions { margin-top: .65rem; }
+.zp-minimum-actions .secondary { padding: .5rem .75rem; }
+#minimum-requirements-status.active {
+  background: rgba(107,157,0,.12);
+  color: #315b21;
+  border-color: rgba(79,115,68,.36);
+}
+@media (max-width: 1100px) {
+  .zp-advisor-layout {
+    grid-template-areas:
+      "core"
+      "minimum"
+      "side";
+  }
+  .zp-minimum-fields { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 620px) {
+  .zp-minimum-fields { grid-template-columns: 1fr; }
+  .zp-minimum-requirements > summary { align-items: flex-start; }
+}

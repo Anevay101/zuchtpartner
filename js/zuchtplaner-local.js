@@ -696,6 +696,23 @@ function wireControls() {
     }));
   document.getElementById('candidate-station-select')?.addEventListener('change', renderBestMatches);
 
+  ['minimum-extpct','maximum-int','minimum-gp','maximum-ext'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const rerender = () => { updateMinimumRequirementsStatus(); renderBestMatches(); };
+    el.addEventListener('change', rerender);
+    el.addEventListener('input', updateMinimumRequirementsStatus);
+  });
+  document.getElementById('minimum-requirements-reset')?.addEventListener('click', () => {
+    ['minimum-extpct','maximum-int','minimum-gp','maximum-ext'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    updateMinimumRequirementsStatus();
+    renderBestMatches();
+  });
+  updateMinimumRequirementsStatus();
+
   document.getElementById('farbwunsch-options').addEventListener('change', renderBestMatches);
 
   document.getElementById('talent-wish-select')?.addEventListener('change', e => {
@@ -1303,6 +1320,55 @@ function compactWhyRecommendedHtml(c, mare, stallion) {
   </details>`;
 }
 
+function plannerReadOptionalNumber(id) {
+  const raw = String(document.getElementById(id)?.value ?? '').trim().replace(',', '.');
+  if (!raw) return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+function plannerMinimumRequirements() {
+  return {
+    extPctMin: plannerReadOptionalNumber('minimum-extpct'),
+    intMax: plannerReadOptionalNumber('maximum-int'),
+    gpMin: plannerReadOptionalNumber('minimum-gp'),
+    extMax: plannerReadOptionalNumber('maximum-ext'),
+  };
+}
+
+function plannerHasMinimumRequirements(req = plannerMinimumRequirements()) {
+  return Object.values(req || {}).some(v => v != null);
+}
+
+function plannerMinimumRequirementLabel(req = plannerMinimumRequirements()) {
+  const bits = [];
+  if (req.extPctMin != null) bits.push(`Ext% ≥ ${fmtPct(req.extPctMin)}`);
+  if (req.intMax != null) bits.push(`Int ≤ ${fmtScore(req.intMax)}`);
+  if (req.gpMin != null) bits.push(`GP ≥ ${fmtGp(req.gpMin)}`);
+  if (req.extMax != null) bits.push(`Ext ≤ ${fmtScore(req.extMax)}`);
+  return bits.join(' · ');
+}
+
+function plannerCandidateMeetsMinimumRequirements(candidate, req) {
+  if (!plannerHasMinimumRequirements(req)) return true;
+  const est = candidate?.emp || {};
+  if (req.extPctMin != null && !(Number.isFinite(Number(est.extPct)) && Number(est.extPct) >= req.extPctMin)) return false;
+  if (req.intMax != null && !(Number.isFinite(Number(est.int)) && Number(est.int) <= req.intMax)) return false;
+  if (req.gpMin != null && !(Number.isFinite(Number(est.gp)) && Number(est.gp) >= req.gpMin)) return false;
+  if (req.extMax != null && !(Number.isFinite(Number(est.ext)) && Number(est.ext) <= req.extMax)) return false;
+  return true;
+}
+
+function updateMinimumRequirementsStatus() {
+  const status = document.getElementById('minimum-requirements-status');
+  if (!status) return;
+  const req = plannerMinimumRequirements();
+  const count = Object.values(req).filter(v => v != null).length;
+  const isEn = window.MDR_I18N?.language === 'en';
+  status.textContent = count ? `${count} ${isEn ? 'active' : 'aktiv'}` : (typeof mdrT === 'function' ? mdrT('Aus') : 'Aus');
+  status.classList.toggle('active', count > 0);
+}
+
 function renderBestMatches() {
   // V53.6: Der tatsächlich sichtbare Select-Wert ist bei JEDER Berechnung
   // die Quelle der Wahrheit. Keine zwischengespeicherte Zustandsvariable darf
@@ -1333,6 +1399,8 @@ function renderBestMatches() {
   const owner = document.getElementById('candidate-owner-select').value;
   const breed = document.getElementById('candidate-breed-select').value;
   const station = richtung === 'hengst' ? '' : (document.getElementById('candidate-station-select')?.value || '');
+  const minimumReq = plannerMinimumRequirements();
+  const hasMinimumReq = plannerHasMinimumRequirements(minimumReq);
   const filterMatchedPool = pool.filter(h => candidateMatchesFilters(h, owner, breed, station));
   const stationEligibilityExcluded = filterMatchedPool.filter(h => !plannerCandidateAllowedForPrimary(primary, h)).length;
   const filtered = filterMatchedPool.filter(h => plannerCandidateAllowedForPrimary(primary, h));
@@ -1353,7 +1421,7 @@ function renderBestMatches() {
   // bewertet, damit ein guter Turnierzucht-Partner nicht schon durch die
   // normale GP/Ext/Int-Vorsortierung außerhalb der Top 20 abgeschnitten wird.
   const resultLimit = ranked.top.length || 20;
-  let rankingPool = liveTurnierzuchtMode !== 'off' && Array.isArray(ranked.all)
+  let rankingPool = (liveTurnierzuchtMode !== 'off' || hasMinimumReq) && Array.isArray(ranked.all)
     ? ranked.all.slice()
     : ranked.top.slice();
 
@@ -1454,8 +1522,13 @@ function renderBestMatches() {
     });
   }
 
+  const minimumRequirementsExcluded = hasMinimumReq
+    ? rankingPool.filter(c => !plannerCandidateMeetsMinimumRequirements(c, minimumReq)).length
+    : 0;
+
   ranked.top = rankingPool
     .filter(c => candidateMatchesFilters(c.stallion, owner, breed, station) && plannerCandidateAllowedForPrimary(primary, c.stallion))
+    .filter(c => plannerCandidateMeetsMinimumRequirements(c, minimumReq))
     .slice(0, resultLimit);
 
   // Sicherheitsprüfung: keine Karte darf den aktiven Besitzer-/Rassefilter
@@ -1477,6 +1550,7 @@ function renderBestMatches() {
   if (ex.related) exclusionBits.push(`${ex.related} wegen echter gemeinsamer Verwandtschaft`);
   if (ex.overo) exclusionBits.push(`${ex.overo} wegen Overo × Overo`);
   if (ex.colorWish) exclusionBits.push(`${ex.colorWish} wegen aktivem Farbwunsch`);
+  if (minimumRequirementsExcluded) exclusionBits.push(`${minimumRequirementsExcluded} wegen Mindestanforderungen`);
   if (stationEligibilityExcluded) {
     exclusionBits.push(
       richtung === 'hengst'
@@ -1495,7 +1569,8 @@ function renderBestMatches() {
     (liveTurnierzuchtMode !== 'off' ? ' · Turnierzucht wird vorrangig gewertet.' : '') +
     (baseColorWish !== 'any' ? ` · Grundfarbenwunsch ${baseColorWish} berücksichtigt.` : '') +
     (appaloosaWish !== 'any' ? ` · Appaloosa-Wunsch ${appaloosaWish === 'snowflake' ? 'Snowflake' : appaloosaWish} berücksichtigt.` : '') +
-    (talentWish ? ` · Begabungswunsch ${talentWish} als kleiner Zusatzfaktor.` : '');
+    (talentWish ? ` · Begabungswunsch ${talentWish} als kleiner Zusatzfaktor.` : '') +
+    (hasMinimumReq ? ` · Mindestanforderungen (DB-Schätzung): ${plannerMinimumRequirementLabel(minimumReq)}.` : '');
 
   let html = horseSummary(primaryLabel, primary);
   html += `<div class="notice">
@@ -1518,7 +1593,8 @@ function renderBestMatches() {
         <strong>Ausschlussgründe:</strong>
         echte gemeinsame Verwandtschaft ${ranked.exclusionStats?.related || 0},
         Overo × Overo ${ranked.exclusionStats?.overo || 0},
-        aktiver Farbwunsch ${ranked.exclusionStats?.colorWish || 0}.<br>
+        aktiver Farbwunsch ${ranked.exclusionStats?.colorWish || 0},
+        Mindestanforderungen ${minimumRequirementsExcluded || 0}.<br>
         ${unknownPedigreeCandidates ? `${unknownPedigreeCandidates} Kandidaten haben unbekannte Stammbaumplätze; Unknown/Unbekannt wird ausdrücklich ignoriert.` : ''}
         Eine Namenswiederholung <strong>nur innerhalb derselben Elternseite</strong>
         gilt nicht mehr als gemeinsamer Vorfahr.

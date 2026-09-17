@@ -1,0 +1,10 @@
+MDR-Datenbank V54.0.67
+
+- Zuchtplaner: neuer aufklappbarer Kasten „Mindestanforderungen“ direkt unter Schwerpunkt & Partnerfilter.
+- Harte Grenzwerte für die Datenbank-Schätzung: Ext% mindestens, Int höchstens, GP mindestens, Ext höchstens.
+- Leere Felder deaktivieren das jeweilige Kriterium; Reset leert alle Grenzen.
+- Kandidaten ohne verfügbare Datenbank-Schätzung für ein aktives Kriterium bestehen dieses Kriterium nicht.
+- Mindestfilter wird vor der Top-20-Begrenzung auf den gesamten bereits zuchtfachlich zulässigen Kandidatenpool angewendet.
+- Anzahl der wegen Mindestanforderungen ausgeschlossenen Partner erscheint in der Diagnose.
+- DE/EN ergänzt; responsive 4/2/1-Spalten-Darstellung.
+- Keine zusätzlichen Supabase-Abfragen oder neue Datenbankfelder.

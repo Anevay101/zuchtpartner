@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Zuchtplaner – MDR Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5466" />
+  <link rel="stylesheet" href="css/style.css?v=5467" />
 </head>
 <body class="planner-high-contrast">
 <header class="topbar">
@@ -108,6 +108,18 @@
         <p class="small muted candidate-filter-note">Besitzer- und Rassefilter gelten für den Gegenpartner. Deckstation-Hengste werden nur für Prämienstuten berücksichtigt.</p>
       </fieldset>
 
+      <details class="card zp-tool-card zp-minimum-requirements" id="minimum-requirements-details">
+        <summary><strong>🎯 Mindestanforderungen</strong><span id="minimum-requirements-status" class="zp-summary-status">Aus</span></summary>
+        <p class="small muted">Nur Verpaarungen anzeigen, deren Datenbank-Schätzung alle ausgefüllten Grenzwerte erfüllt. Bei Ext und Int gilt: niedriger ist besser.</p>
+        <div class="zp-compact-fields zp-minimum-fields">
+          <div><label for="minimum-extpct">Ext% mindestens</label><input id="minimum-extpct" type="number" min="0" max="100" step="0.1" inputmode="decimal" placeholder="–" /></div>
+          <div><label for="maximum-int">Int höchstens</label><input id="maximum-int" type="number" min="0" step="0.01" inputmode="decimal" placeholder="–" /></div>
+          <div><label for="minimum-gp">GP mindestens</label><input id="minimum-gp" type="number" min="0" step="1" inputmode="numeric" placeholder="–" /></div>
+          <div><label for="maximum-ext">Ext höchstens</label><input id="maximum-ext" type="number" min="0" step="0.01" inputmode="decimal" placeholder="–" /></div>
+        </div>
+        <div class="actions zp-minimum-actions"><button type="button" id="minimum-requirements-reset" class="secondary">Zurücksetzen</button></div>
+      </details>
+
       <div class="zp-option-stack">
         <section class="card zp-tool-card zp-mini-card">
           <h3>🎨 Zusatzwünsche</h3>
@@ -160,21 +172,21 @@
   <p id="zucht-error" class="error"></p>
 </main>
 
-<script src="js/i18n.js?v=5466"></script>
-  <script src="js/supabase-loader.js?v=5466"></script>
-<script src="js/supabase-config.js?v=5466"></script>
-<script src="js/database-local.js?v=5466"></script>
-<script src="js/local-app.js?v=5466"></script>
-<script src="js/learning-file.js?v=5466"></script>
-<script src="js/parser.js?v=5466"></script>
-<script src="js/data-quality.js?v=5466"></script>
-<script src="js/planer-common.js?v=5466"></script>
-<script src="js/zuchtplaner-engine-helpers.js?v=5466"></script>
-<script src="js/breeding-original.js?v=5466"></script>
-<script src="js/verpaarungsratgeber-engine.js?v=5466"></script>
-<script src="js/foal-prediction.js?v=5466"></script>
-<script src="js/color-guide.js?v=5466"></script>
-<script src="js/turnierzucht.js?v=5466"></script>
-<script src="js/zuchtplaner-local.js?v=5466"></script>
+<script src="js/i18n.js?v=5467"></script>
+  <script src="js/supabase-loader.js?v=5467"></script>
+<script src="js/supabase-config.js?v=5467"></script>
+<script src="js/database-local.js?v=5467"></script>
+<script src="js/local-app.js?v=5467"></script>
+<script src="js/learning-file.js?v=5467"></script>
+<script src="js/parser.js?v=5467"></script>
+<script src="js/data-quality.js?v=5467"></script>
+<script src="js/planer-common.js?v=5467"></script>
+<script src="js/zuchtplaner-engine-helpers.js?v=5467"></script>
+<script src="js/breeding-original.js?v=5467"></script>
+<script src="js/verpaarungsratgeber-engine.js?v=5467"></script>
+<script src="js/foal-prediction.js?v=5467"></script>
+<script src="js/color-guide.js?v=5467"></script>
+<script src="js/turnierzucht.js?v=5467"></script>
+<script src="js/zuchtplaner-local.js?v=5467"></script>
 </body>
 </html>

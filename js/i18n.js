@@ -1,4 +1,4 @@
-// MDR V54.0.61 – bilingual UI layer (DE/EN)
+// MDR V54.0.67 – bilingual UI layer (DE/EN)
 // Internal database/parser keys intentionally remain unchanged.
 (() => {
   'use strict';
@@ -202,6 +202,9 @@
     'Größte Differenz (Risiko/Chance)':'Largest difference (risk/opportunity)',
     'Datenbank-Schätzung':'Database estimate', 'Abweichung zur Datenbank-Schätzung':'Deviation from database estimate',
     'DB-Bereich getroffen?':'DB range hit?', 'DB-Prognose Grundwert':'DB baseline forecast',
+    '🎯 Mindestanforderungen':'🎯 Minimum requirements', 'Mindestanforderungen':'Minimum requirements',
+    'Nur Verpaarungen anzeigen, deren Datenbank-Schätzung alle ausgefüllten Grenzwerte erfüllt. Bei Ext und Int gilt: niedriger ist besser.':'Only show pairings whose database estimate meets every entered threshold. For conformation and temperament, lower is better.',
+    'wegen Mindestanforderungen':'due to minimum requirements',
 
     // Genetics
     'Erbkrankheiten':'Hereditary diseases', 'Erbkrankheit vorhanden':'Hereditary disease present',
