@@ -128,18 +128,6 @@ function renderBreedingDashboard(rows) {
 }
 
 
-function dashboardLastFiveMonths(now = new Date()) {
-  const out=[];
-  const anchor=new Date(now.getFullYear(),now.getMonth(),1);
-  for (let offset=4; offset>=0; offset--) {
-    const d=new Date(anchor.getFullYear(),anchor.getMonth()-offset,1);
-    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    const label=d.toLocaleDateString('de-DE',{month:'short',year:'2-digit'}).replace('.', '');
-    out.push({key,label});
-  }
-  return out;
-}
-
 function dashboardGenderKey(value) {
   const raw=String(value||'').trim().toLowerCase();
   if (/stute|mare|female/.test(raw)) return 'Stute';
@@ -169,48 +157,13 @@ function wireZsTrendGenderToggle() {
   }));
 }
 
-function renderBreedingShowTrend(rows) {
-  const root=document.getElementById('zs-trend-dashboard');
-  if (!root) return;
-  const months=dashboardLastFiveMonths();
-  const monthKeys=new Set(months.map(m=>m.key));
+function renderBreedingShowBenchmark(rows) {
   const activeRows=(rows||[]).filter(h=>normalizeBreed(h?.breed));
   const breeds=[...new Set(activeRows.map(h=>normalizeBreed(h?.breed)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
   const benchmarkRoot=document.getElementById('zs-benchmark-dashboard');
   if (window.MDR_BREEDING_SHOW_BENCHMARK?.render) {
     window.MDR_BREEDING_SHOW_BENCHMARK.render(benchmarkRoot,{gender:DASHBOARD_ZS_GENDER,breeds});
   }
-  if (!breeds.length) {
-    root.innerHTML='<p class="muted small">Keine aktive Rasse im aktuellen Filter.</p>';
-    return;
-  }
-
-  const stats=new Map();
-  for (const breed of breeds) stats.set(breed,new Map(months.map(m=>[m.key,[]])));
-  for (const horse of activeRows) {
-    if (dashboardGenderKey(horse?.gender)!==DASHBOARD_ZS_GENDER) continue;
-    const total=typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : Number(horse?.breeding_show_points);
-    const date=typeof plannerBreedingShowSnapshotDate === 'function' ? plannerBreedingShowSnapshotDate(horse) : null;
-    if (!(Number.isFinite(Number(total)) && Number(total)>0) || !date) continue;
-    const key=String(date).slice(0,7);
-    if (!monthKeys.has(key)) continue;
-    const breed=normalizeBreed(horse?.breed);
-    if (!breed || !stats.has(breed)) continue;
-    stats.get(breed).get(key).push(Number(total));
-  }
-
-  const body=breeds.map(breed=>{
-    const cells=months.map(month=>{
-      const values=stats.get(breed).get(month.key)||[];
-      if (!values.length) return '<td class="muted">–</td>';
-      const avg=values.reduce((sum,v)=>sum+v,0)/values.length;
-      return `<td><strong>${Math.round(avg)}</strong><br><span class="tiny muted">n=${values.length}</span></td>`;
-    }).join('');
-    return `<tr><th>${escapeHtml(breed)}</th>${cells}</tr>`;
-  }).join('');
-
-  const label=DASHBOARD_ZS_GENDER==='Hengst'?'Hengste':'Stuten';
-  root.innerHTML=`<div class="table-wrap"><table class="detail-table dashboard-zs-trend-table"><thead><tr><th>Rasse</th>${months.map(m=>`<th>${escapeHtml(m.label)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div><p class="tiny muted">${label}: positive eingetragene ZS-Gesamtwerte nach Eintragungsdatum. Ein Eintrag gilt als Gewinnwert der betreffenden Zuchtschau.</p>`;
 }
 
 function localAverageFilter(rows, options = {}) {
@@ -244,8 +197,8 @@ async function calculate() {
     const allData = await localGetAll(LOCAL_STORES.horses);
     const activeData = allData.filter(h => isActiveBreeder(h.owner) && !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
     const data = localAverageFilter(activeData);
-    const trendData = localAverageFilter(activeData, { ignoreGender: true });
-    renderBreedingShowTrend(trendData);
+    const benchmarkData = localAverageFilter(activeData, { ignoreGender: true });
+    renderBreedingShowBenchmark(benchmarkData);
 
     if (!data.length) {
       resultEl.innerHTML = '<p>Keine Pferde gefunden.</p>';

@@ -6173,3 +6173,73 @@ summary:focus-visible {
   .mdr-topbar-tools { justify-content: space-between; }
   .mdr-account-name { max-width: 42vw; overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* ============================================================
+   V54.0.66 – Schau-Niveau mobil klar trennen
+   Rasse als Kartenkopf; Kennzahlen darunter statt gequetschter Tabelle.
+   ============================================================ */
+@media (max-width: 760px) {
+  #zs-benchmark-dashboard .table-wrap {
+    overflow: visible;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .dashboard-zs-benchmark-table,
+  .dashboard-zs-benchmark-table tbody {
+    display: block;
+    width: 100%;
+  }
+  .dashboard-zs-benchmark-table thead { display: none; }
+  .dashboard-zs-benchmark-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .5rem .75rem;
+    margin: 0 0 .6rem;
+    padding: .72rem .78rem;
+    border: 1px solid color-mix(in srgb, var(--border) 82%, var(--accent) 18%);
+    border-radius: .75rem;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .dashboard-zs-benchmark-table tr:last-child { margin-bottom: 0; }
+  .dashboard-zs-benchmark-table th,
+  .dashboard-zs-benchmark-table td {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .12rem;
+    width: auto !important;
+    padding: .12rem 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .dashboard-zs-benchmark-table th {
+    grid-column: 1 / -1;
+    padding-bottom: .38rem;
+    margin-bottom: .05rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 88%, var(--accent) 12%);
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 800;
+  }
+  .dashboard-zs-benchmark-table th::before,
+  .dashboard-zs-benchmark-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: .68rem;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+  .dashboard-zs-benchmark-table th::before { display: none; }
+  .dashboard-zs-benchmark-table td:last-child { grid-column: 1 / -1; }
+  .dashboard-zs-benchmark-head { align-items: flex-start; }
+}
+
+@media (max-width: 430px) {
+  .dashboard-zs-benchmark-table tr { grid-template-columns: 1fr; }
+  .dashboard-zs-benchmark-table td:last-child { grid-column: auto; }
+}

@@ -1,0 +1,8 @@
+V54.0.66 – Verpaarungslog & Dashboard kompakter
+
+- Verpaarungslog: rote Zuchtempfehlung „Aussortieren empfohlen“ auf „Aussortieren“ verkürzt, damit die Ampelspalte stabil bleibt.
+- Dashboard: Bereich „Zuchtschau-Entwicklung“ in „Aktuelles Schau-Niveau“ umbenannt.
+- Dashboard: eigene ZS-Entwicklung der letzten fünf Monate vollständig entfernt.
+- Dashboard: Benchmark-Berechnung bleibt erhalten; unnötige Berechnung der entfernten Eigenentwicklung entfällt.
+- Mobile: aktuelles Schau-Niveau wird auf schmalen Displays als saubere Rasse-Karte dargestellt. Rasse steht vollbreit, Meldeniveau/Podium/Siegniveau/Datengrundlage folgen getrennt.
+- Keine Änderung am Supabase-Sync oder an den gespeicherten Benchmark-Daten.

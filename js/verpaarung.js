@@ -1109,7 +1109,7 @@ function foalBreedingRecommendation(pairing) {
   const parents = parentAverageMetricSnapshot(pairing);
   if (typeof bpEvaluateParentAverage === 'function') {
     const rec = bpEvaluateParentAverage(actualHorse, parents.stallion, parents.mare);
-    const labelMap = { keep:'Behalten', check:'Prüfen', cull:'Aussortieren empfohlen', partial:'Noch offen' };
+    const labelMap = { keep:'Behalten', check:'Prüfen', cull:'Aussortieren', partial:'Noch offen' };
     return { ...rec, label:labelMap[rec.level] || 'Noch offen' };
   }
   return { level:'partial', label:'Noch offen', reasons:['Zuchtfortschrittslogik nicht geladen.'], evaluated:0 };
@@ -1119,7 +1119,7 @@ function foalBreedingRecommendationHtml(pairing) {
   const rec = foalBreedingRecommendation(pairing);
 
   const config = {
-    cull:    { cls:'traffic-red-pill',    label:'Aussortieren empfohlen' },
+    cull:    { cls:'traffic-red-pill',    label:'Aussortieren' },
     check:   { cls:'traffic-orange-pill', label:'Prüfen' },
     keep:    { cls:'traffic-green-pill',  label:'Behalten' },
     partial: { cls:'traffic-neutral-pill',label:'Noch offen' },
