@@ -1,0 +1,12 @@
+V54.0.79 – Zuchtplaner Workflow-Grid korrigiert
+
+- Regression in „Partner finden“ behoben: Schritt 2 („Bewertung & Partnerfilter")
+  und Schritt 3 („Optionale Verfeinerung") stehen wieder sauber untereinander
+  über die volle verfügbare Breite.
+- Ursache war eine alte CSS-Zuweisung `grid-area: core` aus V54.0.67, die im
+  neuen V54.0.78-Workflow ein implizites Grid erzeugte und die Karten diagonal
+  versetzte.
+- Neuer Workflow erzwingt eine einspaltige Reihenfolge und setzt alte Grid-Areas
+  ausschließlich innerhalb `.zp-planner-workflow` zurück.
+- Keine fachliche Zuchtplaner- oder Verpaarungslog-Logik geändert.
+- Cache-Buster auf 5479 aktualisiert.

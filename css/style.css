@@ -7374,3 +7374,24 @@ button.keep-foal-no.active {
 .zp-core-options .zp-prediction-note {
   margin: .8rem 0 0;
 }
+
+/* ============================================================
+   V54.0.79 – Zuchtplaner Workflow-Grid korrigiert
+   ============================================================ */
+/* V54.0.67 hatte .zp-core-options noch einem benannten Grid-Bereich
+   "core" zugewiesen. Im neuen linearen Workflow erzeugte dieser Rest
+   implizite Grid-Zeilen/-Spalten und versetzte Schritt 2 und 3 diagonal. */
+.zp-planner-workflow {
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-flow: row;
+}
+.zp-planner-workflow > .zp-core-options,
+.zp-planner-workflow > .zp-refinement-card {
+  grid-area: auto !important;
+  grid-column: 1 / -1 !important;
+  grid-row: auto !important;
+  width: 100%;
+  min-width: 0;
+}
+.zp-planner-workflow > .zp-core-options { order: 1; }
+.zp-planner-workflow > .zp-refinement-card { order: 2; }

@@ -1,0 +1,25 @@
+RELEASE-CHECK V54.0.79
+
+Zweck
+- Korrektur der diagonalen Fehlplatzierung von Schritt 2 und Schritt 3 im Zuchtplaner.
+
+Geprüft
+- CSS geparst: 0 Fehler.
+- JavaScript-Syntax: 40/40 Dateien OK.
+- JavaScript-Fachlogik gegenüber V54.0.78 unverändert; einzige JS-Byteänderung ist
+  der Cache-Buster 5478 -> 5479 in i18n.js.
+- HTML: 0 doppelte IDs.
+- Zuchtplaner: 65 IDs vorhanden, 65 eindeutig.
+- Lokale Ressourcenpfade: 332 geprüft, 0 fehlend.
+- DOM-Reihenfolge: Schritt 2 vor Schritt 3.
+- Workflow-CSS setzt alte Grid-Areas scoped innerhalb .zp-planner-workflow zurück.
+
+Ursache des V54.0.78-Fehlers
+- Aus V54.0.67 war `.zp-core-options { grid-area: core; }` noch aktiv.
+- Im neuen linearen `.zp-planner-workflow` gab es keine passende benannte Grid-Area mehr.
+- Der Browser erzeugte deshalb implizite Grid-Linien und platzierte die Workflow-Karten diagonal.
+
+Korrektur
+- .zp-planner-workflow explizit einspaltig.
+- grid-area/grid-row/grid-column der direkten Workflow-Karten zurückgesetzt.
+- Reihenfolge zusätzlich über order abgesichert: Schritt 2 vor Schritt 3.
