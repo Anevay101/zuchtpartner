@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Verpaarungslog – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5475" />
+  <link rel="stylesheet" href="css/style.css?v=5476" />
 </head>
 <body>
   <header class="topbar">
@@ -53,7 +53,7 @@
             <label for="p-existing-foal">Fohlen bereits in Datenbank? <span class="muted small">(optional)</span></label>
             <input id="p-existing-foal" list="foal-horse-names" placeholder="Vorhandenes Fohlen auswählen" autocomplete="off" />
           </div>
-          <div style="grid-column: 1 / -1;"><label for="p-notes">Notizen</label><input id="p-notes" /></div>
+          <div class="grid-full"><label for="p-notes">Notizen</label><input id="p-notes" /></div>
         </div>
         <datalist id="stallion-horse-names"></datalist>
         <datalist id="mare-horse-names"></datalist>
@@ -158,7 +158,7 @@
          ohne Duplizierung wiederverwenden kann. Das eigentliche
          Speichern übernimmt aber verpaarung.js, siehe onSaveFoal(). -->
     <div id="foal-modal" class="modal-overlay" hidden>
-      <div class="modal-box" style="max-width: 720px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-box modal-w-720 modal-scroll">
         <h2 id="foal-modal-title">Fohlen eintragen</h2>
         <p id="foal-modal-hint" class="small muted"></p>
 
@@ -260,7 +260,7 @@
         <fieldset>
           <legend>Sonstiges</legend>
           <div class="form-grid">
-            <div style="grid-column: 1 / -1;"><label for="notes">Notizen</label><textarea id="notes" rows="3"></textarea></div>
+            <div class="grid-full"><label for="notes">Notizen</label><textarea id="notes" rows="3"></textarea></div>
             <div><label for="image_url">Bild-URL</label><input id="image_url" type="url" /></div>
           </div>
         </fieldset>
@@ -294,23 +294,23 @@
     </div>
   </main>
 
-  <script src="js/tournament-catalog.js?v=5475"></script>
-<script src="js/i18n.js?v=5475"></script>
-  <script src="js/core-utils.js?v=5475"></script>
-  <script src="js/supabase-loader.js?v=5475"></script>
-<script src="js/supabase-config.js?v=5475"></script>
-<script src="js/database-local.js?v=5475"></script>
-  <script src="js/local-app.js?v=5475"></script>
-  <script src="js/learning-file.js?v=5475"></script>
-  <script src="js/horse-data-utils.js?v=5475"></script>
-<script src="js/parser.js?v=5475"></script>
-  <script src="js/zuchtplaner-engine-helpers.js?v=5475"></script>
-  <script src="js/breeding-original.js?v=5475"></script>
-  <script src="js/verpaarungsratgeber-engine.js?v=5475"></script>
-  <script src="js/foal-prediction.js?v=5475"></script>
-  <script src="js/breeding-progress.js?v=5475"></script>
-  <script src="js/horse-detail-render.js?v=5475"></script>
-<script src="js/horseForm.js?v=5475"></script>
-  <script src="js/verpaarung.js?v=5475"></script>
+  <script src="js/tournament-catalog.js?v=5476"></script>
+<script src="js/i18n.js?v=5476"></script>
+  <script src="js/core-utils.js?v=5476"></script>
+  <script src="js/supabase-loader.js?v=5476"></script>
+<script src="js/supabase-config.js?v=5476"></script>
+<script src="js/database-local.js?v=5476"></script>
+  <script src="js/local-app.js?v=5476"></script>
+  <script src="js/learning-file.js?v=5476"></script>
+  <script src="js/horse-data-utils.js?v=5476"></script>
+<script src="js/parser.js?v=5476"></script>
+  <script src="js/zuchtplaner-engine-helpers.js?v=5476"></script>
+  <script src="js/breeding-original.js?v=5476"></script>
+  <script src="js/verpaarungsratgeber-engine.js?v=5476"></script>
+  <script src="js/foal-prediction.js?v=5476"></script>
+  <script src="js/breeding-progress.js?v=5476"></script>
+  <script src="js/horse-detail-render.js?v=5476"></script>
+<script src="js/horseForm.js?v=5476"></script>
+  <script src="js/verpaarung.js?v=5476"></script>
 </body>
 </html>

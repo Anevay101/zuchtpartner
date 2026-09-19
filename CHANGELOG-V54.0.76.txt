@@ -1,0 +1,21 @@
+V54.0.76 – UI/CSS Cleanup
+
+Schwerpunkt: optische Konsolidierung ohne Änderungen an Fachlogik oder Datenmodell.
+
+- Zentrale Design-Tokens für Abstände, Radien, Bedienelement-Höhen, Oberflächen, Rahmen, Fokus und Schatten ergänzt.
+- Buttons vereinheitlicht: Primary/Secondary/Danger, Disabled-, Active- und Icon-Zustände.
+- Formulare vereinheitlicht: Feldhöhen, Padding, Rahmen, Fokusdarstellung, Checkbox/Radio-Akzent und Readonly-Ansicht.
+- Cards, Fieldsets, Modals, Status-/Hinweisflächen und wichtige Fachkarten auf gemeinsame Radien/Rahmen/Schatten gezogen.
+- Filter-/Toolbar-Bereiche harmonisiert; Filtergruppen und aktive Filterchips verwenden gemeinsame Oberflächen-Tokens.
+- Tabellen optisch beruhigt: konsistente Rahmen, Zellabstände, Header-Hierarchie und Hover-Flächen. Responsive Kartenansichten bleiben bestehen.
+- Dropdowns, Checkdrop-Menüs sowie Tabs/Subtabs an die gemeinsame Oberflächensprache angeglichen.
+- Wiederholte Inline-Layoutstile in horse.html, index.html, verpaarung.html und view.html durch kleine CSS-Hilfsklassen ersetzt.
+- Mobile Abstände und Touch-Höhen konsolidiert.
+- Globales zoom: 0.8 bewusst beibehalten; die neuen Dichte-Tokens bilden die Grundlage für eine spätere separate Zoom-Migration.
+- Cache-Buster auf 5476 aktualisiert.
+
+Nicht verändert:
+- Parser-/Horse-Modullogik
+- Supabase-/Backup-/Migrationslogik
+- Turnier-, Zucht-, Import- oder Berechnungslogik
+- bestehende Farbidentität und Planner-High-Contrast-Sonderdesigns

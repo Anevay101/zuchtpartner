@@ -1605,10 +1605,7 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
 
 
 /* --- V30: ruhige Blautöne, weiße Felder und hoher Kontrast --- */
-body {
-  background: var(--bg-gradient);
-  color: var(--text);
-}
+/* body-Grundfarben werden im späteren zentralen Theme-Block gesetzt. */
 
 a { color: var(--accent-dark); }
 a:hover { color: #2e586c; }
@@ -3262,10 +3259,6 @@ button,
 .horse-tag-badge,
 .foal-traffic-pill {
   border-radius: 9px !important;
-}
-
-.table-wrap {
-  overflow: auto;
 }
 
 .pairing-breeding-traffic-light {
@@ -6271,3 +6264,302 @@ summary:focus-visible {
   .inventory-result-table{min-width:720px}
 }
 @media (max-width:480px){.inventory-count-grid{grid-template-columns:1fr}.inventory-modal-head{align-items:center}}
+
+/* ============================================================
+   V54.0.76 – UI/CSS-Konsolidierung
+   Gemeinsame Design-Tokens und Komponentenregeln. Der globale Zoom
+   bleibt bewusst unverändert; diese Schicht schafft die Grundlage für
+   eine spätere zoom-freie Dichte-Umstellung, ohne Fachlogik anzufassen.
+   ============================================================ */
+:root {
+  /* Abstände */
+  --space-1: .25rem;
+  --space-2: .4rem;
+  --space-3: .6rem;
+  --space-4: .8rem;
+  --space-5: 1rem;
+  --space-6: 1.25rem;
+  --space-7: 1.5rem;
+
+  /* Radien */
+  --radius-sm: 6px;
+  --radius-control: 9px;
+  --radius-card: 14px;
+  --radius-pill: 999px;
+
+  /* Bedienelemente */
+  --control-height: 2.35rem;
+  --control-height-compact: 2.05rem;
+  --control-padding-y: .46rem;
+  --control-padding-x: .72rem;
+
+  /* Oberflächen / Linien / Fokus */
+  --surface-muted: color-mix(in srgb, var(--surface) 95%, var(--accent) 5%);
+  --surface-hover: color-mix(in srgb, var(--surface) 90%, var(--accent) 10%);
+  --border-subtle: color-mix(in srgb, var(--border) 82%, var(--surface) 18%);
+  --border-strong: color-mix(in srgb, var(--border) 66%, var(--accent-dark) 34%);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 34%, transparent);
+  --shadow-control: 0 1px 2px rgba(33, 55, 28, .06);
+  --shadow-card: 0 2px 8px rgba(33, 55, 28, .08);
+}
+
+/* Kleine Layout-Helfer ersetzen wiederholte Inline-Styles in den Seiten. */
+.grid-full { grid-column: 1 / -1; }
+.control-auto { width: auto !important; }
+.inline-fieldset-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.inline-fieldset-row > fieldset.flex-fieldset {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.modal-w-560 { max-width: 560px; }
+.modal-w-620 { max-width: 620px; }
+.modal-w-720 { max-width: 720px; }
+.modal-w-760 { max-width: 760px; }
+.modal-scroll { max-height: 90vh; overflow-y: auto; }
+
+/* Buttons: eine konsistente Größe und Zustandslogik. Spezialisierte
+   Tab-/Link-/Sortierbuttons behalten ihre eigenen Regeln. */
+button,
+.btn {
+  min-height: var(--control-height);
+  padding: var(--control-padding-y) var(--control-padding-x);
+  border-radius: var(--radius-control) !important;
+  line-height: 1.2;
+  box-shadow: var(--shadow-control);
+  transition: background-color .14s ease, border-color .14s ease,
+              box-shadow .14s ease, transform .08s ease, filter .14s ease;
+}
+button:not(:disabled):not(.tab-btn):not(.subtab-btn):not(.link-button):not(.tournament-group-sort):active,
+.btn:not([aria-disabled="true"]):not(.tab-btn):not(.subtab-btn):active {
+  transform: translateY(1px);
+}
+button:disabled,
+.btn[aria-disabled="true"],
+.btn.disabled {
+  opacity: .58;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+button.secondary,
+.btn.secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+button.secondary:hover,
+.btn.secondary:hover { background: var(--surface-hover); }
+button.danger,
+.btn.danger {
+  background: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 82%, #000 18%);
+  color: #fff;
+}
+button.danger:hover,
+.btn.danger:hover { filter: brightness(.93); }
+.icon-btn {
+  min-width: var(--control-height-compact);
+  min-height: var(--control-height-compact);
+  padding: .2rem .38rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.topbar nav .btn,
+.topbar nav button { min-height: var(--control-height-compact); }
+.tab-btn,
+.subtab-btn,
+.link-button,
+.tournament-group-sort,
+.nav-dropdown-menu button {
+  box-shadow: none;
+}
+
+/* Formulare: einheitliche Feldhöhe, weichere Rahmen und klare Fokuslage. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+select,
+textarea,
+.checkdrop-toggle {
+  min-height: var(--control-height);
+  padding: var(--control-padding-y) var(--control-padding-x);
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--radius-control) !important;
+  box-shadow: inset 0 1px 1px rgba(33, 55, 28, .025);
+}
+textarea { line-height: 1.42; }
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent-dark);
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.checkdrop-toggle:focus-visible,
+button:focus-visible,
+a.btn:focus-visible,
+summary:focus-visible {
+  outline: none !important;
+  box-shadow: var(--focus-ring);
+}
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: .72;
+}
+.view-mode input[readonly],
+.view-mode textarea[readonly],
+.view-mode select:disabled {
+  min-height: 0;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+label {
+  font-weight: 600;
+  line-height: 1.25;
+}
+.form-grid { row-gap: var(--space-1); }
+.form-actions,
+.paste-actions,
+.view-actions {
+  gap: var(--space-3);
+  align-items: center;
+}
+
+/* Karten und Informationsflächen: gleicher Radius, gleiche Rahmendichte,
+   aber bestehende semantische Warn-/Planerfarben bleiben erhalten. */
+.card,
+fieldset,
+details.card,
+details.paste-box,
+.compare-avg-block,
+.filter-bar,
+.result-card,
+.planner-summary,
+.modal-box,
+.modal-card,
+.dashboard-panel,
+.settings-toggle-card,
+.zp-tool-card,
+.tp-stats-card,
+.horse-hero-card,
+.table-wrap {
+  border-radius: var(--radius-card) !important;
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-card);
+}
+.card,
+fieldset,
+details.card,
+details.paste-box,
+.compare-avg-block,
+.dashboard-panel,
+.settings-toggle-card,
+.zp-tool-card,
+.tp-stats-card { background: var(--surface); }
+fieldset { padding: var(--space-4) var(--space-5) var(--space-5); }
+fieldset > legend {
+  padding-inline: var(--space-2);
+  font-size: .82rem;
+  font-weight: 800;
+}
+.flash-banner,
+.missing-data-notice,
+.notice,
+.notice-warning {
+  border-radius: var(--radius-card) !important;
+  box-shadow: var(--shadow-control);
+}
+
+/* Filter / Toolbars: gleiche Abstände und ruhigere Untergruppen. */
+.filter-bar,
+.database-filter-bar {
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.filter-group {
+  border-color: var(--border-subtle);
+  border-radius: calc(var(--radius-card) - 3px);
+  background: var(--surface-muted);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+}
+.filter-group-title {
+  margin-bottom: var(--space-1);
+  letter-spacing: .035em;
+}
+.filter-bar .actions,
+.database-filter-bar .actions,
+#bulk-actions {
+  gap: var(--space-2);
+}
+.active-filter-bar {
+  border-radius: calc(var(--radius-card) - 2px);
+  padding: var(--space-2) var(--space-3);
+  box-shadow: var(--shadow-control);
+}
+.active-filter-chip,
+.pill,
+.foal-traffic-pill,
+.inventory-profile-pill,
+.inventory-owner-chip {
+  border-radius: var(--radius-pill) !important;
+}
+
+/* Tabellen: gemeinsame Scanbarkeit, ohne die bestehenden responsiven
+   Kartenansichten oder Vergleichsfarben zu überschreiben. */
+.table-wrap {
+  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+}
+th,
+td {
+  padding: .52rem .62rem;
+  border-bottom-color: var(--border-subtle);
+}
+thead th {
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+tbody tr:last-child > td { border-bottom-color: transparent; }
+#horse-table tbody tr:hover td:not(.cmp-good):not(.cmp-bad):not(.cmp-tolerance),
+.detail-table tbody tr:hover td,
+.tournament-ranking-table tbody tr:hover td {
+  background: var(--surface-hover);
+}
+
+/* Navigation / Menüs / Reiter auf dieselben Oberflächen-Tokens ziehen. */
+.checkdrop-panel,
+.nav-dropdown-menu {
+  border: 1px solid var(--border-subtle);
+  border-radius: calc(var(--radius-card) - 3px) !important;
+  box-shadow: var(--shadow-card);
+}
+.checkdrop-item,
+.nav-dropdown-menu a,
+.nav-dropdown-menu button {
+  border-radius: var(--radius-sm);
+}
+.checkdrop-item:hover,
+.nav-dropdown-menu a:hover,
+.nav-dropdown-menu button:hover { background: var(--surface-hover); }
+.tabs,
+.subtabs { border-color: var(--border-subtle); }
+.tab-btn,
+.subtab-btn { border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important; }
+
+/* Responsive: kompakt, aber auf Touch-Geräten weiterhin gut bedienbar. */
+@media (max-width: 760px) {
+  main.container { padding: .8rem; }
+  .filter-bar,
+  .database-filter-bar { padding: var(--space-3); }
+  .inline-fieldset-row { align-items: stretch; flex-direction: column; }
+  .form-actions > button,
+  .form-actions > .btn { min-height: 2.55rem; }
+  .modal-box { border-radius: 12px !important; }
+}
+

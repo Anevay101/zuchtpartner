@@ -1,0 +1,22 @@
+Release-Check V54.0.76
+======================
+
+Schwerpunkt: UI/CSS Cleanup
+
+Prüfungen:
+- VERSION.txt = 54.0.76: OK
+- CSS mit tinycss2 geparst: 0 Parsefehler
+- JavaScript-Syntax (node --check, alle js/*.js): OK
+- JS-Dateien gegenüber V54.0.75 bytegleich: OK
+- doppelte HTML-IDs: keine gefunden
+- lokale src/href-Referenzen geprüft: 332, davon fehlend: 0
+- Cache-Buster ?v=5475 in HTML: 0
+- Cache-Buster ?v=5476 in HTML: 197
+- Inline-Styles reduziert: 33 -> 20; verbleibend überwiegend feste <col>-Breiten
+- globales zoom: 0.8 absichtlich beibehalten
+
+Geänderte Funktionsbereiche:
+- ausschließlich CSS/UI-Struktur, kleine präsentationsbezogene HTML-Klassen,
+  Versions-/Cache-Buster-Angaben und Release-Dokumentation
+- keine Parser-, Datenbank-, Supabase-, Import-, Zucht-, Turnier- oder
+  Berechnungslogik geändert
