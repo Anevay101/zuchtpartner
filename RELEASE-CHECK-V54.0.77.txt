@@ -1,0 +1,29 @@
+Release-Check V54.0.77
+======================
+
+Schwerpunkt: sichtbares UI-Facelift + Regression-Fix Pferdeansicht
+
+Prüfungen:
+- VERSION.txt = 54.0.77: OK
+- CSS mit tinycss2 geparst: 0 Parsefehler
+- JavaScript-Syntax (node --check, alle js/*.js): OK
+- JS-Dateien gegenüber V54.0.76 bytegleich: OK
+- doppelte HTML-IDs: keine gefunden
+- lokale src/href-Referenzen geprüft: 332, davon fehlend: 0
+- Cache-Buster ?v=5476 in HTML: 0
+- Cache-Buster ?v=5477 in HTML: 197
+- style.css: 203171 Bytes
+- Regression-Fix: readonly/disabled Datenfelder der Pferdeansicht erhalten wieder
+  helle Hintergrundfläche, Rahmen, volle Opazität und lesbare Textfarbe
+- globales zoom: 0.8 auf Desktop absichtlich beibehalten; Mobile zoom: 1 bleibt bestehen
+
+Geänderte Bereiche:
+- css/style.css: neues sichtbares V54.0.77-Facelift als abschließende, gezielt
+  gekapselte Komponenten-Schicht
+- HTML: ausschließlich Cache-Buster 5477
+- VERSION/CHANGELOG/Release-Dokumentation
+
+Nicht geändert:
+- keine JavaScript-Datei
+- keine Parser-, Datenbank-, Supabase-, Import-, Zucht-, Turnier-, Cup-, ZS-,
+  Backup- oder Berechnungslogik

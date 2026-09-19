@@ -6563,3 +6563,496 @@ tbody tr:last-child > td { border-bottom-color: transparent; }
   .modal-box { border-radius: 12px !important; }
 }
 
+
+/* ============================================================
+   V54.0.77 – sichtbares UI-Facelift + View-Regressionsfix
+   Ziel: deutlich modernere, weichere MDR-Oberfläche ohne Fachlogik-
+   oder DOM-Umbau. Die Pferdeansicht erhält wieder klar abgegrenzte,
+   helle Datenfelder; globale Regeln bleiben bewusst komponentennah.
+   ============================================================ */
+:root {
+  /* Verfeinerte MDR-Salbei-Palette */
+  --bg: #e7f1e3;
+  --bg-gradient:
+    radial-gradient(circle at 82% 0%, rgba(255,255,255,.58) 0, rgba(255,255,255,0) 35%),
+    linear-gradient(135deg, #7daa70 0%, #a9cf9b 41%, #e7f1e3 100%);
+  --surface: #ffffff;
+  --border: #a9c39f;
+  --text: #233026;
+  --muted: #607064;
+  --accent: #78a969;
+  --accent-dark: #355f3a;
+  --th-bg-solid: #e5efe1;
+
+  --ui-surface: #ffffff;
+  --ui-surface-soft: #f4f8f2;
+  --ui-surface-soft-2: #edf5ea;
+  --ui-surface-strong: #e4efe0;
+  --ui-border: #bfd2b9;
+  --ui-border-strong: #91b187;
+  --ui-text-strong: #1f3423;
+  --ui-green-deep: #315b37;
+  --ui-green-mid: #5f9160;
+  --ui-shadow-sm: 0 2px 7px rgba(34, 62, 37, .08);
+  --ui-shadow-md: 0 8px 24px rgba(34, 62, 37, .12);
+  --ui-shadow-lg: 0 14px 36px rgba(34, 62, 37, .14);
+  --radius-control: 10px;
+  --radius-card: 16px;
+}
+
+body {
+  background: var(--bg-gradient);
+  color: var(--text);
+}
+
+/* Kopfzeile: hell, ruhig und klar vom Arbeitsbereich getrennt. */
+.topbar {
+  background: rgba(255,255,255,.95);
+  border-bottom: 1px solid rgba(111, 153, 101, .42);
+  box-shadow: 0 5px 22px rgba(35, 66, 39, .12);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+}
+.topbar h1 {
+  color: var(--ui-green-deep);
+  text-shadow: 0 1px 0 rgba(255,255,255,.7);
+}
+.topbar nav .btn,
+.topbar nav button {
+  font-weight: 700;
+  border-width: 1px !important;
+}
+.topbar nav .btn.secondary,
+.topbar nav button.secondary {
+  background: rgba(255,255,255,.88);
+  border-color: #b7cdb0 !important;
+  color: #355239;
+}
+.topbar nav .btn.secondary:hover,
+.topbar nav button.secondary:hover {
+  background: #edf5ea;
+  border-color: #8faf86 !important;
+}
+.topbar nav .nav-current {
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #6e9f69 0%, #4f7f52 100%) !important;
+  border-color: #47754b !important;
+  box-shadow: 0 2px 8px rgba(47, 89, 53, .18) !important;
+}
+
+/* Primäre Aktionen: klarere Hierarchie, aber weiterhin kompakt. */
+button:not(.secondary):not(.danger):not(.tab-btn):not(.subtab-btn):not(.link-button):not(.tournament-group-sort),
+.btn:not(.secondary):not(.danger):not(.tab-btn):not(.subtab-btn) {
+  background: linear-gradient(180deg, #6f9f68 0%, #4d7b50 100%);
+  border-color: #477449;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 3px 9px rgba(47, 89, 53, .18);
+}
+button:not(.secondary):not(.danger):not(.tab-btn):not(.subtab-btn):not(.link-button):not(.tournament-group-sort):hover,
+.btn:not(.secondary):not(.danger):not(.tab-btn):not(.subtab-btn):hover {
+  background: linear-gradient(180deg, #628f5d 0%, #416d45 100%);
+  border-color: #3d6740;
+}
+button.secondary,
+.btn.secondary {
+  background: #ffffff;
+  color: #304d34;
+  border-color: #9fbd97 !important;
+  box-shadow: 0 1px 3px rgba(38, 67, 40, .06);
+}
+button.secondary:hover,
+.btn.secondary:hover {
+  background: #edf5ea;
+  border-color: #78a16f !important;
+}
+button.danger,
+.btn.danger {
+  background: linear-gradient(180deg, #c45b5b 0%, #a84444 100%);
+  border-color: #983c3c !important;
+  box-shadow: 0 2px 7px rgba(140, 46, 46, .15);
+}
+
+/* Formulare: weniger Browser-Standard, mehr klarer Arbeitsbereich. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+select,
+textarea,
+.checkdrop-toggle {
+  background: #ffffff !important;
+  color: #203024 !important;
+  border: 1px solid var(--ui-border-strong) !important;
+  border-radius: var(--radius-control) !important;
+  box-shadow: 0 1px 2px rgba(37, 63, 39, .04), inset 0 1px 0 rgba(255,255,255,.85);
+  transition: border-color .14s ease, box-shadow .14s ease, background .14s ease;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):hover:not(:disabled):not([readonly]),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled):not([readonly]),
+.checkdrop-toggle:hover {
+  border-color: #719b6b !important;
+}
+input:focus,
+select:focus,
+textarea:focus,
+.checkdrop-toggle:focus,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.checkdrop-toggle:focus-visible {
+  border-color: #4f7d54 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(120,169,105,.24), 0 2px 6px rgba(39,70,42,.08) !important;
+}
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 1;
+  color: #536056 !important;
+  -webkit-text-fill-color: #536056;
+  background: #eef3ec !important;
+  border-color: #c2cec0 !important;
+}
+label {
+  color: #506456;
+  font-weight: 700;
+}
+
+/* Karten / Formulargruppen: helle Flächen, weichere Tiefenwirkung. */
+.card,
+fieldset,
+details.card,
+details.paste-box,
+.compare-avg-block,
+.filter-bar,
+.database-filter-details,
+.result-card,
+.planner-summary,
+.modal-box,
+.modal-card,
+.dashboard-panel,
+.settings-toggle-card,
+.zp-tool-card,
+.tp-stats-card,
+.table-wrap {
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--radius-card) !important;
+  box-shadow: var(--ui-shadow-sm);
+}
+fieldset,
+.card,
+details.card,
+details.paste-box,
+.compare-avg-block,
+.filter-bar,
+.database-filter-details,
+.dashboard-panel,
+.settings-toggle-card,
+.zp-tool-card,
+.tp-stats-card {
+  background: rgba(255,255,255,.94);
+}
+fieldset {
+  padding: .85rem 1rem 1rem;
+  margin-bottom: .8rem;
+}
+fieldset > legend {
+  padding: .2rem .58rem;
+  border: 1px solid #c4d6bf;
+  border-radius: 999px;
+  background: #f5f9f3;
+  color: #365f3b;
+  font-weight: 800;
+  box-shadow: 0 1px 2px rgba(38,65,41,.04);
+}
+.card > summary,
+details.card > summary,
+details.paste-box > summary {
+  color: #345a39;
+}
+
+/* Filter: deutlich als Werkzeugleiste lesbar, Untergruppen ruhiger. */
+.filter-bar,
+.database-filter-details {
+  background: rgba(255,255,255,.95);
+  box-shadow: var(--ui-shadow-md);
+}
+.filter-group {
+  background: var(--ui-surface-soft) !important;
+  border: 1px solid #cadac5 !important;
+  border-radius: 13px !important;
+}
+.filter-group-title {
+  color: #355f3a;
+  font-weight: 800;
+}
+.database-filter-details > summary {
+  color: #315837;
+  background: linear-gradient(180deg, rgba(244,249,242,.96), rgba(235,244,232,.96));
+  border-radius: 15px;
+}
+.database-filter-details[open] > summary {
+  border-bottom-color: #c4d5bf;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.active-filter-bar {
+  background: #f2f7f0;
+  border: 1px solid #cadac5;
+}
+.active-filter-chip,
+.pill,
+.foal-traffic-pill,
+.inventory-profile-pill,
+.inventory-owner-chip {
+  box-shadow: 0 1px 2px rgba(35,62,38,.06);
+}
+
+/* Tabellen: stärkerer Kopf, ruhigeres Raster, klare Hover-Zeile. */
+.table-wrap {
+  background: #ffffff;
+  box-shadow: var(--ui-shadow-md);
+  overflow: auto;
+}
+th,
+#horse-table thead th,
+.detail-table thead th,
+.tournament-ranking-table thead th {
+  background: linear-gradient(180deg, #edf5ea 0%, #e1eddd 100%);
+  color: #284b2e;
+  font-weight: 800;
+  border-bottom: 1px solid #b8cdb2;
+}
+#horse-table tbody tr:nth-child(even) td:not(.cmp-good):not(.cmp-bad):not(.cmp-tolerance),
+.detail-table tbody tr:nth-child(even) td {
+  background: #fafcf9;
+}
+#horse-table tbody tr:hover td:not(.cmp-good):not(.cmp-bad):not(.cmp-tolerance),
+.detail-table tbody tr:hover td,
+.tournament-ranking-table tbody tr:hover td {
+  background: #edf5ea;
+}
+
+/* Reiter: weiche Segmentsteuerung statt klassischer Formular-Tabs. */
+.horse-view-tabs,
+.tp-main-tabs,
+.zp-main-tabs {
+  padding: .34rem !important;
+  gap: .28rem;
+  border: 1px solid #bfd1b9 !important;
+  border-radius: 15px !important;
+  background: rgba(255,255,255,.94) !important;
+  box-shadow: var(--ui-shadow-sm);
+}
+.horse-view-tabs .tab-btn,
+.tp-main-tabs .tab-btn,
+.zp-main-tabs .subtab-btn {
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: #426047 !important;
+  font-weight: 750;
+  padding: .48rem .78rem;
+}
+.horse-view-tabs .tab-btn:hover,
+.tp-main-tabs .tab-btn:hover,
+.zp-main-tabs .subtab-btn:hover {
+  background: #edf5ea !important;
+  color: #2f5635 !important;
+}
+.horse-view-tabs .tab-btn.active,
+.tp-main-tabs .tab-btn.active,
+.zp-main-tabs .subtab-btn.active {
+  background: linear-gradient(180deg, #6f9e69 0%, #527f55 100%) !important;
+  color: #ffffff !important;
+  border-color: #4a774e !important;
+  box-shadow: 0 3px 8px rgba(48, 85, 51, .18) !important;
+}
+
+/* Pferdeprofil: sichtbar hochwertiger, gleichzeitig kompakt. */
+.horse-view-v53 { max-width: 1260px; }
+.view-navigation-settings {
+  background: rgba(255,255,255,.9) !important;
+  border: 1px solid #bfd1b9 !important;
+  border-radius: 13px !important;
+  box-shadow: var(--ui-shadow-sm);
+  padding: .55rem .7rem;
+}
+.view-navigation-settings label { color: #48604c; }
+.view-navigation-settings select {
+  background: #f9fcf8 !important;
+  border-color: #9fba98 !important;
+}
+.horse-hero-card {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,.82), rgba(255,255,255,0) 42%),
+    linear-gradient(180deg, #eef6eb 0%, #e4f0df 100%) !important;
+  border: 1px solid #aac29f !important;
+  border-radius: 20px !important;
+  box-shadow: var(--ui-shadow-lg) !important;
+  padding: 1rem 1.15rem 1.05rem;
+}
+.horse-hero-image {
+  background: #f8fbf6 !important;
+  border: 1px solid #b6caae !important;
+  border-radius: 18px !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.68);
+}
+.horse-image-placeholder {
+  background: #f7fbf5;
+  border-color: #adc5a5;
+  border-radius: 18px;
+}
+.horse-nav-arrow {
+  background: rgba(255,255,255,.9) !important;
+  border: 1px solid #91b087 !important;
+  color: #315b37 !important;
+  box-shadow: 0 4px 12px rgba(48,83,51,.10) !important;
+}
+.horse-nav-arrow:hover {
+  background: #e4f0e0 !important;
+  transform: translateY(-1px);
+}
+.horse-summary-chips > span {
+  background: rgba(255,255,255,.88);
+  border-color: #b5c9ae;
+  color: #29492e;
+  box-shadow: 0 1px 3px rgba(37,65,40,.06);
+}
+.horse-key-metrics {
+  gap: .48rem;
+  max-width: 800px;
+  margin-top: .65rem;
+}
+.horse-key-metric {
+  padding: .5rem .48rem .52rem;
+  border: 1px solid #acc4a5;
+  border-top: 3px solid #6f9f68;
+  border-radius: 13px;
+  background: rgba(255,255,255,.94);
+  box-shadow: 0 4px 11px rgba(41,74,44,.08);
+}
+.horse-key-metric span {
+  color: #617362;
+  font-size: .68rem;
+}
+.horse-key-metric strong {
+  color: #1f4728;
+  font-size: 1.12rem;
+}
+.horse-key-copy-actions .secondary {
+  background: rgba(255,255,255,.9);
+}
+.horse-view-tabs {
+  top: 3.35rem;
+  margin: .75rem 0 .9rem;
+}
+
+/* REGRESSIONSFIX V54.0.76: reine Ansicht bleibt als Datenoberfläche lesbar.
+   Vor allem disabled <select> (Flaxen/Erbkrankheiten etc.) darf nicht mehr
+   transparent/nackt im grünen Feldset stehen. */
+.horse-view-v53 fieldset,
+.horse-view-v53 .card,
+.horse-view-v53 .horse-turnier-section,
+.horse-view-v53 .detail-card {
+  background: rgba(255,255,255,.92) !important;
+  border-color: #b8ceb1 !important;
+  box-shadow: var(--ui-shadow-sm) !important;
+}
+.view-mode input[readonly],
+.view-mode textarea[readonly],
+.view-mode select:disabled,
+.horse-view-v53 input[readonly],
+.horse-view-v53 textarea[readonly],
+.horse-view-v53 select:disabled {
+  min-height: var(--control-height) !important;
+  padding: var(--control-padding-y) var(--control-padding-x) !important;
+  border: 1px solid #a7bea0 !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  color: #203024 !important;
+  -webkit-text-fill-color: #203024 !important;
+  opacity: 1 !important;
+  box-shadow: 0 1px 3px rgba(35,62,38,.05) !important;
+  cursor: default;
+}
+.view-mode select:disabled,
+.horse-view-v53 select:disabled {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+.view-mode textarea[readonly] { resize: none; }
+.horse-view-v53 .form-grid > div {
+  min-width: 0;
+}
+.horse-view-v53 .form-grid label {
+  margin-top: .45rem;
+  margin-bottom: .24rem;
+  color: #526956;
+}
+.horse-view-v53 .tiny.muted,
+.horse-view-v53 .small.muted {
+  color: #6a776c;
+}
+
+/* Dashboard/Einstellungen: Kennzahlen und Schalter als echte UI-Karten. */
+.dashboard-panel,
+.settings-toggle-card,
+.tp-stats-card,
+.zp-tool-card {
+  background: rgba(255,255,255,.94) !important;
+  border-color: #bfd2b9 !important;
+  box-shadow: var(--ui-shadow-md) !important;
+}
+.dashboard-panel > legend,
+.dashboard-panel h2,
+.dashboard-panel h3,
+.settings-toggle-card strong,
+.tp-stats-card h3,
+.zp-tool-card h3 {
+  color: #315a37;
+}
+
+/* Modals/Dropdowns schließen sich visuell an die neuen Karten an. */
+.modal-box,
+.modal-card,
+.checkdrop-panel,
+.nav-dropdown-menu {
+  background: #ffffff !important;
+  border-color: #b8cdb2 !important;
+  box-shadow: var(--ui-shadow-lg) !important;
+}
+.checkdrop-item:hover,
+.nav-dropdown-menu a:hover,
+.nav-dropdown-menu button:hover {
+  background: #edf5ea !important;
+}
+
+@media (max-width: 760px) {
+  .horse-hero-card {
+    border-radius: 16px !important;
+    padding: .75rem .55rem .85rem;
+  }
+  .horse-view-tabs,
+  .tp-main-tabs,
+  .zp-main-tabs {
+    border-radius: 13px !important;
+  }
+  .horse-view-tabs .tab-btn,
+  .tp-main-tabs .tab-btn,
+  .zp-main-tabs .subtab-btn {
+    min-height: 2.35rem;
+    padding: .48rem .68rem;
+  }
+  fieldset { padding: .72rem .78rem .88rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  .btn,
+  input,
+  select,
+  textarea,
+  .tab-btn,
+  .subtab-btn { transition: none !important; }
+}

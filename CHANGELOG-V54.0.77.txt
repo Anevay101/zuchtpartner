@@ -1,0 +1,25 @@
+V54.0.77 – sichtbares UI-Facelift + Pferdeansicht-Fix
+
+Schwerpunkt: deutlich modernere, weichere MDR-Oberfläche bei unveränderter Fachlogik.
+
+- Regression aus V54.0.76 behoben: Readonly-/Disabled-Felder in der Pferdeansicht sind wieder klar abgegrenzte helle Datenfelder. Das betrifft insbesondere Select-Werte wie Flaxen-Träger, Erbkrankheiten, Geschlecht und Zuchtzulassung.
+- MDR-Farbwelt verfeinert: Salbei-/Wiesengrün bleibt identitätsprägend, Flächen und Rahmen sind ruhiger und kontrastreicher abgestuft.
+- Hintergrund, Topbar und Navigation sichtbar modernisiert; Navigation bleibt kompakt, bekommt aber klarere aktive/sekundäre Zustände.
+- Buttons stärker hierarchisiert und weicher gestaltet; Primary, Secondary und Danger sind optisch deutlicher getrennt.
+- Formulare hochwertiger gestaltet: feinere Rahmen, ruhige Schatten, bessere Hover-/Focus-Zustände und konsistente helle Eingabeflächen.
+- Cards und Fieldsets sichtbar aufgewertet: weichere 16px-Radien, helle Flächen, feinere Schatten und pillenförmige Legends.
+- Filter-/Toolbar-Bereiche stärker als Arbeitsflächen gruppiert; Filtergruppen erhalten dezente, helle Unterflächen.
+- Tabellen modernisiert: stärkerer grüner Tabellenkopf, dezente Zebra-Zeilen und klarer Hover bei Erhalt bestehender Vergleichsfarben.
+- Haupttabs auf Pferde-, Turnier- und Zuchtplanerseiten als weiche Segmentsteuerung gestaltet; aktiver Tab wird klar hervorgehoben.
+- Pferdeprofil sichtbar überarbeitet: hellerer Hero-Bereich, weichere Navigation, hochwertigere Chips und KPI-Karten für GP/EXT/EXT%/INT/ZS/Nachkommen.
+- Dashboard-, Settings-, Statistik- und Tool-Karten an die neue Oberflächensprache angeglichen.
+- Modal-, Dropdown- und Checkdrop-Flächen optisch vereinheitlicht.
+- Reduced-Motion-Rücksicht ergänzt.
+- Globales zoom: 0.8 auf Desktop weiterhin bewusst beibehalten; Mobile bleibt wie zuvor bei zoom: 1.
+- Cache-Buster auf 5477 aktualisiert.
+
+Nicht verändert:
+- JavaScript-/Fachlogik
+- Parser-/Import-/Datenbank-/Supabase-/Backup-/Migrationslogik
+- Turnier-, Zucht-, Cup-, ZS- oder sonstige Berechnungsmodelle
+- Datenmodell
