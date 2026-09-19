@@ -257,8 +257,8 @@ function renderAussortResults() {
         </div>
       </div>
       <div class="planner-candidate-actions">
-        <a class="btn secondary" href="view.html?id=${encodeURIComponent(x.h.id)}">Ansehen</a>
-        <a class="btn secondary" href="horse.html?id=${encodeURIComponent(x.h.id)}">Bearbeiten</a>
+        <a class="btn secondary" href="${mdrRoute('view',{id:x.h.id})}">Ansehen</a>
+        <a class="btn secondary" href="${mdrRoute('horse',{id:x.h.id})}">Bearbeiten</a>
       </div>
     </article>
   `).join('');

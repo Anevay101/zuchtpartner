@@ -425,7 +425,7 @@
     const open=document.getElementById('purchase-open-existing');
     adopt.hidden=!currentRawText;
     open.hidden=currentStoredId==null;
-    if (currentStoredId!=null) open.href=`view.html?id=${encodeURIComponent(currentStoredId)}`;
+    if (currentStoredId!=null) open.href=mdrRoute('view',{id:currentStoredId});
   }
 
   async function analyzeParsed(candidate,{rawText='',storedId=null}={}) {
@@ -496,7 +496,7 @@
     document.getElementById('purchase-adopt-btn').addEventListener('click',()=>{
       if (!currentRawText) return;
       try { sessionStorage.setItem(RAW_TO_HORSE_KEY,currentRawText); } catch {}
-      location.href='horse.html?purchase=1';
+      location.href=mdrRoute('horse',{purchase:1});
     });
 
     let transferred='';

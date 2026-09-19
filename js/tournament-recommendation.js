@@ -25,8 +25,7 @@ const MDR_TOURNAMENT_ABSOLUTE_START_BY_LK = Object.freeze({
 });
 
 function plannerHorseTournamentServer(horse) {
-  const raw=String(horse?.mdr_server || horse?.game_version || '').trim().toUpperCase();
-  return raw==='DE' || raw==='EN' ? raw : 'UNKNOWN';
+  return mdrGameWorld(horse, 'UNKNOWN');
 }
 
 function plannerTournamentServerLabel(server) {

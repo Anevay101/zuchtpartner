@@ -624,7 +624,7 @@ async function mdrNextNumericId() {
 function mdrHorseExternalIdToken(horse) {
   const externalId = String(horse?.external_id ?? '').trim();
   if (!externalId) return '';
-  return `${String(horse?.game_version || 'DE').toUpperCase()}|${externalId}`;
+  return `${mdrGameWorld(horse, 'DE')}|${externalId}`;
 }
 
 async function mdrAssertHorseExternalIdUnique(horse) {

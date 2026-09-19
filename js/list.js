@@ -60,6 +60,49 @@ async function getLocalHorseById(id) {
   return getLocalRecordById(LOCAL_STORES.horses, id);
 }
 
+let inventoryReconcileModulePromise = null;
+
+function loadInventoryReconcileModule() {
+  if (window.MDR_INVENTORY_RECONCILE) return Promise.resolve(window.MDR_INVENTORY_RECONCILE);
+  if (inventoryReconcileModulePromise) return inventoryReconcileModulePromise;
+  inventoryReconcileModulePromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'js/inventory-reconcile.js?v=5474';
+    script.async = true;
+    script.addEventListener('load', () => resolve(window.MDR_INVENTORY_RECONCILE), { once:true });
+    script.addEventListener('error', () => {
+      inventoryReconcileModulePromise = null;
+      reject(new Error('Bestandsabgleich konnte nicht geladen werden.'));
+    }, { once:true });
+    document.head.appendChild(script);
+  });
+  return inventoryReconcileModulePromise;
+}
+
+function wireInventoryReconcileLazyLoad() {
+  const button = document.getElementById('inventory-reconcile-btn');
+  if (!button || button.dataset.lazyInventoryReady === '1') return;
+  button.dataset.lazyInventoryReady = '1';
+  button.addEventListener('click', async (event) => {
+    if (window.MDR_INVENTORY_RECONCILE) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const oldText = button.textContent;
+    button.disabled = true;
+    button.textContent = window.MDR_I18N?.language === 'en' ? 'Loading stock check…' : 'Bestandsabgleich wird geladen…';
+    try {
+      await loadInventoryReconcileModule();
+      button.disabled = false;
+      button.textContent = oldText;
+      button.click();
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = oldText;
+      alert(error?.message || String(error));
+    }
+  }, { capture:true });
+}
+
 async function init() {
   const session = await requireSession();
   if (!session) return;
@@ -89,6 +132,7 @@ async function init() {
   wireDeleteModal();
   wireCompareAvg();
   wireFilterPresets();
+  wireInventoryReconcileLazyLoad();
   wireScrollTop();
   showFlashBanner();
   // Undo wird erst nach einer Aktion als schwebender Toast eingeblendet;
@@ -173,7 +217,7 @@ async function showMissingDataNotice(session) {
   }
   notice.classList.add('personal-dismissible-notice');
   const list = incomplete
-    .map((h) => `<li data-horse-id="${escapeHtml(String(h.id))}"><span class="age-notice-horse"><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> <span>${escapeHtml(h.name)} - ${escapeHtml(h.missing.join(', '))}</span></span><button type="button" class="btn secondary age-notice-done" data-dismiss-horse="${escapeHtml(String(h.id))}">Erledigt</button></li>`)
+    .map((h) => `<li data-horse-id="${escapeHtml(String(h.id))}"><span class="age-notice-horse"><a class="btn secondary icon-btn" href="${mdrRoute('horse',{id:h.id})}" title="Bearbeiten">✏️</a> <span>${escapeHtml(h.name)} - ${escapeHtml(h.missing.join(', '))}</span></span><button type="button" class="btn secondary age-notice-done" data-dismiss-horse="${escapeHtml(String(h.id))}">Erledigt</button></li>`)
     .join('');
   notice.innerHTML = `<summary><strong>Hinweis:</strong> Es fehlen noch Daten bei ${incomplete.length} Pferd${incomplete.length === 1 ? '' : 'en'}</summary><p>Es fehlen noch folgende Daten:</p><ul>${list}</ul>`;
   notice.hidden = false;
@@ -403,7 +447,7 @@ function renderAgeNotice(selector, horses, summaryText, introHtml, options={}) {
   const dismissable = Boolean(options.dismissType && options.session);
   if (dismissable) notice.classList.add('personal-dismissible-notice');
   const list = horses
-    .map((h) => `<li data-horse-id="${escapeHtml(String(h.id))}"><span class="age-notice-horse"><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> <span>${escapeHtml(h.name)}</span></span>${dismissable ? `<button type="button" class="btn secondary age-notice-done" data-dismiss-horse="${escapeHtml(String(h.id))}">Erledigt</button>` : ''}</li>`)
+    .map((h) => `<li data-horse-id="${escapeHtml(String(h.id))}"><span class="age-notice-horse"><a class="btn secondary icon-btn" href="${mdrRoute('horse',{id:h.id})}" title="Bearbeiten">✏️</a> <span>${escapeHtml(h.name)}</span></span>${dismissable ? `<button type="button" class="btn secondary age-notice-done" data-dismiss-horse="${escapeHtml(String(h.id))}">Erledigt</button>` : ''}</li>`)
     .join('');
   notice.innerHTML = `<summary><strong>Hinweis:</strong> ${summaryText}</summary>${introHtml}<ul>${list}</ul>`;
   notice.hidden = false;
@@ -439,7 +483,7 @@ async function loadTagSuggestions() {
     const sourceText = s.source ? ` <span class="muted small">(aus ${escapeHtml(s.source)})</span>` : '';
     return `<li>
       <span class="horse-tag-badge" style="background:${tagColor(s.label)}">${escapeHtml(badgeText)}</span>
-      für <a href="horse.html?id=${s.horse_id}">${escapeHtml(horseName)}</a>${sourceText}
+      für <a href="${mdrRoute('horse',{id:s.horse_id})}">${escapeHtml(horseName)}</a>${sourceText}
       <button type="button" class="secondary icon-btn" data-accept-suggestion="${s.id}" title="Übernehmen">✓</button>
       <button type="button" class="secondary icon-btn" data-discard-suggestion="${s.id}" title="Verwerfen">✗</button>
     </li>`;
@@ -717,7 +761,7 @@ async function buildQuery() {
     if (owner && databaseOwnerKey(row.owner) !== databaseOwnerKey(owner)) return false;
     if (gender && row.gender !== gender) return false;
 
-    const rowGameVersion = row.game_version || 'DE';
+    const rowGameVersion = mdrGameWorld(row, 'DE');
     if (gameVersion && rowGameVersion !== gameVersion) return false;
 
     const normalized = normalizeBreed(row.breed) || 'Rasselos';
@@ -1355,12 +1399,12 @@ function rowHtml(h) {
   // "hoeher" als der Rest der Zeile sass, siehe Nutzer-Feedback). Die
   // Flex-Anordnung fuer Name+Badges sitzt deshalb auf einem inneren Span
   // statt auf dem <td> selbst.
-  const gameVersion = h.game_version || 'DE';
+  const gameVersion = mdrGameWorld(h, 'DE');
   const versionBadge = `<span class="game-version-badge game-version-${gameVersion.toLowerCase()}">${escapeHtml(gameVersion)}</span>`;
   const learningBadge = (typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h))
     ? '<span class="learning-file-badge" title="Dieses Pferd bleibt als Lerndatei erhalten, wird aber aus operativen Planerlisten ausgeblendet.">🧠 Lerndatei</span>'
     : '';
-  const nameCell = `<span class="name-cell-inner"><a href="view.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a>${versionBadge}${learningBadge}${dataQualityBadgeHtml(h)}</span>`;
+  const nameCell = `<span class="name-cell-inner"><a href="${mdrRoute('view',{id:h.id})}">${escapeHtml(h.name || '(ohne Name)')}</a>${versionBadge}${learningBadge}${dataQualityBadgeHtml(h)}</span>`;
   const tagsCell = tagsBadgesHtml(h.tags, h.birthdate);
   const nameTitle = [h.name || '(ohne Name)', ...(h.tags || []).map((t) => t.note ? `${t.label}: ${t.note}` : t.label)].join(' – ');
   const gameHost = gameVersion === 'EN' ? 'www.morning-dust-ranch.com' : 'www.morning-dust-ranch.de';
@@ -1368,7 +1412,7 @@ function rowHtml(h) {
     ? `<a class="btn secondary icon-btn" href="https://${gameHost}/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
     : '';
   const imageCell = h.image_url
-    ? `<a href="view.html?id=${h.id}"><img class="table-thumb" src="${escapeHtml(h.image_url)}" alt="" loading="lazy" /></a>`
+    ? `<a href="${mdrRoute('view',{id:h.id})}"><img class="table-thumb" src="${escapeHtml(h.image_url)}" alt="" loading="lazy" /></a>`
     : '';
   const nameCls = ['name-cell', overallCmpClass(d)].filter(Boolean).join(' ');
   const breedingInfo = bestFoalOverviewEnabled && breedingOverviewContext && typeof bpBestFoalInfo === 'function'
@@ -1399,7 +1443,7 @@ function rowHtml(h) {
     <td data-label="Alter">${h.birthdate ? escapeHtml(formatAge(h.birthdate)) : ''}</td>
     <td data-label="Besitzer" title="${escapeHtml(h.owner || '')}">${escapeHtml(h.owner || '')}</td>
         <td data-label="Aktionen" class="actions-cell">
-      <a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a>
+      <a class="btn secondary icon-btn" href="${mdrRoute('horse',{id:h.id})}" title="Bearbeiten">✏️</a>
       <button class="danger icon-btn" data-delete="${h.id}" title="Löschen">✗</button>
     </td>
   </tr>`;

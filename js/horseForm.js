@@ -277,7 +277,7 @@ async function init() {
       return;
     }
     try { sessionStorage.setItem(MDR_PURCHASE_ADVISOR_RAW_KEY, raw); } catch {}
-    location.href = 'ankaufsberatung.html';
+    location.href = mdrRoute('purchase');
   });
   document.getElementById('horse-form').addEventListener('submit', onSave);
   document.getElementById('delete-btn').addEventListener('click', onDelete);
@@ -417,7 +417,7 @@ function mergeParsedIntoExisting(oldData, parsed) {
 
 function fillForm(data) {
   // Alle vor V17 gespeicherten Datensätze stammen aus der DE-Version.
-  if (!data.game_version) data = { ...data, game_version: 'DE' };
+  if (!data.game_version || mdrGameWorldConflict(data)) data = { ...data, game_version: mdrGameWorld(data, 'DE') };
   for (const id of TEXT_FIELDS.concat(DATE_FIELDS)) {
     const el = document.getElementById(id);
     if (el && data[id] !== undefined && data[id] !== null) el.value = data[id];
@@ -1074,11 +1074,12 @@ let pendingSave = null;
 // stattdessen direkt zum naechsten/vorherigen Pferd. null (siehe
 // onSaveAndNew) heisst "gar nicht weiterleiten, Formular fuer die
 // naechste Neuanlage zuruecksetzen" (Massenerfassung).
-let saveRedirect = 'index.html';
+const MDR_DATABASE_ROUTE = mdrRoute('database');
+let saveRedirect = MDR_DATABASE_ROUTE;
 
 async function onSave(e) {
   e.preventDefault();
-  saveRedirect = 'index.html';
+  saveRedirect = MDR_DATABASE_ROUTE;
   await runSaveFlow();
 }
 
@@ -1151,6 +1152,12 @@ async function runSaveFlow() {
   for (const k of IMPORTED_PROFILE_SCALAR_KEYS) {
     if (extraData[k] !== undefined) payload[k] = extraData[k];
   }
+  // V54.0.74: Spielversion und Turnier-Spielwelt sind keine getrennten
+  // Wahrheiten mehr. Das sichtbare DE/EN-Feld ist beim Speichern maßgeblich;
+  // beide Kompatibilitätsfelder werden identisch gehalten.
+  const selectedWorld = mdrNormalizeGameWorld(payload.game_version, 'DE');
+  payload.game_version = selectedWorld;
+  payload.mdr_server = selectedWorld;
   // Der reinkopierte Rohtext wird nur zum Auslesen gebraucht - nach dem
   // Speichern soll ausschließlich das daraus extrahierte Ergebnis in der
   // Datenbank stehen, nicht der Rohtext selbst.
@@ -1177,8 +1184,8 @@ async function runSaveFlow() {
   // kontrollieren, ob der Import angekommen ist, statt erst wieder aus der
   // Übersicht hinein navigieren zu müssen. Neue Pferde verhalten sich
   // weiterhin wie bisher.
-  if (currentChangeSource === 'importiert' && targetId && saveRedirect === 'index.html') {
-    saveRedirect = `horse.html?id=${encodeURIComponent(targetId)}`;
+  if (currentChangeSource === 'importiert' && targetId && saveRedirect === MDR_DATABASE_ROUTE) {
+    saveRedirect = mdrRoute('horse',{id:targetId});
   }
 
   // Zweiter Durchlauf mit dem bestehenden Datensatz: so kann beim Lösen
@@ -1657,7 +1664,7 @@ async function resolveSaveTarget(formData, payload) {
 
   try {
     const horses = await localGetAll(LOCAL_STORES.horses);
-    const version = payload.game_version || 'DE';
+    const version = mdrGameWorld(payload, 'DE');
     const normalizedExternalId = String(payload.external_id || '').trim();
 
     // Auch beim Bearbeiten darf die MDR-ID niemals auf einen zweiten
@@ -1665,12 +1672,12 @@ async function resolveSaveTarget(formData, payload) {
     if (targetId && normalizedExternalId) {
       const collision = horses.find(h =>
         String(h.id) !== String(targetId) &&
-        (h.game_version || 'DE') === version &&
+        mdrGameWorld(h, 'DE') === version &&
         String(h.external_id || '').trim() === normalizedExternalId
       ) || null;
       if (collision) {
         const choice = await askHardDuplicateHorse(collision, formData, false);
-        if (choice === 'open') window.location.href = `horse.html?id=${encodeURIComponent(collision.id)}`;
+        if (choice === 'open') window.location.href = mdrRoute('horse',{id:collision.id});
         return null;
       }
     }
@@ -1681,13 +1688,13 @@ async function resolveSaveTarget(formData, payload) {
       // diesen Datensatz aktualisieren.
       if (normalizedExternalId) {
         const idMatch = horses.find(h =>
-          (h.game_version || 'DE') === version &&
+          mdrGameWorld(h, 'DE') === version &&
           String(h.external_id || '').trim() === normalizedExternalId
         ) || null;
         if (idMatch) {
           const choice = await askHardDuplicateHorse(idMatch, formData, true);
           if (choice === 'open') {
-            window.location.href = `horse.html?id=${encodeURIComponent(idMatch.id)}`;
+            window.location.href = mdrRoute('horse',{id:idMatch.id});
             return null;
           }
           if (choice !== 'update') return null;
@@ -1701,7 +1708,7 @@ async function resolveSaveTarget(formData, payload) {
       if (!targetId) {
         const sameName = horses.find(h =>
           (h.name || '').trim().toLowerCase() === (formData.name || '').trim().toLowerCase() &&
-          (h.game_version || 'DE') === version
+          mdrGameWorld(h, 'DE') === version
         ) || null;
         if (sameName) {
           const isSame = await askIsDuplicateHorse(
@@ -1721,7 +1728,7 @@ async function resolveSaveTarget(formData, payload) {
       if (!targetId) {
         const newStats = quickStatsOf(payload);
         const candidate = horses.find(
-          (h) => (h.game_version || 'DE') === version && statsMatch(newStats, quickStatsOf(h))
+          (h) => mdrGameWorld(h, 'DE') === version && statsMatch(newStats, quickStatsOf(h))
         ) || null;
 
         if (candidate) {
@@ -1849,7 +1856,7 @@ async function performSave(formData, payload, session, targetId, beforeRecord) {
   // onSaveAndNavigate - sonst wuerde der Banner erst beim naechsten
   // zufaelligen Besuch der Uebersicht faelschlich fuer dieses Pferd
   // erscheinen).
-  if (saveRedirect === 'index.html') {
+  if (saveRedirect === MDR_DATABASE_ROUTE) {
     sessionStorage.setItem('mdr_flash', JSON.stringify({
       action: targetId ? 'updated' : 'created',
       name: formData.name,
@@ -1924,7 +1931,7 @@ function renderBulkSessionCard() {
   const items = bulkSessionEntries.map((entry) => `
     <li class="bulk-session-item">
       <span class="bulk-session-icon">${entry.updated ? '🔵' : '✅'}</span>
-      <a href="horse.html?id=${encodeURIComponent(entry.id)}">${escapeHtml(entry.name)}</a>
+      <a href="${mdrRoute('horse',{id:entry.id})}">${escapeHtml(entry.name)}</a>
       ${entry.updated ? '<span class="bulk-session-badge">aktualisiert</span>' : ''}
     </li>
   `).join('');
@@ -1946,7 +1953,7 @@ function onBulkSessionFinish() {
     action: 'created',
     bulkNames: bulkSessionEntries.map((e) => e.name),
   }));
-  window.location.href = 'index.html';
+  window.location.href = mdrRoute('database');
 }
 
 async function onDelete() {
@@ -1962,7 +1969,7 @@ async function onDelete() {
     document.getElementById('form-error').textContent = 'Löschen fehlgeschlagen: ' + error.message;
     return;
   }
-  window.location.href = 'index.html';
+  window.location.href = mdrRoute('database');
 }
 
 // V54.0.37: kompakte P1/P2/P3-Anzeige für LP-Schecken. P2/P3 werden
@@ -2572,7 +2579,7 @@ function pedigreeNameHtml(name, linkMap) {
   const safe = escapeHtml(name || '');
   const horse = linkMap?.get(pedigreeLinkKey(name));
   if (!horse?.id) return safe;
-  return `<a href="view.html?id=${encodeURIComponent(horse.id)}" title="Pferd in der Datenbank öffnen">${safe}</a>`;
+  return `<a href="${mdrRoute('view',{id:horse.id})}" title="Pferd in der Datenbank öffnen">${safe}</a>`;
 }
 
 function pedigreeGroupTableHtml(title, entries, linkMap = null) {

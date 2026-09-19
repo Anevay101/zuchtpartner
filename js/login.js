@@ -5,7 +5,7 @@
   const errorBox=document.getElementById('mdr-login-error');
   const submit=document.getElementById('mdr-login-submit');
   const params=new URLSearchParams(location.search);
-  const next=params.get('next') || 'index.html';
+  const next=mdrSafeInternalRoute(params.get('next'), 'database');
   const message=params.get('message') || '';
   const messageBox=document.getElementById('mdr-login-message');
   if(message && messageBox){messageBox.textContent=message;messageBox.hidden=false;}

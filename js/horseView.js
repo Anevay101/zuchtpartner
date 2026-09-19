@@ -248,9 +248,9 @@ async function initView() {
 
   const params = new URLSearchParams(window.location.search);
   viewHorseId = params.get('id');
-  if (!viewHorseId) { window.location.href = 'index.html'; return; }
+  if (!viewHorseId) { window.location.href = mdrRoute('database'); return; }
 
-  document.getElementById('edit-link').href = `horse.html?id=${encodeURIComponent(viewHorseId)}`;
+  document.getElementById('edit-link').href = mdrRoute('horse',{id:viewHorseId});
   document.getElementById('delete-btn').addEventListener('click', onDeleteView);
   document.getElementById('horse-copy-basic-data')?.addEventListener('click', (event) => {
     if (extraData) plannerCopyText(viewBasicDataCopyText(extraData), event.currentTarget);
@@ -273,7 +273,7 @@ async function initView() {
 
   const name = document.getElementById('name').value;
   document.getElementById('page-heading').textContent = '🐴 ' + (name || '(ohne Name)');
-  document.title = (name || 'Pferd') + ' – MDR Pferdedatenbank lokal';
+  document.title = (name || (window.MDR_I18N?.language === 'en' ? 'Horse' : 'Pferd')) + (window.MDR_I18N?.language === 'en' ? ' – MDR Database' : ' – MDR Datenbank');
 
   renderHorseViewHeader(extraData);
   renderHorseBreedingShowSummary(extraData, viewHorseList);
@@ -285,7 +285,7 @@ async function initView() {
   const linkBtn = document.getElementById('mdr-link-btn');
   const missingLink = document.getElementById('mdr-link-missing');
   if (externalId) {
-    const gameHost = (extraData.game_version || 'DE') === 'EN' ? 'www.morning-dust-ranch.com' : 'www.morning-dust-ranch.de';
+    const gameHost = mdrGameHost(extraData, 'DE');
     linkBtn.href = `https://${gameHost}/index2.php?site=pferd&id=${encodeURIComponent(externalId)}`;
     linkBtn.hidden = false;
     missingLink.hidden = true;
@@ -311,7 +311,7 @@ async function onDeleteView() {
   if (!confirm('Dieses Pferd wirklich unwiderruflich löschen?')) return;
   try { await localDelete(LOCAL_STORES.horses, viewHorseKey(viewHorseId)); }
   catch (error) { document.getElementById('form-error').textContent = 'Löschen fehlgeschlagen: ' + error.message; return; }
-  window.location.href = 'index.html';
+  window.location.href = mdrRoute('database');
 }
 
 async function onNavigateView(direction) {
@@ -326,5 +326,5 @@ async function onNavigateView(direction) {
     errorEl.textContent = direction === 'next' ? 'Kein weiteres Pferd (Ende der gewählten Sortierung).' : 'Kein vorheriges Pferd (Anfang der gewählten Sortierung).';
     return;
   }
-  window.location.href = `view.html?id=${encodeURIComponent(adjacent.id)}`;
+  window.location.href = mdrRoute('view',{id:adjacent.id});
 }

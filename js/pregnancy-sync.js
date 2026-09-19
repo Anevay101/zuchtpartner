@@ -9,7 +9,7 @@ function mdrPregnancyLocalTodayIso() {
 }
 
 function mdrPregnancySameGameVersion(a, b) {
-  return String(a?.game_version || 'DE').toUpperCase() === String(b?.game_version || 'DE').toUpperCase();
+  return mdrGameWorld(a,'DE') === mdrGameWorld(b,'DE');
 }
 
 function mdrPregnancyFindStallion(horses, sireName, mare) {
@@ -43,7 +43,7 @@ function mdrPregnancyExactNaturalMatch(pairing, mare, pregnancy) {
   if (!sameNamesAndDate) return false;
 
   const storedVersion = String(pairing?.pregnancy_source_game_version || '').toUpperCase();
-  return !storedVersion || storedVersion === String(mare?.game_version || 'DE').toUpperCase();
+  return !storedVersion || storedVersion === mdrGameWorld(mare,'DE');
 }
 
 function mdrPregnancyIsSameMare(pairing, mare) {
@@ -52,8 +52,8 @@ function mdrPregnancyIsSameMare(pairing, mare) {
   const sameName =
     mdrPregnancyNormalizeName(pairing.mare) === mdrPregnancyNormalizeName(mare.name);
   const sameVersion =
-    String(pairing.pregnancy_source_game_version || mare.game_version || 'DE').toUpperCase() ===
-    String(mare.game_version || 'DE').toUpperCase();
+    String(pairing.pregnancy_source_game_version || mdrGameWorld(mare,'DE')).toUpperCase() ===
+    mdrGameWorld(mare,'DE');
 
   if (!sameName || !sameVersion) return false;
 
@@ -119,7 +119,7 @@ async function syncPregnancyPairingFromSavedHorse(mare, pregnancy, sessionUserId
     pregnancy_auto: true,
     pregnancy_source_horse_id: mare.id ?? null,
     pregnancy_source_external_id: mare.external_id ?? null,
-    pregnancy_source_game_version: mare.game_version || 'DE',
+    pregnancy_source_game_version: mdrGameWorld(mare,'DE'),
     pregnancy_detected_at: now,
     expected_foal: {
       mare_id: mare.id ?? null,
@@ -127,7 +127,7 @@ async function syncPregnancyPairingFromSavedHorse(mare, pregnancy, sessionUserId
       stallion_id: stallion?.id ?? null,
       stallion_name: pregnancy.sire_name,
       foaling_date: pregnancy.foaling_date,
-      game_version: mare.game_version || 'DE',
+      game_version: mdrGameWorld(mare,'DE'),
     },
   };
 

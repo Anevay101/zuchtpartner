@@ -50,7 +50,7 @@ async function repairStoredEnglishHorsesForPlanner(horses) {
 
   for (let i = 0; i < horses.length; i++) {
     const old = horses[i];
-    if ((old?.game_version || 'DE') !== 'EN' || !old?.raw_text) continue;
+    if (mdrGameWorld(old, 'DE') !== 'EN' || !old?.raw_text) continue;
 
     let parsed;
     try {
@@ -911,10 +911,10 @@ function renderPairingCompare() {
   });
   const cell=fn=>cols.map(fn).join('');
   root.innerHTML=`
-    <div class="zp-compare-base-summary"><strong>Ausgangspunkt:</strong> <a href="view.html?id=${encodeURIComponent(base.id)}">${esc(base.name||'(ohne Name)')}</a> <span class="small muted">· ${esc(base.owner||'')} · ${esc(base.breed||'')}</span></div>
+    <div class="zp-compare-base-summary"><strong>Ausgangspunkt:</strong> <a href="${mdrRoute('view',{id:base.id})}">${esc(base.name||'(ohne Name)')}</a> <span class="small muted">· ${esc(base.owner||'')} · ${esc(base.breed||'')}</span></div>
     <div class="table-wrap zp-pairing-compare-wrap">
       <table class="detail-table zp-pairing-compare-table">
-        <thead><tr><th>Vergleich</th>${cell(c=>`<th><a href="view.html?id=${encodeURIComponent(c.candidate.id)}">${esc(c.candidate.name || '(ohne Name)')}</a><br><span class="tiny muted">${esc(c.candidate.owner||'')} · ${esc(c.candidate.breed||'')}</span></th>`)}</tr></thead>
+        <thead><tr><th>Vergleich</th>${cell(c=>`<th><a href="${mdrRoute('view',{id:c.candidate.id})}">${esc(c.candidate.name || '(ohne Name)')}</a><br><span class="tiny muted">${esc(c.candidate.owner||'')} · ${esc(c.candidate.breed||'')}</span></th>`)}</tr></thead>
         <tbody>
           <tr><th>Verwandtschaft</th>${cell(c=>`<td>${c.related.length ? '✗ sichtbar verwandt' : '✓ keine sichtbare Verwandtschaft'}</td>`)}</tr>
           <tr><th>Overo × Overo</th>${cell(c=>`<td>${c.overo ? '✗ Risiko' : '✓ kein Doppel-Overo'}</td>`)}</tr>
@@ -1664,7 +1664,7 @@ function renderBestMatches() {
         ${turnierzuchtResultHtml(c.turnierzucht)}
 
         <div class="actions">
-          <a class="btn secondary" href="view.html?id=${encodeURIComponent(h.id)}">Pferd ansehen</a>
+          <a class="btn secondary" href="${mdrRoute('view',{id:h.id})}">Pferd ansehen</a>
           <button type="button" class="btn secondary decksprung-btn"
             data-mare="${esc(mare.name || '')}"
             data-mare-id="${esc(mare.id || '')}"
@@ -1732,7 +1732,7 @@ async function onDecksprungLocal(e) {
       throw new Error('Der Eintrag konnte nach dem Speichern nicht wiedergefunden werden.');
     }
 
-    status.innerHTML = '✓ Gespeichert · <a href="verpaarung.html">Zum Verpaarungs-Log</a>';
+    status.innerHTML = `✓ Gespeichert · <a href="${mdrRoute('pairing')}">Zum Verpaarungs-Log</a>`;
   } catch (err) {
     status.textContent = 'Fehler: ' + err.message;
     btn.disabled = false;
@@ -1881,8 +1881,8 @@ async function renderRememberedPairings() {
         <tbody>
           ${rows.map(r => `
             <tr>
-              <td><strong>${r.mare_id ? `<a href="view.html?id=${encodeURIComponent(r.mare_id)}">${esc(r.mare_name || '–')}</a>` : esc(r.mare_name || '–')}</strong>${r.mare_owner ? `<br><span class="small muted">${esc(r.mare_owner)}</span>` : ''}</td>
-              <td><strong>${r.stallion_id ? `<a href="view.html?id=${encodeURIComponent(r.stallion_id)}">${esc(r.stallion_name || '–')}</a>` : esc(r.stallion_name || '–')}</strong>${r.stallion_owner ? `<br><span class="small muted">${esc(r.stallion_owner)}</span>` : ''}<br><span class="tiny muted">Decktaxe: ${esc(currentFee(r))}</span></td>
+              <td><strong>${r.mare_id ? `<a href="${mdrRoute('view',{id:r.mare_id})}">${esc(r.mare_name || '–')}</a>` : esc(r.mare_name || '–')}</strong>${r.mare_owner ? `<br><span class="small muted">${esc(r.mare_owner)}</span>` : ''}</td>
+              <td><strong>${r.stallion_id ? `<a href="${mdrRoute('view',{id:r.stallion_id})}">${esc(r.stallion_name || '–')}</a>` : esc(r.stallion_name || '–')}</strong>${r.stallion_owner ? `<br><span class="small muted">${esc(r.stallion_owner)}</span>` : ''}<br><span class="tiny muted">Decktaxe: ${esc(currentFee(r))}</span></td>
               <td>${esc(r.mare_goal || r.stallion_goal || '–')}</td>
               <td>${r.created_at ? esc(new Date(r.created_at).toLocaleDateString('de-DE')) : '–'}</td>
               <td><strong>${remainingDays(r)} Tage</strong></td>

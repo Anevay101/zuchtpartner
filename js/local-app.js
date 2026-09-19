@@ -176,11 +176,11 @@ async function requireSession() {
 }
 
 function redirectToLogin(message='') {
-  const current = `${location.pathname.split('/').pop() || 'index.html'}${location.search || ''}${location.hash || ''}`;
+  const current = `${window.MDR_CORE?.currentPage?.() || mdrRoute('database')}${location.search || ''}${location.hash || ''}`;
   const params = new URLSearchParams();
   params.set('next', current);
   if (message) params.set('message', message);
-  location.replace(`login.html?${params.toString()}`);
+  location.replace(mdrRoute('login', params));
 }
 
 function showOnlineConnectionBlocker(message) {
@@ -328,7 +328,7 @@ function wireLogout() {
       try {
         if (typeof mdrClearCachedCloudData === 'function') await mdrClearCachedCloudData();
         await mdrCreateSupabaseClient().auth.signOut();
-      } finally { location.replace('login.html'); }
+      } finally { location.replace(mdrRoute('login')); }
     });
     mdrAccountUiWired=true;
   };
@@ -1814,7 +1814,7 @@ async function injectDataSafetyPanel() {
         ? `<button type="button" class="btn secondary small" id="mdr-data-safety-panel-btn">Backup-Ordner wählen</button>
            <button type="button" class="btn secondary small" id="mdr-data-safety-authorize-btn" hidden>Zugriff freigeben</button>
            <button type="button" class="btn secondary small" id="mdr-data-safety-forget-btn" hidden>Backup-Ordner vergessen</button>`
-        : `<a class="btn secondary small" href="einstellungen.html">⚙️ Sicherung verwalten</a>`}
+        : `<a class="btn secondary small" href="${mdrRoute('settings')}">⚙️ Sicherung verwalten</a>`}
       <button type="button" class="btn secondary small mdr-restore-good-btn" id="mdr-data-safety-restore-btn" hidden>↩ Rückgängig – letzte gute Sicherung wiederherstellen</button>
       <button type="button" class="btn secondary small" id="mdr-data-safety-force-btn" hidden>⚠️ Kleineren Stand bewusst sichern</button>
     </div>`;
@@ -1878,14 +1878,14 @@ async function renderSharedNav() {
   if (feedConfig.enabled && !nav.querySelector('[data-feed-plan-nav]')) {
     const link=document.createElement('a');
     link.className='btn secondary';
-    link.href='futterabo.html';
+    link.href=mdrRoute('feed');
     link.dataset.feedPlanNav='1';
     link.textContent='🌾 Futterabo';
     if (feedPlanIsDue(feedConfig)) {
       link.classList.add('feed-plan-nav-due');
       link.title='Futterbestellung fällig';
     }
-    const settingsLink=[...nav.querySelectorAll('a[href]')].find(a=>String(a.getAttribute('href')||'').split(/[?#]/)[0].endsWith('einstellungen.html'));
+    const settingsLink=[...nav.querySelectorAll('a[href]')].find(a=>String(a.getAttribute('href')||'').split(/[?#]/)[0].endsWith(mdrRoute('settings')));
     if (settingsLink) nav.insertBefore(link,settingsLink);
     else nav.appendChild(link);
   }
@@ -1893,11 +1893,11 @@ async function renderSharedNav() {
   // V54.0.47: Die Hauptnavigation steht bereits statisch identisch in allen
   // App-Seiten. Hier wird nur noch der aktive Bereich markiert. Dadurch
   // springen Guide/Einstellungen nicht mehr erst nach dem JS-Start in die Leiste.
-  const currentPage = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  const currentPage = (window.MDR_CORE?.currentPage?.() || mdrRoute('database')).toLowerCase();
   const sectionPage = ({
-    'horse.html':'index.html',
-    'view.html':'index.html',
-    'durchschnitt.html':'dashboard.html',
+    [mdrRoute('horse')]:mdrRoute('database'),
+    [mdrRoute('view')]:mdrRoute('database'),
+    [mdrRoute('average')]:mdrRoute('dashboard'),
   })[currentPage] || currentPage;
   document.body.dataset.mdrPage = currentPage.replace(/\.html$/,'');
   nav.querySelectorAll('a[href]').forEach(link => {
@@ -1922,7 +1922,7 @@ function mdrImportNorm(value) {
 }
 
 function mdrImportVersion(horse) {
-  return String(horse?.game_version || 'DE').toUpperCase();
+  return mdrGameWorld(horse, 'DE');
 }
 
 function mdrImportExternalId(horse) {
@@ -2202,7 +2202,7 @@ async function openImportModeDialog(payload, fileName) {
   const analysis = mdrAnalyzeHorseImport(importedHorses, existingHorses);
   const pairings = payload.stores?.[LOCAL_STORES.pairings] || [];
   const remembered = payload.stores?.[LOCAL_STORES.pairingNotes] || [];
-  const versions = [...new Set(importedHorses.map(h => h.game_version || 'DE'))].sort();
+  const versions = [...new Set(importedHorses.map(h => mdrGameWorld(h, 'DE'))) ].sort();
   const incomingSummary = backupSummary(payload);
   const currentZsRecords = existingHorses.filter(mdrHasBreedingShowPoints).length;
 

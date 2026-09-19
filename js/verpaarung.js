@@ -955,7 +955,7 @@ function pairingHorseRecord(name, preferredId = null) {
 function localHorseLinkHtml(horse, fallbackName, className = 'pairing-horse-link') {
   const label = horse?.name || fallbackName || '';
   if (!horse?.id) return escapeHtml(label);
-  return `<a class="${className}" href="view.html?id=${encodeURIComponent(horse.id)}" title="Pferdeseite von ${escapeHtml(label)} öffnen">${escapeHtml(label)}</a>`;
+  return `<a class="${className}" href="${mdrRoute('view',{id:horse.id})}" title="Pferdeseite von ${escapeHtml(label)} öffnen">${escapeHtml(label)}</a>`;
 }
 
 function pairingParentLinkHtml(pairing, role) {
@@ -1339,9 +1339,10 @@ function closeFoalModal() {
 function inferFoalGameVersion(pairing) {
   const mare = pairingHorseByName(pairing?.mare);
   const stallion = pairingHorseByName(pairing?.stallion);
-  const versions = [mare?.game_version, stallion?.game_version]
+  const versions = [mare, stallion]
     .filter(Boolean)
-    .map(v => String(v).toUpperCase());
+    .map(h => mdrGameWorld(h, 'UNKNOWN'))
+    .filter(v => v !== 'UNKNOWN');
   if (versions.includes('EN')) return 'EN';
   if (versions.includes('DE')) return 'DE';
   return 'DE';
@@ -1384,7 +1385,8 @@ function collectFoalModalForm() {
 
   // Diese Felder gibt es nicht als sichtbare Inputs im kompakten Popup,
   // können aber aus dem kopierten Pferdetext erkannt worden sein.
-  out.game_version = extraData?.game_version || inferFoalGameVersion(currentPairing);
+  out.game_version = mdrGameWorld(extraData, inferFoalGameVersion(currentPairing));
+  out.mdr_server = out.game_version;
   out.birthdate = extraData?.birthdate ?? null;
   out.breeding_goal = extraData?.breeding_goal ?? null;
 

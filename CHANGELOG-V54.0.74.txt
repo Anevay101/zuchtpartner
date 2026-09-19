@@ -1,0 +1,13 @@
+V54.0.74 – Stabilitäts-, Performance- & Konsistenz-Pass
+
+- DE/EN-Spielwelt zentralisiert: game_version und mdr_server werden über eine gemeinsame Hilfsschicht ausgewertet; mdr_server bleibt kompatibel, widersprüchliche Anzeige-/Turnierwelten werden beim nächsten Pferdespeichern vereinheitlicht.
+- Bestandsabgleich übernimmt bei eindeutiger neuer Spielwelt nun game_version und mdr_server gemeinsam; keine automatischen Löschungen/Besitzeränderungen.
+- Interne dynamische Seitenpfade über eine zentrale Route-Tabelle vereinheitlicht; Login-Weiterleitung akzeptiert nur bekannte interne Seiten.
+- Bestandsabgleich auf der Datenbankseite wird erst beim ersten Öffnen nachgeladen statt bei jedem Seitenstart.
+- Unbenutztes data-quality.js im Zuchtplaner entfernt.
+- EN-i18n optimiert: begrenzte Übersetzungscaches und unnötige characterData-Beobachtung entfernt.
+- Google Fonts werden direkt im HTML per preconnect/stylesheet geladen statt über CSS-@import.
+- CSS-Themetokens bereinigt: obsolete Root-Farbpaletten entfernt, ältere Komponentenvariablen auf gemeinsame Tokens vereinheitlicht, keine undefinierten CSS-Custom-Properties mehr.
+- Seitentitel auf „MDR Datenbank“ vereinheitlicht; dynamischer Pferdetitel ebenfalls DE/EN-konsistent.
+- Alte CHANGELOG-Dateien nach docs/history/ verschoben; aktuelle Release-Notiz bleibt im Root.
+- Keine Änderung am Supabase-Delta-/Manifest-/IndexedDB-Sync und keine neue Vollabfrage.

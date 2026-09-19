@@ -538,7 +538,7 @@ function bpOffspringAnalysis(parentHorse, context, pairings=[]) {
 function bpHorseLink(horse) {
   if (!horse) return '–';
   if (horse.id == null) return bpEsc(horse.name || '–');
-  return `<a href="view.html?id=${encodeURIComponent(horse.id)}">${bpEsc(horse.name || '(ohne Name)')}</a>`;
+  return `<a href="${mdrRoute('view',{id:horse.id})}">${bpEsc(horse.name || '(ohne Name)')}</a>`;
 }
 
 function bpRenderOwnProgress(horse, context) {

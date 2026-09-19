@@ -548,7 +548,7 @@ function renderTournamentRanking() {
     const classification=tournamentTrafficHtml(row,true);
     return `<tr>
       <td>${index+1}</td>
-      <td><a href="view.html?id=${encodeURIComponent(horse.id)}"><strong>${plannerEscape(horse.name || '(ohne Name)')}</strong></a><br><span class="tiny muted">${plannerEscape(horse.owner || '')} · ${plannerEscape(horse.breed || '')}</span></td>
+      <td><a href="${mdrRoute('view',{id:horse.id})}"><strong>${plannerEscape(horse.name || '(ohne Name)')}</strong></a><br><span class="tiny muted">${plannerEscape(horse.owner || '')} · ${plannerEscape(horse.breed || '')}</span></td>
       <td>${plannerEscape(row.discipline)}</td>
       <td><strong>${Math.round(row.points)}</strong></td>
       <td>${tournamentInteriorHtml(row)}</td>
@@ -622,7 +622,7 @@ function renderHorseTournamentOptions() {
     <div class="planner-summary tournament-recommendation-card selectable-copy-area">
       <div class="tournament-recommendation-head">
         <div>
-          <h3><a href="view.html?id=${encodeURIComponent(horse.id)}">${plannerEscape(horse.name||'(ohne Name)')}</a></h3>
+          <h3><a href="${mdrRoute('view',{id:horse.id})}">${plannerEscape(horse.name||'(ohne Name)')}</a></h3>
           <p class="tournament-recommendation-line"><strong>Turnierprofil:</strong> ${plannerEscape(visible.mainGroup||'Hauptbegabung unbekannt')} · ${mainTraffic}</p>
         </div>
         <button type="button" class="secondary small" id="tp-copy-recommendation">Für Notizen kopieren</button>
@@ -744,7 +744,7 @@ function cupCalendarAvailability(discipline, lk) {
 }
 
 function cupCandidateLinks(horses) {
-  return horses.map(h=>`<a class="cup-candidate-link" href="view.html?id=${encodeURIComponent(h.id)}"><strong>${plannerEscape(h.name || '(ohne Name)')}</strong>${h.owner ? `<span>${plannerEscape(h.owner)}</span>` : ''}</a>`).join('');
+  return horses.map(h=>`<a class="cup-candidate-link" href="${mdrRoute('view',{id:h.id})}"><strong>${plannerEscape(h.name || '(ohne Name)')}</strong>${h.owner ? `<span>${plannerEscape(h.owner)}</span>` : ''}</a>`).join('');
 }
 
 function cupAvailabilityHtml(discipline, lk) {
@@ -911,7 +911,7 @@ function renderCupAchievements() {
     const cupLk=result.cup_lk || progress.cup_lk || evaluation?.lk || '–';
     const tournamentValueText=tournamentValue == null ? '–' : String(Math.round(tournamentValue));
     return `<tr class="${upcomingClass}">
-      <td><a href="view.html?id=${encodeURIComponent(horse.id)}"><strong>${plannerEscape(horse.name || '(ohne Name)')}</strong></a><br><span class="tiny muted">${plannerEscape(horse.owner || '')}</span></td>
+      <td><a href="${mdrRoute('view',{id:horse.id})}"><strong>${plannerEscape(horse.name || '(ohne Name)')}</strong></a><br><span class="tiny muted">${plannerEscape(horse.owner || '')}</span></td>
       <td>${plannerEscape(discipline || 'Disziplin noch ergänzen')}</td>
       <td><strong>${result.first || 0}</strong></td>
       <td>${starts == null ? '–' : starts}</td>
@@ -1016,7 +1016,7 @@ function zsOutlierDiagnosticsHtml(model) {
       const horseName=plannerEscape(h.name || '(ohne Name)');
       const horseCell=learning
         ? `<strong>${horseName}</strong><br><span class="tiny muted">Lerndatei</span>`
-        : `<a href="view.html?id=${encodeURIComponent(h.id)}"><strong>${horseName}</strong></a>${h.owner?`<br><span class="tiny muted">${plannerEscape(h.owner)}</span>`:''}`;
+        : `<a href="${mdrRoute('view',{id:h.id})}"><strong>${horseName}</strong></a>${h.owner?`<br><span class="tiny muted">${plannerEscape(h.owner)}</span>`:''}`;
       const diff=Number(row.difference);
       return `<tr><td>${horseCell}</td><td>${Number.isFinite(Number(x.gp))?Number(x.gp).toFixed(0):'–'}</td><td>${Number.isFinite(Number(x.ext))?Number(x.ext).toFixed(2):'–'}</td><td>${Number.isFinite(Number(x.extpct))?Number(x.extpct).toFixed(2)+' %':'–'}</td><td>${Number.isFinite(Number(x.int))?Number(x.int).toFixed(2):'–'}</td><td>${Number.isFinite(Number(row.actual))?Math.round(Number(row.actual)):'–'}</td><td>${Number.isFinite(Number(row.predicted))?Math.round(Number(row.predicted)):'–'}</td><td><strong>${Number.isFinite(diff)?`${diff>=0?'+':''}${Math.round(diff)}`:'–'}</strong></td></tr>`;
     }).join('')}</tbody></table></div>
@@ -1153,7 +1153,7 @@ function renderBreedingShowOverview() {
       if (map[st.reason]) dataNote=`<br><span class="tiny warning-text">${plannerEscape(map[st.reason])}</span>`;
     }
     return `<tr>
-      <td><a href="view.html?id=${encodeURIComponent(h.id)}"><strong>${plannerEscape(h.name || '(ohne Name)')}</strong></a><br><span class="tiny muted">${plannerEscape(h.owner || '')}</span>${dataNote}</td>
+      <td><a href="${mdrRoute('view',{id:h.id})}"><strong>${plannerEscape(h.name || '(ohne Name)')}</strong></a><br><span class="tiny muted">${plannerEscape(h.owner || '')}</span>${dataNote}</td>
       <td>${total==null?'–':Math.round(total)}</td><td>${turnier}</td><td>${cup}</td><td>${base==null?'–':Math.round(base)}</td>
       <td>${pred==null?'–':Math.round(pred)}</td><td>${diff==null?'–':`${diff>=0?'+':''}${Math.round(diff)}`}</td>
     </tr>`;

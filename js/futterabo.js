@@ -198,7 +198,7 @@ function feedRenderAssignments(model) {
       <summary><strong>${feedEsc(feedProductName(product))}</strong> · ${feedNumber(horses.length)} ${feedUiText('Pferde','horses')}</summary>
       <div class="feed-horse-list">${horses
         .sort((a,b)=>String(a?.name||'').localeCompare(String(b?.name||''),'de'))
-        .map(h=>`<a href="view.html?id=${encodeURIComponent(h.id)}">${feedEsc(h.name || '(ohne Name)')}</a><span>${feedEsc(h.owner || '')}</span>`)
+        .map(h=>`<a href="${mdrRoute('view',{id:h.id})}">${feedEsc(h.name || '(ohne Name)')}</a><span>${feedEsc(h.owner || '')}</span>`)
         .join('')}</div>
     </details>`);
   }
@@ -206,7 +206,7 @@ function feedRenderAssignments(model) {
     sections.unshift(`<div class="notice warning feed-plan-warning"><strong>${feedUiText('Nicht zugeordnet','Unassigned')}:</strong> ${feedNumber(model.unassigned.length)} ${feedUiText('Pferde haben kein auswertbares Alter und keine vorrangige ZZL-/Cupstern-Regel. Für sie wurde bewusst kein Futter geraten.','horses have no usable age and no higher-priority licence/Cup-star rule. No feed was guessed for them.')}</div>`);
     sections.push(`<details class="feed-assignment-group" open>
       <summary><strong>⚠ ${feedUiText('Nicht zugeordnet','Unassigned')}</strong> · ${feedNumber(model.unassigned.length)}</summary>
-      <div class="feed-horse-list">${model.unassigned.map(h=>`<a href="view.html?id=${encodeURIComponent(h.id)}">${feedEsc(h.name || '(ohne Name)')}</a><span>${feedEsc(h.owner || '')}</span>`).join('')}</div>
+      <div class="feed-horse-list">${model.unassigned.map(h=>`<a href="${mdrRoute('view',{id:h.id})}">${feedEsc(h.name || '(ohne Name)')}</a><span>${feedEsc(h.owner || '')}</span>`).join('')}</div>
     </details>`);
   }
   root.innerHTML=sections.join('') || `<p class="muted">${feedUiText('Keine Pferde für den hinterlegten MDR-Namen gefunden.','No horses found for the configured MDR username.')}</p>`;
@@ -297,7 +297,7 @@ async function renderFeedPlanPage() {
   const ownerName=String(config.owner_name || '').trim();
   const errorRoot=document.getElementById('feed-plan-error');
   if (!ownerName) {
-    if (errorRoot) errorRoot.innerHTML=`${feedUiText('Bitte hinterlege unter Einstellungen zuerst deinen MDR-Namen.','Please set your MDR username under Settings first.')} <a href="einstellungen.html">${feedUiText('Zu den Einstellungen','Open Settings')}</a>`;
+    if (errorRoot) errorRoot.innerHTML=`${feedUiText('Bitte hinterlege unter Einstellungen zuerst deinen MDR-Namen.','Please set your MDR username under Settings first.')} <a href="${mdrRoute('settings')}">${feedUiText('Zu den Einstellungen','Open Settings')}</a>`;
     return;
   }
   if (errorRoot) errorRoot.textContent='';

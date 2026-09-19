@@ -219,7 +219,7 @@ function learningExportHasZs(horse) {
 
 function learningExportCleanHorse(source) {
   const keep = [
-    'name','game_version','gender','breed','breed_composition','purebred_pct','coat_color','appaloosa_pattern',
+    'name','game_version','mdr_server','gender','breed','breed_composition','purebred_pct','coat_color','appaloosa_pattern',
     'ico','disease_free','genetic_diseases','colors','color_gene_overrides','phenotype_gene_hints',
     'exterior_genetics','exterior_descriptive','temperament','disciplines','traits','tournament_potential',
     'pedigree','tournament_starts_total','tournament_results','cup_results','breeding_show_points','breeding_show_snapshot'

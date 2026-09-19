@@ -71,7 +71,7 @@ function analyzeHorseDataQuality(horse) {
   const genetics = hasExteriorGenetics || hasColorGenetics || hasDiseaseGenetics;
 
   const pedigreeCount = dqPedigreeNames(horse?.pedigree).size;
-  const version = horse?.game_version || 'DE';
+  const version = mdrGameWorld(horse, 'DE');
 
   const checks = [
     { label:'Spielversion', ok: version === 'DE' || version === 'EN', value: version },

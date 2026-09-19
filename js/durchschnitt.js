@@ -280,7 +280,7 @@ function dashboardCompare(value,op,target){if(target==null||target==='')return t
 function dashboardPresetFilter(rows,filters,breedingContext,preferredBreeds){const f=filters||{},tags=dashboardTriState(f.tags),gen=dashboardTriState(f.genetik),ekh=dashboardTriState(f.ekh);return rows.filter(row=>{
   if(f.name&&!String(row.name||'').toLowerCase().includes(String(f.name).toLowerCase()))return false;if(f.owner&&row.owner!==f.owner)return false;if(f.gender&&row.gender!==f.gender)return false;
   const breed=normalizeBreed(row.breed)||'Rasselos';if(f.breed==='__preferred__'&&Array.isArray(preferredBreeds)&&preferredBreeds.length&&!preferredBreeds.includes(breed))return false;if(f.breed&&f.breed!=='__preferred__'&&breed!==f.breed)return false;
-  if(f.gameVersion&&(row.game_version||'DE')!==f.gameVersion)return false;if(f.zzl==='true'&&row.breeding_allowed!==true)return false;if(f.zzl==='false'&&row.breeding_allowed===true)return false;if(f.cupStarOnly&&!dashboardCupStar(row))return false;
+  if(f.gameVersion&&mdrGameWorld(row,'DE')!==f.gameVersion)return false;if(f.zzl==='true'&&row.breeding_allowed!==true)return false;if(f.zzl==='false'&&row.breeding_allowed===true)return false;if(f.cupStarOnly&&!dashboardCupStar(row))return false;
   if(f.dataQuality&&typeof analyzeHorseDataQuality==='function'){const level=analyzeHorseDataQuality(row).level;if(f.dataQuality==='not-complete'?level==='green':level!==f.dataQuality)return false;}
   if(gen.include.length&&!gen.include.every(v=>dashboardMatchesGenetic(row,v)))return false;if(gen.exclude.some(v=>dashboardMatchesGenetic(row,v)))return false;if(ekh.include.length&&!dashboardMatchesEkh(row,ekh.include))return false;if(ekh.exclude.length&&dashboardMatchesEkh(row,ekh.exclude))return false;if(tags.include.length&&!matchesTags(row,tags.include))return false;if(tags.exclude.length&&matchesTags(row,tags.exclude))return false;
   const d=computeDerived(row);if(!dashboardCompare(d.gp,f.gpOp||'gt',f.gpVal))return false;if(!dashboardCompare(d.extAvg,f.extOp||'gt',f.extVal))return false;if(!dashboardCompare(d.extPercent,f.extpctOp||'gt',f.extpctVal))return false;if(!dashboardCompare(d.intAvg,f.intOp||'gt',f.intVal))return false;
@@ -294,7 +294,7 @@ async function populateCompareHorseOptions() {
   const rows = (await localGetAll(LOCAL_STORES.horses)).filter(h => isActiveBreeder(h.owner) && !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
   rows.sort((a,b) => (a.name || '').localeCompare(b.name || '', 'de'));
   sel.innerHTML = '<option value="">Bitte wählen…</option>' +
-    rows.map(h => `<option value="${h.id}">${escapeHtml(h.name || '(ohne Name)')} · ${escapeHtml(h.breed || 'ohne Rasse')} · ${escapeHtml(h.game_version || 'DE')}</option>`).join('');
+    rows.map(h => `<option value="${h.id}">${escapeHtml(h.name || '(ohne Name)')} · ${escapeHtml(h.breed || 'ohne Rasse')} · ${escapeHtml(mdrGameWorld(h,'DE'))}</option>`).join('');
   sel.addEventListener('change', renderBreedComparison);
 }
 
@@ -322,7 +322,7 @@ async function renderBreedComparison() {
   const peers = horses.filter(h =>
     h.id !== horse.id &&
     (h.breed || '') === (horse.breed || '') &&
-    (h.game_version || 'DE') === (horse.game_version || 'DE')
+    mdrGameWorld(h,'DE') === mdrGameWorld(horse,'DE')
   );
 
   const self = computeDerived(horse);
@@ -349,7 +349,7 @@ async function renderBreedComparison() {
 
   root.innerHTML = `
     <p><strong>${escapeHtml(horse.name || '(ohne Name)')}</strong> vs. ${peers.length} andere Pferde der Rasse
-      <strong>${escapeHtml(horse.breed || 'ohne Rasse')}</strong> (${escapeHtml(horse.game_version || 'DE')})</p>
+      <strong>${escapeHtml(horse.breed || 'ohne Rasse')}</strong> (${escapeHtml(mdrGameWorld(horse,'DE'))})</p>
     ${!peers.length ? '<p class="muted">Noch keine Vergleichspferde derselben Rasse/Spielversion vorhanden.</p>' : `
     <table class="detail-table">
       <thead><tr><th>Wert</th><th>Pferd</th><th>Rasse Ø</th><th>Abweichung</th><th>Einordnung</th></tr></thead>
@@ -621,7 +621,7 @@ function dashboardColorInheritance(filteredChildren, allRows) {
 
 function dashboardSnowflakeStableKey(horse, fallbackIndex = 0) {
   const external = String(horse?.external_id || '').trim();
-  if (external) return `mdr:${String(horse?.game_version || 'DE').toUpperCase()}:${external}`;
+  if (external) return `mdr:${mdrGameWorld(horse,'DE')}:${external}`;
   if (horse?.id != null && horse?.id !== '') return `local:${String(horse.id)}`;
   return `fallback:${dashboardOwnerKey(horse?.name)}:${fallbackIndex}`;
 }
@@ -690,7 +690,7 @@ function dashboardSnowflakeNameIndex(rows) {
     const nameKey = dashboardOwnerKey(horse?.name);
     if (!nameKey) continue;
     push(byName,nameKey,horse);
-    push(byVersionName,`${String(horse?.game_version || 'DE').toUpperCase()}|${nameKey}`,horse);
+    push(byVersionName,`${mdrGameWorld(horse,'DE')}|${nameKey}`,horse);
   }
   return {byVersionName,byName};
 }
@@ -698,7 +698,7 @@ function dashboardSnowflakeNameIndex(rows) {
 function dashboardSnowflakeResolveByName(name, child, index) {
   const key = dashboardSnowflakeKinshipKey(name);
   if (!key) return null;
-  const versionKey = `${String(child?.game_version || 'DE').toUpperCase()}|${key}`;
+  const versionKey = `${mdrGameWorld(child,'DE')}|${key}`;
   const sameVersion = index.byVersionName.get(versionKey) || [];
   if (sameVersion.length === 1) return sameVersion[0];
   const global = index.byName.get(key) || [];
@@ -976,7 +976,7 @@ function dashboardSnowflakeHypothesisChecks(control,pairings,audit) {
 function dashboardSnowflakeHorseLink(horse, fallbackName = '–') {
   const name = horse?.name || fallbackName || '–';
   if (horse?.id == null || horse?.id === '') return escapeHtml(name);
-  return `<a href="view.html?id=${encodeURIComponent(horse.id)}"><strong>${escapeHtml(name)}</strong></a>`;
+  return `<a href="${mdrRoute('view',{id:horse.id})}"><strong>${escapeHtml(name)}</strong></a>`;
 }
 
 function dashboardSnowflakePatternCounts(horses) {

@@ -1,4 +1,4 @@
-// MDR V54.0.67 – bilingual UI layer (DE/EN)
+// MDR V54.0.74 – bilingual UI layer (DE/EN), cached dynamic translations
 // Internal database/parser keys intentionally remain unchanged.
 (() => {
   'use strict';
@@ -35,6 +35,19 @@
     'Nach oben':'Back to top',
 
     // Titles
+    'Pferde – MDR Datenbank':'Horses – MDR Database',
+    'Pferd – MDR Datenbank':'Horse – MDR Database',
+    'Pferd ansehen – MDR Datenbank':'View horse – MDR Database',
+    'Dashboard – MDR Datenbank':'Dashboard – MDR Database',
+    'Einstellungen – MDR Datenbank':'Settings – MDR Database',
+    'Futterabo – MDR Datenbank':'Feed plan – MDR Database',
+    'Ankaufsberatung – MDR Datenbank':'Purchase advisor – MDR Database',
+    'Anmelden – MDR Datenbank':'Sign in – MDR Database',
+    'Guide – MDR Datenbank':'Guide – MDR Database',
+    'Zuchtplaner – MDR Datenbank':'Breeding planner – MDR Database',
+    'Turnier & Leistung – MDR Datenbank':'Competition & performance – MDR Database',
+    'Aussortierhilfe – MDR Datenbank':'Selection helper – MDR Database',
+    'Verpaarungslog – MDR Datenbank':'Pairing log – MDR Database',
     'Pferde – MDR Pferdedatenbank – Lokal':'Horses – MDR Horse Database – Local',
     'Pferd – MDR Pferdedatenbank – Lokal':'Horse – MDR Horse Database – Local',
     'Pferd ansehen – MDR Pferdedatenbank – Lokal':'View horse – MDR Horse Database – Local',
@@ -941,38 +954,59 @@
     ['zur Verfügung','available'], ['kann jederzeit','can be changed at any time'], ['bleiben','remain'],
   ].sort((a,b)=>b[0].length-a[0].length);
 
+  // Dynamic components can render the same labels hundreds of times. A small,
+  // bounded cache avoids repeating the full regex/replacement chain while keeping
+  // arbitrary horse/user text from growing memory without limit.
+  const TRANSLATION_CACHE_LIMIT = 2048;
+  const exactDynamicCache = new Map();
+  const staticFallbackCache = new Map();
+  const attributeCache = new Map();
+
+  function cachedTranslation(cache, raw, compute) {
+    const key = String(raw ?? '');
+    if (cache.has(key)) return cache.get(key);
+    const value = compute(key);
+    if (cache.size >= TRANSLATION_CACHE_LIMIT) cache.clear();
+    cache.set(key, value);
+    return value;
+  }
+
   function translateExactOrDynamic(raw) {
-    const original = String(raw ?? '');
-    const leading = original.match(/^\s*/)?.[0] || '';
-    const trailing = original.match(/\s*$/)?.[0] || '';
-    const text = original.trim();
-    if (!text) return original;
-    if (EN[text] != null) return leading + EN[text] + trailing;
-    for (const [re, replacement] of DYNAMIC_EN) {
-      if (re.test(text)) return leading + text.replace(re, replacement) + trailing;
-    }
-    return original;
+    return cachedTranslation(exactDynamicCache, raw, (original) => {
+      const leading = original.match(/^\s*/)?.[0] || '';
+      const trailing = original.match(/\s*$/)?.[0] || '';
+      const text = original.trim();
+      if (!text) return original;
+      if (EN[text] != null) return leading + EN[text] + trailing;
+      for (const [re, replacement] of DYNAMIC_EN) {
+        if (re.test(text)) return leading + text.replace(re, replacement) + trailing;
+      }
+      return original;
+    });
   }
 
   function translateStaticFallback(raw) {
-    let out = translateExactOrDynamic(raw);
-    if (out !== raw) return out;
-    const original = String(raw ?? '');
-    const leading = original.match(/^\s*/)?.[0] || '';
-    const trailing = original.match(/\s*$/)?.[0] || '';
-    let text = original.trim();
-    if (!text) return original;
-    let changed = false;
-    for (const [de,en] of STATIC_REPLACEMENTS) {
-      if (text.includes(de)) { text = text.split(de).join(en); changed = true; }
-    }
-    return changed ? leading + text + trailing : original;
+    return cachedTranslation(staticFallbackCache, raw, (original) => {
+      let out = translateExactOrDynamic(original);
+      if (out !== original) return out;
+      const leading = original.match(/^\s*/)?.[0] || '';
+      const trailing = original.match(/\s*$/)?.[0] || '';
+      let text = original.trim();
+      if (!text) return original;
+      let changed = false;
+      for (const [de,en] of STATIC_REPLACEMENTS) {
+        if (text.includes(de)) { text = text.split(de).join(en); changed = true; }
+      }
+      return changed ? leading + text + trailing : original;
+    });
   }
 
   function translateAttributeValue(value) {
-    const exact = ATTR_EN[value] || EN[value];
-    if (exact != null) return exact;
-    return translateExactOrDynamic(value);
+    return cachedTranslation(attributeCache, value, (original) => {
+      const exact = ATTR_EN[original] || EN[original];
+      if (exact != null) return exact;
+      return translateExactOrDynamic(original);
+    });
   }
 
   function protectedNode(node) {
@@ -1021,7 +1055,7 @@
       }
     });
     observer.observe(document.documentElement, {
-      subtree:true, childList:true, characterData:true, attributes:true,
+      subtree:true, childList:true, attributes:true,
       attributeFilter:['title','placeholder','aria-label','data-label']
     });
   }

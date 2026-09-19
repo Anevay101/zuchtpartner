@@ -1,4 +1,4 @@
-/* MDR V54.0.73 – lokaler Bestandsabgleich aus kopierten MDR-Profilseiten.
+/* MDR V54.0.74 – lokaler Bestandsabgleich aus kopierten MDR-Profilseiten.
    Abgleich ausschließlich über normalisierte Pferdenamen. Keine automatische
    Löschung oder Besitzeränderung. Der Vergleich arbeitet nur auf dem bereits
    synchronisierten lokalen Pferdebestand.
@@ -171,8 +171,7 @@
     try { return typeof mdrIsLearningHorse==='function' && mdrIsLearningHorse(horse); } catch { return false; }
   }
   function irHorseServer(horse) {
-    const raw=String(horse?.mdr_server || horse?.game_version || '').trim().toUpperCase();
-    return raw==='DE' || raw==='EN' ? raw : 'UNKNOWN';
+    return mdrGameWorld(horse, 'UNKNOWN');
   }
   function irServerCompatible(horse,profile) {
     const ps=String(profile?.server || '').toUpperCase();
@@ -294,11 +293,11 @@
     if (!pending.size) return {updated:0};
     const now=new Date().toISOString();
     const updates=[...pending.values()].map(({local,server})=>({
-      ...local, mdr_server:server, updated_at:now, last_change_source:'Bestandsabgleich'
+      ...local, mdr_server:server, game_version:server, updated_at:now, last_change_source:'Bestandsabgleich'
     }));
     if (typeof localBulkPut==='function') await localBulkPut(LOCAL_STORES.horses,updates,100);
     else for (const row of updates) await localPut(LOCAL_STORES.horses,row);
-    for (const {local,server} of pending.values()) local.mdr_server=server;
+    for (const {local,server} of pending.values()) { local.mdr_server=server; local.game_version=server; }
     return {updated:updates.length};
   }
 
@@ -327,7 +326,7 @@
         ? irText('auf keiner der vollständig geprüften DE-/EN-Profilseiten enthalten','not present on either fully checked DE/EN profile page')
         : irText('nicht auf der vollständig erkannten MDR-Profilseite enthalten','not present on the fully parsed MDR profile page');
       if (type==='ambiguous') note=item.note || irText('nicht eindeutig','ambiguous');
-      const action=local?.id!=null ? `<a class="btn secondary small" href="view.html?id=${encodeURIComponent(local.id)}">${irText('Pferd öffnen','Open horse')}</a>` : '–';
+      const action=local?.id!=null ? `<a class="btn secondary small" href="${mdrRoute('view',{id:local.id})}">${irText('Pferd öffnen','Open horse')}</a>` : '–';
       return `<tr><th>${irEsc(horseName)}</th><td>${irEsc(server||'–')}</td><td>${irEsc(owner)}</td><td>${irEsc(note)}</td><td>${action}</td></tr>`;
     }).join('')}</tbody></table></div>`;
   }

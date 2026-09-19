@@ -1,65 +1,6 @@
 /* Farben und Schriften angelehnt an die Startseite von morning-dust-ranch.de:
    Wiesengrün als Hauptfarbe, Himmelblau-Verlauf im Hintergrund, "Courgette"
    für Überschriften, "Source Sans Pro" als Fließtext. */
-@import url('https://fonts.googleapis.com/css2?family=Courgette&family=Source+Sans+3:wght@400;600;700&display=swap');
-
-:root {
-  --bg: #cfe9fb;
-  --bg-gradient: linear-gradient(to bottom right, #6bbae4, #b5def5, #cfe9fb);
-  --surface: #ffffff;
-  --border: #d8d8d8;
-  --text: #4a4a4a;
-  --muted: #7a7a7a;
-  --accent: #6b9d00;
-  --accent-dark: #649200;
-  --danger: #c84149;
-  --success: #6b9d00;
-  --success-tolerance: #1f8f7a;
-  --warning: #b5860a;
-  --info: #2f7fd1;
-  /* Zusätzliche Farbe nur für Schlagwort-Badges (siehe HORSE_TAG_OPTIONS
-     in js/parser.js) - Verkauf/Reserviert/Bleibt decken sich bereits mit
-     danger/warning/success, GBH braucht eine weitere, klar
-     unterscheidbare Farbe. */
-  --tag-purple: #8a5fb0;
-  --radius: 8px;
-  --font-heading: "Courgette", cursive;
-  --font-body: "Source Sans 3", "Source Sans Pro", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  /* Deckende (nicht-transparente) Entsprechung von "th { background:
-     rgba(107,157,0,0.08) }" über --surface - wird für die fixierte
-     Tabellenkopfzeile gebraucht, damit beim Scrollen keine Zeilen
-     durchscheinen. */
-  --th-bg-solid: #f3f7eb;
-  /* Skalierungsfaktor der gesamten Seite (siehe "html { zoom: ... }"
-     weiter unten) - als Variable, damit vh-basierte Höhen (die vom
-     CSS-Zoom NICHT automatisch mitskaliert werden, da sie sich immer auf
-     die tatsächliche, ungezoomte Bildschirmhöhe beziehen) dennoch korrekt
-     die volle sichtbare Höhe ausfüllen: "calc(100vh / var(--zoom))" ergibt
-     nach dem Herunterskalieren durch den Zoom wieder genau 100vh auf dem
-     Bildschirm, statt nur 100vh * zoom (=80%) und ungenutztem Rand. */
-  --zoom: 0.8;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #16232b;
-    --bg-gradient: linear-gradient(to bottom right, #16323f, #1c2e38, #16232b);
-    --surface: #22303a;
-    --border: #35454f;
-    --text: #e7f0e0;
-    --muted: #9db0a8;
-    --accent: #89b957;
-    --accent-dark: #a3ca79;
-    --danger: #e0827f;
-    --success: #89b957;
-    --success-tolerance: #4fc9b0;
-    --warning: #d9a441;
-    --info: #6fa8dc;
-    --tag-purple: #b98fd9;
-    --th-bg-solid: #2a3b3c;
-  }
-}
-
 * { box-sizing: border-box; }
 
 /* Verkleinert die gesamte Seite (alle Einheiten, auch px) auf 80% - wirkt
@@ -1664,45 +1605,6 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
 
 
 /* --- V30: ruhige Blautöne, weiße Felder und hoher Kontrast --- */
-:root {
-  --bg: #e4f0f6;
-  --bg-gradient: linear-gradient(135deg, #c9dfeb 0%, #e4f0f6 42%, #f3f8fb 100%);
-  --surface: #ffffff;
-  --border: #a9c1cf;
-  --text: #25343d;
-  --muted: #627985;
-  --accent: #5f8fa6;
-  --accent-dark: #3f6f86;
-  --danger: #b85656;
-  --success: #4f887c;
-  --success-tolerance: #5d8c91;
-  --warning: #a7793f;
-  --info: #4f8199;
-  --tag-purple: #7b6f9f;
-  --th-bg-solid: #edf5f8;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Auch im System-Dark-Mode bleibt die App bewusst hell und ruhig. */
-    --bg: #dbe9f0;
-    --bg-gradient: linear-gradient(135deg, #bfd6e2 0%, #dceaf1 45%, #eef5f8 100%);
-    --surface: #ffffff;
-    --border: #9eb8c7;
-    --text: #25343d;
-    --muted: #627985;
-    --accent: #5f8fa6;
-    --accent-dark: #3f6f86;
-    --danger: #b85656;
-    --success: #4f887c;
-    --success-tolerance: #5d8c91;
-    --warning: #a7793f;
-    --info: #4f8199;
-    --tag-purple: #7b6f9f;
-    --th-bg-solid: #edf5f8;
-  }
-}
-
 body {
   background: var(--bg-gradient);
   color: var(--text);
@@ -1964,6 +1866,10 @@ tr:hover td {
 
 /* --- V31: kräftigeres Grün-Design, Referenz #8bbd78 --- */
 :root {
+  --radius: 8px;
+  --font-heading: "Courgette", cursive;
+  --font-body: "Source Sans 3", "Source Sans Pro", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --zoom: 0.8;
   --bg: #dcebd6;
   --bg-gradient: linear-gradient(135deg, #79a969 0%, #9fc991 38%, #dcebd6 100%);
   --surface: #ffffff;
@@ -2000,6 +1906,18 @@ tr:hover td {
     --tag-purple: #85669b;
     --th-bg-solid: #dcebd6;
   }
+}
+
+/* V54.0.74 – einheitliche Komponenten-Tokens. Ältere Module verwendeten
+   teilweise eigene Variablennamen; die Aliase halten Optik und Theme nun
+   an einer zentralen Palette. */
+:root {
+  --card: var(--surface);
+  --card-bg: var(--surface);
+  --input-bg: var(--surface);
+  --surface-2: color-mix(in srgb, var(--surface) 92%, var(--accent) 8%);
+  --good: var(--success);
+  --bad: var(--danger);
 }
 
 body {
@@ -6278,9 +6196,9 @@ summary:focus-visible {
 .zp-minimum-actions { margin-top: .65rem; }
 .zp-minimum-actions .secondary { padding: .5rem .75rem; }
 #minimum-requirements-status.active {
-  background: rgba(107,157,0,.12);
-  color: #315b21;
-  border-color: rgba(79,115,68,.36);
+  background: color-mix(in srgb, var(--surface) 86%, var(--accent) 14%);
+  color: var(--accent-dark);
+  border-color: color-mix(in srgb, var(--border) 70%, var(--accent) 30%);
 }
 @media (max-width: 1100px) {
   .zp-advisor-layout {
@@ -6330,7 +6248,7 @@ summary:focus-visible {
 .inventory-modal-head h2{margin-top:0}
 .inventory-reconcile-layout{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(360px,1.25fr);gap:1rem;margin:1rem 0}
 .inventory-owner-options{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.6rem;max-height:230px;overflow:auto;padding:.15rem}
-.inventory-owner-chip{display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--border, #bbb);border-radius:999px;padding:.35rem .65rem;cursor:pointer;background:var(--card-bg, transparent)}
+.inventory-owner-chip{display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--border, #bbb);border-radius:999px;padding:.35rem .65rem;cursor:pointer;background:var(--card-bg)}
 .inventory-owner-chip:has(input:checked){font-weight:700;outline:2px solid color-mix(in srgb, currentColor 28%, transparent)}
 .inventory-owner-chip input{margin:0}
 .inventory-reconcile-layout textarea{width:100%;min-height:220px;resize:vertical}
