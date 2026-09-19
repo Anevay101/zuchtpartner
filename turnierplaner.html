@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Turnier & Leistung – MDR Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5471" />
+  <link rel="stylesheet" href="css/style.css?v=5472" />
 </head>
 <body class="turnierplaner-page">
 <header class="topbar">
@@ -156,12 +156,13 @@
       <div class="tournament-section-head">
         <div>
           <h2>Referenzwerte</h2>
-          <p class="small muted">Referenz sind alle lokal vorhandenen Pferde, für die die jeweilige Disziplin vollständig berechnet werden kann. Haupt- und Nebenbegabung der Referenzpferde werden gleich behandelt.</p>
+          <p class="small muted">DE und EN werden getrennt ausgewertet. Haupt- und Nebenbegabung der Referenzpferde werden innerhalb derselben Spielwelt gleich behandelt.</p>
         </div>
+        <label class="tp-stats-server-filter">Spielwelt <select id="tp-stats-server"><option value="DE">DE</option><option value="EN">EN</option><option value="UNKNOWN">Unbekannt (bisher gemischt)</option></select></label>
       </div>
       <details id="tp-relative-help" class="tp-relative-help">
         <summary><span class="tp-info-dot">i</span> Relative Stärke</summary>
-        <p class="small">Der Empfehlungswert 0–100 kombiniert Pxx mit einer weichen Punktekurve: LK10 ab 155, LK9 ab 190, LK8 ab 200 Punkten. Pxx vergleicht primär exakt dieselbe Disziplin + LK; bei weniger als 15 Vergleichswerten wird auf Hauptgruppe + LK und danach auf die gesamte LK zurückgefallen. INT wird separat bewertet.</p>
+        <p class="small">Der Empfehlungswert 0–100 kombiniert Pxx mit einer serverbezogenen Punktekurve. DE und EN werden nie miteinander vermischt. EN-LK10 startet bei 130 Punkten; weitere EN-LKs werden erst bei ausreichender eigener EN-Datenbasis kalibriert. Pxx vergleicht primär exakt dieselbe Disziplin + LK und fällt nur innerhalb derselben Spielwelt zurück. INT wird separat bewertet.</p>
       </details>
       <p id="tp-stats-basis" class="small muted"></p>
       <div class="table-wrap">
@@ -183,16 +184,16 @@
   </section>
 </main>
 
-<script src="js/i18n.js?v=5471"></script>
-  <script src="js/supabase-loader.js?v=5471"></script>
-<script src="js/supabase-config.js?v=5471"></script>
-<script src="js/database-local.js?v=5471"></script>
-<script src="js/local-app.js?v=5471"></script>
-<script src="js/learning-file.js?v=5471"></script>
-<script src="js/parser.js?v=5471"></script>
-<script src="js/data-quality.js?v=5471"></script>
-<script src="js/planer-common.js?v=5471"></script>
-<script src="js/tournament-recommendation.js?v=5471"></script>
-<script src="js/turnierplaner-local.js?v=5471"></script>
+<script src="js/i18n.js?v=5472"></script>
+  <script src="js/supabase-loader.js?v=5472"></script>
+<script src="js/supabase-config.js?v=5472"></script>
+<script src="js/database-local.js?v=5472"></script>
+<script src="js/local-app.js?v=5472"></script>
+<script src="js/learning-file.js?v=5472"></script>
+<script src="js/parser.js?v=5472"></script>
+<script src="js/data-quality.js?v=5472"></script>
+<script src="js/planer-common.js?v=5472"></script>
+<script src="js/tournament-recommendation.js?v=5472"></script>
+<script src="js/turnierplaner-local.js?v=5472"></script>
 </body>
 </html>

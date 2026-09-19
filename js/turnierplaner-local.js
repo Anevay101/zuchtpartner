@@ -3,6 +3,7 @@ let TP_HORSES = [];
 let TP_ALL_HORSES = [];
 let TP_SELECTED = null;
 let TP_TOURNAMENT_REFERENCES = null;
+let TP_TOURNAMENT_REFERENCES_BY_SERVER = null;
 let TP_ZS_MODEL = null;
 function tpOwnerKey(value){ return String(value || '').trim().toLocaleLowerCase('de'); }
 
@@ -33,7 +34,10 @@ async function initTurnierplaner() {
 
   // V54.0.58: eine einzige lokale Referenzmatrix für alle Disziplinen/LK-Kombinationen.
   // Keine zusätzlichen Supabase-Abfragen: TP_ALL_HORSES wurde oben bereits einmal geladen.
-  TP_TOURNAMENT_REFERENCES = plannerBuildTournamentRelativeModel(TP_ALL_HORSES, tournamentScore);
+  TP_TOURNAMENT_REFERENCES_BY_SERVER = plannerBuildTournamentModelsByServer(TP_ALL_HORSES, tournamentScore);
+  TP_TOURNAMENT_REFERENCES = TP_TOURNAMENT_REFERENCES_BY_SERVER.DE?.horseCount ? TP_TOURNAMENT_REFERENCES_BY_SERVER.DE : (TP_TOURNAMENT_REFERENCES_BY_SERVER.EN?.horseCount ? TP_TOURNAMENT_REFERENCES_BY_SERVER.EN : TP_TOURNAMENT_REFERENCES_BY_SERVER.ALL);
+  const statsServer=document.getElementById('tp-stats-server');
+  if (statsServer && !TP_TOURNAMENT_REFERENCES_BY_SERVER.DE?.horseCount && TP_TOURNAMENT_REFERENCES_BY_SERVER.EN?.horseCount) statsServer.value='EN';
 
   buildTournamentControls();
   buildCupAndShowControls();
@@ -283,6 +287,7 @@ function wireTournamentControls() {
     document.getElementById(id)?.addEventListener('input', renderHorseTournamentOptions);
   });
   document.getElementById('tp-horse-lk').addEventListener('change', renderHorseTournamentOptions);
+  document.getElementById('tp-stats-server')?.addEventListener('change', renderTournamentStats);
 }
 
 
@@ -442,8 +447,7 @@ function tournamentTrafficHtml(row, compact=false) {
 function tournamentInteriorHtml(row) {
   const a=row?.interiorAssessment || plannerTournamentInteriorAssessment(row?.interior);
   const value=row?.interior == null ? '–' : Number(row.interior).toFixed(2);
-  const prefix=a.traffic==='green'?'🟢':a.traffic==='yellow'?'🟡':a.traffic==='red'?'🔴':'⚪';
-  return `<span class="tp-int tp-int-${a.traffic}" title="${plannerEscape(a.label)}">${value} <span class="tiny">${prefix}</span></span>`;
+  return `<span class="tp-int tp-int-${a.traffic}" title="${plannerEscape(a.label)}">${value}</span>`;
 }
 
 function renderTournamentStats() {
@@ -451,7 +455,8 @@ function renderTournamentStats() {
   const groupBody=document.getElementById('tp-stats-group-body');
   const basis=document.getElementById('tp-stats-basis');
   if (!body || !groupBody || !basis) return;
-  const model=TP_TOURNAMENT_REFERENCES || {exact:{},byLk:{},horseCount:0};
+  const selectedServer=(document.getElementById('tp-stats-server')?.value || 'DE').toUpperCase();
+  const model=(selectedServer==='UNKNOWN' ? TP_TOURNAMENT_REFERENCES_BY_SERVER?.ALL : TP_TOURNAMENT_REFERENCES_BY_SERVER?.[selectedServer]) || TP_TOURNAMENT_REFERENCES || {exact:{},byLk:{},horseCount:0,server:selectedServer};
   const order=['LK10','LK9','LK8','LK7','LK6','LK5','LK4','LK3','LK2','LK1'];
   const fmt=v=>v==null?'–':String(Math.round(Number(v)));
   const rows=order.map(lk=>model.byLk?.[lk]).filter(Boolean);
@@ -470,7 +475,7 @@ function renderTournamentStats() {
     <th>${plannerEscape(row.discipline)}</th><td>${plannerEscape(row.group||'–')}</td><td>${plannerEscape(row.lk)}</td><td>${row.n}</td>
     <td>${fmt(row.p25)}</td><td><strong>${fmt(row.p50)}</strong></td><td>${fmt(row.p75)}</td>
   </tr>`).join('') : '<tr><td colspan="7" class="muted">Keine Disziplin/LK-Daten.</td></tr>';
-  basis.textContent=plannerTournamentReferenceBasisText(model) + '. Berechnung vollständig lokal aus dem bereits synchronisierten Bestand.';
+  basis.textContent=plannerTournamentReferenceBasisText(model) + '. ' + plannerTournamentCalibrationText(model) + ' Berechnung vollständig lokal aus dem bereits synchronisierten Bestand.';
 }
 
 function tournamentDataQualityBadge(horse) {
@@ -506,8 +511,9 @@ function renderTournamentRanking() {
   rows.forEach(({horse,eval:row})=>{
     const mainGroup=detectHorseMainGroup(horse);
     const isMain=Boolean(mainGroup && row.group===mainGroup);
-    const rel=plannerTournamentRelative(row,TP_TOURNAMENT_REFERENCES);
-    const recommendation=plannerTournamentRecommendationScore(row,rel.percentile);
+    const relativeModel=plannerTournamentModelForHorse(horse,TP_TOURNAMENT_REFERENCES_BY_SERVER,TP_ALL_HORSES,tournamentScore);
+    const rel=plannerTournamentRelative(row,relativeModel);
+    const recommendation=plannerTournamentRecommendationScore(row,rel.percentile,relativeModel);
     row.percentile=rel.percentile; row.reference=rel.reference; row.isMainGroup=isMain;
     row.recommendationScore=recommendation.score; row.recommendation=recommendation;
     row.interpretation=plannerTournamentInterpretation(recommendation.score,isMain);
@@ -590,7 +596,8 @@ function renderHorseTournamentOptions() {
   const interiorRaw=document.getElementById('tp-horse-interior-max')?.value||'';
   const interiorMax=interiorRaw===''?null:Number(interiorRaw);
 
-  const profile=plannerAnalyzeTournamentProfile(horse,TP_ALL_HORSES,tournamentScore,{relativeModel:TP_TOURNAMENT_REFERENCES});
+  const relativeModel=plannerTournamentModelForHorse(horse,TP_TOURNAMENT_REFERENCES_BY_SERVER,TP_ALL_HORSES,tournamentScore);
+  const profile=plannerAnalyzeTournamentProfile(horse,TP_ALL_HORSES,tournamentScore,{relativeModel});
   if(!profile.rows.length){ summary.innerHTML=''; root.innerHTML='<p class="muted">Für dieses Pferd fehlen noch vollständige Turnier-Potenzialwerte.</p>'; return; }
 
   const filtered=profile.rows.filter(r=>{
@@ -622,7 +629,7 @@ function renderHorseTournamentOptions() {
       </div>
       ${mainBest?`<p><strong>Stärkste Hauptdisziplin:</strong> ${plannerEscape(mainBest.discipline)} · ${Math.round(mainBest.points)} P. · ${plannerEscape(mainBest.lk||'LK –')} · INT ${tournamentInteriorHtml(mainBest)} · Empf. ${plannerTournamentRecommendationHtml(mainBest)}</p>`:'<p class="muted">Keine Hauptdisziplin entspricht den Filtern.</p>'}
       <p class="small"><strong>Beste Nebenbegabung:</strong> ${secondarySummary}</p>
-      <details class="tp-relative-help tp-relative-help-inline"><summary><span class="tp-info-dot">i</span> Empfehlung &amp; INT</summary><p class="tiny">Der Empfehlungswert 0–100 kombiniert die relative Pxx-Stärke mit einer weichen realistischen Turnierkurve: LK10 ab 155, LK9 ab 190, LK8 ab 200 Punkten. Pxx wird weiterhin aus derselben Disziplin + LK berechnet und bei kleiner Stichprobe auf Gruppe+LK bzw. LK gesamt zurückgeführt. INT bleibt separat: ≤2,00 sehr gut, 2,01–2,50 gut machbar, &gt;2,50 mühsamer.</p></details>
+      <details class="tp-relative-help tp-relative-help-inline"><summary><span class="tp-info-dot">i</span> Empfehlung &amp; INT</summary><p class="tiny">${plannerEscape(plannerTournamentCalibrationText(profile.relativeModel))} Pxx wird servergetrennt aus derselben Disziplin + LK berechnet und bei kleiner Stichprobe nur innerhalb derselben Spielwelt auf Gruppe+LK bzw. LK gesamt zurückgeführt. INT bleibt separat: ≤2,00 sehr gut, 2,01–2,50 gut machbar, &gt;2,50 mühsamer.</p></details>
     </div>`;
 
   const mainRows=visible.mainRows.length?visible.mainRows.map(r=>`<tr>

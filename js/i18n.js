@@ -816,6 +816,27 @@
     'P72 = stärker als etwa 72 % der Vergleichswerte. Primär zählt exakt dieselbe Disziplin + LK. Bei weniger als 15 Vergleichswerten fällt die Berechnung auf Hauptgruppe + LK und danach auf die gesamte LK zurück. Die Empfehlung basiert auf Pxx; INT wird separat bewertet.':'P72 means stronger than about 72% of the comparison values. The primary reference is the exact same discipline + level. With fewer than 15 comparison values, the calculation falls back to main group + level and then the entire level. Recommendations are based on Pxx; INT is assessed separately.'
   });
 
+  // V54.0.72 – Bestandsabgleich + servergetrennte Turnierreferenzen
+  Object.assign(EN, {
+    '🔄 Bestandsabgleich':'🔄 Stock reconciliation',
+    'Bestandsabgleich':'Stock reconciliation',
+    'Eine oder mehrere vollständige MDR-Profilseiten einfügen und mit frei gewählten Besitzern aus der Datenbank vergleichen.':'Paste one or more complete MDR profile pages and compare them with freely selected owners from the database.',
+    'Besitzer einbeziehen':'Include owners',
+    'MDR-Profilseite(n)':'MDR profile page(s)',
+    'Vollständige Profilseite hier einfügen …':'Paste complete profile page here …',
+    'Primär wird über die MDR-ID abgeglichen, der Pferdename dient als Fallback. „Nicht mehr im MDR-Bestand“ wird nur berechnet, wenn die auf der Profilseite angegebene Pferdezahl vollständig erkannt wurde.':'Matching primarily uses the MDR ID, with the horse name as fallback. “No longer in MDR stock” is only calculated when the horse count stated on the profile page was parsed completely.',
+    'Bestand abgleichen':'Compare stock',
+    'Fehlt in der Datenbank':'Missing from database',
+    'Nicht mehr im MDR-Bestand':'No longer in MDR stock',
+    'Besitzer abweichend':'Owner differs',
+    'Vorhanden':'Present',
+    'Hinweis':'Note', 'Aktion':'Action',
+    'Pferd öffnen':'Open horse',
+    'DE und EN werden getrennt ausgewertet. Haupt- und Nebenbegabung der Referenzpferde werden innerhalb derselben Spielwelt gleich behandelt.':'DE and EN are evaluated separately. Main and secondary talents of reference horses are treated equally within the same game world.',
+    'Spielwelt':'Game world', 'Unbekannt':'Unknown', 'Unbekannt (bisher gemischt)':'Unknown (previous mixed model)',
+    'Der Empfehlungswert 0–100 kombiniert Pxx mit einer serverbezogenen Punktekurve. DE und EN werden nie miteinander vermischt. EN-LK10 startet bei 130 Punkten; weitere EN-LKs werden erst bei ausreichender eigener EN-Datenbasis kalibriert. Pxx vergleicht primär exakt dieselbe Disziplin + LK und fällt nur innerhalb derselben Spielwelt zurück. INT wird separat bewertet.':'The 0–100 recommendation score combines Pxx with a server-specific points curve. DE and EN are never mixed. EN LK10 starts at 130 points; additional EN levels are calibrated only when enough EN-only data is available. Pxx primarily compares the exact same discipline + level and only falls back within the same game world. INT is assessed separately.'
+  });
+
   const DYNAMIC_EN = [
     [/^Hauptbegabung (sehr stark|gut|durchschnittlich|eher schwach|schwach)$/s, (m,x) => `Main talent ${EN[x] || x}`],
     [/^Hauptbegabung (sehr stark|gut|durchschnittlich|eher schwach|schwach) · Nebenbegabung (.+)$/s, (m,a,b) => `Main talent ${EN[a] || a} · secondary talent ${EN[b] || b}`],

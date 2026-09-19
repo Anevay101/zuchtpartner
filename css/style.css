@@ -6322,3 +6322,34 @@ summary:focus-visible {
   .horse-key-copy-actions .btn,
   .horse-key-copy-actions button { width: 100%; max-width: 320px; }
 }
+
+
+/* V54.0.72 – Bestandsabgleich */
+.inventory-reconcile-modal-box{max-width:1120px;max-height:92vh;overflow:auto}
+.inventory-modal-head,.inventory-owner-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+.inventory-modal-head h2{margin-top:0}
+.inventory-reconcile-layout{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(360px,1.25fr);gap:1rem;margin:1rem 0}
+.inventory-owner-options{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.6rem;max-height:230px;overflow:auto;padding:.15rem}
+.inventory-owner-chip{display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--border, #bbb);border-radius:999px;padding:.35rem .65rem;cursor:pointer;background:var(--card-bg, transparent)}
+.inventory-owner-chip:has(input:checked){font-weight:700;outline:2px solid color-mix(in srgb, currentColor 28%, transparent)}
+.inventory-owner-chip input{margin:0}
+.inventory-reconcile-layout textarea{width:100%;min-height:220px;resize:vertical}
+.inventory-results{margin-top:1rem}
+.inventory-profile-summary{display:flex;flex-wrap:wrap;gap:.45rem;margin:.5rem 0 1rem}
+.inventory-profile-pill{display:inline-flex;border:1px solid var(--border, #bbb);border-radius:999px;padding:.3rem .6rem;font-size:.86rem}
+.inventory-profile-pill.ok{font-weight:700}
+.inventory-profile-pill.warn{border-style:dashed}
+.inventory-count-grid{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:.65rem;margin:1rem 0}
+.inventory-count-grid>div{border:1px solid var(--border, #ccc);border-radius:.75rem;padding:.7rem;display:flex;flex-direction:column;gap:.15rem}
+.inventory-count-grid strong{font-size:1.35rem}
+.inventory-result-group{margin:.65rem 0;border:1px solid var(--border, #ccc);border-radius:.7rem;padding:.55rem .7rem}
+.inventory-result-group>summary{cursor:pointer;font-weight:700}
+.inventory-result-table{margin-top:.6rem}
+.link-button{border:0;background:none;padding:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit}
+.tp-stats-server-filter{display:flex;gap:.45rem;align-items:center;white-space:nowrap}
+@media (max-width:760px){
+  .inventory-reconcile-layout{grid-template-columns:1fr}
+  .inventory-count-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .inventory-result-table{min-width:720px}
+}
+@media (max-width:480px){.inventory-count-grid{grid-template-columns:1fr}.inventory-modal-head{align-items:center}}

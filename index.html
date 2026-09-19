@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://dmhvizuendjgndkyjvzm.supabase.co" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <title>Pferde – MDR Pferdedatenbank – Lokal</title>
-  <link rel="stylesheet" href="css/style.css?v=5471" />
+  <link rel="stylesheet" href="css/style.css?v=5472" />
 </head>
 <body class="list-page">
   <header class="topbar">
@@ -209,6 +209,7 @@
           <option value="">Vorlage laden…</option>
         </select>
         <button type="button" id="save-filter-preset-btn" class="secondary">💾 Als Vorlage speichern</button>
+        <button type="button" id="inventory-reconcile-btn" class="secondary">🔄 Bestandsabgleich</button>
         <button type="button" id="reset-filters" class="secondary">Alle Filter löschen</button>
         <span class="small muted filter-live-hint">Filter wirken sofort.</span>
       </div>
@@ -366,6 +367,33 @@
       </table>
     </div>
 
+
+    <div id="inventory-reconcile-modal" class="modal-overlay" hidden>
+      <div class="modal-box inventory-reconcile-modal-box">
+        <div class="inventory-modal-head">
+          <div><h2>🔄 Bestandsabgleich</h2><p class="small muted">Eine oder mehrere vollständige MDR-Profilseiten einfügen und mit frei gewählten Besitzern aus der Datenbank vergleichen.</p></div>
+          <button type="button" id="inventory-reconcile-close" class="secondary small" aria-label="Schließen">×</button>
+        </div>
+        <div class="inventory-reconcile-layout">
+          <section>
+            <div class="inventory-owner-head"><strong>Besitzer einbeziehen</strong><span><button type="button" id="inventory-owner-all" class="link-button">Alle auswählen</button> · <button type="button" id="inventory-owner-none" class="link-button">Alle abwählen</button></span></div>
+            <div id="inventory-owner-options" class="inventory-owner-options"></div>
+          </section>
+          <section>
+            <label for="inventory-reconcile-text"><strong>MDR-Profilseite(n)</strong></label>
+            <textarea id="inventory-reconcile-text" rows="10" placeholder="Vollständige Profilseite hier einfügen …"></textarea>
+            <p class="tiny muted">Primär wird über die MDR-ID abgeglichen, der Pferdename dient als Fallback. „Nicht mehr im MDR-Bestand“ wird nur berechnet, wenn die auf der Profilseite angegebene Pferdezahl vollständig erkannt wurde.</p>
+          </section>
+        </div>
+        <p id="inventory-reconcile-status" class="small muted"></p>
+        <div class="modal-actions">
+          <button type="button" id="inventory-reconcile-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="inventory-reconcile-run">Bestand abgleichen</button>
+        </div>
+        <div id="inventory-results" class="inventory-results"></div>
+      </div>
+    </div>
+
     <div id="delete-modal" class="modal-overlay" hidden>
       <div class="modal-box">
         <h2 id="delete-modal-title">Löschen bestätigen</h2>
@@ -449,16 +477,17 @@
     <button type="button" id="scroll-top-btn" class="scroll-top-btn" hidden title="Nach oben">↑</button>
   </main>
 
-  <script src="js/i18n.js?v=5471"></script>
-  <script src="js/supabase-loader.js?v=5471"></script>
-<script src="js/supabase-config.js?v=5471"></script>
-<script src="js/database-local.js?v=5471"></script>
-  <script src="js/local-app.js?v=5471"></script>
-  <script src="js/learning-file.js?v=5471"></script>
-  <script src="js/parser.js?v=5471"></script>
-  <script src="js/data-quality.js?v=5471"></script>
-  <script src="js/breeding-progress.js?v=5471"></script>
-  <script src="js/planer-common.js?v=5471"></script>
-  <script src="js/list.js?v=5471"></script>
+  <script src="js/i18n.js?v=5472"></script>
+  <script src="js/supabase-loader.js?v=5472"></script>
+<script src="js/supabase-config.js?v=5472"></script>
+<script src="js/database-local.js?v=5472"></script>
+  <script src="js/local-app.js?v=5472"></script>
+  <script src="js/learning-file.js?v=5472"></script>
+  <script src="js/parser.js?v=5472"></script>
+  <script src="js/data-quality.js?v=5472"></script>
+  <script src="js/breeding-progress.js?v=5472"></script>
+  <script src="js/planer-common.js?v=5472"></script>
+  <script src="js/list.js?v=5472"></script>
+  <script src="js/inventory-reconcile.js?v=5472"></script>
 </body>
 </html>

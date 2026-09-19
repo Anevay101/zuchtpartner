@@ -541,6 +541,10 @@ function parseHorseText(rawText) {
   const result = {
     raw_text: rawText,
     game_version: gameVersion,
+    // V54.0.72: Turnierreferenzen von DE und EN werden getrennt geführt.
+    // Das Servermerkmal wird bewusst zusätzlich zur UI-/Spielversion gespeichert,
+    // damit die Benchmark-Welt fachlich eindeutig bleibt.
+    mdr_server: gameVersion,
   };
 
   Object.assign(result, extractHeaderBlock(lines));

@@ -1,0 +1,16 @@
+V54.0.72 – Bestandsabgleich & getrennte DE/EN-Turnierreferenzen
+
+- Neuer „Bestandsabgleich“ direkt neben den Filter-Vorlagen auf der Datenbank-Hauptseite.
+- Frei wählbare Besitzer; mehrere MDR-Profilseiten können in einem Durchgang eingefügt werden.
+- Abgleich primär über MDR-Pferde-ID, eindeutiger Name als Fallback.
+- Vier Ergebnisgruppen: Vorhanden, Fehlt in der Datenbank, Nicht mehr im MDR-Bestand, Besitzer abweichend.
+- „Nicht mehr im MDR-Bestand“ wird nur berechnet, wenn die auf der Profilseite angegebene Pferdezahl vollständig erkannt wurde.
+- Keine automatischen Löschungen und keine automatischen Besitzeränderungen.
+- Eindeutige DE/EN-Spielwelt wird bei bislang unklassifizierten, sicher zugeordneten Pferden als mdr_server ergänzt; vorhandene Zuordnungen werden nicht überschrieben. Schreibvorgänge erfolgen gesammelt.
+- Neue/reimportierte Pferde speichern die erkannte Spielwelt ebenfalls als mdr_server.
+- Turnierreferenzen und Pxx werden für DE und EN vollständig getrennt aufgebaut; keine serverübergreifenden Fallbacks.
+- EN-LK10 verwendet eine eigene weiche Einstiegskurve ab 130 Punkten. Weitere EN-LK-Schwellen werden erst ab mindestens fünf verschiedenen EN-Pferden in der jeweiligen LK empirisch aus dem EN-Bestand abgeleitet.
+- Unklassifizierte Altbestände behalten vorläufig die bisherige gemischte Turnierbewertung, bis DE oder EN eindeutig bekannt ist.
+- Turnierplaner-Referenzwerte erhalten eine Spielwelt-Auswahl DE / EN / Unbekannt.
+- Bestandsabgleich und Turnierauswertung arbeiten auf dem bereits synchronisierten lokalen Bestand; keine zusätzliche Vollabfrage des Pferdebestands.
+- Kein Supabase-Schema-Update erforderlich.

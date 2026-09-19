@@ -12,7 +12,7 @@ const JSONB_KEYS = [
 // Strukturierte Profilwerte ohne eigenes Eingabefeld. Sie werden beim
 // Aktualisieren der MDR-Seite automatisch neu eingelesen und unverändert
 // mitgespeichert.
-const IMPORTED_PROFILE_SCALAR_KEYS = ['offspring_count'];
+const IMPORTED_PROFILE_SCALAR_KEYS = ['offspring_count', 'mdr_server'];
 
 // V54.0.55: Übergabe zwischen normalem Pferdeimport und Ankaufsberatung.
 // Kandidaten bleiben bis zum ausdrücklichen Speichern ausschließlich in sessionStorage.
@@ -960,7 +960,7 @@ function maybePromptAppaloosaPattern() {
 
 function importRecognizedCount(parsed) {
   if (!parsed || typeof parsed !== 'object') return 0;
-  const keys = ['name','external_id','game_version','gender','breed','purebred_pct','breed_composition','coat_color','birthdate','owner','disease_free','breeding_allowed','hlp_slp','offspring_count','ico','in_breeding_station','stud_fee','breeding_goal','genetic_diseases','colors','exterior_genetics','exterior_descriptive','temperament','disciplines','traits','tournament_potential','tournament_results','tournament_starts_total','pedigree'];
+  const keys = ['name','external_id','game_version','mdr_server','gender','breed','purebred_pct','breed_composition','coat_color','birthdate','owner','disease_free','breeding_allowed','hlp_slp','offspring_count','ico','in_breeding_station','stud_fee','breeding_goal','genetic_diseases','colors','exterior_genetics','exterior_descriptive','temperament','disciplines','traits','tournament_potential','tournament_results','tournament_starts_total','pedigree'];
   return keys.reduce((n,key) => n + (isEmptyValue(key, parsed[key]) ? 0 : 1), 0);
 }
 

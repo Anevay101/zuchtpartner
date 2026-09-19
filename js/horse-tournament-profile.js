@@ -1,4 +1,4 @@
-let HTP_RELATIVE_MODEL = null;
+let HTP_RELATIVE_MODELS = null;
 let HTP_RELATIVE_SOURCE = null;
 
 
@@ -121,10 +121,11 @@ async function renderHorseTournamentProfile(horse, allHorsesArg = null) {
 
   // Keine neue Cloud-Abfrage: allHorses stammt bereits aus dem lokal synchronisierten Bestand.
   if(HTP_RELATIVE_SOURCE!==allHorses){
-    HTP_RELATIVE_MODEL=plannerBuildTournamentRelativeModel(allHorses,htpScore);
+    HTP_RELATIVE_MODELS=plannerBuildTournamentModelsByServer(allHorses,htpScore);
     HTP_RELATIVE_SOURCE=allHorses;
   }
-  const profile=plannerAnalyzeTournamentProfile(horse,allHorses,htpScore,{relativeModel:HTP_RELATIVE_MODEL});
+  const relativeModel=plannerTournamentModelForHorse(horse,HTP_RELATIVE_MODELS,allHorses,htpScore);
+  const profile=plannerAnalyzeTournamentProfile(horse,allHorses,htpScore,{relativeModel});
   const talent=plannerHorseTalent(horse);
   const mainGroup=plannerHorseMainGroup(horse);
 
@@ -163,7 +164,7 @@ async function renderHorseTournamentProfile(horse, allHorsesArg = null) {
       </div><button type="button" class="secondary small" id="horse-copy-tournament">Für Notizen kopieren</button></div>
       ${mainBest?`<p><strong>Stärkste Hauptdisziplin:</strong> ${plannerEscape(mainBest.discipline)} · ${Math.round(mainBest.points)} P. · ${plannerEscape(mainBest.lk||'LK –')} · INT ${plannerTournamentInteriorHtml(mainBest)} · Empf. ${plannerTournamentRecommendationHtml(mainBest)}</p>`:''}
       <p class="small"><strong>Beste Nebenbegabung:</strong> ${secondaryBest?`${plannerEscape(secondaryBest.discipline)} · INT ${plannerTournamentInteriorHtml(secondaryBest)} · Empf. ${plannerTournamentRecommendationHtml(secondaryBest)} · ${plannerTournamentTrafficHtml(secondaryBest)}`:'<span class="muted">keine auffällige ab 45/100</span>'}</p>
-      <details class="tp-relative-help tp-relative-help-inline"><summary><span class="tp-info-dot">i</span> Empfehlung &amp; INT</summary><p class="tiny">Der sichtbare Empfehlungswert 0–100 kombiniert die relative Pxx-Stärke mit einer weichen realistischen Turnierkurve: LK10 ab 155, LK9 ab 190, LK8 ab 200 Punkten. Pxx bleibt intern die Vergleichsbasis aus derselben Disziplin + LK; bei kleiner Stichprobe wird auf Gruppe+LK bzw. LK gesamt zurückgefallen. INT bleibt separat: ≤2,00 sehr gut, 2,01–2,50 gut machbar, &gt;2,50 mühsamer.</p></details>
+      <details class="tp-relative-help tp-relative-help-inline"><summary><span class="tp-info-dot">i</span> Empfehlung &amp; INT</summary><p class="tiny">Der sichtbare Empfehlungswert 0–100 kombiniert die relative Pxx-Stärke mit einer servergetrennten Turnierkurve. ${plannerEscape(plannerTournamentCalibrationText(profile.relativeModel))} Pxx vergleicht nur innerhalb derselben MDR-Spielwelt; bei kleiner Stichprobe wird innerhalb dieses Servers auf Gruppe+LK bzw. LK gesamt zurückgefallen. INT bleibt separat: ≤2,00 sehr gut, 2,01–2,50 gut machbar, &gt;2,50 mühsamer.</p></details>
     </div>
 
     <section class="tournament-compact-section selectable-copy-area"><h3>Hauptbegabung · ${plannerEscape(mainGroup||'–')}</h3>

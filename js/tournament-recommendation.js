@@ -1,11 +1,11 @@
-/* V54.0.60 – LK-relative Turnierberatung mit realistischer Turnierkurve
+/* V54.0.72 – servergetrennte LK-relative Turnierberatung mit realistischer Turnierkurve
    Kernprinzip:
-   - Pxx bleibt die relative Basis: exakt dieselbe Disziplin + dieselbe LK.
+   - Pxx bleibt die relative Basis: exakt dieselbe Disziplin + dieselbe LK innerhalb derselben MDR-Spielwelt (DE/EN).
    - Referenz = alle lokal vorhandenen, vollständig auswertbaren Pferde; Haupt-/Nebenbegabung
      der Referenzpferde spielt keine Rolle.
    - Bei kleiner exakter Stichprobe: Fallback Gruppe+LK, danach gesamte LK.
    - Sichtbar ist nur EIN Empfehlungswert (0–100): Pxx wird mit einer weichen absoluten
-     Turnierkurve kombiniert. Kalibrierte Startbereiche: LK10=155, LK9=190, LK8=200 Punkte.
+     Turnierkurve kombiniert. DE nutzt die bewährten Startbereiche; EN hat eine eigene Kalibrierung.
    - Die Startwerte sind keine harten Kanten; die Kurve steigt davor/danach weich an.
    - Interieur bleibt bewusst separat: <=2,00 sehr gut; <=2,50 gut machbar; >2,50 mühsamer.
 */
@@ -24,20 +24,73 @@ const MDR_TOURNAMENT_ABSOLUTE_START_BY_LK = Object.freeze({
   LK8: 200,
 });
 
-function plannerTournamentAbsoluteStart(lk) {
-  const value=MDR_TOURNAMENT_ABSOLUTE_START_BY_LK[String(lk||'').trim()];
+function plannerHorseTournamentServer(horse) {
+  const raw=String(horse?.mdr_server || horse?.game_version || '').trim().toUpperCase();
+  return raw==='DE' || raw==='EN' ? raw : 'UNKNOWN';
+}
+
+function plannerTournamentServerLabel(server) {
+  const s=String(server || '').toUpperCase();
+  if (s==='DE') return 'DE';
+  if (s==='EN') return 'EN';
+  return 'unbekannt';
+}
+
+function plannerTournamentDerivedAbsoluteStarts(horses, scoreFn, server) {
+  const byLk=new Map();
+  const horsesByLk=new Map();
+  for (const horse of (horses || [])) {
+    if (server==='DE' || server==='EN') {
+      if (plannerHorseTournamentServer(horse)!==server) continue;
+    }
+    const mainGroup=typeof plannerHorseMainGroup==='function' ? plannerHorseMainGroup(horse) : null;
+    if (!mainGroup) continue;
+    const horseKey=String(horse?.id ?? horse?.external_id ?? horse?.name ?? '');
+    for (const [discipline,def] of Object.entries(MDR_TOURNAMENT_DISCIPLINES || {})) {
+      if (def?.group!==mainGroup) continue;
+      const row=scoreFn(horse,discipline);
+      if (!row || row.complete===false || !row.lk || !Number.isFinite(Number(row.points))) continue;
+      if (!byLk.has(row.lk)) byLk.set(row.lk,[]);
+      if (!horsesByLk.has(row.lk)) horsesByLk.set(row.lk,new Set());
+      byLk.get(row.lk).push(Number(row.points));
+      horsesByLk.get(row.lk).add(horseKey || `row:${byLk.get(row.lk).length}`);
+    }
+  }
+  const starts={};
+  const samples={};
+  for (const [lk,values] of byLk) {
+    const clean=values.filter(Number.isFinite);
+    const horseCount=horsesByLk.get(lk)?.size || 0;
+    samples[lk]={horses:horseCount,values:clean.length};
+    // Eine eigene absolute EN-Kurve wird erst ab mindestens fünf verschiedenen
+    // Pferden derselben LK freigeschaltet. So können vier korrelierte Disziplinen
+    // eines einzelnen Pferdes nicht allein eine neue Server-Schwelle erzeugen.
+    // Das 40. Perzentil ist bewusst eine Einstiegsschwelle und kein Elite-Median.
+    if (horseCount>=MDR_TOURNAMENT_REFERENCE_PROVISIONAL_MIN_N) {
+      starts[lk]=Math.round(plannerTournamentPercentile(clean,.40));
+    }
+  }
+  return {starts,samples};
+}
+
+function plannerTournamentAbsoluteStart(lk, context=null) {
+  const key=String(lk||'').trim();
+  const contextual=context?.absoluteStarts?.[key];
+  if (Number.isFinite(Number(contextual))) return Number(contextual);
+  const server=String(context?.server || '').toUpperCase();
+  // EN-LK10 ist als Erfahrungswert separat kalibriert. Für höhere EN-LKs
+  // wird ausschließlich aus dem EN-Bestand gelernt; niemals auf DE zurückgefallen.
+  if (server==='EN') return key==='LK10' ? 130 : null;
+  const value=MDR_TOURNAMENT_ABSOLUTE_START_BY_LK[key];
   return Number.isFinite(Number(value)) ? Number(value) : null;
 }
 
-function plannerTournamentReadinessFactor(points, lk) {
+function plannerTournamentReadinessFactor(points, lk, context=null) {
   const p=Number(points);
-  const start=plannerTournamentAbsoluteStart(lk);
+  const start=plannerTournamentAbsoluteStart(lk,context);
   if (!Number.isFinite(p) || start == null) return {factor:1,start,calibrated:false,delta:null};
   const delta=p-start;
-  // Weiche Kurve um den Erfahrungs-Startwert:
-  // -40 => 10 %, -20 => 30 %, Start => 72 %, +20 => 90 %, +40 => 100 %.
-  // So bleibt z.B. LK9/171 trotz hohem Pxx klar zu schwach, während 190 nicht abrupt
-  // von „keine Chance“ auf „Top-Empfehlung“ springt.
+  // Weiche Kurve um den serverbezogenen Startwert.
   const knots=[[-40,0.10],[-20,0.30],[0,0.72],[20,0.90],[40,1.00]];
   let factor;
   if (delta<=knots[0][0]) factor=knots[0][1];
@@ -56,10 +109,10 @@ function plannerTournamentReadinessFactor(points, lk) {
   return {factor:Math.max(0,Math.min(1,factor)),start,calibrated:true,delta};
 }
 
-function plannerTournamentRecommendationScore(row, percentile) {
+function plannerTournamentRecommendationScore(row, percentile, context=null) {
   const p=Number(percentile);
-  if (!Number.isFinite(p)) return {score:null,percentile:null,...plannerTournamentReadinessFactor(row?.points,row?.lk)};
-  const readiness=plannerTournamentReadinessFactor(row?.points,row?.lk);
+  if (!Number.isFinite(p)) return {score:null,percentile:null,...plannerTournamentReadinessFactor(row?.points,row?.lk,context)};
+  const readiness=plannerTournamentReadinessFactor(row?.points,row?.lk,context);
   const score=Math.max(0,Math.min(100,Math.round(p*readiness.factor)));
   return {score,percentile:Math.round(p),...readiness};
 }
@@ -126,14 +179,20 @@ function plannerTournamentRefKey(...parts) {
   return parts.map(v=>String(v ?? '').trim()).join('|||');
 }
 
-function plannerBuildTournamentRelativeModel(horses, scoreFn, minN = MDR_TOURNAMENT_REFERENCE_MIN_N) {
+function plannerBuildTournamentRelativeModel(horses, scoreFn, minN = MDR_TOURNAMENT_REFERENCE_MIN_N, options = {}) {
   const exactRaw=new Map();
   const groupRaw=new Map();
   const lkRaw=new Map();
   const samples=[];
   const horseIds=new Set();
+  const requestedServer=String(options?.server || 'ALL').toUpperCase();
 
-  const pool=(horses || []).filter(h=>h && !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
+  const pool=(horses || []).filter(h=>{
+    if (!h || (typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h))) return false;
+    if (requestedServer==='DE' || requestedServer==='EN') return plannerHorseTournamentServer(h)===requestedServer;
+    if (requestedServer==='UNKNOWN') return plannerHorseTournamentServer(h)==='UNKNOWN';
+    return true;
+  });
   for (const horse of pool) {
     for (const [discipline, def] of Object.entries(MDR_TOURNAMENT_DISCIPLINES || {})) {
       const row=scoreFn(horse,discipline);
@@ -168,12 +227,43 @@ function plannerBuildTournamentRelativeModel(horses, scoreFn, minN = MDR_TOURNAM
   const byLk={};
   for (const [lk,values] of lkRaw) byLk[lk]=plannerTournamentReferenceStats(values,{source:'lk',lk});
 
-  return {samples,horseCount:horseIds.size,exact,byGroupLk,byLk,minN:Number(minN)||MDR_TOURNAMENT_REFERENCE_MIN_N};
+  let absoluteStarts={...MDR_TOURNAMENT_ABSOLUTE_START_BY_LK};
+  let calibrationSamples={};
+  if (requestedServer==='EN') {
+    const derived=plannerTournamentDerivedAbsoluteStarts(pool,scoreFn,'EN');
+    absoluteStarts={...derived.starts,LK10:130};
+    calibrationSamples=derived.samples;
+  } else if (requestedServer==='DE') {
+    absoluteStarts={...MDR_TOURNAMENT_ABSOLUTE_START_BY_LK};
+  }
+
+  return {samples,horseCount:horseIds.size,exact,byGroupLk,byLk,minN:Number(minN)||MDR_TOURNAMENT_REFERENCE_MIN_N,server:requestedServer,absoluteStarts,calibrationSamples};
+}
+
+function plannerBuildTournamentModelsByServer(horses, scoreFn, minN = MDR_TOURNAMENT_REFERENCE_MIN_N) {
+  return {
+    DE: plannerBuildTournamentRelativeModel(horses,scoreFn,minN,{server:'DE'}),
+    EN: plannerBuildTournamentRelativeModel(horses,scoreFn,minN,{server:'EN'}),
+    UNKNOWN: plannerBuildTournamentRelativeModel(horses,scoreFn,minN,{server:'UNKNOWN'}),
+    ALL: plannerBuildTournamentRelativeModel(horses,scoreFn,minN,{server:'ALL'}),
+  };
+}
+
+function plannerTournamentModelForHorse(horse, models, horses, scoreFn, minN = MDR_TOURNAMENT_REFERENCE_MIN_N) {
+  const server=plannerHorseTournamentServer(horse);
+  if (server==='DE' || server==='EN') {
+    if (models?.[server]) return models[server];
+    return plannerBuildTournamentRelativeModel(horses,scoreFn,minN,{server});
+  }
+  // Unbekannte Altbestände behalten bewusst die bisherige gemischte Bewertung,
+  // bis eine eindeutige Serverzuordnung vorliegt.
+  if (models?.ALL) return models.ALL;
+  return plannerBuildTournamentRelativeModel(horses,scoreFn,minN,{server:'ALL'});
 }
 
 // Kompatibilitätsalias: bestehende Aufrufer erhalten ab V54.0.58 das neue Modell.
 function plannerBuildTournamentReferences(horses, scoreFn, minN = MDR_TOURNAMENT_REFERENCE_MIN_N) {
-  return plannerBuildTournamentRelativeModel(horses,scoreFn,minN);
+  return plannerBuildTournamentRelativeModel(horses,scoreFn,minN,{server:'ALL'});
 }
 
 function plannerTournamentReferenceFor(row, model) {
@@ -259,7 +349,7 @@ function plannerTournamentSuitability(row, referenceOrModel, _secondaryMin, opti
   const relative=referenceOrModel?.exact || referenceOrModel?.byLk
     ? plannerTournamentRelative(row,referenceOrModel)
     : {percentile:null,reference:referenceOrModel||null,usable:false};
-  const recommendation=plannerTournamentRecommendationScore(row,relative.percentile);
+  const recommendation=plannerTournamentRecommendationScore(row,relative.percentile,referenceOrModel);
   const interpretation=plannerTournamentInterpretation(recommendation.score,options.isMainGroup===true);
   return {
     suitable:interpretation.suitable,
@@ -279,7 +369,12 @@ function plannerTournamentSuitability(row, referenceOrModel, _secondaryMin, opti
 
 function plannerAnalyzeTournamentProfile(horse, horses, scoreFn, options = {}) {
   const minN=Number.isFinite(Number(options.minN)) ? Number(options.minN) : MDR_TOURNAMENT_REFERENCE_MIN_N;
-  const model=options.relativeModel || options.references || plannerBuildTournamentRelativeModel(horses,scoreFn,minN);
+  const horseServer=plannerHorseTournamentServer(horse);
+  let model=options.relativeModel || options.references || null;
+  const wantedServer=(horseServer==='DE' || horseServer==='EN') ? horseServer : 'ALL';
+  if (!model || String(model.server || 'ALL').toUpperCase()!==wantedServer) {
+    model=plannerBuildTournamentRelativeModel(horses,scoreFn,minN,{server:wantedServer});
+  }
   const mainGroup=typeof plannerHorseMainGroup === 'function' ? plannerHorseMainGroup(horse) : null;
   const talent=typeof plannerHorseTalent === 'function' ? plannerHorseTalent(horse) : null;
 
@@ -290,7 +385,7 @@ function plannerAnalyzeTournamentProfile(horse, horses, scoreFn, options = {}) {
       const isMainGroup=Boolean(mainGroup && row.group === mainGroup);
       const proof=plannerTournamentProof(horse,row.discipline);
       const relative=plannerTournamentRelative(row,model);
-      const recommendation=plannerTournamentRecommendationScore(row,relative.percentile);
+      const recommendation=plannerTournamentRecommendationScore(row,relative.percentile,model);
       const interpretation=plannerTournamentInterpretation(recommendation.score,isMainGroup);
       const interiorAssessment=plannerTournamentInteriorAssessment(row.interior);
       return {
@@ -358,7 +453,7 @@ function plannerAnalyzeTournamentProfile(horse, horses, scoreFn, options = {}) {
     horse,rows,mainRows,secondaryRows,recommendedSecondaryRows,situationalSecondaryRows,
     suitableRows,groups,mainGroup,talent,main,alternatives,singleAlternatives,recommendation,
     best:rows[0]||null,bestMain,bestSecondary,bestSuitable:suitableRows[0]||null,
-    references:model,relativeModel:model,minN,
+    references:model,relativeModel:model,minN,server:horseServer,
     absoluteMin:null,secondaryMin:null,mainMin:null,
   };
 }
@@ -439,7 +534,31 @@ function plannerTournamentReferenceGroupSummaries(model) {
 function plannerTournamentReferenceBasisText(model) {
   const exact=Object.values(model?.exact||{});
   const n=exact.reduce((s,r)=>s+r.n,0);
-  return `${model?.horseCount||0} Pferde · ${n} auswertbare Disziplin/LK-Werte · interne Pxx-Basis primär aus exakt gleicher Disziplin + LK`;
+  const server=String(model?.server || 'ALL').toUpperCase();
+  const en=typeof window!=='undefined' && window.MDR_I18N?.language==='en';
+  const serverText=server==='DE' || server==='EN' ? ` · ${en?'server':'Server'} ${server}` : server==='UNKNOWN' ? ` · ${en?'server unknown':'Server unbekannt'}` : '';
+  return en
+    ? `${model?.horseCount||0} horses · ${n} evaluable discipline/level values${serverText} · internal Pxx basis primarily from the exact same discipline + level`
+    : `${model?.horseCount||0} Pferde · ${n} auswertbare Disziplin/LK-Werte${serverText} · interne Pxx-Basis primär aus exakt gleicher Disziplin + LK`;
+}
+
+function plannerTournamentCalibrationText(model) {
+  const server=String(model?.server || 'ALL').toUpperCase();
+  const en=typeof window!=='undefined' && window.MDR_I18N?.language==='en';
+  if (server==='EN') {
+    const starts=model?.absoluteStarts || {};
+    const bits=[en?'LK10 from 130':'LK10 ab 130'];
+    for (const lk of ['LK9','LK8','LK7','LK6','LK5','LK4','LK3','LK2','LK1']) {
+      if (Number.isFinite(Number(starts[lk]))) bits.push(en?`${lk} from ${Math.round(Number(starts[lk]))}`:`${lk} ab ${Math.round(Number(starts[lk]))}`);
+    }
+    return en
+      ? `EN benchmark: ${bits.join(', ')} points. Additional levels are calibrated only from the EN stock when enough EN data is available; there is no DE fallback.`
+      : `EN-Benchmark: ${bits.join(', ')} Punkten. Weitere LK werden nur bei ausreichender EN-Datenbasis aus dem EN-Bestand kalibriert; es gibt keinen DE-Fallback.`;
+  }
+  if (server==='DE') return en ? 'DE benchmark: LK10 from 155, LK9 from 190, LK8 from 200 points.' : 'DE-Benchmark: LK10 ab 155, LK9 ab 190, LK8 ab 200 Punkten.';
+  return en
+    ? 'Server still unknown: the previous mixed assessment remains active until DE or EN is assigned unambiguously.'
+    : 'Server noch unbekannt: vorläufig bleibt die bisherige gemischte Bewertung aktiv, bis DE oder EN eindeutig zugeordnet ist.';
 }
 
 function plannerTournamentRelativeHtml(row) {
