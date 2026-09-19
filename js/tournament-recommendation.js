@@ -365,16 +365,15 @@ function plannerAnalyzeTournamentProfile(horse, horses, scoreFn, options = {}) {
 
 function plannerFormatTournamentOption(row, includeGroup = false) {
   if (!row) return '';
-  const score=Number.isFinite(Number(row.recommendationScore)) ? `Empf. ${Math.round(Number(row.recommendationScore))}/100` : 'Empf. –';
-  const bits=[`${row.discipline} ${Math.round(Number(row.points))}`,`INT ${row.interior==null?'–':Number(row.interior).toFixed(2)}`,row.lk||'LK –',score];
+  const bits=[`${row.discipline} ${Math.round(Number(row.points))}`,`INT ${row.interior==null?'–':Number(row.interior).toFixed(2)}`,row.lk||'LK –'];
   const base=bits.join(' / ');
-  return includeGroup ? `${base} (${row.group})` : base;
+  return includeGroup ? `${row.group} – ${base}` : base;
 }
 
 function plannerTournamentCopyText(profile) {
   if (!profile) return '';
-  const lines=[`Turnier: ${profile.mainGroup || 'unbekannt'}`];
-  (profile.mainRows || []).forEach(row=>lines.push(plannerFormatTournamentOption(row)));
+  const lines=[`Hauptbegabung: ${profile.mainGroup || 'unbekannt'}`];
+  (profile.mainRows || []).forEach(row=>lines.push(plannerFormatTournamentOption(row,true)));
   const secondaries=[...(profile.recommendedSecondaryRows||[]),...(profile.situationalSecondaryRows||[])];
   if (secondaries.length) {
     lines.push('Nebenbegabungen:');
@@ -473,6 +472,5 @@ function plannerTournamentInteriorHtml(row) {
   const a=row?.interiorAssessment || plannerTournamentInteriorAssessment(row?.interior);
   const esc=typeof plannerEscape==='function'?plannerEscape:(v=>String(v??''));
   const value=row?.interior==null?'–':Number(row.interior).toFixed(2);
-  const prefix=a.traffic==='green'?'🟢':a.traffic==='yellow'?'🟡':a.traffic==='red'?'🔴':'⚪';
-  return `<span class="tp-int tp-int-${a.traffic}" title="${esc(a.label)}">${value} <span class="tiny">${prefix}</span></span>`;
+  return `<span class="tp-int" title="${esc(a.label)}">${value}</span>`;
 }

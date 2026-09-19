@@ -1171,6 +1171,16 @@ async function runSaveFlow() {
   const resolved = await resolveSaveTarget(formData, payload);
   if (!resolved) return;
   const { targetId, payload: mergedPayload, beforeRecord } = resolved;
+
+  // Beim erneuten Einlesen eines bereits vorhandenen Pferdes direkt zum
+  // Pferd zurückkehren. So lässt sich insbesondere bei Turnierdaten sofort
+  // kontrollieren, ob der Import angekommen ist, statt erst wieder aus der
+  // Übersicht hinein navigieren zu müssen. Neue Pferde verhalten sich
+  // weiterhin wie bisher.
+  if (currentChangeSource === 'importiert' && targetId && saveRedirect === 'index.html') {
+    saveRedirect = `horse.html?id=${encodeURIComponent(targetId)}`;
+  }
+
   // Zweiter Durchlauf mit dem bestehenden Datensatz: so kann beim Lösen
   // der Lerndatei der zuvor intern gemerkte Besitzer wiederhergestellt werden.
   syncFlaxenCarrierRecord(mergedPayload);

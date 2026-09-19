@@ -1,0 +1,10 @@
+V54.0.71 – Pferdeseite: Kopierformat, Gruppensortierung & EN-Werte
+
+- Turnier-INT ohne farbige Punkte; nur der Zahlenwert bleibt sichtbar.
+- Kopiertexte enthalten keine Empfehlungswerte/Ampel mehr.
+- Turnier-Notiztext beginnt mit „Hauptbegabung:“ und setzt die Gruppe vor jede Disziplin.
+- „Gruppe“ ist in den kompakten Turniertabellen klickbar und gruppiert/entgruppiert die Zeilen.
+- Neuer Button „Stammdaten kopieren“ unter den sechs Kennzahlen. Ausgabe immer: GP, Ext, Ext%, Int, ZS, Nachkommen – je eine Zeile.
+- Englische Pferdeseite: Kennzahlen heißen OP, Confo, Confo%, Inner Values.
+- Englische Competition Values zeigen Disziplinen, Fundamentals und Gaits konsequent auf Englisch.
+- Keine Änderungen an Supabase-Sync oder Datenmodell.

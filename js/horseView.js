@@ -16,6 +16,42 @@ function viewTagLabels(horse) {
   return (horse?.tags || []).map(t => typeof t === 'string' ? t : t?.label).filter(Boolean);
 }
 
+function viewLanguage() {
+  return window.MDR_I18N?.language === 'en' ? 'en' : 'de';
+}
+
+function viewBreedingShowMetric(horse) {
+  const actualZs = typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : null;
+  let value = actualZs;
+  let state = actualZs != null ? '✓' : '?';
+  let title = actualZs != null ? 'eingetragener ZS-Wert' : 'kein ZS-Wert verfügbar';
+  if (actualZs == null && Array.isArray(viewHorseList) && typeof plannerBuildBreedingShowModel === 'function') {
+    try {
+      const model = plannerBuildBreedingShowModel(viewHorseList);
+      const predicted = model?.predict?.(horse);
+      if (predicted != null && Number.isFinite(Number(predicted))) {
+        value = Number(predicted);
+        state = '≈';
+        title = 'ZS-Prognose';
+      }
+    } catch {}
+  }
+  return { value, state, title };
+}
+
+function viewBasicDataCopyText(horse) {
+  const d = viewDerived(horse);
+  const zs = viewBreedingShowMetric(horse);
+  const offspringRaw = horse?.offspring_count != null && horse.offspring_count !== '' ? Number(horse.offspring_count) : null;
+  const gp = d.gp == null || !Number.isFinite(d.gp) ? '?' : Math.round(d.gp);
+  const ext = d.ext == null || !Number.isFinite(d.ext) ? '?' : d.ext.toFixed(2);
+  const extpct = d.extpct == null || !Number.isFinite(Number(d.extpct)) ? '?' : `${Number(d.extpct).toFixed(0)}%`;
+  const intValue = d.int == null || !Number.isFinite(d.int) ? '?' : d.int.toFixed(2);
+  const zsValue = zs.value == null || !Number.isFinite(Number(zs.value)) ? '?' : `${zs.state} ${Math.round(Number(zs.value))}`;
+  const offspring = offspringRaw == null || !Number.isFinite(offspringRaw) ? '?' : Math.max(0, Math.round(offspringRaw));
+  return [`GP ${gp}`,`Ext ${ext}`,`Ext% ${extpct}`,`Int ${intValue}`,`ZS ${zsValue}`,`Nachkommen ${offspring}`].join('\n');
+}
+
 function viewImportantMissing(horse) {
   const missing = [];
   if (!horse?.external_id) missing.push('MDR-ID');
@@ -60,31 +96,18 @@ function renderHorseViewHeader(horse) {
   const metrics = document.getElementById('horse-key-metrics');
   if (metrics) {
     const d = viewDerived(horse);
-    const actualZs = typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : null;
-    let zsValue = actualZs;
-    let zsState = actualZs != null ? '✓' : '?';
-    let zsTitle = actualZs != null ? 'eingetragener ZS-Wert' : 'kein ZS-Wert verfügbar';
-    if (actualZs == null && Array.isArray(viewHorseList) && typeof plannerBuildBreedingShowModel === 'function') {
-      try {
-        const model = plannerBuildBreedingShowModel(viewHorseList);
-        const predicted = model?.predict?.(horse);
-        if (predicted != null && Number.isFinite(Number(predicted))) {
-          zsValue = Number(predicted);
-          zsState = '≈';
-          zsTitle = 'ZS-Prognose';
-        }
-      } catch {}
-    }
+    const zs = viewBreedingShowMetric(horse);
     const offspring = horse?.offspring_count != null && horse.offspring_count !== '' ? Number(horse.offspring_count) : null;
+    const en = viewLanguage() === 'en';
     const rows = [
-      ['GP', d.gp == null || !Number.isFinite(d.gp) ? '?' : Math.round(d.gp), 'Gesamtpotenzial'],
-      ['Ext', d.ext == null || !Number.isFinite(d.ext) ? '?' : d.ext.toFixed(2), 'Körperbau – niedriger ist besser'],
-      ['Ext%', d.extpct == null || !Number.isFinite(Number(d.extpct)) ? '?' : `${Number(d.extpct).toFixed(0)}%`, 'genetisches Exterieur – höher ist besser'],
-      ['Int', d.int == null || !Number.isFinite(d.int) ? '?' : d.int.toFixed(2), 'Interieur – niedriger ist besser'],
-      ['ZS', `${zsState} ${zsValue == null || !Number.isFinite(Number(zsValue)) ? '–' : Math.round(Number(zsValue))}`, zsTitle],
-      ['Nachkommen', offspring == null || !Number.isFinite(offspring) ? '?' : Math.max(0, Math.round(offspring)), offspring == null ? 'noch nicht aus MDR-Profil eingelesen' : 'Nachkommen laut MDR-Profil'],
+      [en ? 'OP' : 'GP', d.gp == null || !Number.isFinite(d.gp) ? '?' : Math.round(d.gp), en ? 'Overall potential' : 'Gesamtpotenzial'],
+      [en ? 'Confo' : 'Ext', d.ext == null || !Number.isFinite(d.ext) ? '?' : d.ext.toFixed(2), en ? 'Conformation – lower is better' : 'Körperbau – niedriger ist besser'],
+      [en ? 'Confo%' : 'Ext%', d.extpct == null || !Number.isFinite(Number(d.extpct)) ? '?' : `${Number(d.extpct).toFixed(0)}%`, en ? 'Genetic conformation – higher is better' : 'genetisches Exterieur – höher ist besser'],
+      [en ? 'Inner Values' : 'Int', d.int == null || !Number.isFinite(d.int) ? '?' : d.int.toFixed(2), en ? 'Inner values – lower is better' : 'Interieur – niedriger ist besser'],
+      ['ZS', `${zs.state} ${zs.value == null || !Number.isFinite(Number(zs.value)) ? '–' : Math.round(Number(zs.value))}`, zs.title],
+      [en ? 'Offspring' : 'Nachkommen', offspring == null || !Number.isFinite(offspring) ? '?' : Math.max(0, Math.round(offspring)), offspring == null ? (en ? 'not yet imported from MDR profile' : 'noch nicht aus MDR-Profil eingelesen') : (en ? 'offspring according to MDR profile' : 'Nachkommen laut MDR-Profil')],
     ];
-    metrics.innerHTML = rows.map(([label,value,title]) => `<div class="horse-key-metric" title="${plannerEscape(title)}"><span>${plannerEscape(label)}</span><strong>${plannerEscape(String(value))}</strong></div>`).join('');
+    metrics.innerHTML = rows.map(([label,value,title]) => `<div class="horse-key-metric" title="${plannerEscape(title)}" data-i18n-skip><span>${plannerEscape(label)}</span><strong>${plannerEscape(String(value))}</strong></div>`).join('');
   }
 
   const missing = viewImportantMissing(horse);
@@ -229,6 +252,9 @@ async function initView() {
 
   document.getElementById('edit-link').href = `horse.html?id=${encodeURIComponent(viewHorseId)}`;
   document.getElementById('delete-btn').addEventListener('click', onDeleteView);
+  document.getElementById('horse-copy-basic-data')?.addEventListener('click', (event) => {
+    if (extraData) plannerCopyText(viewBasicDataCopyText(extraData), event.currentTarget);
+  });
   document.getElementById('prev-horse-btn').addEventListener('click', () => onNavigateView('prev'));
   document.getElementById('next-horse-btn').addEventListener('click', () => onNavigateView('next'));
   wireTabs();

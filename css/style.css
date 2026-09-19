@@ -6295,3 +6295,30 @@ summary:focus-visible {
   .zp-minimum-fields { grid-template-columns: 1fr; }
   .zp-minimum-requirements > summary { align-items: flex-start; }
 }
+
+
+/* V54.0.71 – kompakte Kopieraktionen + klickbare Gruppensortierung */
+.horse-key-copy-actions {
+  display: flex;
+  justify-content: center;
+  margin: .35rem auto .1rem;
+}
+.tournament-group-sort {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tournament-group-sort:hover,
+.tournament-group-sort:focus-visible { text-decoration: underline; }
+.tournament-group-sort.active { font-weight: 800; }
+@media (max-width: 620px) {
+  .horse-key-copy-actions .btn,
+  .horse-key-copy-actions button { width: 100%; max-width: 320px; }
+}

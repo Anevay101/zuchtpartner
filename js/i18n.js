@@ -223,9 +223,21 @@
     'Gruppe':'Group', 'Alle Gruppen':'All groups', 'Bestimmte Disziplin':'Specific discipline',
     'Englisch':'English', 'Rennen':'Racing', 'Fahren':'Driving', 'Barock':'Baroque',
     'Mehrgang':'Gaits', 'Rodeo':'Rodeo', 'Western':'Western',
+    // Competition-value display names on English horse pages. Internal storage remains German.
+    'Dressur':'Dressage', 'Springen':'Showjumping', 'Cross Country':'Cross Country', 'Distanz':'Endurance',
+    'Flachrennen':'Flat Racing', 'Hindernisrennen':'Steeplechase', 'Seejagdrennen':'Lake Chase Racing', 'Trabrennen':'Trot Racing',
+    'Dressurfahren':'Dressage Driving', 'Hindernisfahren':'Obstacle Driving', 'Geländefahren':'Cross Country Driving', 'Holzrücken':'Pulling',
+    'Klassische Dressur':'Classical Dressage', 'Spanische Gänge':'Spanish Walk', 'Schulsprünge':'School Jumps', 'Hohe Schule':'Haute Ecole',
+    'Tölt-Prüfung':'Tölt Trial', 'Passrennen':'Pace Racing', 'Foxtrott Pleasure':'Foxtrot Pleasure', 'Racking':'Racking',
+    'Grundlagen':'Fundamentals', 'Gangarten':'Gaits',
+    'Wendigkeit':'Agility', 'Gelassenheit':'Serenity', 'Kraft':'Strength', 'Tempo':'Speed',
+    'Beschleunigung':'Acceleration', 'Kondition':'Stamina', 'Präzision':'Precision', 'Ausdruck':'Expression',
+    'Schritt':'Walk', 'Trab':'Trot', 'Galopp':'Canter', 'Renngalopp':'Gallop',
+    'Tölt':'Tölt', 'Pass':'Pace', 'Foxtrott':'Foxtrot', 'Rack':'Rack',
 
     // Tournament
     'Turnier':'Competition', 'Turniere':'Competitions', 'Turnierwerte':'Competition values',
+    'Stammdaten kopieren':'Copy basic data', 'Nach Gruppe sortieren':'Sort by group',
     'Turnierwert':'Competition value', 'Turnierdaten aus der Pferdeseite':'Competition data from the horse page',
     '🏆 Turnierplanung':'🏆 Competition planner', 'Turnierplanung':'Competition planning',
     'Turniereignung':'Competition suitability', 'Bestand vergleichen':'Compare stock',

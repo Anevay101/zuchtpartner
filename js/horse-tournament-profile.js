@@ -139,19 +139,19 @@ async function renderHorseTournamentProfile(horse, allHorsesArg = null) {
   const secondaryBest=secondaryMention[0]||null;
 
   const mainRows=profile.mainRows.length?profile.mainRows.map(r=>`<tr>
-      <td data-field="traffic" data-label="Ampel">${plannerTournamentTrafficHtml(r)}</td><td data-field="group" data-label="Gruppe">${plannerEscape(r.group)}</td><th data-field="discipline" data-label="Disziplin">${plannerEscape(r.discipline)}${r.proven?' <span class="planner-badge tournament-secondary-badge">bewährt</span>':''}</th>
+      <td data-field="traffic" data-label="Ampel">${plannerTournamentTrafficHtml(r)}</td><td data-field="group" data-label="Gruppe" data-group-key="${plannerEscape(r.group)}">${plannerEscape(r.group)}</td><th data-field="discipline" data-label="Disziplin">${plannerEscape(r.discipline)}${r.proven?' <span class="planner-badge tournament-secondary-badge">bewährt</span>':''}</th>
       <td data-field="points" data-label="Punkte">${Math.round(r.points)}</td><td data-field="int" data-label="INT">${plannerTournamentInteriorHtml(r)}</td><td data-field="lk" data-label="LK">${plannerEscape(r.lk||'–')}</td><td data-field="recommendation" data-label="Empfehlung"><strong>${plannerTournamentRecommendationHtml(r)}</strong></td>
     </tr>`).join(''):'<tr><td colspan="7" class="muted">Keine auswertbare Disziplin in der Hauptbegabung.</td></tr>';
 
   const secondaryRows=secondaryMention.length?secondaryMention.map(r=>`<tr>
-      <td data-field="traffic" data-label="Ampel">${plannerTournamentTrafficHtml(r)}</td><td data-field="group" data-label="Gruppe">${plannerEscape(r.group)}</td><th data-field="discipline" data-label="Disziplin">${plannerEscape(r.discipline)}${r.proven?' <span class="planner-badge tournament-secondary-badge">bewährt</span>':''}</th>
+      <td data-field="traffic" data-label="Ampel">${plannerTournamentTrafficHtml(r)}</td><td data-field="group" data-label="Gruppe" data-group-key="${plannerEscape(r.group)}">${plannerEscape(r.group)}</td><th data-field="discipline" data-label="Disziplin">${plannerEscape(r.discipline)}${r.proven?' <span class="planner-badge tournament-secondary-badge">bewährt</span>':''}</th>
       <td data-field="points" data-label="Punkte">${Math.round(r.points)}</td><td data-field="int" data-label="INT">${plannerTournamentInteriorHtml(r)}</td><td data-field="lk" data-label="LK">${plannerEscape(r.lk||'–')}</td><td data-field="recommendation" data-label="Empfehlung"><strong>${plannerTournamentRecommendationHtml(r)}</strong></td>
     </tr>`).join(''):'<tr><td colspan="7" class="muted">Keine Nebenbegabung mit Empfehlung ab 45/100 erkannt.</td></tr>';
 
   const grouped=MDR_TOURNAMENT_GROUP_ORDER.map(group=>({group,rows:profile.rows.filter(r=>r.group===group)})).filter(x=>x.rows.length);
   const allDetails=grouped.map(g=>`<div class="group-heading">${plannerEscape(g.group)}</div><div class="table-wrap"><table class="detail-table compact-tournament-table tournament-all-table">
       <thead><tr><th>Ampel</th><th>Gruppe</th><th>Disziplin</th><th>Punkte</th><th>INT</th><th>LK</th><th>Empfehlung</th><th>Einordnung / Referenz</th></tr></thead><tbody>${g.rows.map(r=>`<tr>
-        <td data-field="traffic" data-label="Ampel">${plannerTournamentTrafficHtml(r)}</td><td data-field="group" data-label="Gruppe">${plannerEscape(r.group)}</td><th data-field="discipline" data-label="Disziplin">${plannerEscape(r.discipline)}</th><td data-field="points" data-label="Punkte">${Math.round(r.points)}</td><td data-field="int" data-label="INT">${plannerTournamentInteriorHtml(r)}</td><td data-field="lk" data-label="LK">${plannerEscape(r.lk||'–')}</td><td data-field="recommendation" data-label="Empfehlung">${plannerTournamentRecommendationHtml(r)}</td>
+        <td data-field="traffic" data-label="Ampel">${plannerTournamentTrafficHtml(r)}</td><td data-field="group" data-label="Gruppe" data-group-key="${plannerEscape(r.group)}">${plannerEscape(r.group)}</td><th data-field="discipline" data-label="Disziplin">${plannerEscape(r.discipline)}</th><td data-field="points" data-label="Punkte">${Math.round(r.points)}</td><td data-field="int" data-label="INT">${plannerTournamentInteriorHtml(r)}</td><td data-field="lk" data-label="LK">${plannerEscape(r.lk||'–')}</td><td data-field="recommendation" data-label="Empfehlung">${plannerTournamentRecommendationHtml(r)}</td>
         <td data-field="reference" data-label="Einordnung / Referenz">${plannerTournamentTrafficHtml(r)}<br><span class="tiny muted">${plannerEscape(plannerReferenceLabel(r.reference))}</span></td>
       </tr>`).join('')}</tbody></table></div>`).join('');
 
@@ -167,15 +167,35 @@ async function renderHorseTournamentProfile(horse, allHorsesArg = null) {
     </div>
 
     <section class="tournament-compact-section selectable-copy-area"><h3>Hauptbegabung · ${plannerEscape(mainGroup||'–')}</h3>
-      <div class="table-wrap"><table class="detail-table tournament-suitable-table"><thead><tr><th>Ampel</th><th>Gruppe</th><th>Disziplin</th><th>Punkte</th><th>INT</th><th>LK</th><th>Empfehlung</th></tr></thead><tbody>${mainRows}</tbody></table></div>
+      <div class="table-wrap"><table class="detail-table tournament-suitable-table"><thead><tr><th>Ampel</th><th><button type="button" class="tournament-group-sort" title="Nach Gruppe sortieren"><span>Gruppe</span> ↕</button></th><th>Disziplin</th><th>Punkte</th><th>INT</th><th>LK</th><th>Empfehlung</th></tr></thead><tbody>${mainRows}</tbody></table></div>
     </section>
 
     <section class="tournament-compact-section selectable-copy-area"><div class="tournament-section-head"><div><h3>Nebenbegabungen · Beritt prüfen</h3><p class="tiny muted">Nur Empfehlungen ab 45/100 werden hervorgehoben.</p></div><button type="button" class="secondary small" id="horse-copy-suitable">Empfehlungen kopieren</button></div>
-      <div class="table-wrap"><table class="detail-table tournament-suitable-table"><thead><tr><th>Ampel</th><th>Gruppe</th><th>Disziplin</th><th>Punkte</th><th>INT</th><th>LK</th><th>Empfehlung</th></tr></thead><tbody>${secondaryRows}</tbody></table></div>
+      <div class="table-wrap"><table class="detail-table tournament-suitable-table"><thead><tr><th>Ampel</th><th><button type="button" class="tournament-group-sort" title="Nach Gruppe sortieren"><span>Gruppe</span> ↕</button></th><th>Disziplin</th><th>Punkte</th><th>INT</th><th>LK</th><th>Empfehlung</th></tr></thead><tbody>${secondaryRows}</tbody></table></div>
     </section>
 
     <details class="horse-all-disciplines tournament-all-details"><summary>Alle 28 Disziplinen anzeigen</summary>${allDetails}</details>`;
 
+  root.querySelectorAll('.tournament-suitable-table').forEach(table=>{
+    const tbody=table.tBodies?.[0];
+    const button=table.querySelector('.tournament-group-sort');
+    if(!tbody||!button)return;
+    [...tbody.rows].forEach((row,index)=>row.dataset.originalOrder=String(index));
+    let grouped=false;
+    button.addEventListener('click',()=>{
+      grouped=!grouped;
+      const rows=[...tbody.rows];
+      rows.sort((a,b)=>{
+        if(!grouped)return Number(a.dataset.originalOrder)-Number(b.dataset.originalOrder);
+        const ag=a.querySelector('[data-field="group"]')?.dataset.groupKey||a.querySelector('[data-field="group"]')?.textContent||'';
+        const bg=b.querySelector('[data-field="group"]')?.dataset.groupKey||b.querySelector('[data-field="group"]')?.textContent||'';
+        return ag.localeCompare(bg,'de') || Number(a.dataset.originalOrder)-Number(b.dataset.originalOrder);
+      });
+      rows.forEach(row=>tbody.appendChild(row));
+      button.classList.toggle('active',grouped);
+      button.setAttribute('aria-pressed',String(grouped));
+    });
+  });
   document.getElementById('horse-copy-tournament')?.addEventListener('click',e=>plannerCopyText(plannerTournamentCopyText(profile),e.currentTarget));
   document.getElementById('horse-copy-suitable')?.addEventListener('click',e=>plannerCopyText(plannerSuitableTournamentCopyText(profile),e.currentTarget));
   renderHorseCupStatus(horse);

@@ -1018,28 +1018,61 @@ function parseTournamentPotential(lines) {
   const startIdx = lines.indexOf('Turnierpotenzial');
   if (startIdx === -1) return {};
   const result = {};
-  const knownLabels = ['Begabung', 'Disziplinen', 'Gesamtpotenzial', 'Grundlagen'];
-  const tokens = lines.slice(startIdx + 1, Math.min(startIdx + 18, lines.length)).filter(Boolean);
-  for (let i = 0; i < tokens.length; i++) {
-    const line = tokens[i];
-    const parts = line.split('\t');
-    for (const part of parts) {
-      const m = part.match(/^([^:]+):\s*(.+)$/);
-      if (m && knownLabels.includes(m[1].trim())) {
-        const label = m[1].trim();
-        let value = m[2].trim();
-        // EN-Turnierdisziplinen intern auf dieselben deutschen Schlüssel
-        // normalisieren wie alle übrigen Leistungsdaten. Das ist wichtig
-        // für Hauptbegabung, Turnierprofil und Zuchtziel.
-        if (label === 'Begabung') value = normalizeTournamentDisciplineName(value);
-        result[label] = value;
-      }
+
+  // EN-Seiten liefern diesen Block je nach Browser/Kopierweg in mehreren
+  // Formen: einzelne Zeilen, Tabellenspalten per TAB oder beide Zellen in
+  // einer Pipe-/Textzeile (z.B. "Talent: Trot Racing | Disciplines: 99").
+  // Deshalb nicht mehr nur an TAB trennen, sondern die vier bekannten
+  // Labels unabhängig voneinander aus dem kompletten Block herausziehen.
+  const block = lines
+    .slice(startIdx + 1, Math.min(startIdx + 24, lines.length))
+    .filter(Boolean)
+    .join('\n');
+
+  const firstMatch = (patterns) => {
+    for (const re of patterns) {
+      const m = block.match(re);
+      if (m) return String(m[1] || '').trim().replace(/^\*+|\*+$/g, '').trim();
     }
-    if (line === 'Erfahrung' && tokens[i + 1] && /%$/.test(tokens[i + 1])) {
-      result['Erfahrung'] = tokens[i + 1];
+    return null;
+  };
+
+  const talent = firstMatch([
+    /(?:^|[\n|\t])\s*(?:Begabung|Talent)\s*:\s*(.+?)(?=\s*(?:\||\t|\n|Disziplinen\s*:|Disciplines\s*:|$))/im,
+    /(?:Begabung|Talent)\s*:\s*(.+?)\s+(?=(?:Disziplinen|Disciplines)\s*:)/i,
+  ]);
+  const disciplines = firstMatch([
+    /(?:Disziplinen|Disciplines)\s*:\s*([\d.,]+)/i,
+  ]);
+  const overall = firstMatch([
+    /(?:Gesamtpotenzial|Overall\s+potential)\s*:\s*([\d.,]+)/i,
+  ]);
+  const traits = firstMatch([
+    /(?:Grundlagen|Traits)\s*:\s*([\d.,]+)/i,
+  ]);
+
+  if (talent) result.Begabung = normalizeTournamentDisciplineName(talent);
+  if (disciplines) result.Disziplinen = disciplines;
+  if (overall) result.Gesamtpotenzial = overall;
+  if (traits) result.Grundlagen = traits;
+
+  // Erfahrung/Experience kann ebenfalls als Label+Wert oder auf zwei
+  // getrennten Zeilen vorkommen.
+  const experienceDirect = firstMatch([
+    /(?:Erfahrung|Experience)\s*:\s*([\d.,]+\s*%?)/i,
+  ]);
+  if (experienceDirect) {
+    result.Erfahrung = /%$/.test(experienceDirect) ? experienceDirect : `${experienceDirect}%`;
+  } else {
+    const tokens = lines.slice(startIdx + 1, Math.min(startIdx + 28, lines.length)).filter(Boolean);
+    for (let i = 0; i < tokens.length; i++) {
+      if (!/^(?:Erfahrung|Experience)\s*:??$/i.test(String(tokens[i]).trim())) continue;
+      const next = String(tokens[i + 1] || '').trim();
+      if (/^[\d.,]+\s*%$/.test(next)) result.Erfahrung = next;
       break;
     }
   }
+
   return result;
 }
 

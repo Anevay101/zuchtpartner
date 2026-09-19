@@ -1,0 +1,7 @@
+V54.0.70 – EN-Turnierimport robust + Rückkehr zum Pferd
+
+- Competition-potential-Block der englischen MDR-Seite wird nun unabhängig vom Kopierformat erkannt.
+- Unterstützt einzelne Zeilen, TAB-Tabellen, Pipe-Tabellen und gekoppelte EN-Zellen wie Talent + Disciplines bzw. Overall potential + Traits.
+- Begabung wird weiterhin auf den internen deutschen Disziplinschlüssel normalisiert.
+- Beim erneuten Import eines bereits vorhandenen Pferdes führt Speichern anschließend direkt zum Pferd statt zur Datenbankübersicht.
+- Keine Änderung an Supabase-Sync oder Datenmodell.
