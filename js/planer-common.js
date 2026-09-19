@@ -1,153 +1,4 @@
-
-const MDR_TOURNAMENT_DISCIPLINES = {
-  'Dressur': {
-    group: 'Englisch',
-    performance: ['Dressur', 'Schritt', 'Trab', 'Galopp', 'Kraft', 'Präzision', 'Ausdruck'],
-    interior: ['Gelehrigkeit', 'Aufmerksamkeit', 'Intelligenz'],
-  },
-  'Springen': {
-    group: 'Englisch',
-    performance: ['Springen', 'Galopp', 'Beschleunigung', 'Wendigkeit', 'Kondition', 'Kraft', 'Tempo'],
-    interior: ['Furchtlosigkeit', 'Leistungsbereitschaft', 'Temperament'],
-  },
-  'Cross Country': {
-    group: 'Englisch',
-    performance: ['Cross Country', 'Galopp', 'Beschleunigung', 'Wendigkeit', 'Kondition', 'Kraft', 'Tempo'],
-    interior: ['Nervenstärke', 'Aufmerksamkeit', 'Leistungsbereitschaft'],
-  },
-  'Distanz': {
-    group: 'Englisch',
-    performance: ['Distanz', 'Schritt', 'Trab', 'Galopp', 'Kondition', 'Tempo', 'Gelassenheit'],
-    interior: ['Gutmütigkeit', 'Nervenstärke', 'Temperament'],
-  },
-
-  'Flachrennen': {
-    group: 'Rennen',
-    performance: ['Flachrennen', 'Renngalopp', 'Beschleunigung', 'Kondition', 'Tempo', 'Kraft', 'Gelassenheit'],
-    interior: ['Siegeswille', 'Leistungsbereitschaft', 'Temperament'],
-  },
-  'Hindernisrennen': {
-    group: 'Rennen',
-    performance: ['Hindernisrennen', 'Renngalopp', 'Beschleunigung', 'Kondition', 'Tempo', 'Kraft', 'Gelassenheit'],
-    interior: ['Siegeswille', 'Nervenstärke', 'Aufmerksamkeit'],
-  },
-  'Seejagdrennen': {
-    group: 'Rennen',
-    performance: ['Seejagdrennen', 'Renngalopp', 'Beschleunigung', 'Kondition', 'Tempo', 'Kraft', 'Gelassenheit'],
-    interior: ['Siegeswille', 'Nervenstärke', 'Furchtlosigkeit'],
-  },
-  'Trabrennen': {
-    group: 'Rennen',
-    performance: ['Trabrennen', 'Trab', 'Beschleunigung', 'Kondition', 'Tempo', 'Kraft', 'Gelassenheit'],
-    interior: ['Temperament', 'Siegeswille', 'Leistungsbereitschaft'],
-  },
-
-  'Reining': {
-    group: 'Western',
-    performance: ['Reining', 'Schritt', 'Galopp', 'Beschleunigung', 'Wendigkeit', 'Kondition', 'Präzision'],
-    interior: ['Temperament', 'Leistungsbereitschaft', 'Intelligenz'],
-  },
-  'Trail': {
-    group: 'Western',
-    performance: ['Trail', 'Schritt', 'Trab', 'Galopp', 'Wendigkeit', 'Präzision', 'Gelassenheit'],
-    interior: ['Aufmerksamkeit', 'Gelehrigkeit', 'Intelligenz'],
-  },
-  'Pleasure': {
-    group: 'Western',
-    performance: ['Pleasure', 'Schritt', 'Trab', 'Galopp', 'Gelassenheit', 'Ausdruck', 'Präzision'],
-    interior: ['Sozialverhalten', 'Gutmütigkeit', 'Gelehrigkeit'],
-  },
-  'Horsemanship': {
-    group: 'Western',
-    performance: ['Horsemanship', 'Schritt', 'Trab', 'Galopp', 'Gelassenheit', 'Ausdruck', 'Präzision'],
-    interior: ['Gutmütigkeit', 'Gelehrigkeit', 'Intelligenz'],
-  },
-
-  'Cutting': {
-    group: 'Rodeo',
-    performance: ['Cutting', 'Galopp', 'Beschleunigung', 'Wendigkeit', 'Gelassenheit', 'Kraft', 'Tempo'],
-    interior: ['Furchtlosigkeit', 'Nervenstärke', 'Intelligenz'],
-  },
-  'Roping': {
-    group: 'Rodeo',
-    performance: ['Roping', 'Galopp', 'Beschleunigung', 'Präzision', 'Gelassenheit', 'Kraft', 'Tempo'],
-    interior: ['Aufmerksamkeit', 'Furchtlosigkeit', 'Nervenstärke'],
-  },
-  'Pole Bending': {
-    group: 'Rodeo',
-    performance: ['Pole Bending', 'Galopp', 'Beschleunigung', 'Wendigkeit', 'Präzision', 'Kraft', 'Tempo'],
-    interior: ['Leistungsbereitschaft', 'Siegeswille', 'Temperament'],
-  },
-  'Barrel Racing': {
-    group: 'Rodeo',
-    performance: ['Barrel Racing', 'Galopp', 'Beschleunigung', 'Wendigkeit', 'Präzision', 'Kraft', 'Tempo'],
-    interior: ['Leistungsbereitschaft', 'Siegeswille', 'Temperament'],
-  },
-
-  'Dressurfahren': {
-    group: 'Fahren',
-    performance: ['Dressurfahren', 'Schritt', 'Trab', 'Galopp', 'Wendigkeit', 'Präzision', 'Ausdruck'],
-    interior: ['Sozialverhalten', 'Gelehrigkeit', 'Intelligenz'],
-  },
-  'Hindernisfahren': {
-    group: 'Fahren',
-    performance: ['Hindernisfahren', 'Galopp', 'Tempo', 'Wendigkeit', 'Präzision', 'Kondition', 'Kraft'],
-    interior: ['Sozialverhalten', 'Aufmerksamkeit', 'Furchtlosigkeit'],
-  },
-  'Geländefahren': {
-    group: 'Fahren',
-    performance: ['Geländefahren', 'Galopp', 'Tempo', 'Wendigkeit', 'Gelassenheit', 'Kondition', 'Kraft'],
-    interior: ['Sozialverhalten', 'Nervenstärke', 'Furchtlosigkeit'],
-  },
-  'Holzrücken': {
-    group: 'Fahren',
-    performance: ['Holzrücken', 'Schritt', 'Kraft', 'Gelassenheit', 'Kondition', 'Wendigkeit', 'Ausdruck'],
-    interior: ['Nervenstärke', 'Furchtlosigkeit', 'Gutmütigkeit'],
-  },
-
-  'Klassische Dressur': {
-    group: 'Barock',
-    performance: ['Klassische Dressur', 'Schritt', 'Trab', 'Galopp', 'Kraft', 'Präzision', 'Ausdruck'],
-    interior: ['Gelehrigkeit', 'Aufmerksamkeit', 'Intelligenz'],
-  },
-  'Spanische Gänge': {
-    group: 'Barock',
-    performance: ['Spanische Gänge', 'Schritt', 'Trab', 'Wendigkeit', 'Präzision', 'Ausdruck', 'Gelassenheit'],
-    interior: ['Gutmütigkeit', 'Aufmerksamkeit', 'Intelligenz'],
-  },
-  'Schulsprünge': {
-    group: 'Barock',
-    performance: ['Schulsprünge', 'Kraft', 'Präzision', 'Ausdruck', 'Gelassenheit', 'Kondition', 'Wendigkeit'],
-    interior: ['Temperament', 'Leistungsbereitschaft', 'Nervenstärke'],
-  },
-  'Hohe Schule': {
-    group: 'Barock',
-    performance: ['Hohe Schule', 'Schritt', 'Trab', 'Galopp', 'Kraft', 'Präzision', 'Ausdruck'],
-    interior: ['Gelehrigkeit', 'Leistungsbereitschaft', 'Intelligenz'],
-  },
-
-  'Tölt-Prüfung': {
-    group: 'Mehrgang',
-    performance: ['Tölt-Prüfung', 'Tölt', 'Kraft', 'Präzision', 'Ausdruck', 'Kondition', 'Gelassenheit'],
-    interior: ['Gutmütigkeit', 'Sozialverhalten', 'Aufmerksamkeit'],
-  },
-  'Passrennen': {
-    group: 'Mehrgang',
-    performance: ['Passrennen', 'Pass', 'Beschleunigung', 'Kondition', 'Tempo', 'Kraft', 'Gelassenheit'],
-    interior: ['Sozialverhalten', 'Siegeswille', 'Temperament'],
-  },
-  'Foxtrott Pleasure': {
-    group: 'Mehrgang',
-    performance: ['Foxtrott Pleasure', 'Foxtrott', 'Gelassenheit', 'Ausdruck', 'Präzision', 'Kondition', 'Wendigkeit'],
-    interior: ['Gutmütigkeit', 'Sozialverhalten', 'Gelehrigkeit'],
-  },
-  'Racking': {
-    group: 'Mehrgang',
-    performance: ['Racking', 'Rack', 'Tempo', 'Ausdruck', 'Präzision', 'Kondition', 'Beschleunigung'],
-    interior: ['Gutmütigkeit', 'Sozialverhalten', 'Gelehrigkeit'],
-  },
-};
-
+// MDR V54.0.75 – Turnierdefinitionen kommen zentral aus tournament-catalog.js.
 function plannerNorm(value) {
   return String(value ?? '').trim().toLocaleLowerCase('de');
 }
@@ -479,8 +330,7 @@ const MDR_TOURNAMENT_GAITS = ['Schritt','Trab','Galopp','Renngalopp','Tölt','Pa
 function plannerNormalizeDisciplineName(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
-  if (typeof EN_TO_INTERNAL_EXACT !== 'undefined' && EN_TO_INTERNAL_EXACT[raw]) return EN_TO_INTERNAL_EXACT[raw];
-  return raw;
+  return typeof mdrTournamentNormalizeDiscipline === 'function' ? mdrTournamentNormalizeDiscipline(raw) : raw;
 }
 
 function plannerHorseTalent(horse) {
@@ -683,7 +533,7 @@ function plannerApplyBreedingShowSnapshotForSave(payload, beforeRecord=null) {
 }
 
 async function plannerEnsureBreedingShowSnapshots() {
-  if (typeof localGetAll !== 'function' || typeof LOCAL_STORES === 'undefined') return {updated:0};
+  if (typeof localGetAll !== 'function' || typeof LOCAL_STORES === 'undefined') return {updated:0,scanned:0};
   const horses = await localGetAll(LOCAL_STORES.horses);
   const changed = [];
   for (const horse of horses || []) {
@@ -701,12 +551,12 @@ async function plannerEnsureBreedingShowSnapshots() {
       updated_at: horse.updated_at || new Date().toISOString(),
     });
   }
-  if (!changed.length) return {updated:0};
+  if (!changed.length) return {updated:0,scanned:(horses || []).length};
   if (typeof localBulkPut === 'function') await localBulkPut(LOCAL_STORES.horses, changed);
   else if (typeof localPut === 'function') {
     for (const horse of changed) await localPut(LOCAL_STORES.horses, horse);
-  } else return {updated:0};
-  return {updated:changed.length};
+  } else return {updated:0,scanned:(horses || []).length};
+  return {updated:changed.length,scanned:(horses || []).length};
 }
 
 function plannerBreedingShowBase(horse) {

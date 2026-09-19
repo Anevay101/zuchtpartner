@@ -162,12 +162,18 @@ async function requireSession() {
     // blockieren; lokale Einstellungen werden seit V54.0.36 sofort gelesen.
     await ensureMdrStartupReady();
     if (typeof plannerEnsureBreedingShowSnapshots === 'function') {
-      try { await plannerEnsureBreedingShowSnapshots(); }
-      catch (error) { console.warn('ZS-Snapshots konnten nicht vollständig ergänzt werden:', error); }
+      try {
+        const run = () => plannerEnsureBreedingShowSnapshots();
+        if (typeof mdrRunLocalMigrationOnce === 'function') await mdrRunLocalMigrationOnce('zs-snapshots-v54.0.75', run);
+        else await run();
+      } catch (error) { console.warn('ZS-Snapshots konnten nicht vollständig ergänzt werden:', error); }
     }
     if (typeof mdrEnsureLearningFileRules === 'function') {
-      try { await mdrEnsureLearningFileRules(); }
-      catch (error) { console.warn('Lerndatei-Regeln konnten nicht angewendet werden:', error); }
+      try {
+        const run = () => mdrEnsureLearningFileRules();
+        if (typeof mdrRunLocalMigrationOnce === 'function') await mdrRunLocalMigrationOnce('learning-file-rules-v54.0.75', run);
+        else await run();
+      } catch (error) { console.warn('Lerndatei-Regeln konnten nicht angewendet werden:', error); }
     }
     wireLogout();
     return LOCAL_SESSION;

@@ -66,7 +66,7 @@ function mdrApplyLearningOwner(payload, desired, previous = null) {
 }
 
 async function mdrEnsureLearningFileRules() {
-  if (typeof localGetAll !== 'function' || typeof LOCAL_STORES === 'undefined') return { changed: 0, seeded: false };
+  if (typeof localGetAll !== 'function' || typeof LOCAL_STORES === 'undefined') return { changed:0, seeded:false, scanned:0 };
 
   const horses = await localGetAll(LOCAL_STORES.horses);
   const marker = await localGet(LOCAL_STORES.userSettings, MDR_LEARNING_FILE_SEED_KEY).catch(() => null);
@@ -95,7 +95,7 @@ async function mdrEnsureLearningFileRules() {
       rule: 'V54.0.7: vorhandene Lerndatei-Markierung beibehalten; GBH-Schlagwort oder Besitzerkennung (GBH)/(Friedhof) immer Lerndatei; Besitzer von Lerndatei-Pferden = Lerndatei',
     });
   }
-  return { changed, seeded: false };
+  return { changed, seeded:false, scanned:horses.length };
 }
 
 function mdrLearningFileForSave(payload, previous = null) {

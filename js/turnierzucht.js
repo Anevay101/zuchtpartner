@@ -1,40 +1,5 @@
-
-const TURNIERZUCHT_DISCIPLINES = {
-  'Dressur': { group: 'Englisch', interior: ['Gelehrigkeit', 'Aufmerksamkeit', 'Intelligenz'] },
-  'Springen': { group: 'Englisch', interior: ['Furchtlosigkeit', 'Leistungsbereitschaft', 'Temperament'] },
-  'Cross Country': { group: 'Englisch', interior: ['Nervenstärke', 'Aufmerksamkeit', 'Leistungsbereitschaft'] },
-  'Distanz': { group: 'Englisch', interior: ['Gutmütigkeit', 'Nervenstärke', 'Temperament'] },
-
-  'Flachrennen': { group: 'Rennen', interior: ['Siegeswille', 'Leistungsbereitschaft', 'Temperament'] },
-  'Hindernisrennen': { group: 'Rennen', interior: ['Siegeswille', 'Nervenstärke', 'Aufmerksamkeit'] },
-  'Seejagdrennen': { group: 'Rennen', interior: ['Siegeswille', 'Nervenstärke', 'Furchtlosigkeit'] },
-  'Trabrennen': { group: 'Rennen', interior: ['Temperament', 'Siegeswille', 'Leistungsbereitschaft'] },
-
-  'Reining': { group: 'Western', interior: ['Temperament', 'Leistungsbereitschaft', 'Intelligenz'] },
-  'Trail': { group: 'Western', interior: ['Aufmerksamkeit', 'Gelehrigkeit', 'Intelligenz'] },
-  'Pleasure': { group: 'Western', interior: ['Sozialverhalten', 'Gutmütigkeit', 'Gelehrigkeit'] },
-  'Horsemanship': { group: 'Western', interior: ['Gutmütigkeit', 'Gelehrigkeit', 'Intelligenz'] },
-
-  'Cutting': { group: 'Rodeo', interior: ['Furchtlosigkeit', 'Nervenstärke', 'Intelligenz'] },
-  'Roping': { group: 'Rodeo', interior: ['Aufmerksamkeit', 'Furchtlosigkeit', 'Nervenstärke'] },
-  'Pole Bending': { group: 'Rodeo', interior: ['Leistungsbereitschaft', 'Siegeswille', 'Temperament'] },
-  'Barrel Racing': { group: 'Rodeo', interior: ['Leistungsbereitschaft', 'Siegeswille', 'Temperament'] },
-
-  'Dressurfahren': { group: 'Fahren', interior: ['Sozialverhalten', 'Gelehrigkeit', 'Intelligenz'] },
-  'Hindernisfahren': { group: 'Fahren', interior: ['Sozialverhalten', 'Aufmerksamkeit', 'Furchtlosigkeit'] },
-  'Geländefahren': { group: 'Fahren', interior: ['Sozialverhalten', 'Nervenstärke', 'Furchtlosigkeit'] },
-  'Holzrücken': { group: 'Fahren', interior: ['Nervenstärke', 'Furchtlosigkeit', 'Gutmütigkeit'] },
-
-  'Klassische Dressur': { group: 'Barock', interior: ['Gelehrigkeit', 'Aufmerksamkeit', 'Intelligenz'] },
-  'Spanische Gänge': { group: 'Barock', interior: ['Gutmütigkeit', 'Aufmerksamkeit', 'Intelligenz'] },
-  'Schulsprünge': { group: 'Barock', interior: ['Temperament', 'Leistungsbereitschaft', 'Nervenstärke'] },
-  'Hohe Schule': { group: 'Barock', interior: ['Gelehrigkeit', 'Leistungsbereitschaft', 'Intelligenz'] },
-
-  'Tölt-Prüfung': { group: 'Mehrgang', interior: ['Gutmütigkeit', 'Sozialverhalten', 'Aufmerksamkeit'] },
-  'Passrennen': { group: 'Mehrgang', interior: ['Sozialverhalten', 'Siegeswille', 'Temperament'] },
-  'Foxtrott Pleasure': { group: 'Mehrgang', interior: ['Gutmütigkeit', 'Sozialverhalten', 'Gelehrigkeit'] },
-  'Racking': { group: 'Mehrgang', interior: ['Gutmütigkeit', 'Sozialverhalten', 'Gelehrigkeit'] },
-};
+// MDR V54.0.75 – zentrale Disziplin-/Gruppendefinitionen verwenden.
+const TURNIERZUCHT_DISCIPLINES = MDR_TOURNAMENT_DISCIPLINES;
 
 const TURNIERZUCHT_ALL_INTERIOR = [
   'Temperament', 'Intelligenz', 'Gelehrigkeit', 'Leistungsbereitschaft',
@@ -48,10 +13,7 @@ function turnierzuchtNormalizeDiscipline(value) {
   // EN-Pferde können in älteren gespeicherten Datensätzen die Begabung
   // noch auf Englisch tragen, obwohl die Disziplin-Gruppen bereits auf
   // interne deutsche Schlüssel normalisiert sind.
-  if (typeof EN_TO_INTERNAL_EXACT !== 'undefined' && EN_TO_INTERNAL_EXACT[raw]) {
-    return EN_TO_INTERNAL_EXACT[raw];
-  }
-  return raw;
+  return typeof mdrTournamentNormalizeDiscipline === 'function' ? mdrTournamentNormalizeDiscipline(raw) : raw;
 }
 
 function turnierzuchtMainGroup(horse) {

@@ -1,0 +1,11 @@
+V54.0.75 – Modulsplit, zentraler Turnierkatalog & einmalige Migrationen
+
+- parser.js in echten Copy/Paste-Parser und gemeinsame horse-data-utils.js getrennt. Seiten ohne Pferdeseiten-Import laden den Parser nicht mehr.
+- horseForm.js verkleinert: reine Detail-/Genetik-/Stammbaumdarstellung und Tab-Helfer nach horse-detail-render.js ausgelagert.
+- view.html lädt horseForm.js und parser.js nicht mehr; die reine Pferdeansicht lädt nur Anzeige-/Datenhelfer.
+- Zentraler tournament-catalog.js für alle 28 Turnierdisziplinen, Gruppen sowie Grundlagen/Gangarten. Interne deutsche Schlüssel bleiben unverändert; EN-Anzeigen und Parser-Aliase stammen aus einer Quelle.
+- Englische Varianten wie Show Jumping/Showjumping und Steeplechase/Steeplechasing werden weiterhin tolerant auf dieselben internen Schlüssel normalisiert.
+- i18n zweistufig geladen: der kleine i18n.js-Kern bleibt immer aktiv, die große i18n-en.js-Wortliste wird nur bei tatsächlich gewählter EN-Oberfläche geladen.
+- ZS-Snapshot-Bestandsmigration und Lerndatei-Regelprüfung erhalten lokale Versionsmarker und scannen einen bereits migrierten Bestand nicht bei jedem Seitenstart erneut.
+- Leerer/offline noch nicht gefüllter Cache setzt bewusst keinen Migrationsmarker, damit die Prüfung beim nächsten Start mit Daten nachgeholt werden kann.
+- Keine Änderung an Supabase-Schema, Delta-/Manifest-Sync oder fachlichen Turnier-/Zuchtberechnungen.

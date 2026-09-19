@@ -1,4 +1,4 @@
-/* MDR V54.0.74 – zentrale Spielwelt- und Pfadhelfer.
+/* MDR V54.0.75 – zentrale Spielwelt- und Pfadhelfer.
    Fachlogik bleibt in den jeweiligen Modulen; hier werden nur wiederkehrende
    Infrastrukturregeln gebündelt, damit DE/EN und interne Seitenpfade überall
    konsistent ausgewertet werden. */
@@ -71,6 +71,23 @@
     return (location.pathname.split('/').pop() || ROUTES.database).toLowerCase();
   }
 
+  const LOCAL_MIGRATION_PREFIX = 'mdr-local-migration-v1:';
+
+  async function runLocalMigrationOnce(key, runner) {
+    const storageKey = `${LOCAL_MIGRATION_PREFIX}${String(key || '').trim()}`;
+    try {
+      if (localStorage.getItem(storageKey)) return { skipped:true, migration:key };
+    } catch {}
+    const result = await runner();
+    // Bei einem leeren/offline noch nicht gefüllten Cache nicht markieren:
+    // dann darf die Migration beim nächsten Start mit Daten erneut laufen.
+    const completed = result?.completed === true || Number(result?.scanned || 0) > 0;
+    if (completed) {
+      try { localStorage.setItem(storageKey, JSON.stringify({ completed_at:new Date().toISOString() })); } catch {}
+    }
+    return result;
+  }
+
   function safeInternalRoute(value, fallback = 'database') {
     const fallbackFile = ROUTES[fallback] || ROUTES.database;
     const raw = String(value || '').trim();
@@ -91,6 +108,7 @@
     route,
     currentPage,
     safeInternalRoute,
+    runLocalMigrationOnce,
   });
 
   window.MDR_CORE = api;
@@ -100,4 +118,5 @@
   window.mdrGameHost = horseGameHost;
   window.mdrRoute = route;
   window.mdrSafeInternalRoute = safeInternalRoute;
+  window.mdrRunLocalMigrationOnce = runLocalMigrationOnce;
 })();

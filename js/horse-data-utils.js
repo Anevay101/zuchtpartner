@@ -1,0 +1,1241 @@
+// MDR V54.0.75 – gemeinsame Pferdedaten-Helfer.
+// Aus parser.js herausgezogen, damit Seiten ohne Copy/Paste-Parser nur die
+// tatsächlich wiederverwendeten Daten-/Genetik-/Filterfunktionen laden.
+
+const BREED_ABBREVIATIONS = {
+  APH: 'American Paint Horse',
+  Knab: 'Knabstupper',
+  Anda: 'Andalusier',
+  Lusi: 'Lusitano',
+  QH: 'Quarter Horse',
+  DRP: 'Deutsches Reitpony',
+};
+
+
+function normalizeColorLocusLabel(label) {
+  const raw = String(label || '').trim();
+  if (!raw) return raw;
+  const key = raw
+    .toLowerCase()
+    .replace(/[()\[\]{}:_-]+/g, ' ')
+    .replace(/[\/]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const aliases = {
+    'extension': 'Extension',
+    'extension gene': 'Extension',
+    'red black extension': 'Extension',
+    'agouti': 'Agouti',
+    'agouti gene': 'Agouti',
+    'cream': 'Cream',
+    'cream gene': 'Cream',
+    'cream pearl': 'Cream',
+    'pearl cream': 'Cream',
+    'pearl': 'Cream',
+    'dun': 'Dun',
+    'dun gene': 'Dun',
+    'champagne': 'Champagne',
+    'champagne gene': 'Champagne',
+    'grey': 'Grey',
+    'gray': 'Grey',
+    'grey gene': 'Grey',
+    'gray gene': 'Grey',
+    'silver': 'Silver',
+    'silver gene': 'Silver',
+    'silver dapple': 'Silver',
+    'appaloosa': 'Appaloosa',
+    'leopard': 'Appaloosa',
+    'leopard complex': 'Appaloosa',
+    'leopard complex lp': 'Appaloosa',
+    'lp': 'Appaloosa',
+    'patn1': 'PATN1',
+    'patn 1': 'PATN1',
+    'pattern1': 'PATN1',
+    'pattern 1': 'PATN1',
+    'pattern gene 1': 'PATN1',
+    'overo': 'Overo',
+    'frame overo': 'Overo',
+    'splashed': 'Splashed',
+    'splashed white': 'Splashed',
+    'splash white': 'Splashed',
+    'splash': 'Splashed',
+    'kit': 'KIT',
+    'c kit': 'KIT',
+    'ckit': 'KIT',
+    'kit locus': 'KIT',
+    'flaxen': 'Flaxen',
+  };
+  return aliases[key] || raw;
+}
+
+function normalizeColorGenotypeValue(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return raw;
+  if (/^(?:nicht getestet|not tested|untested|unknown|not analy[sz]ed)$/i.test(raw)) return 'Nicht getestet';
+  // Trenner unterscheiden sich zwischen DE/EN-Ansichten. Intern arbeiten
+  // die Farbhelfer mit kompakten Allelpaaren; die eigentlichen Allelcodes
+  // bleiben unverändert.
+  return raw.replace(/\s+/g, '').replace(/[\/|]/g, '');
+}
+
+
+function normalizeBreed(value) {
+  if (!value) return value;
+  const trimmed = value.trim();
+  const abbrKey = Object.keys(BREED_ABBREVIATIONS).find((abbr) => abbr.toLowerCase() === trimmed.toLowerCase());
+  return abbrKey ? BREED_ABBREVIATIONS[abbrKey] : trimmed;
+}
+
+
+// V46: sichtbares Appaloosa-Muster als eigener Phänotyp.
+// Dieses Feld ist KEIN Gentest. Es ergänzt LP/PATN, weil z.B. p1p1 allein
+// nicht sagt, ob PATN2 oder gar kein PATN vorliegt.
+const APPALOOSA_PATTERN_OPTIONS = [
+  'Leopard',
+  'Few Spot',
+  'Spotted Blanket',
+  'Snowcap',
+  'Varnish Roan',
+  'Snowflake',
+  'anderes / unklar',
+];
+
+function detectAppaloosaPatternFromCoatColor(value) {
+  const s = String(value || '');
+  if (/few\s*spot|fewspot/i.test(s)) return 'Few Spot';
+  if (/snowcap/i.test(s)) return 'Snowcap';
+  if (/spotted\s*blanket|\bblanket\b/i.test(s)) return 'Spotted Blanket';
+  if (/varnish\s*roan/i.test(s)) return 'Varnish Roan';
+  if (/snowflake/i.test(s)) return 'Snowflake';
+  if (/\bleopard\b/i.test(s)) return 'Leopard';
+  return null;
+}
+
+// V54.0.37: kompakte P1/P2/P3-Logik aus der MDR-Patterntafel.
+// P1 ist als PATN1 testbar. P2/P3 werden NICHT als Gentest gespeichert,
+// sondern nur aus dem sichtbaren Muster logisch abgeleitet. Ein höheres
+// Pattern kann darunterliegende Pattern verdecken; deshalb bleibt dort
+// bewusst "?" statt einen Genotyp zu erfinden.
+function normalizePatn1Genotype(value) {
+  const s = String(value || '').replace(/\s+/g, '');
+  if (s === 'P1P1') return 'P1P1';
+  if (s === 'P1p1' || s === 'p1P1') return 'P1p1';
+  if (s === 'p1p1') return 'p1p1';
+  return null;
+}
+
+function appaloosaPatternState(patternValue, patn1Value) {
+  const pattern = APPALOOSA_PATTERN_OPTIONS.includes(String(patternValue || '').trim())
+    ? String(patternValue || '').trim()
+    : detectAppaloosaPatternFromCoatColor(patternValue);
+
+  const states = { P1: 'unknown', P2: 'unknown', P3: 'unknown' };
+  if (pattern === 'Leopard' || pattern === 'Few Spot') {
+    states.P1 = 'yes';
+  } else if (pattern === 'Spotted Blanket' || pattern === 'Snowcap') {
+    states.P1 = 'no';
+    states.P2 = 'yes';
+  } else if (pattern === 'Varnish Roan') {
+    states.P1 = 'no';
+    states.P2 = 'no';
+    states.P3 = 'yes';
+  } else if (pattern === 'Snowflake') {
+    states.P1 = 'no';
+    states.P2 = 'no';
+    states.P3 = 'no';
+  }
+
+  const testedP1 = normalizePatn1Genotype(patn1Value);
+  let contradiction = false;
+  if (testedP1) {
+    const testedState = testedP1 === 'p1p1' ? 'no' : 'yes';
+    if (states.P1 !== 'unknown' && states.P1 !== testedState) contradiction = true;
+    states.P1 = testedState;
+  }
+
+  return { pattern, states, testedP1, contradiction };
+}
+
+function appaloosaPatternStateForHorse(horse) {
+  const pattern = String(horse?.appaloosa_pattern || '').trim()
+    || detectAppaloosaPatternFromCoatColor(horse?.coat_color);
+  const patn1 = (horse?.colors || []).find((r) => r?.label === 'PATN1')?.value;
+  const lp = (horse?.colors || []).find((r) => r?.label === 'Appaloosa')?.value;
+  const result = appaloosaPatternState(pattern, patn1);
+  const relevant = Boolean(
+    result.pattern || normalizePatn1Genotype(patn1) ||
+    /Lp/i.test(String(lp || '')) ||
+    /appaloosa|leopard|few\s*spot|blanket|snowcap|varnish|snowflake/i.test(String(horse?.coat_color || ''))
+  );
+  return { ...result, relevant };
+}
+
+
+// --- Bewertungsskalen für Exterieur (Körperbau) und Interieur (Mentalität) ---
+//
+// Exterieur folgt einer symmetrischen 9-stufigen Skala um "exzellent" (Mitte)
+// herum: exzellent=1, gut=2, passabel=3, "zu X"=4, "viel zu X"=5 (bzw.
+// eigene Begriffe wie Speckhals/Hirschhals). Reihenfolge der Prüfung ist
+// wichtig: spezifischere/extremere Begriffe zuerst, sonst würde z.B.
+// "viel zu klein" schon bei der Prüfung auf "zu klein" (4) hängen bleiben.
+// "hoch" wird bei Beugung (z.B. "zu hoher Halsansatz") zu "hoh-" (das
+// zweite "c" fällt weg) - "hoh" deckt das zusätzlich zur unveränderten
+// Form ab. "eng" fehlte bisher komplett (z.B. "Zu enge Brust"), dadurch
+// wurden solche Zeilen von averageScore() stillschweigend übersprungen
+// statt als schlechter Wert gezählt - hat den Ext-Durchschnitt künstlich
+// zu gut aussehen lassen.
+const EXTERIOR_TERM_SCORES = [
+  [/viel zu (klein|groß|tief|hoch|hoh|flach|steil|schmal|breit|eng|kurz|lang|weich|hart)/i, 5],
+  [/starker (unterbiss|überbiss|senkrücken|karpfenrücken)/i, 5],
+  [/speckhals|hirschhals|zeheneng|zehenweit/i, 5],
+  [/zu (klein|groß|tief|hoch|hoh|flach|steil|schmal|breit|eng|kurz|lang|weich|hart)/i, 4],
+  [/unterbiss|überbiss|senkrücken|karpfenrücken|schwanenhals|dicker hals|bodeneng|bodenweit/i, 4],
+  [/passab/i, 3],
+  [/exzellent/i, 1],
+  [/\bgut/i, 2],
+  // EN-Version: die häufigsten beschreibenden Qualitätsstufen/Faults
+  [/\bexcellent\b/i, 1],
+  [/\bgood\b/i, 2],
+  [/\bacceptable\b/i, 3],
+  [/\b(steep|flat|wide|narrow|short|long|low|high|weak|hard)\b/i, 4],
+];
+
+// Interieur: Exzellent=1, Gut=2, In Ordnung=3, Schlecht=4 (vom Nutzer vorgegeben).
+const TEMPERAMENT_TERM_SCORES = [
+  [/exzellent|\bexcellent\b/i, 1],
+  [/ordnung|\bokay\b|\bacceptable\b/i, 3],
+  [/schlecht|\bbad\b/i, 4],
+  [/miserabel|\bmiserable\b/i, 5],
+  [/\bgut\b|\bgood\b/i, 2],
+];
+
+function scoreTerm(text, table) {
+  if (!text) return null;
+  for (const [re, score] of table) {
+    if (re.test(text)) return score;
+  }
+  return null;
+}
+
+function scoreExteriorTerm(text) {
+  return scoreTerm(text, EXTERIOR_TERM_SCORES);
+}
+
+function scoreTemperamentTerm(text) {
+  return scoreTerm(text, TEMPERAMENT_TERM_SCORES);
+}
+
+// Durchschnitt über eine Liste von {label, value}-Zeilen, anhand einer
+// Bewertungsfunktion, die den Textwert in eine Zahl übersetzt. Zeilen, die
+// sich keinem bekannten Begriff zuordnen lassen, werden ignoriert.
+function averageScore(rows, scoreFn) {
+  if (!rows || !rows.length) return null;
+  const scores = rows.map((r) => scoreFn(r.value)).filter((s) => s !== null && s !== undefined);
+  if (!scores.length) return null;
+  return scores.reduce((a, b) => a + b, 0) / scores.length;
+}
+
+// Wandelt einen Bruch-Score wie "10/16" in einen Prozentwert um.
+function fractionToPercent(scoreStr) {
+  const m = /^(\d+)\s*\/\s*(\d+)$/.exec(scoreStr || '');
+  if (!m) return null;
+  return (parseInt(m[1], 10) / parseInt(m[2], 10)) * 100;
+}
+
+// Wenn ein Locus nicht getestet ist, lässt sich daraus trotzdem manchmal ein
+// Mindestbestand ableiten - aus der sichtbaren Fellfarbe, aus der Notiz
+// oder (nur bei Sooty) aus dem Namen. Nur eindeutige Begriffe werden
+// ausgewertet - "Pinto" z.B. bleibt bewusst unberücksichtigt, da es für
+// Overo, Splashed, Tobiano oder Sabino stehen kann und sich nicht sicher
+// einem einzelnen Gen zuordnen lässt.
+//
+// Reihenfolge ist wichtig: spezifischere Begriffe zuerst, damit z.B.
+// "Schwarzbraun"/"Wildbraun" nicht fälschlich die generische "Braun"-Regel
+// auslösen, und "Varnish Roan" nicht als das separate cKit-Gen "Roan"
+// erkannt wird. Jeder Treffer entfernt seinen Text aus der Arbeitskopie.
+const PHENOTYPE_GENE_HINTS = [
+  // Mehrwort-Kombinationsnamen IMMER zuerst prüfen, vor allen Basisfarben-/
+  // Verdünnungs-Einzelmustern weiter unten - und innerhalb dieser Gruppe
+  // immer die längeren/spezifischeren Namen vor den kürzeren, in denen sie
+  // enthalten sind (z.B. "Sealbrown Cream Dun" vor "Sealbrown Cream" vor
+  // "Sealbrown"). Sonst würde das kürzere Muster schon einen Teil des
+  // Textes konsumieren, bevor die spezifischere Kombination geprüft wird,
+  // und diese würde nie mehr (oder nur unvollständig) zutreffen.
+  //
+  // "Classic Dun" ist im Spiel doppeldeutig: in der einfachen
+  // Aufhellungs-Tabelle steht es für Bay+Dun, in der Tabelle der
+  // doppelten Aufhellungen dagegen für Black+Dun+Champagne. Da sich das
+  // allein am Namen nicht unterscheiden lässt, wird hier bewusst nur Dun
+  // abgeleitet (auf Nummer sicher) - Extension/Agouti/Champagne bleiben
+  // offen und sollen stattdessen aus getesteten Loci bzw. der Notiz
+  // kommen. Die eindeutigen 3-Wort-Varianten "Classic Dun Cream"/"Classic
+  // Dun Pearl" (nur bei Basis Black dokumentiert) sind davon nicht
+  // betroffen und werden vollständig aufgelöst.
+  // "Gold" ist doppeldeutig: allein bzw. als "Gold Champagne" bedeutet es
+  // Chestnut+Champagne (siehe unten), als "Gold Chestnut"/"Gold Bay" ist
+  // es dagegen nur eine Schattierung (Helligkeitsstufe) OHNE Champagne -
+  // diese beiden Faelle muessen daher zuerst abgefangen werden, sonst
+  // wuerde faelschlich Champagne abgeleitet.
+  { pattern: /\bgold chestnut\b/i, label: 'Gold Chestnut (Chestnut-Schattierung, keine Champagne)', hints: [{ locus: 'Extension', allele: 'ee' }] },
+  { pattern: /\bgold bay\b/i, label: 'Gold Bay (Schattierung, keine Champagne)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }] },
+  { pattern: /\bgold dun cream\b/i, label: 'Gold Dun Cream (Chestnut-Dun-Champagne-Cream)', hints: [{ locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bgold dun pearl\b/i, label: 'Gold Dun Pearl (Chestnut-Dun-Champagne-Pearl)', hints: [{ locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bamber dun cream\b/i, label: 'Amber Dun Cream (Bay-Dun-Champagne-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bamber dun pearl\b/i, label: 'Amber Dun Pearl (Bay-Dun-Champagne-Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bsable dun cream\b/i, label: 'Sable Dun Cream (Sealbrown-Dun-Champagne-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bsable dun pearl\b/i, label: 'Sable Dun Pearl (Sealbrown-Dun-Champagne-Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bsealbrown cream dun\b/i, label: 'Sealbrown Cream Dun (Sealbrown-Dun-doppel-Cream/Cream+Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Dun', allele: 'D' }, { locus: 'Cream', allele: 'CrCr' }], ambiguousCream: true },
+  { pattern: /\bsealbrown cream champagne\b/i, label: 'Sealbrown Cream Champagne (Sealbrown-Champagne-doppel-Cream/Cream+Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'CrCr' }], ambiguousCream: true },
+  { pattern: /\bclassic dun cream\b/i, label: 'Classic Dun Cream (Black-Dun-Champagne-doppel-Cream/Cream+Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'CrCr' }], ambiguousCream: true },
+  { pattern: /\bclassic dun pearl\b/i, label: 'Classic Dun Pearl (Black-Dun-Champagne-Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bsmoky brown dun\b/i, label: 'Smoky Brown Dun (Sealbrown-Dun-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Dun', allele: 'D' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bsmoky cream dun\b/i, label: 'Smoky Cream Dun (Black-Dun-doppel-Cream/Cream+Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Dun', allele: 'D' }, { locus: 'Cream', allele: 'CrCr' }], ambiguousCream: true },
+  { pattern: /\bpearl bay dun\b/i, label: 'Pearl Bay Dun (Bay-Dun-Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Dun', allele: 'D' }, { locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bpearl brown dun\b/i, label: 'Pearl Brown Dun (Sealbrown-Dun-Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Dun', allele: 'D' }, { locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bpearl black dun\b/i, label: 'Pearl Black Dun (Black-Dun-Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Dun', allele: 'D' }, { locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bwild dunskin\b/i, label: 'Wild Dunskin (Wildbay-Dun-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'Ap' }, { locus: 'Dun', allele: 'D' }, { locus: 'Cream', allele: 'Cr' }] },
+
+  { pattern: /\bsealbrown cream\b/i, label: 'Sealbrown Cream (Sealbrown-doppel-Cream/Cream+Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Cream', allele: 'CrCr' }], ambiguousCream: true },
+  { pattern: /\bsmoky brown\b/i, label: 'Smoky Brown (Sealbrown-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bsmoky black\b/i, label: 'Smoky Black (Black-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bsmoky cream\b/i, label: 'Smoky Cream (Black-doppel-Cream/Cream+Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Cream', allele: 'CrCr' }], ambiguousCream: true },
+  { pattern: /\bclassic dun\b/i, label: 'Classic Dun (Bay-Dun, mehrdeutig - siehe getestete Loci/Notiz)', hints: [{ locus: 'Dun', allele: 'D' }] },
+  { pattern: /\bsmoky grulla\b/i, label: 'Smoky Grulla (Black-Dun-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Dun', allele: 'D' }, { locus: 'Cream', allele: 'Cr' }] },
+
+  { pattern: /\bdunalino\b/i, label: 'Dunalino (Chestnut-Dun-Cream)', hints: [{ locus: 'Dun', allele: 'D' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bgold dun\b/i, label: 'Gold Dun (Chestnut-Dun-Champagne)', hints: [{ locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }] },
+  { pattern: /\bgold cream\b/i, label: 'Gold Cream (Chestnut-Champagne-Cream)', hints: [{ locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bapricot dun\b/i, label: 'Apricot Dun (Chestnut-Dun-Pearl)', hints: [{ locus: 'Dun', allele: 'D' }, { locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bgold pearl\b/i, label: 'Gold Pearl (Chestnut-Champagne-Pearl)', hints: [{ locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bcremello dun\b/i, label: 'Cremello Dun (Chestnut-Dun-doppel-Cream/Cream+Pearl)', hints: [{ locus: 'Dun', allele: 'D' }, { locus: 'Cream', allele: 'CrCr' }], ambiguousCream: true },
+  { pattern: /\bcremello champagne\b/i, label: 'Cremello Champagne (Chestnut-Champagne-doppel-Cream/Cream+Pearl)', hints: [{ locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'CrCr' }], ambiguousCream: true },
+  { pattern: /\bdunskin\b/i, label: 'Dunskin (Bay-Dun-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Dun', allele: 'D' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bamber dun\b/i, label: 'Amber Dun (Bay-Dun-Champagne)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }] },
+  { pattern: /\bamber cream\b/i, label: 'Amber Cream (Bay-Champagne-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'Cr' }] },
+  // Laut MDR-Doku wird derselbe Name ("Perlino Champagne") sowohl für die
+  // Kombination mit doppeltem Cream als auch für Champagne+Pearl benutzt
+  // (visuell kaum zu unterscheiden) - hier anhand der Beispielformel in
+  // der Doku als Champagne+Pearl abgelegt.
+  { pattern: /\bperlino champagne\b/i, label: 'Perlino Champagne (Bay-Champagne-Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bsable dun\b/i, label: 'Sable Dun (Sealbrown-Dun-Champagne)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }] },
+  { pattern: /\bsable cream\b/i, label: 'Sable Cream (Sealbrown-Champagne-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bsable pearl\b/i, label: 'Sable Pearl (Sealbrown-Champagne-Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bclassic cream\b/i, label: 'Classic Cream (Black-Champagne-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bclassic pearl\b/i, label: 'Classic Pearl (Black-Champagne-Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'plpl' }] },
+
+  // Basisfarbe + Verdünnung: diese Namen setzen laut MDR-Farbvererbung
+  // zwingend bestimmte Allele voraus.
+  { pattern: /grulla/i, label: 'Grulla', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Dun', allele: 'D' }] },
+  { pattern: /wild\s*bay|wildbay|wildbraun/i, label: 'Wildbay', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'Ap' }] },
+  { pattern: /seal\s*brown|sealbrown|schwarzbraun|\bbrown\b/i, label: 'Sealbrown/Brown', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }] },
+  { pattern: /\b(bay|braun)\b/i, label: 'Bay', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }] },
+
+  // Cream-Kombinationsnamen: einfache (Crcr) und doppelte (CrCr) Aufhellung
+  // sind unterschiedliche Namen, daher je Basisfarbe eigene Einträge statt
+  // sich auf das allgemeine "Cream"-Muster zu verlassen (das nur die
+  // einfache Aufhellung abbildet). Die "doppelte" Aufhellung (Cremello/
+  // Perlino/Smoky Cream/...) sieht aber optisch identisch aus, egal ob
+  // das Pferd reinerbig CrCr ist ODER je 1x Cream UND Pearl (Cr+pl,
+  // dasselbe Cream-Aufhellungs-Aussehen wie CrCr) trägt. Standardmäßig
+  // wird deshalb weiterhin CrCr (reinerbig) abgeleitet - nur wenn ein
+  // Elternteil selbst nachweislich pl trägt (einfach ODER reinerbig, ob
+  // getestet oder abgeleitet, siehe parentsMightHavePearl in
+  // horseForm.js), könnte das zweite "Cr" tatsächlich ein "pl" sein;
+  // "ambiguousCream: true" markiert genau diese Einträge, damit
+  // inferGeneticHintsFromPhenotype dann auf das vorsichtigere "Cr"
+  // (mindestens 1x, nicht zwingend reinerbig) herunterstuft.
+  { pattern: /\bpalomino\b/i, label: 'Palomino (Chestnut-Cream)', hints: [{ locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bcremello\b/i, label: 'Cremello (Chestnut-doppel-Cream/Cream+Pearl)', hints: [{ locus: 'Cream', allele: 'CrCr' }], ambiguousCream: true },
+  { pattern: /\bbuckskin\b/i, label: 'Buckskin (Bay-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bperlino\b/i, label: 'Perlino (Bay-doppel-Cream/Cream+Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Cream', allele: 'CrCr' }], ambiguousCream: true },
+  { pattern: /smoky/i, label: 'Smoky', hints: [{ locus: 'Cream', allele: 'Cr' }] },
+
+  // Champagne-Kombinationsnamen: der Name kombiniert Basisfarbe +
+  // Champagne, daher immer beide Loci mit ableiten. "Classic Dun" wird
+  // oben bereits vorher abgefangen, sonst würde es hier fälschlich als
+  // Champagne statt als Dun erkannt.
+  { pattern: /\bsable\b/i, label: 'Sable (Sealbrown-Champagne)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Champagne', allele: 'Ch' }] },
+  { pattern: /\bgold\b/i, label: 'Gold (Chestnut-Champagne)', hints: [{ locus: 'Champagne', allele: 'Ch' }] },
+  { pattern: /\bamber\b/i, label: 'Amber (Bay-Champagne)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Champagne', allele: 'Ch' }] },
+  { pattern: /\bclassic\b/i, label: 'Classic (Black-Champagne)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Champagne', allele: 'Ch' }] },
+
+  // Muster, Scheckungen und sonstige Merkmale (volle Begriffe).
+  { pattern: /varnish roan/i, label: 'Varnish Roan', hints: [{ locus: 'Appaloosa', allele: 'Lp' }] },
+  { pattern: /\bchampagne\b/i, label: 'Champagne', hints: [{ locus: 'Champagne', allele: 'Ch' }] },
+  { pattern: /\broan\b/i, label: 'Roan', hints: [{ locus: 'KIT', allele: 'Rn' }] },
+  { pattern: /\btovero\b/i, label: 'Tovero (Tobiano + Overo)', hints: [{ locus: 'KIT', allele: 'To' }, { locus: 'Overo', allele: 'O' }] },
+  { pattern: /\btobiano\b/i, label: 'Tobiano', hints: [{ locus: 'KIT', allele: 'To' }] },
+  { pattern: /\bsabino\b/i, label: 'Sabino', hints: [{ locus: 'KIT', allele: 'Sb' }] },
+  { pattern: /\bovero\b/i, label: 'Overo', hints: [{ locus: 'Overo', allele: 'O' }] },
+  { pattern: /\bsplashed\b/i, label: 'Splashed White', hints: [{ locus: 'Splashed', allele: 'SPL' }] },
+  { pattern: /\bsilver\b/i, label: 'Silver', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Silver', allele: 'Z' }] },
+  { pattern: /\bpangare\b/i, label: 'Pangare', hints: [{ locus: 'Pangare', allele: 'Pa' }] },
+  { pattern: /\bdun\b/i, label: 'Dun', hints: [{ locus: 'Dun', allele: 'D' }] },
+  { pattern: /\bcream\b/i, label: 'Cream', hints: [{ locus: 'Cream', allele: 'Cr' }] },
+  // Pearl zeigt sich sichtbar nur reinerbig (plpl) - wenn der Name also
+  // "Pearl"/"Apricot" lautet, ist das Gen doppelt vorhanden, nicht nur
+  // einfach getragen.
+  { pattern: /\b(pearl|apricot)\b/i, label: 'Pearl', hints: [{ locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /flaxentr[äa]ger/i, label: 'Flaxenträger', hints: [{ locus: 'Flaxen', allele: 'fl' }] },
+  { pattern: /\bflaxen\b/i, label: 'Flaxen', hints: [{ locus: 'Flaxen', allele: 'flfl' }] },
+  { pattern: /\bsooty\b/i, label: 'Sooty', hints: [{ locus: 'Sooty', allele: 'sty' }] },
+  { pattern: /\brabicano\b/i, label: 'Rabicano', hints: [{ locus: 'Rabicano', allele: 'rc' }] },
+  { pattern: /\bgr[ae]y\b/i, label: 'Grey', hints: [{ locus: 'Grey', allele: 'G' }] },
+  { pattern: /\b(leopard|few\s*spot|fewspot|spotted\s*blanket|blanket|snowcap|snowflake)\b/i, label: 'Leopard-Musterung', hints: [{ locus: 'Appaloosa', allele: 'Lp' }]},
+  { pattern: /\bappaloosa\b/i, label: 'Appaloosa-Scheckung', hints: [{ locus: 'Appaloosa', allele: 'Lp' }]},
+
+  // Kurzkürzel, wie sie z.B. direkt in einer Notiz stehen könnten (z.B.
+  // "SPL" oder "SB" statt der vollen Wörter). Groß-/Kleinschreibung wird
+  // ignoriert (Notizen werden oft locker/klein getippt) - nur als
+  // eigenständiges Wort (\b), um Zufallstreffer in normalem Fließtext zu
+  // vermeiden. Die Kürzel selbst sind keine echten deutschen Wörter, daher
+  // ist das Risiko von Fehltreffern auch ohne Groß-/Kleinschreibung gering.
+  // Doppelt geschriebene Kürzel (z.B. "SPLSPL" statt "SPL") bedeuten
+  // reinerbig/homozygot - werden vor dem jeweiligen Einzel-Kürzel geprüft
+  // und mit dem doppelten Wert selbst als Allel-Anzeige abgelegt (analog
+  // zum bereits bestehenden "plpl"/"flfl").
+  { pattern: /\bSPLSPL\b/i, label: 'Splashed White homozygot (Kürzel)', hints: [{ locus: 'Splashed', allele: 'SPLSPL' }] },
+  { pattern: /\bSBSB\b/i, label: 'Sabino homozygot (Kürzel)', hints: [{ locus: 'KIT', allele: 'SbSb' }] },
+  { pattern: /\bTOTO\b/i, label: 'Tobiano homozygot (Kürzel)', hints: [{ locus: 'KIT', allele: 'ToTo' }] },
+  { pattern: /\bRNRN\b/i, label: 'Roan homozygot (Kürzel)', hints: [{ locus: 'KIT', allele: 'RnRn' }] },
+  { pattern: /\bCHCH\b/i, label: 'Champagne homozygot (Kürzel)', hints: [{ locus: 'Champagne', allele: 'ChCh' }] },
+  { pattern: /\bCRCR\b/i, label: 'Cream homozygot (Kürzel)', hints: [{ locus: 'Cream', allele: 'CrCr' }] },
+  { pattern: /\bLPLP\b/i, label: 'Appaloosa homozygot (Kürzel)', hints: [{ locus: 'Appaloosa', allele: 'LpLp' }] },
+  { pattern: /\bSTYSTY\b/i, label: 'Sooty homozygot (Kürzel)', hints: [{ locus: 'Sooty', allele: 'stysty' }] },
+  { pattern: /\bRCRC\b/i, label: 'Rabicano homozygot (Kürzel)', hints: [{ locus: 'Rabicano', allele: 'rcrc' }] },
+
+  { pattern: /\bSPL\b/i, label: 'Splashed White (Kürzel)', hints: [{ locus: 'Splashed', allele: 'SPL' }] },
+  { pattern: /\bSB\b/i, label: 'Sabino (Kürzel)', hints: [{ locus: 'KIT', allele: 'Sb' }] },
+  { pattern: /\bTo\b/i, label: 'Tobiano (Kürzel)', hints: [{ locus: 'KIT', allele: 'To' }] },
+  { pattern: /\bRn\b/i, label: 'Roan (Kürzel)', hints: [{ locus: 'KIT', allele: 'Rn' }] },
+  { pattern: /\bCh\b/i, label: 'Champagne (Kürzel)', hints: [{ locus: 'Champagne', allele: 'Ch' }] },
+  { pattern: /\bCr\b/i, label: 'Cream (Kürzel)', hints: [{ locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bLp\b/i, label: 'Appaloosa (Kürzel)', hints: [{ locus: 'Appaloosa', allele: 'Lp' }] },
+  // Kein doppeltes "OO"-Kürzel: Overo ist reinerbig dominant letal (siehe
+  // MDR-Doku), ein lebendes Pferd kann also nie OO sein.
+  { pattern: /\bO\b/i, label: 'Overo (Kürzel)', hints: [{ locus: 'Overo', allele: 'O' }] },
+  { pattern: /\bplpl\b/i, label: 'Pearl (Kürzel)', hints: [{ locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bpl\b/i, label: 'Pearl (Kürzel)', hints: [{ locus: 'Cream', allele: 'pl' }] },
+  { pattern: /\bflfl\b/i, label: 'Flaxen (Kürzel)', hints: [{ locus: 'Flaxen', allele: 'flfl' }] },
+  { pattern: /\bfl\b/i, label: 'Flaxen (Kürzel)', hints: [{ locus: 'Flaxen', allele: 'fl' }] },
+  { pattern: /\bsty\b/i, label: 'Sooty (Kürzel)', hints: [{ locus: 'Sooty', allele: 'sty' }] },
+  { pattern: /\brc\b/i, label: 'Rabicano (Kürzel)', hints: [{ locus: 'Rabicano', allele: 'rc' }] },
+];
+
+// Verneinungen wie "Kein Ch", "keine Overo", "nicht Champagne" sollen NICHT
+// als vorhandenes Gen gewertet werden - das direkt folgende Wort wird
+// deshalb vorab aus dem Arbeitstext entfernt, bevor die eigentlichen
+// Muster unten geprüft werden (sonst würde z.B. "Kein Ch" trotzdem das
+// Champagne-Kürzel "Ch" auslösen, da \bCh\b auch innerhalb der Notiz
+// zuschlägt).
+function stripNegatedPhrases(text) {
+  return text.replace(/\b(kein|keine|keinen|nicht|ohne)\b\s+[\wäöüßÄÖÜ-]+/gi, ' ');
+}
+
+// Gibt eine Liste { locus, allele, label } aller aus dem Text eindeutig
+// ableitbaren Merkmale zurück. Bereits erkannte Textstellen werden aus der
+// Arbeitskopie entfernt, damit z.B. "Schwarzbraun" nicht zusätzlich das
+// separate "Braun"-Muster auslöst. "parentMightHavePearl" (siehe
+// parentsMightHavePearl in horseForm.js) stuft bei als "ambiguousCream"
+// markierten Einträgen (Cremello/Perlino/Smoky Cream/...) das abgeleitete
+// "CrCr" auf das vorsichtigere "Cr" herunter, falls ein Elternteil
+// nachweislich pl trägt - das zweite "Cr" könnte dann tatsächlich ein
+// "pl" sein (optisch nicht unterscheidbar). Ohne diesen Hinweis (Standard,
+// z.B. wenn kein Stammbaum bekannt ist) bleibt es beim einfacheren
+// Regelfall CrCr.
+function inferBaseColorHintsFromPhenotype(text) {
+  const s = String(text || '');
+  const out = [];
+  const add = (locus, allele, label) => out.push({ locus, allele, label });
+
+  // Reihenfolge wichtig: die sichtbare MDR-Fellfarbe legt zuerst die
+  // Grundfarbenfamilie fest, Modifikatoren wie Sooty/Roan/Appaloosa ändern
+  // diese Basis nicht.
+  // MDR-Farbguide: Chestnut = ee.
+  if (/\b(?:light\s+|gold\s+|sorrel\s+|copper\s+|dark\s+|liver\s+|dark\s+liver\s+)?chestnut\b|\bsorrel\b|\bpalomino\b|\bcremello\b|\bdunalino\b|\bred dun\b|\bgold champagne\b|\bgold dun\b|\bgold cream\b|\bgold pearl\b|\bapricot\b/i.test(s)) {
+    add('Extension', 'ee', 'Chestnut-Grundfarbe aus Fellfarbe abgeleitet');
+    return out;
+  }
+
+  // Wildbay = E_ + Ap_.
+  if (/\bwild\s*bay\b|\bwildbay\b|\bwild buckskin\b|\bwild dunskin\b|\bwildbraun\b/i.test(s)) {
+    add('Extension', 'E', 'Wildbay-Grundfarbe: mindestens 1× E');
+    add('Agouti', 'Ap', 'Wildbay-Grundfarbe: mindestens 1× Ap');
+    return out;
+  }
+
+  // Sealbrown = E_ + At_.
+  if (/\bseal\s*brown\b|\bsealbrown\b|\bbrown\b|\bsmoky brown\b|\bsable(?: champagne| cream| pearl| dun)?\b|\bbrown dun\b|\bpearl brown\b/i.test(s)) {
+    add('Extension', 'E', 'Sealbrown-Grundfarbe: mindestens 1× E');
+    add('Agouti', 'At', 'Sealbrown-Grundfarbe: mindestens 1× At');
+    return out;
+  }
+
+  // Black/Rappe = E_ + a0a0 nach dem MDR-Guide. Wichtig: ein schwarzes
+  // Pferd hat gerade KEIN dominantes Bay/Wildbay/Sealbrown-Agouti; sonst
+  // wäre die schwarze Grundfarbe am Körper nicht sichtbar.
+  if (/\b(?:coal\s+|pitch\s+|jet\s+)?black\b|\bsmoky black\b|\bgrulla\b|\bclassic champagne\b|\bclassic cream\b|\bclassic pearl\b|\bpearl black\b/i.test(s)) {
+    add('Extension', 'E', 'Black-Grundfarbe: mindestens 1× E');
+    add('Agouti', 'a0a0', 'Black-Grundfarbe: a0a0 aus Fellfarbe abgeleitet');
+    return out;
+  }
+
+  // Bay = E_ + A1_ (Wildbay und Sealbrown wurden oben bereits abgefangen).
+  if (/\b(?:light\s+|gold\s+|blood\s+|copper\s+|russet\s+|mahagony\s+|mahogany\s+|dark\s+)?bay\b|\bbuckskin\b|\bdunskin\b|\bamber(?: champagne| cream| pearl| dun)?\b|\bperlino\b|\bpearl bay\b/i.test(s)) {
+    add('Extension', 'E', 'Bay-Grundfarbe: mindestens 1× E');
+    add('Agouti', 'A1', 'Bay-Grundfarbe: mindestens 1× A1');
+    return out;
+  }
+
+  return out;
+}
+
+function inferGeneticHintsFromPhenotype(text, parentMightHavePearl) {
+  if (!text) return [];
+  let working = stripNegatedPhrases(text);
+  const hints = [];
+  for (const { pattern, hints: entryHints, label, ambiguousCream } of PHENOTYPE_GENE_HINTS) {
+    if (pattern.test(working)) {
+      for (const h of entryHints) {
+        const allele = (ambiguousCream && parentMightHavePearl && h.locus === 'Cream' && h.allele === 'CrCr') ? 'Cr' : h.allele;
+        hints.push({ locus: h.locus, allele, label });
+      }
+      working = working.replace(pattern, ' ');
+    }
+  }
+
+  // Die Grundfarbenfamilie wird zusätzlich aus dem ORIGINALTEXT abgeleitet.
+  // Dadurch bleibt z.B. bei "Gold Chestnut Appaloosa" das ee erhalten,
+  // auch wenn "Gold Chestnut" vorher als spezielle Schattierung erkannt wurde.
+  for (const h of inferBaseColorHintsFromPhenotype(text)) {
+    if (!hints.some(x => x.locus === h.locus && x.allele === h.allele)) hints.push(h);
+  }
+  return hints;
+}
+
+function isUntestedLocusValue(value) {
+  return /nicht getestet|not tested|untested|unknown|not analy[sz]ed/i.test(value || '');
+}
+
+// Zerlegt einen Locus-Rohwert (zwei gleich lange Allel-Tokens) und behält
+// nur die "vorhandenen" Allele: großgeschrieben = vorhanden, klein = nicht
+// vorhanden. Ausnahme: "pl" (Pearl) gilt immer als vorhanden, obwohl es
+// klein geschrieben ist - es ist kein rezessives Gegenstück zu einem
+// Großbuchstaben, sondern das eigentliche Allel-Kürzel selbst. Nicht zu
+// verwechseln mit "lp" (Appaloosa/Leopard), das weiterhin als "nicht
+// vorhanden" gilt, wenn es klein geschrieben ist.
+function extractPresentAlleles(rawValue) {
+  if (!rawValue || isUntestedLocusValue(rawValue)) return '';
+  const half = rawValue.length / 2;
+  const tokens = Number.isInteger(half) ? [rawValue.slice(0, half), rawValue.slice(half)] : [rawValue];
+  return tokens.filter((t) => t === 'pl' || /[A-Z]/.test(t)).join('');
+}
+
+// Ein getesteter Locus ist reinerbig für das vorhandene Allel, wenn BEIDE
+// Hälften "vorhanden" sind (z.B. "EE", "ChCh", "SPLSPL") - so ein Locus
+// wird garantiert an jedes Nachkommen weitervererbt (mind. eine Kopie),
+// unabhängig vom zweiten Elternteil. Wird genutzt, um vom Elternteil auf
+// ein noch nicht vollständig getestetes Fohlen zu schließen (siehe
+// homozygousPresentHints/presentGenesSummary).
+function isHomozygousPresent(rawValue) {
+  if (!rawValue || isUntestedLocusValue(rawValue)) return false;
+  const half = rawValue.length / 2;
+  if (!Number.isInteger(half)) return false;
+  const tokens = [rawValue.slice(0, half), rawValue.slice(half)];
+  return tokens.every((t) => t === 'pl' || /[A-Z]/.test(t));
+}
+
+// Liefert für jeden getesteten, reinerbig-vorhandenen Locus eines Pferdes
+// {locus, alleles} - z.B. für ein Elternteil mit getesteter Farbgenetik,
+// um daraus auf ein Fohlen zu schließen.
+function homozygousPresentHints(colorRows) {
+  return (colorRows || [])
+    .filter((r) => isHomozygousPresent(r.value))
+    .map((r) => ({ locus: r.label, alleles: extractPresentAlleles(r.value) }));
+}
+
+// Erkennt, ob ein Allel-Anzeigewert (egal ob getestet oder abgeleitet,
+// z.B. "DD", "plpl", "SPLSPL") reinerbig/doppelt ist, also aus zwei
+// identischen Hälften besteht. Wird genutzt, um aus presentGenesSummary
+// eines Elternteils (bestätigte UND abgeleitete Gene) die Loci
+// herauszufiltern, die garantiert an ein Fohlen weitervererbt werden.
+function isDoubledAllele(alleleStr) {
+  if (!alleleStr) return false;
+  const half = alleleStr.length / 2;
+  if (!Number.isInteger(half) || half < 1) return false;
+  return alleleStr.slice(0, half) === alleleStr.slice(half);
+}
+
+// Halbiert ein reinerbiges Allel (z.B. "DD" -> "D", "plpl" -> "pl") - ein
+// einzelnes Allel eines reinerbigen Elternteils, das garantiert (zu 100%)
+// weitervererbt wird, aber beim Fohlen für sich allein nur eine einzelne
+// Kopie (mischerbig) bedeutet, solange nicht auch der zweite Elternteil
+// dasselbe Allel reinerbig trägt (siehe parentColorHints in horseForm.js).
+function halveDoubledAllele(alleleStr) {
+  return alleleStr.slice(0, alleleStr.length / 2);
+}
+
+// Der erste Eintrag im Stammbaum ist immer das Pferd selbst. Die restlichen
+// Vorfahren stehen in der Reihenfolge des kopierten Texts; bei einem
+// vollständigen 3-Generationen-Stammbaum sind das 2 Eltern, 4 Großeltern
+// und 8 Urgroßeltern (2+4+8=14) - diese Reihenfolge (statt z.B. Sire-Linie
+// zuerst komplett durch) passt auch zu den im Text mitgelieferten
+// Potenzial-Werten, die nur für die ersten 6 Vorfahren (Eltern+Großeltern)
+// angegeben werden. Eine Baumstruktur (wer ist Vater/Mutter von wem) lässt
+// sich aus dem Text ohne Einrückung trotzdem nicht ableiten.
+function hasPedigreeData(pedigree) {
+  if (!pedigree) return false;
+  if (Array.isArray(pedigree)) return pedigree.length > 0;
+  return (pedigree.ancestors?.length > 0) || (pedigree.sections && Object.keys(pedigree.sections).length > 0);
+}
+
+// Ein vollständig ausgelesenes Pferd hat 7 Disziplin-Kategorien mit je 4
+// Einzeldisziplinen (Western wird zuerst offen angezeigt, die übrigen 6
+// erst hinter "Alle Disziplinen anzeigen?" - siehe extractDisciplineGroups).
+// Fehlt eine Kategorie ganz oder hat sie weniger als 4 Einträge, war das
+// Auslesen unvollständig (z.B. weil "Alle Disziplinen anzeigen?" im Spiel
+// nicht angeklickt und der zusätzliche Text daher nicht mitkopiert wurde).
+const EXPECTED_DISCIPLINE_COUNTS = {
+  Western: 4, Englisch: 4, Rennen: 4, Rodeo: 4, Fahren: 4, Barock: 4, Mehrgang: 4,
+};
+
+function hasAllDisciplines(disciplines) {
+  if (!disciplines) return false;
+  return Object.entries(EXPECTED_DISCIPLINE_COUNTS)
+    .every(([category, count]) => (disciplines[category]?.length || 0) >= count);
+}
+
+// Kurz-Labels für Daten, die typischerweise fehlen, wenn beim Kopieren aus
+// dem Spiel etwas nicht mit erfasst wurde (z.B. weil nicht die ganze Seite
+// markiert wurde) - wird sowohl beim Speichern (horseForm.js, ausführliche
+// Hinweistexte) als auch in der Übersicht (list.js, Hinweis-Banner über
+// den Filtern) genutzt.
+function missingDataLabels(horse) {
+  const missing = [];
+  if (horse.exterior_genetics?.overall?.percent == null) missing.push('Ext%');
+  if (!hasPedigreeData(horse.pedigree)) missing.push('Stammbaum');
+  if (
+    !horse.tournament_potential?.Gesamtpotenzial
+    || !horse.tournament_potential?.Begabung
+    || !hasAllDisciplines(horse.disciplines)
+  ) {
+    missing.push('Turnierwerte');
+  }
+  // Ist ein Pferd laut Reinrassigkeit-Wert nicht zu 100% reinrassig,
+  // hätte das Spiel eigentlich eine Rasseanteile-Aufschlüsselung
+  // anzubieten gehabt ("Rasseanteile anzeigen?", siehe parser.js
+  // extractHeaderBlock) - die aber beim Kopieren nur mitkommt, wenn sie
+  // vorher im Spiel aufgeklappt wurde. Das gilt unabhängig davon, ob
+  // (zusätzlich zu den Anteilen) eine Haupt-Rasse eingetragen ist.
+  if (horse.purebred_pct != null && horse.purebred_pct < 100 && !horse.breed_composition) {
+    missing.push('Rasseanteile');
+  }
+  return missing;
+}
+
+// "Pinto" heißt laut MDR-Farbvererbung, dass mindestens 2 der 4
+// Scheckungs-Muster (SB/Sabino, SPL/Splashed, O/Overo, To/Tobiano)
+// gleichzeitig vorhanden sind - welche genau, lässt sich aus dem Namen
+// allein nicht sicher sagen. Sind aber bei den Eltern (zusammen) genau 2
+// dieser 4 Muster getestet vorhanden, muss ein als "Pinto" bezeichnetes
+// Fohlen (das die Scheckung ja sichtbar zeigt) genau diese 2 geerbt
+// haben, da im Genpool der Eltern keine anderen zur Auswahl stehen.
+function pintoPatternsFromColors(colorRows) {
+  const found = new Set();
+  for (const r of colorRows || []) {
+    if (isUntestedLocusValue(r.value)) continue;
+    const present = extractPresentAlleles(r.value);
+    if (!present) continue;
+    if (r.label === 'Splashed') found.add('SPL');
+    else if (r.label === 'Overo') found.add('O');
+    else if (r.label === 'KIT') {
+      // Anders als bei den übrigen Loci steht Tobiano/Sabino im
+      // Rohwert tatsächlich in Großbuchstaben ("TO"/"SB"), nicht in der
+      // gemischt geschriebenen Kürzel-Konvention ("To"/"Sb"), die nur für
+      // die abgeleiteten Namens-Hinweise verwendet wird.
+      if (present.includes('TO')) found.add('TO');
+      if (present.includes('SB')) found.add('SB');
+    }
+  }
+  return found;
+}
+
+const PINTO_ALLELE_LOCUS = { SPL: 'Splashed', O: 'Overo', TO: 'KIT', SB: 'KIT' };
+
+// Manuelle Gen-Bestätigung je Locus (siehe colorGeneticsHtml/
+// geneOverrideBadge und den Klick-Handler in horseForm.js) - Klick-Zyklus:
+// unbekannt (kein Eintrag) -> 1x vorhanden -> 2x vorhanden (reinerbig) ->
+// nicht vorhanden -> zurück zu unbekannt.
+const LOCUS_PRIMARY_ALLELE = {
+  Extension: 'E', Dun: 'D', Champagne: 'Ch', Grey: 'G', Silver: 'Z',
+  Overo: 'O', Splashed: 'SPL', Appaloosa: 'Lp', PATN1: 'P1',
+  Flaxen: 'fl',
+};
+
+// Loci mit mehreren unabhängigen Allelen/Merkmalen statt einem einzigen
+// eindeutigen Code (Gegenstück zu LOCUS_PRIMARY_ALLELE) - hier gibt es
+// pro Allel einen eigenen Klick-Button. Der Override-Schlüssel ist dann
+// nicht der bloße Locus-Name, sondern "Locus:Allel" (z.B. "KIT:To"),
+// siehe geneOverrideBadge/colorGeneticsHtml. Cream traegt sowohl Cr
+// (Cream-Aufhellung) als auch pl (Pearl, geteilter Locus, siehe
+// PHENOTYPE_GENE_HINTS) - beide unabhaengig voneinander bestaetigbar.
+const LOCUS_MULTI_ALLELES = {
+  KIT: ['To', 'Sb', 'Rn'],
+  Agouti: ['A1', 'At', 'Ap'],
+  Cream: ['Cr', 'pl'],
+};
+
+// Overo ist laut MDR-Doku reinerbig dominant letal (siehe
+// PHENOTYPE_GENE_HINTS oben) - "2x vorhanden" wird für diesen Locus daher
+// aus dem Klick-Zyklus ausgelassen (nur 1x <-> nicht vorhanden möglich).
+const OVERRIDE_STATE_ORDER_DEFAULT = ['het', 'hom', 'absent'];
+const OVERRIDE_STATE_ORDER_NO_HOM = ['het', 'absent'];
+
+// Override-Schlüssel sind entweder ein bloßer Locus-Name ("Champagne")
+// oder "Locus:Allel" ("KIT:To", siehe LOCUS_MULTI_ALLELES) - dieser Helfer
+// liefert in beiden Fällen den reinen Locus-Namen davor.
+function localeOfOverrideKey(key) {
+  return key.split(':')[0];
+}
+
+function overrideStateOrder(key) {
+  return localeOfOverrideKey(key) === 'Overo' ? OVERRIDE_STATE_ORDER_NO_HOM : OVERRIDE_STATE_ORDER_DEFAULT;
+}
+
+// Naechster Zustand im Klick-Zyklus (siehe overrideStateOrder) - "null"
+// steht dabei für "unbekannt" (kein manueller Eintrag), sowohl als
+// Start- als auch als Endpunkt des Zyklus.
+function nextOverrideState(key, current) {
+  const order = overrideStateOrder(key);
+  const idx = order.indexOf(current);
+  const nextIdx = idx + 1;
+  return nextIdx >= order.length ? null : order[nextIdx];
+}
+
+// Die 10 im Spiel testbaren Erbkrankheiten (siehe extractSimpleTable
+// 'Erbkrankheiten') - anders als bei der Farbgenetik sind hier
+// normalerweise ALLE Krankheiten getestet (Rohwerte wie "NN/NN"); fehlt
+// eine davon trotzdem im Array (z.B. bei einem noch nicht beim Tierarzt
+// getesteten Fohlen), zeigt horseForm.js/diseaseTableHtml dafür eine
+// eigene "Nicht getestet"-Zeile mit Klick-Button (gleicher Mechanismus
+// wie bei den Farbgenetik-Loci: unbekannt -> Träger -> betroffen -> frei
+// -> zurück zu unbekannt, siehe nextOverrideState).
+const KNOWN_DISEASE_CODES = ['CA', 'HERDA', 'PSSM', 'EMH', 'ASD', 'HYPP', 'LFS', 'SCID', 'GBED', 'JEB'];
+
+// Anzeige-Reihenfolge für presentGenesSummary (Übersicht/Farbgenetik-
+// Zusammenfassung/CSV-Export): Grundfarbe, Aufhellungen, Sonderfarben,
+// Scheckungen, Flaxen - unabhängig davon, in welcher Reihenfolge das
+// Spiel die Loci testet. "Cream" deckt dabei auch Pearl mit ab (siehe
+// LOCUS_MULTI_ALLELES), "KIT" alle Scheckungs-Allele (To/Sb/Rn). Loci
+// außerhalb dieser Liste (z.B. Sooty/Rabicano/Pangare) landen am Ende.
+const GENE_DISPLAY_ORDER = [
+  'Extension', 'Agouti',
+  'Cream', 'Dun',
+  'Champagne', 'Silver', 'Grey',
+  'KIT', 'Overo', 'Splashed', 'Appaloosa', 'PATN1',
+  'Flaxen',
+];
+
+function sortGenesForDisplay(genes) {
+  return [...genes].sort((a, b) => {
+    const ai = GENE_DISPLAY_ORDER.indexOf(a.locus);
+    const bi = GENE_DISPLAY_ORDER.indexOf(b.locus);
+    return (ai === -1 ? GENE_DISPLAY_ORDER.length : ai) - (bi === -1 ? GENE_DISPLAY_ORDER.length : bi);
+  });
+}
+
+// Fasst alle tatsächlich vorhandenen Gene eines Pferdes zusammen: zuerst
+// aus getesteten Loci (siehe extractPresentAlleles), dann - nur für Loci,
+// die nicht getestet wurden (bzw. die es als Locus gar nicht gibt, wie
+// Sooty/Flaxen) - manuelle Bestätigungen (overrides, siehe
+// LOCUS_PRIMARY_ALLELE) mit Vorrang, sonst Hinweise im Fellfarbe-Namen, in
+// der Notiz, im Pferdenamen (siehe inferGeneticHintsFromPhenotype) und
+// optional aus reinerbig-vorhandenen Loci der Eltern (parentHints, siehe
+// homozygousPresentHints - wird von horseForm.js anhand des Stammbaums
+// befüllt, falls Vater/Mutter in der Datenbank stehen). Das Ergebnis wird
+// abschließend in eine feste Anzeige-Reihenfolge gebracht (siehe
+// sortGenesForDisplay), unabhängig von der Reihenfolge, in der die
+// einzelnen Quellen (getestet/manuell/abgeleitet) hier gesammelt wurden.
+function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentHints, overrides, parentMightHavePearl) {
+  const rows = colorRows || [];
+  const confirmed = [];
+  const testedLoci = new Set();
+  const ov = overrides || {};
+
+  for (const r of rows) {
+    if (isUntestedLocusValue(r.value)) continue;
+    testedLoci.add(r.label);
+    const alleles = extractPresentAlleles(r.value);
+    if (alleles) confirmed.push({ locus: r.label, alleles, source: 'getestet' });
+  }
+
+  // Manuell bestätigte (oder als "nicht vorhanden" markierte) Loci/Allele
+  // überstimmen die automatisch abgeleiteten Hinweise unten - bei
+  // getesteten Loci wird ein Override ignoriert (der Rohwert bleibt
+  // maßgeblich). Bei Loci mit mehreren Allelen (LOCUS_MULTI_ALLELES)
+  // betrifft das nur das jeweils überschriebene Allel, nicht den ganzen
+  // Locus - andere Allele desselben Locus bleiben von der automatischen
+  // Ableitung unberührt.
+  const overriddenKeys = new Set(Object.keys(ov).filter((k) => ov[k] && !testedLoci.has(localeOfOverrideKey(k))));
+  const manual = [];
+  for (const key of overriddenKeys) {
+    const state = ov[key];
+    const locus = localeOfOverrideKey(key);
+    const primary = key.includes(':') ? key.split(':')[1] : LOCUS_PRIMARY_ALLELE[key];
+    if (!primary || state === 'absent') continue;
+    const alleleCode = state === 'hom' ? primary + primary : primary;
+    manual.push({ locus, alleles: alleleCode, source: 'manuell' });
+  }
+
+  const hints = [
+    ...inferGeneticHintsFromPhenotype(coatColorName, parentMightHavePearl).map((h) => ({ ...h, source: 'abgeleitet' })),
+    ...inferGeneticHintsFromPhenotype(notes, parentMightHavePearl).map((h) => ({ ...h, source: 'abgeleitet' })),
+    ...inferGeneticHintsFromPhenotype(horseName, parentMightHavePearl).map((h) => ({ ...h, source: 'abgeleitet' })),
+    ...(parentHints || []).map((h) => ({ locus: h.locus, allele: h.alleles, source: 'elternteil' })),
+  ];
+  const seen = new Set();
+  const inferred = [];
+  for (const h of hints) {
+    if (testedLoci.has(h.locus)) continue;
+    const hKey = LOCUS_MULTI_ALLELES[h.locus] ? `${h.locus}:${h.allele}` : h.locus;
+    if (overriddenKeys.has(hKey)) continue;
+    const key = h.locus + h.allele;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    inferred.push({ locus: h.locus, alleles: h.allele, source: h.source });
+  }
+
+  return sortGenesForDisplay([...confirmed, ...manual, ...inferred]);
+}
+
+// Schlagwörter der lokalen Version.
+// "Reserviert" und "Bleibt" wurden bewusst entfernt.
+// "GBH" wird ab 25 Spieljahren automatisch ergänzt.
+const HORSE_TAG_CONFIG_STORAGE_KEY = 'mdr-horse-tag-options-v47';
+const HORSE_TAG_CONFIG_DB_KEY = 'horse_tag_options_v47';
+
+// Aktive Züchter begrenzen persönliche Arbeitsansichten und definieren die
+// dort angebotene Rassenbasis. Das Verpaarungs-Log speichert seine sichtbare
+// Züchterauswahl zusätzlich pro Login.
+const ACTIVE_BREEDERS_STORAGE_KEY = 'mdr-active-breeders-v48'; // Legacy-Fallback
+const ACTIVE_BREEDERS_DB_KEY = 'active_breeders_v48'; // Legacy-Fallback
+
+function activeBreedersStorageKey() {
+  if (typeof mdrPersonalSettingKey === 'function') return `mdr-${mdrPersonalSettingKey('active-breeders-v54')}`;
+  return ACTIVE_BREEDERS_STORAGE_KEY;
+}
+
+function activeBreedersDbKey() {
+  if (typeof mdrPersonalSettingKey === 'function') return mdrPersonalSettingKey('active_breeders_v54');
+  return ACTIVE_BREEDERS_DB_KEY;
+}
+
+function getActiveBreeders() {
+  try {
+    const raw = localStorage.getItem(activeBreedersStorageKey());
+    if (raw == null) {
+      // Online-Version: sinnvolle persönliche Voreinstellung pro Login.
+      // Anevay = Anevay + Wilder Wolf, Saeculume = Saeculume.
+      if (typeof mdrPersonalOwnerNames === 'function') {
+        const defaults=mdrPersonalOwnerNames().map(x=>String(x).trim()).filter(Boolean);
+        if (defaults.length) return defaults;
+      }
+      return null; // Legacy: noch nicht konfiguriert = alle aktiv
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(x => String(x).trim()).filter(Boolean) : null;
+  } catch {
+    return null;
+  }
+}
+
+function isActiveBreeder(owner) {
+  const configured = getActiveBreeders();
+  if (configured == null) return true;
+  return configured.includes(String(owner || '').trim());
+}
+
+function activeBreederOptions(owners) {
+  const unique = [...new Set((owners || []).map(x => String(x || '').trim()).filter(Boolean))]
+    .sort((a,b) => a.localeCompare(b,'de'));
+  const configured = getActiveBreeders();
+  return configured == null ? unique : unique.filter(owner => configured.includes(owner));
+}
+
+
+// Gemeinsame persönliche Rassenbasis für alle Arbeitsansichten.
+// Maßgeblich sind nur Pferde, die aktuell einem aktiven Züchter gehören.
+// Lerndatei-/Archivpferde zählen nicht als aktueller Besitz. Wenn noch keine
+// aktive Züchterauswahl gespeichert wurde, gelten wie bisher alle Besitzer.
+function activeOwnedHorses(horses) {
+  return (horses || []).filter((horse) => {
+    if (!isActiveBreeder(horse?.owner)) return false;
+    if (typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(horse)) return false;
+    return true;
+  });
+}
+
+function activeOwnedBreeds(horses) {
+  const values = activeOwnedHorses(horses).map((horse) => {
+    const raw = typeof normalizeBreed === 'function' ? normalizeBreed(horse?.breed) : horse?.breed;
+    return String(raw || 'Rasselos').trim() || 'Rasselos';
+  });
+  return [...new Set(values)].sort((a,b) => a.localeCompare(b,'de'));
+}
+
+function activeOwnedBreedSet(horses) {
+  return new Set(activeOwnedBreeds(horses));
+}
+
+
+// Für Verpaarungen bestimmen die eigenen/aktiven Stuten die tatsächlich
+// relevante Zuchtrassenbasis: Eine fremde Deckhengstrasse soll nicht allein
+// deshalb als Auswahl auftauchen, weil irgendwo ein Hengst dieser Rasse steht.
+function activeBreedingBreeds(horses) {
+  const mares = activeOwnedHorses(horses).filter((horse) => {
+    const g = String(horse?.gender || '').toLocaleLowerCase('de');
+    return /stute|mare|female/.test(g);
+  });
+  const values = mares.map((horse) => {
+    const raw = typeof normalizeBreed === 'function' ? normalizeBreed(horse?.breed) : horse?.breed;
+    return String(raw || 'Rasselos').trim() || 'Rasselos';
+  });
+  return [...new Set(values)].sort((a,b) => a.localeCompare(b,'de'));
+}
+
+const HORSE_TAG_DEFAULT_OPTIONS = [
+  { label: 'Verkauf', color: 'var(--danger)' },
+  { label: 'GBH', color: 'var(--tag-purple)' },
+  { label: 'Cupstern', color: 'var(--tag-blue, #4f83cc)' },
+  { label: 'Zuchtstation', color: 'var(--accent, #6b9d00)' },
+  { label: 'Favorit', color: 'var(--tag-gold, #b48a22)' },
+];
+
+// Legacy-Konstante für ältere Hilfsskripte; neue UI-Bereiche verwenden
+// getHorseTagOptions(), damit Änderungen in Einstellungen ohne Codeänderung
+// übernommen werden.
+const HORSE_TAG_OPTIONS = HORSE_TAG_DEFAULT_OPTIONS;
+
+function getHorseTagOptions() {
+  try {
+    const raw = localStorage.getItem(HORSE_TAG_CONFIG_STORAGE_KEY);
+    if (!raw) return HORSE_TAG_DEFAULT_OPTIONS.map(x => ({ ...x }));
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.length) return HORSE_TAG_DEFAULT_OPTIONS.map(x => ({ ...x }));
+
+    const clean = parsed
+      .map(x => ({
+        label: String(x?.label || '').trim(),
+        color: String(x?.color || 'var(--muted)').trim() || 'var(--muted)',
+      }))
+      .filter(x => x.label);
+
+    // Neue System-Schlagwörter werden auch in bereits bestehenden,
+    // benutzerdefinierten Tag-Konfigurationen ergänzt, ohne eigene Tags
+    // oder Farben zu überschreiben.
+    for (const systemLabel of ['GBH','Cupstern','Zuchtstation']) {
+      if (!clean.some(x => x.label === systemLabel)) {
+        const fallback = HORSE_TAG_DEFAULT_OPTIONS.find(x => x.label === systemLabel);
+        if (fallback) clean.push({ ...fallback });
+      }
+    }
+
+    return clean.length ? clean : HORSE_TAG_DEFAULT_OPTIONS.map(x => ({ ...x }));
+  } catch {
+    return HORSE_TAG_DEFAULT_OPTIONS.map(x => ({ ...x }));
+  }
+}
+
+function tagColor(label) {
+  return getHorseTagOptions().find((t) => t.label === label)?.color || 'var(--muted)';
+}
+
+// Rendert die zugewiesenen Schlagwörter eines Pferds als farbige Badges -
+// gemeinsam genutzt von list.js (Übersicht), horseView.js (Ansichtsseite)
+// und horseForm.js (Vorschau im Formular). "escapeHtml" wird erst beim
+// tatsächlichen Aufruf gebraucht (nicht beim Laden von parser.js selbst)
+// und ist dann bereits durch das jeweilige Seiten-Skript global definiert.
+function effectiveHorseTags(tags, birthdate) {
+  const allowed = new Set(getHorseTagOptions().map((t) => t.label));
+  const result = (tags || [])
+    .filter((tag) => allowed.has(tag.label))
+    .map((tag) => ({ ...tag }));
+
+  // Ab 25 vollen Spieljahren wird GBH immer automatisch angezeigt.
+  if (gameAgeYears(birthdate) >= 25 && !result.some((t) => t.label === 'GBH')) {
+    result.push({ label: 'GBH' });
+  }
+  return result;
+}
+
+function tagsBadgesHtml(tags, birthdate = null) {
+  return effectiveHorseTags(tags, birthdate).map((tag) => {
+    const text = tag.note ? `${tag.label}: ${tag.note}` : tag.label;
+    return `<span class="horse-tag-badge" style="background:${tagColor(tag.label)}">${escapeHtml(text)}</span>`;
+  }).join('');
+}
+
+// Formatiert einen ISO-Zeitstempel (z.B. horses.updated_at) im deutschen
+// Format "TT.MM.JJJJ, HH:MM" - wird u.a. für "Zuletzt bearbeitet" auf der
+// Ansichtsseite gebraucht (siehe horseView.js).
+function formatTimestamp(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Geburtsdatum (horses.birthdate, "JJJJ-MM-TT") -> Alter in vollen
+// Spieljahren (abgerundet) - im Spiel entsprechen 30 reale Tage einem
+// Spieljahr, nicht die reale Kalenderzeit. Referenzdatum ist immer
+// "heute", das Alter wird also bei jedem Aufruf neu berechnet statt
+// gespeichert. Gibt null zurueck, wenn kein/ein ungueltiges Datum
+// vorliegt. Von formatAge sowie von den Alters-Hinweisen in list.js
+// (checkAgeNotices) genutzt.
+//
+// WICHTIG: gibt die exakte (nicht gerundete) Anzahl Tage zurueck - ein
+// vorzeitiges Abrunden hier wuerde bei jungen Fohlen den bereits
+// vergangenen Stundenanteil verschlucken und faelschlich "0 Monate"
+// statt "1 Monat" anzeigen (z.B. ein 2,67 Tage altes Fohlen ist mit
+// 2,5 Tagen/Monat schon im 1. Monat, floor(2)/2.5 rundet das aber vor
+// der Monatsberechnung faelschlich auf 0 Tage runter). Gerundet wird
+// erst ganz am Ende in gameAgeYears/formatAge.
+const REAL_DAYS_PER_GAME_YEAR = 30;
+function gameAgeDays(birthdateIso) {
+  if (!birthdateIso) return null;
+  const birth = new Date(birthdateIso);
+  if (Number.isNaN(birth.getTime())) return null;
+  const daysSinceBirth = (Date.now() - birth.getTime()) / 86400000;
+  return daysSinceBirth < 0 ? null : daysSinceBirth;
+}
+function gameAgeYears(birthdateIso) {
+  const days = gameAgeDays(birthdateIso);
+  return days == null ? null : Math.floor(days / REAL_DAYS_PER_GAME_YEAR);
+}
+
+// Geburtsdatum -> {years, months} (volle Spieljahre + volle Monate im
+// laufenden Spieljahr, beide abgerundet) - gemeinsame Basis fuer
+// formatAge sowie fuer die monatsgenauen Alters-Hinweise in list.js
+// (checkAgeNotices, z.B. "Fohlen mit 6 Monaten").
+function gameAgeYearsMonths(birthdateIso) {
+  const daysSinceBirth = gameAgeDays(birthdateIso);
+  if (daysSinceBirth == null) return null;
+  const years = Math.floor(daysSinceBirth / REAL_DAYS_PER_GAME_YEAR);
+  const remainderDays = daysSinceBirth - years * REAL_DAYS_PER_GAME_YEAR;
+  const months = Math.floor(remainderDays / (REAL_DAYS_PER_GAME_YEAR / 12));
+  return { years, months };
+}
+
+// Formatiert ein Geburtsdatum als Alter in Spieljahren ("X Jahre, Y
+// Monate").
+function formatAge(birthdateIso) {
+  const ym = gameAgeYearsMonths(birthdateIso);
+  if (!ym) return '';
+  const { years, months } = ym;
+  const parts = [];
+  if (years > 0) parts.push(`${years} Jahr${years === 1 ? '' : 'e'}`);
+  if (months > 0 || !years) parts.push(`${months} Monat${months === 1 ? '' : 'e'}`);
+  return parts.join(', ');
+}
+
+// Kompakte Altersanzeige fuer die Pferde-Detailseite.
+function formatAgeShort(birthdateIso) {
+  const ym = gameAgeYearsMonths(birthdateIso);
+  if (!ym) return '';
+  return `${ym.years} J, ${ym.months} M`;
+}
+
+// Prüft, ob ein Pferd mindestens eines der ausgewählten Schlagwörter
+// trägt (ODER-Verknüpfung) - "__none__" findet Pferde ganz ohne
+// Schlagwort. Von list.js (Übersicht-Filter) und durchschnitt.js
+// (Ø-Filter) genutzt.
+function matchesTags(row, selectedLabels) {
+  const tags = effectiveHorseTags(row.tags, row.birthdate);
+  return selectedLabels.some((label) => {
+    if (label === '__none__') return !tags.length;
+    return tags.some((t) => t.label === label);
+  });
+}
+
+// --- Checkbox-Dropdowns (Schlagwörter, Genetik, EKH, ...) ---
+// Generisches Mehrfachauswahl-Dropdown (Markup: .checkdrop > .checkdrop-
+// toggle + .checkdrop-panel, siehe css/style.css) - von list.js und
+// durchschnitt.js genutzt.
+
+function wireCheckDropdowns() {
+  document.querySelectorAll('.checkdrop').forEach((root) => {
+    const toggle = root.querySelector('.checkdrop-toggle');
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const panel = root.querySelector('.checkdrop-panel');
+      const wasOpen = !panel.hidden;
+      closeAllCheckDropdowns();
+      panel.hidden = wasOpen;
+    });
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.checkdrop')) closeAllCheckDropdowns();
+  });
+}
+
+function closeAllCheckDropdowns() {
+  document.querySelectorAll('.checkdrop-panel').forEach((p) => { p.hidden = true; });
+}
+
+function populateCheckDropdown(rootId, values, { noneOption, extra } = {}) {
+  const panel = document.querySelector(`#${rootId} .checkdrop-panel`);
+  panel.innerHTML = '';
+
+  if (noneOption) panel.appendChild(checkDropdownItem('__none__', noneOption));
+  for (const v of values) panel.appendChild(checkDropdownItem(v, v));
+  for (const { value, label } of extra || []) panel.appendChild(checkDropdownItem(value, label));
+
+  if (!noneOption && !values.length && !(extra || []).length) {
+    const empty = document.createElement('div');
+    empty.className = 'checkdrop-empty';
+    empty.textContent = 'Keine Werte vorhanden';
+    panel.appendChild(empty);
+  }
+
+  panel.addEventListener('change', () => updateCheckDropdownLabel(rootId));
+}
+
+function checkDropdownItem(value, label) {
+  const wrap = document.createElement('label');
+  wrap.className = 'checkdrop-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.value = value;
+  wrap.appendChild(cb);
+  wrap.appendChild(document.createTextNode(label));
+  return wrap;
+}
+
+function updateCheckDropdownLabel(rootId) {
+  const root = document.getElementById(rootId);
+  const toggle = root.querySelector('.checkdrop-toggle');
+  const checked = root.querySelectorAll('.checkdrop-panel input[type=checkbox]:checked');
+  toggle.textContent = checked.length ? `${checked.length} ausgewählt` : 'Alle';
+}
+
+function getCheckDropdownSelected(rootId) {
+  return [...document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]:checked`)].map((cb) => cb.value);
+}
+
+function resetCheckDropdown(rootId) {
+  document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]`).forEach((cb) => { cb.checked = false; });
+  updateCheckDropdownLabel(rootId);
+}
+
+function setCheckDropdownSelected(rootId, values) {
+  const wanted = new Set(values || []);
+  document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]`).forEach((cb) => {
+    cb.checked = wanted.has(cb.value);
+  });
+  updateCheckDropdownLabel(rootId);
+}
+
+
+// --- Drei-Zustands-Dropdowns fuer Einschliessen/Ausschliessen ---
+// Zustand je Eintrag: neutral -> include -> exclude -> neutral.
+function populateTriStateDropdown(rootId, values, { noneOption, extra } = {}) {
+  const panel = document.querySelector(`#${rootId} .checkdrop-panel`);
+  panel.innerHTML = '';
+  const append = (value, label) => panel.appendChild(triStateDropdownItem(value, label));
+  if (noneOption) append('__none__', noneOption);
+  for (const v of values) append(v, v);
+  for (const { value, label } of extra || []) append(value, label);
+  if (!noneOption && !values.length && !(extra || []).length) {
+    const empty = document.createElement('div');
+    empty.className = 'checkdrop-empty';
+    empty.textContent = 'Keine Werte vorhanden';
+    panel.appendChild(empty);
+  }
+  updateTriStateDropdownLabel(rootId);
+}
+
+function triStateDropdownItem(value, label) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'checkdrop-tristate-item';
+  btn.dataset.value = value;
+  btn.dataset.state = 'neutral';
+  btn.innerHTML = '<span class="checkdrop-state-sign" aria-hidden="true"></span><span class="checkdrop-state-label"></span>';
+  btn.querySelector('.checkdrop-state-label').textContent = label;
+  btn.addEventListener('click', () => {
+    const state = btn.dataset.state || 'neutral';
+    btn.dataset.state = state === 'neutral' ? 'include' : state === 'include' ? 'exclude' : 'neutral';
+    syncTriStateItemAppearance(btn);
+    updateTriStateDropdownLabel(btn.closest('.checkdrop').id);
+    btn.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  syncTriStateItemAppearance(btn);
+  return btn;
+}
+
+function syncTriStateItemAppearance(btn) {
+  const state = btn.dataset.state || 'neutral';
+  btn.classList.toggle('include', state === 'include');
+  btn.classList.toggle('exclude', state === 'exclude');
+  btn.setAttribute('aria-pressed', state === 'neutral' ? 'false' : 'true');
+  const sign = btn.querySelector('.checkdrop-state-sign');
+  if (sign) sign.textContent = state === 'include' ? '+' : state === 'exclude' ? '−' : '';
+  const label = btn.querySelector('.checkdrop-state-label')?.textContent || '';
+  btn.title = state === 'include' ? `${label}: einschließen` : state === 'exclude' ? `${label}: ausschließen` : `${label}: neutral`;
+}
+
+function updateTriStateDropdownLabel(rootId) {
+  const root = document.getElementById(rootId);
+  if (!root) return;
+  const toggle = root.querySelector('.checkdrop-toggle');
+  const state = getTriStateDropdownState(rootId);
+  const parts = [];
+  if (state.include.length) parts.push(`${state.include.length} drin`);
+  if (state.exclude.length) parts.push(`${state.exclude.length} raus`);
+  toggle.textContent = parts.length ? parts.join(' · ') : 'Alle';
+}
+
+function getTriStateDropdownState(rootId) {
+  const include = [], exclude = [];
+  document.querySelectorAll(`#${rootId} .checkdrop-tristate-item`).forEach((btn) => {
+    const state = btn.dataset.state || 'neutral';
+    if (state === 'include') include.push(btn.dataset.value);
+    else if (state === 'exclude') exclude.push(btn.dataset.value);
+  });
+  return { include, exclude };
+}
+
+function resetTriStateDropdown(rootId) {
+  document.querySelectorAll(`#${rootId} .checkdrop-tristate-item`).forEach((btn) => {
+    btn.dataset.state = 'neutral';
+    syncTriStateItemAppearance(btn);
+  });
+  updateTriStateDropdownLabel(rootId);
+}
+
+function normalizeTriStateSavedState(value) {
+  // Alte Filtervorlagen enthielten nur ein Array: das bleibt ein Einschluss.
+  if (Array.isArray(value)) return { include: value, exclude: [] };
+  if (!value || typeof value !== 'object') return { include: [], exclude: [] };
+  return {
+    include: Array.isArray(value.include) ? value.include : [],
+    exclude: Array.isArray(value.exclude) ? value.exclude : [],
+  };
+}
+
+function setTriStateDropdownState(rootId, value) {
+  const state = normalizeTriStateSavedState(value);
+  const inc = new Set(state.include), exc = new Set(state.exclude);
+  document.querySelectorAll(`#${rootId} .checkdrop-tristate-item`).forEach((btn) => {
+    btn.dataset.state = inc.has(btn.dataset.value) ? 'include' : exc.has(btn.dataset.value) ? 'exclude' : 'neutral';
+    syncTriStateItemAppearance(btn);
+  });
+  updateTriStateDropdownLabel(rootId);
+}
+
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { normalizeBreed, scoreExteriorTerm, scoreTemperamentTerm, averageScore, HORSE_TAG_OPTIONS, HORSE_TAG_DEFAULT_OPTIONS, getHorseTagOptions, tagColor, effectiveHorseTags, tagsBadgesHtml, formatTimestamp, formatAge, formatAgeShort, gameAgeYears, gameAgeYearsMonths, matchesTags, normalizeTriStateSavedState, detectAppaloosaPatternFromCoatColor, normalizePatn1Genotype, appaloosaPatternState, appaloosaPatternStateForHorse };
+}

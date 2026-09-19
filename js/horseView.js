@@ -4,12 +4,91 @@ let viewHorseList = [];
 let viewHorseIndex = -1;
 let swipeStartX = null;
 let viewSort = { field: 'name', dir: 'asc' };
+let extraData = {};
 
 document.addEventListener('DOMContentLoaded', initView);
+
+
+const VIEW_TEXT_FIELDS = ['name','external_id','game_version','gender','breed','breed_composition','coat_color','appaloosa_pattern','owner','hlp_slp','breeding_goal','notes','image_url'];
+const VIEW_NUMBER_FIELDS = ['purebred_pct','ico','stud_fee','tournament_starts_total','breeding_show_points'];
+const VIEW_BOOLEAN_FIELDS = ['disease_free','breeding_allowed','learning_file','in_breeding_station','flaxen_carrier'];
 
 function viewHorseKey(id) {
   const n = Number(id);
   return Number.isNaN(n) ? id : n;
+}
+
+function viewDerivedFlaxenCarrier(data) {
+  if (data?.flaxen_carrier === true || data?.flaxen_carrier === false) return data.flaxen_carrier;
+  const state = data?.color_gene_overrides?.Flaxen;
+  if (state === 'het' || state === 'hom') return true;
+  if (state === 'absent') return false;
+  if (typeof inferGeneticHintsFromPhenotype === 'function') {
+    const visible = [data?.coat_color, data?.notes, data?.name].some((text) =>
+      inferGeneticHintsFromPhenotype(text).some((hint) => hint?.locus === 'Flaxen' && String(hint?.allele || '').toLowerCase() === 'flfl')
+    );
+    if (visible) return true;
+  }
+  return null;
+}
+
+function fillViewHorseFields(data) {
+  const normalized = (!data?.game_version || (typeof mdrGameWorldConflict === 'function' && mdrGameWorldConflict(data)))
+    ? { ...data, game_version: mdrGameWorld(data, 'DE') }
+    : data;
+  for (const id of VIEW_TEXT_FIELDS) {
+    const el = document.getElementById(id);
+    if (el && normalized?.[id] != null) el.value = normalized[id];
+  }
+  const birth = document.getElementById('birthdate');
+  if (birth && normalized?.birthdate) birth.value = normalized.birthdate;
+  for (const id of VIEW_NUMBER_FIELDS) {
+    const el = document.getElementById(id);
+    if (el && normalized?.[id] != null) el.value = normalized[id];
+  }
+  const flaxen = viewDerivedFlaxenCarrier(normalized);
+  for (const id of VIEW_BOOLEAN_FIELDS) {
+    const el = document.getElementById(id);
+    const value = id === 'flaxen_carrier' ? flaxen : normalized?.[id];
+    if (el && value != null) el.value = String(value);
+  }
+
+  const breed = normalizeBreed(normalized?.breed) || 'Rasselos';
+  const breedEl = document.getElementById('breed');
+  if (breedEl) breedEl.value = breed;
+  const compositionField = document.getElementById('breed-composition-field');
+  if (compositionField) compositionField.hidden = !(Number(normalized?.purebred_pct) < 100 || String(normalized?.breed_composition || '').trim());
+  const appaloosaField = document.getElementById('appaloosa-pattern-field');
+  if (appaloosaField) {
+    const relevant = appaloosaPatternStateForHorse(normalized).relevant;
+    appaloosaField.hidden = !relevant;
+  }
+  const isStallion = /hengst|stallion/i.test(String(normalized?.gender || ''));
+  document.getElementById('stud-station-field')?.toggleAttribute('hidden', !isStallion);
+  document.getElementById('stud-fee-field')?.toggleAttribute('hidden', !isStallion);
+  const img = document.getElementById('image-preview');
+  if (img) {
+    const url = String(normalized?.image_url || '').trim();
+    if (url) { img.src = url; img.hidden = false; }
+    else { img.hidden = true; img.removeAttribute('src'); }
+  }
+}
+
+async function loadViewHorse(id) {
+  let data;
+  try { data = await localGet(LOCAL_STORES.horses, viewHorseKey(id)); }
+  catch (error) {
+    document.getElementById('form-error').textContent = 'Konnte Pferd nicht laden: ' + error.message;
+    return null;
+  }
+  if (!data) {
+    document.getElementById('form-error').textContent = 'Pferd wurde in der lokalen Datenbank nicht gefunden.';
+    return null;
+  }
+  extraData = data;
+  fillViewHorseFields(data);
+  await renderDetailTables(data);
+  return data;
 }
 
 function viewTagLabels(horse) {
@@ -264,7 +343,7 @@ async function initView() {
   viewHorseList = await localGetAll(LOCAL_STORES.horses);
   sortViewHorseList();
 
-  await loadHorse(viewHorseId);
+  await loadViewHorse(viewHorseId);
   if (!extraData?.id) return;
 
   document.getElementById('tag-badges').innerHTML = tagsBadgesHtml(extraData.tags, extraData.birthdate);
