@@ -1,0 +1,10 @@
+V54.0.73 – Bestandsabgleich: Partnerprofile + Namensabgleich
+
+- Bestandsabgleich arbeitet jetzt ausschließlich über normalisierte Pferdenamen; MDR-IDs werden nicht mehr zum Matching verwendet.
+- Besitzer einer Profilseite wird aus dem eigentlichen Profilblock direkt vor „Dabei seit“ / „Member since“ gelesen. „Willkommen/Welcome“ und der obere Username gehören nur zum eingeloggten Account.
+- Die obere Pferdezahl wird nur noch verwendet, wenn eingeloggter Account und betrachtetes Profil identisch sind.
+- Partnerprofile ohne eigene Kopf-Pferdezahl gelten als vollständig, wenn der komplette Pferdetabellenblock von „Pferde anzeigen?/Show horses?“ bis „Reiterkönnen/Riding Skills“ erkannt wurde.
+- Mehrdeutige Pferdenamen werden nicht geraten und separat als „Nicht eindeutig“ ausgewiesen.
+- Mehrere Profilseiten desselben Besitzers auf DE und EN können parallel ausgewertet werden; negative Bestandsmeldungen bleiben spielweltspezifisch.
+- Pferde mit bisher unbekannter Spielwelt werden nur bei einem eindeutigen Namens-Treffer automatisch DE/EN zugeordnet.
+- Keine automatische Löschung oder Besitzeränderung; keine zusätzliche Vollabfrage des Pferdebestands.

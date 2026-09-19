@@ -816,7 +816,7 @@
     'P72 = stärker als etwa 72 % der Vergleichswerte. Primär zählt exakt dieselbe Disziplin + LK. Bei weniger als 15 Vergleichswerten fällt die Berechnung auf Hauptgruppe + LK und danach auf die gesamte LK zurück. Die Empfehlung basiert auf Pxx; INT wird separat bewertet.':'P72 means stronger than about 72% of the comparison values. The primary reference is the exact same discipline + level. With fewer than 15 comparison values, the calculation falls back to main group + level and then the entire level. Recommendations are based on Pxx; INT is assessed separately.'
   });
 
-  // V54.0.72 – Bestandsabgleich + servergetrennte Turnierreferenzen
+  // V54.0.73 – Bestandsabgleich: Partnerprofile + Namensabgleich
   Object.assign(EN, {
     '🔄 Bestandsabgleich':'🔄 Stock reconciliation',
     'Bestandsabgleich':'Stock reconciliation',
@@ -824,10 +824,11 @@
     'Besitzer einbeziehen':'Include owners',
     'MDR-Profilseite(n)':'MDR profile page(s)',
     'Vollständige Profilseite hier einfügen …':'Paste complete profile page here …',
-    'Primär wird über die MDR-ID abgeglichen, der Pferdename dient als Fallback. „Nicht mehr im MDR-Bestand“ wird nur berechnet, wenn die auf der Profilseite angegebene Pferdezahl vollständig erkannt wurde.':'Matching primarily uses the MDR ID, with the horse name as fallback. “No longer in MDR stock” is only calculated when the horse count stated on the profile page was parsed completely.',
+    'Der Abgleich erfolgt ausschließlich über den Pferdenamen. Partnerprofile werden am eigentlichen Profilblock („Dabei seit“ / „Member since“) erkannt; „Willkommen/Welcome“ bezeichnet nur den eingeloggten Account. Mehrdeutige Namen werden nicht geraten. „Nicht mehr im MDR-Bestand“ wird nur für vollständig erkannte Spielwelten berechnet.':'Matching uses the horse name only. Partner profiles are identified from the actual profile block (“Dabei seit” / “Member since”); “Willkommen/Welcome” only identifies the logged-in account. Ambiguous names are never guessed. “No longer in MDR stock” is only calculated for fully parsed game worlds.',
     'Bestand abgleichen':'Compare stock',
     'Fehlt in der Datenbank':'Missing from database',
     'Nicht mehr im MDR-Bestand':'No longer in MDR stock',
+    'Spielwelt':'Game world', 'Nicht eindeutig':'Ambiguous',
     'Besitzer abweichend':'Owner differs',
     'Vorhanden':'Present',
     'Hinweis':'Note', 'Aktion':'Action',
