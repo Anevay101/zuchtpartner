@@ -1,0 +1,10 @@
+V54.0.78 Release-Check
+
+- CSS mit tinycss2 geparst: 0 Parsefehler.
+- JavaScript: alle Dateien bestehen node --check.
+- HTML: keine doppelten IDs.
+- Lokale HTML-Ressourcen geprüft: 332 Referenzen, 0 fehlend.
+- Zuchtplaner-ID-Satz gegenüber V54.0.77: 65 IDs vorher / 65 IDs nachher; keine entfernt, keine hinzugefügt.
+- Alle HTML-Dateien verwenden Cache-Buster 5478; kein HTML-Verweis auf 5477 verblieben.
+- Fachlogik des Zuchtplaners/Verpaarungslogs nicht verändert; Änderungen betreffen Markup-Anordnung, CSS und EN-UI-Texte/Cache-Buster.
+- ZIP-Integrität nach Erstellung separat geprüft.

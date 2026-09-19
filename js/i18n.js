@@ -43,7 +43,7 @@
         return;
       }
       const script = document.createElement('script');
-      script.src = 'js/i18n-en.js?v=5475';
+      script.src = 'js/i18n-en.js?v=5478';
       script.async = true;
       script.dataset.mdrI18nEn = '1';
       script.addEventListener('load', () => resolve(installEnglishData(window.MDR_I18N_EN_DATA)), { once:true });

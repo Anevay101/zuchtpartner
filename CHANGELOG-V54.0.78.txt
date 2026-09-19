@@ -1,0 +1,24 @@
+V54.0.78 – Zuchtplaner geordnet + Verpaarungslog-Kontrast
+
+Zuchtplaner
+- Partner-finden-Seite in einen klaren 3-Schritt-Ablauf gegliedert:
+  1. Ausgangspferd
+  2. Bewertung & Partnerfilter
+  3. optionale Verfeinerung
+- Bewertung/Sortierung und Gegenpartnerfilter sind jetzt visuell getrennte Gruppen statt eines gemischten Feldrasters.
+- Mindestanforderungen stehen als eigener, durchgehender optionaler Block.
+- Farbwünsche sind in einem zusammenhängenden Bereich gebündelt; weitere Farbwünsche liegen darin als aufklappbarer Unterbereich.
+- Turnierzucht steht gleichrangig neben den Farbwünschen statt versetzt unter zufälligen Karten.
+- Bestehende Feld-IDs und fachliche Zuchtplanerlogik bleiben erhalten; die Seite wurde strukturell/visuell neu geordnet.
+- Neue UI-Texte wurden für EN ergänzt.
+
+Verpaarungslog
+- Kontrast der ✓ / ? / ✗-Entscheidung deutlich erhöht.
+- Aktive Zustände sind jetzt eindeutig farbcodiert: ✓ grün, ? amber/gelb, ✗ rot.
+- Nicht aktive Entscheidungen bleiben neutral weiß/grau.
+- Aktive Auswahl erhält zusätzlich einen sichtbaren Fokus-/Ringeffekt.
+- Auch der standardmäßig offene ?-Zustand bleibt bei deaktivierten Buttons klar erkennbar.
+
+Release
+- Cache-Buster auf 5478 angehoben.
+- Version auf V54.0.78 angehoben.

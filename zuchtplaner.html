@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Zuchtplaner – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5477" />
+  <link rel="stylesheet" href="css/style.css?v=5478" />
 </head>
 <body class="planner-high-contrast">
 <header class="topbar">
@@ -42,7 +42,14 @@
       <p class="small muted">Passende Partner mit Fohlen-Vorhersage. ✓ Verwandtschaft, Overo × Overo und Deckstationsregeln werden automatisch geprüft.</p>
     </div>
 
-    <section class="card zp-start-card">
+    <section class="card zp-start-card zp-workflow-card">
+      <div class="zp-workflow-heading zp-start-heading">
+        <span class="zp-step-number">1</span>
+        <div>
+          <h3>Ausgangspunkt</h3>
+          <p class="small muted">Ausgangspferd wählen; passende Gegenpartner werden anschließend automatisch gerankt.</p>
+        </div>
+      </div>
       <div class="zp-direction-row">
         <div>
           <label for="richtung-select">Ausgangspunkt</label>
@@ -92,49 +99,75 @@
 
     <div id="inzucht-result" hidden></div>
 
-    <div class="notice zp-prediction-note">
-      Best-/Worst-Case bei <strong>GP</strong> und <strong>Int</strong> sind theoretische Extremwerte. Für die Praxis ist die <strong>Datenbank-Schätzung</strong> meist hilfreicher; Ext und Ext% beruhen auf bekannten genetischen Daten.
-    </div>
+    <div class="zp-planner-workflow">
+      <fieldset class="card zp-tool-card zp-core-options zp-workflow-card">
+        <legend><span class="zp-step-number">2</span> Bewertung &amp; Partnerfilter</legend>
+        <div class="zp-core-groups">
+          <section class="zp-control-group zp-scoring-group">
+            <h3>Bewertung &amp; Sortierung</h3>
+            <div class="zp-compact-fields zp-advisor-controls zp-scoring-controls">
+              <div><label for="schwerpunkt-select">Schwerpunkt</label><select id="schwerpunkt-select"><option value="gp">GP (Gesamtpotenzial)</option><option value="ext">Ext (Körperbau)</option><option value="extpct" selected>Ext% (genetisch)</option><option value="int">Int (Interieur)</option></select></div>
+              <div><label for="sortierung-select">Sortierung</label><select id="sortierung-select"><option value="best">Bester Best Case</option><option value="worst">Bester Worst Case</option><option value="complement" id="complement-sort-option">Bester Ausgleich der Schwächen</option><option value="combo" selected>Kombinierter Ausgleich (2 Kriterien)</option><option value="empirical">Beste Datenbank-Schätzung</option><option value="diff-asc">Kleinste Differenz (verlässlich)</option><option value="diff-desc">Größte Differenz (Risiko/Chance)</option></select></div>
+              <div id="combo-second-wrap"><label for="combo-second-select">2. Kriterium</label><select id="combo-second-select"><option value="gp" selected>GP</option><option value="ext">Ext</option><option value="extpct">Ext%</option><option value="int">Int</option></select></div>
+              <div id="combo-weight-wrap"><label for="combo-weight-input">Gewichtung 1. Kriterium (%)</label><input id="combo-weight-input" type="number" min="0" max="100" value="80" /></div>
+            </div>
+          </section>
 
-    <div class="zp-advisor-layout">
-      <fieldset class="card zp-tool-card zp-core-options">
-        <legend>Schwerpunkt &amp; Partnerfilter</legend>
-        <div class="zp-compact-fields zp-advisor-controls">
-          <div><label for="schwerpunkt-select">Schwerpunkt</label><select id="schwerpunkt-select"><option value="gp">GP (Gesamtpotenzial)</option><option value="ext">Ext (Körperbau)</option><option value="extpct" selected>Ext% (genetisch)</option><option value="int">Int (Interieur)</option></select></div>
-          <div><label for="sortierung-select">Sortierung</label><select id="sortierung-select"><option value="best">Bester Best Case</option><option value="worst">Bester Worst Case</option><option value="complement" id="complement-sort-option">Bester Ausgleich der Schwächen</option><option value="combo" selected>Kombinierter Ausgleich (2 Kriterien)</option><option value="empirical">Beste Datenbank-Schätzung</option><option value="diff-asc">Kleinste Differenz (verlässlich)</option><option value="diff-desc">Größte Differenz (Risiko/Chance)</option></select></div>
-          <div id="combo-second-wrap"><label for="combo-second-select">2. Kriterium</label><select id="combo-second-select"><option value="gp" selected>GP</option><option value="ext">Ext</option><option value="extpct">Ext%</option><option value="int">Int</option></select></div>
-          <div id="combo-weight-wrap"><label for="combo-weight-input">Gewichtung 1. Kriterium (%)</label><input id="combo-weight-input" type="number" min="0" max="100" value="80" /></div>
-          <div><label id="candidate-breed-label" for="candidate-breed-select">Hengst-Rasse</label><select id="candidate-breed-select"><option value="">Alle</option></select></div>
-          <div><label id="candidate-owner-label" for="candidate-owner-select">Hengst-Besitzer</label><select id="candidate-owner-select"><option value="">Alle</option></select></div>
-          <div id="candidate-station-wrap"><label for="candidate-station-select">In Zuchtstation</label><select id="candidate-station-select"><option value="">Alle</option><option value="true">Ja</option><option value="false">Nein</option></select></div>
+          <section class="zp-control-group zp-candidate-group">
+            <h3>Gegenpartner filtern</h3>
+            <div class="zp-compact-fields zp-candidate-controls">
+              <div><label id="candidate-breed-label" for="candidate-breed-select">Hengst-Rasse</label><select id="candidate-breed-select"><option value="">Alle</option></select></div>
+              <div><label id="candidate-owner-label" for="candidate-owner-select">Hengst-Besitzer</label><select id="candidate-owner-select"><option value="">Alle</option></select></div>
+              <div id="candidate-station-wrap"><label for="candidate-station-select">In Zuchtstation</label><select id="candidate-station-select"><option value="">Alle</option><option value="true">Ja</option><option value="false">Nein</option></select></div>
+            </div>
+            <p class="small muted candidate-filter-note">Besitzer- und Rassefilter gelten für den Gegenpartner. Deckstation-Hengste werden nur für Prämienstuten berücksichtigt.</p>
+          </section>
         </div>
-        <p class="small muted candidate-filter-note">Besitzer- und Rassefilter gelten für den Gegenpartner. Deckstation-Hengste werden nur für Prämienstuten berücksichtigt.</p>
+        <div class="notice zp-prediction-note">
+          Best-/Worst-Case bei <strong>GP</strong> und <strong>Int</strong> sind theoretische Extremwerte. Für die Praxis ist die <strong>Datenbank-Schätzung</strong> meist hilfreicher; Ext und Ext% beruhen auf bekannten genetischen Daten.
+        </div>
       </fieldset>
 
-      <details class="card zp-tool-card zp-minimum-requirements" id="minimum-requirements-details">
-        <summary><strong>🎯 Mindestanforderungen</strong><span id="minimum-requirements-status" class="zp-summary-status">Aus</span></summary>
-        <p class="small muted">Nur Verpaarungen anzeigen, deren Datenbank-Schätzung alle ausgefüllten Grenzwerte erfüllt. Bei Ext und Int gilt: niedriger ist besser.</p>
-        <div class="zp-compact-fields zp-minimum-fields">
-          <div><label for="minimum-extpct">Ext% mindestens</label><input id="minimum-extpct" type="number" min="0" max="100" step="0.1" inputmode="decimal" placeholder="–" /></div>
-          <div><label for="maximum-int">Int höchstens</label><input id="maximum-int" type="number" min="0" step="0.01" inputmode="decimal" placeholder="–" /></div>
-          <div><label for="minimum-gp">GP mindestens</label><input id="minimum-gp" type="number" min="0" step="1" inputmode="numeric" placeholder="–" /></div>
-          <div><label for="maximum-ext">Ext höchstens</label><input id="maximum-ext" type="number" min="0" step="0.01" inputmode="decimal" placeholder="–" /></div>
-        </div>
-        <div class="actions zp-minimum-actions"><button type="button" id="minimum-requirements-reset" class="secondary">Zurücksetzen</button></div>
-      </details>
-
-      <div class="zp-option-stack">
-        <section class="card zp-tool-card zp-mini-card">
-          <h3>🎨 Zusatzwünsche</h3>
-          <div class="zp-option-stack-fields">
-            <div><label for="base-color-wish">Grundfarbe bevorzugen</label><select id="base-color-wish"><option value="any">Egal</option><option value="Chestnut">Chestnut</option><option value="Wild Bay">Wild Bay</option><option value="Bay">Bay</option><option value="Sealbrown">Sealbrown</option><option value="Black">Black</option><option value="Grey">Grey</option></select><p id="base-color-wish-info" class="tiny muted"></p></div>
-            <div><label for="appaloosa-wish">🐆 Appaloosa-Muster bevorzugen</label><select id="appaloosa-wish"><option value="any">Egal</option><option value="Leopard">Leopard</option><option value="Few Spot">Few Spot</option><option value="Spotted Blanket">Spotted Blanket</option><option value="Snowcap">Snowcap</option><option value="Varnish Roan">Varnish Roan</option><option value="snowflake">Snowflake</option></select></div>
+      <section class="card zp-tool-card zp-refinement-card zp-workflow-card">
+        <div class="zp-workflow-heading">
+          <span class="zp-step-number">3</span>
+          <div>
+            <h3>Optionale Verfeinerung</h3>
+            <p class="small muted">Nur verwenden, wenn du die Partnerauswahl zusätzlich eingrenzen möchtest.</p>
           </div>
-          <p id="appaloosa-wish-info" class="tiny muted"></p>
-        </section>
-        <details class="card farbwunsch-box zp-color-wishes zp-tool-card" id="farbwunsch-details"><summary><strong>🎨 Weitere Farbwünsche (optional)</strong></summary><div id="farbwunsch-options" class="farbwunsch-grid"></div></details>
-        <details class="card farbwunsch-box turnierzucht-box zp-tool-card" id="turnierzucht-details"><summary><strong>🏆 Turnierzucht</strong><span id="turnierzucht-summary-status" class="zp-summary-status">Aus</span></summary><p class="small muted">Gewichtet relevantes Interieur stärker: Exzellent Bonus, Gut neutral, In Ordnung leicht negativ, darunter deutlich negativ.</p><div class="zp-compact-fields zp-turnier-fields"><div><label for="turnierzucht-mode">Turnierzucht berücksichtigen</label><select id="turnierzucht-mode"><option value="off">Aus</option><option value="main">Hauptdisziplin des Ausgangspferdes</option><option value="specific">Bestimmte Disziplin</option></select></div><div id="turnierzucht-specific-wrap" hidden><label for="turnierzucht-discipline">Disziplin</label><select id="turnierzucht-discipline"></select></div><div><label for="talent-wish-select">Gewünschte Begabung (optional)</label><select id="talent-wish-select"><option value="">Keine Präferenz</option></select></div></div><div id="turnierzucht-info" class="small muted"></div></details>
-      </div>
+        </div>
+
+        <details class="zp-refine-panel zp-minimum-requirements" id="minimum-requirements-details">
+          <summary><strong>🎯 Mindestanforderungen</strong><span id="minimum-requirements-status" class="zp-summary-status">Aus</span></summary>
+          <p class="small muted">Nur Verpaarungen anzeigen, deren Datenbank-Schätzung alle ausgefüllten Grenzwerte erfüllt. Bei Ext und Int gilt: niedriger ist besser.</p>
+          <div class="zp-compact-fields zp-minimum-fields">
+            <div><label for="minimum-extpct">Ext% mindestens</label><input id="minimum-extpct" type="number" min="0" max="100" step="0.1" inputmode="decimal" placeholder="–" /></div>
+            <div><label for="maximum-int">Int höchstens</label><input id="maximum-int" type="number" min="0" step="0.01" inputmode="decimal" placeholder="–" /></div>
+            <div><label for="minimum-gp">GP mindestens</label><input id="minimum-gp" type="number" min="0" step="1" inputmode="numeric" placeholder="–" /></div>
+            <div><label for="maximum-ext">Ext höchstens</label><input id="maximum-ext" type="number" min="0" step="0.01" inputmode="decimal" placeholder="–" /></div>
+          </div>
+          <div class="actions zp-minimum-actions"><button type="button" id="minimum-requirements-reset" class="secondary">Zurücksetzen</button></div>
+        </details>
+
+        <div class="zp-refinement-split">
+          <section class="zp-refine-panel zp-color-preferences-panel">
+            <h3>🎨 Farbwünsche</h3>
+            <div class="zp-option-stack-fields">
+              <div><label for="base-color-wish">Grundfarbe bevorzugen</label><select id="base-color-wish"><option value="any">Egal</option><option value="Chestnut">Chestnut</option><option value="Wild Bay">Wild Bay</option><option value="Bay">Bay</option><option value="Sealbrown">Sealbrown</option><option value="Black">Black</option><option value="Grey">Grey</option></select><p id="base-color-wish-info" class="tiny muted"></p></div>
+              <div><label for="appaloosa-wish">🐆 Appaloosa-Muster bevorzugen</label><select id="appaloosa-wish"><option value="any">Egal</option><option value="Leopard">Leopard</option><option value="Few Spot">Few Spot</option><option value="Spotted Blanket">Spotted Blanket</option><option value="Snowcap">Snowcap</option><option value="Varnish Roan">Varnish Roan</option><option value="snowflake">Snowflake</option></select></div>
+            </div>
+            <p id="appaloosa-wish-info" class="tiny muted"></p>
+            <details class="farbwunsch-box zp-color-wishes zp-nested-details" id="farbwunsch-details"><summary><strong>🎨 Weitere Farbwünsche (optional)</strong></summary><div id="farbwunsch-options" class="farbwunsch-grid"></div></details>
+          </section>
+
+          <details class="zp-refine-panel turnierzucht-box" id="turnierzucht-details">
+            <summary><strong>🏆 Turnierzucht</strong><span id="turnierzucht-summary-status" class="zp-summary-status">Aus</span></summary>
+            <p class="small muted">Gewichtet relevantes Interieur stärker: Exzellent Bonus, Gut neutral, In Ordnung leicht negativ, darunter deutlich negativ.</p>
+            <div class="zp-compact-fields zp-turnier-fields"><div><label for="turnierzucht-mode">Turnierzucht berücksichtigen</label><select id="turnierzucht-mode"><option value="off">Aus</option><option value="main">Hauptdisziplin des Ausgangspferdes</option><option value="specific">Bestimmte Disziplin</option></select></div><div id="turnierzucht-specific-wrap" hidden><label for="turnierzucht-discipline">Disziplin</label><select id="turnierzucht-discipline"></select></div><div><label for="talent-wish-select">Gewünschte Begabung (optional)</label><select id="talent-wish-select"><option value="">Keine Präferenz</option></select></div></div>
+            <div id="turnierzucht-info" class="small muted"></div>
+          </details>
+        </div>
+      </section>
     </div>
 
     <p id="auswahl-hint" class="small muted zp-result-hint"></p>
@@ -175,23 +208,23 @@
   <p id="zucht-error" class="error"></p>
 </main>
 
-<script src="js/tournament-catalog.js?v=5477"></script>
-<script src="js/i18n.js?v=5477"></script>
-  <script src="js/core-utils.js?v=5477"></script>
-  <script src="js/supabase-loader.js?v=5477"></script>
-<script src="js/supabase-config.js?v=5477"></script>
-<script src="js/database-local.js?v=5477"></script>
-<script src="js/local-app.js?v=5477"></script>
-<script src="js/learning-file.js?v=5477"></script>
-<script src="js/horse-data-utils.js?v=5477"></script>
-<script src="js/parser.js?v=5477"></script>
-<script src="js/planer-common.js?v=5477"></script>
-<script src="js/zuchtplaner-engine-helpers.js?v=5477"></script>
-<script src="js/breeding-original.js?v=5477"></script>
-<script src="js/verpaarungsratgeber-engine.js?v=5477"></script>
-<script src="js/foal-prediction.js?v=5477"></script>
-<script src="js/color-guide.js?v=5477"></script>
-<script src="js/turnierzucht.js?v=5477"></script>
-<script src="js/zuchtplaner-local.js?v=5477"></script>
+<script src="js/tournament-catalog.js?v=5478"></script>
+<script src="js/i18n.js?v=5478"></script>
+  <script src="js/core-utils.js?v=5478"></script>
+  <script src="js/supabase-loader.js?v=5478"></script>
+<script src="js/supabase-config.js?v=5478"></script>
+<script src="js/database-local.js?v=5478"></script>
+<script src="js/local-app.js?v=5478"></script>
+<script src="js/learning-file.js?v=5478"></script>
+<script src="js/horse-data-utils.js?v=5478"></script>
+<script src="js/parser.js?v=5478"></script>
+<script src="js/planer-common.js?v=5478"></script>
+<script src="js/zuchtplaner-engine-helpers.js?v=5478"></script>
+<script src="js/breeding-original.js?v=5478"></script>
+<script src="js/verpaarungsratgeber-engine.js?v=5478"></script>
+<script src="js/foal-prediction.js?v=5478"></script>
+<script src="js/color-guide.js?v=5478"></script>
+<script src="js/turnierzucht.js?v=5478"></script>
+<script src="js/zuchtplaner-local.js?v=5478"></script>
 </body>
 </html>
