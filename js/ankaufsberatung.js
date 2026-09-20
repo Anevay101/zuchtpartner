@@ -1,4 +1,4 @@
-// MDR V54.0.57 – kompakte Ankaufsberatung mit Ampelsystem
+// MDR V54.0.81 – Ankaufsberatung mit Schnellübersicht, Top-Turnierwerten und ZS-Prognose
 // Kaufkandidaten werden nur im Browser analysiert. Es wird kein Datensatz
 // geschrieben, bis der Nutzer ausdrücklich „Gekauft – in Datenbank übernehmen“
 // wählt und das Pferd anschließend in horse.html speichert.
@@ -293,6 +293,175 @@
     return Number(value).toLocaleString(window.MDR_I18N?.language === 'en' ? 'en-US' : 'de-DE',{minimumFractionDigits:digits,maximumFractionDigits:digits}) + suffix;
   }
 
+  function purchaseValueMap(horse) {
+    const map = new Map();
+    const normalizer = typeof plannerNorm === 'function' ? plannerNorm : (value => norm(value));
+    for (const source of [horse?.disciplines || {}, horse?.traits || {}]) {
+      for (const rows of Object.values(source)) {
+        for (const row of rows || []) {
+          const potential = Number(row?.potential);
+          if (row?.name && Number.isFinite(potential)) map.set(normalizer(row.name), potential);
+        }
+      }
+    }
+    return map;
+  }
+
+  function purchaseTopTournamentValues(horse, limit=4) {
+    if (typeof MDR_TOURNAMENT_DISCIPLINES === 'undefined') return [];
+    const map = purchaseValueMap(horse);
+    const normalizer = typeof plannerNorm === 'function' ? plannerNorm : (value => norm(value));
+    const rows = [];
+    for (const [discipline, def] of Object.entries(MDR_TOURNAMENT_DISCIPLINES)) {
+      const values = (def?.performance || []).map(name => map.get(normalizer(name)));
+      if (!values.length || values.some(value => !Number.isFinite(value))) continue;
+      const points = 3 * values[0] + values.slice(1).reduce((sum, value) => sum + value, 0);
+      rows.push({ discipline, group:def.group || '', points });
+    }
+    return rows
+      .sort((a,b) => b.points-a.points || String(a.discipline).localeCompare(String(b.discipline),'de'))
+      .slice(0, Math.max(0, Number(limit) || 4));
+  }
+
+  function purchaseDisciplineLabel(value) {
+    return typeof mdrTournamentDisciplineLabel === 'function'
+      ? mdrTournamentDisciplineLabel(value, window.MDR_I18N?.language === 'en' ? 'en' : 'de')
+      : String(value || '');
+  }
+
+  function purchaseGroupLabel(value) {
+    return typeof mdrTournamentGroupLabel === 'function'
+      ? mdrTournamentGroupLabel(value, window.MDR_I18N?.language === 'en' ? 'en' : 'de')
+      : String(value || '');
+  }
+
+  function purchaseBreedingShowPreview(horse) {
+    const actual = typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : null;
+    if (actual != null) return { actual:Number(actual), predicted:null, model:null, benchmark:null, assessment:null };
+
+    let model = null;
+    let predicted = null;
+    try {
+      if (typeof plannerBuildBreedingShowModel === 'function') {
+        model = plannerBuildBreedingShowModel(allHorses || []);
+        const value = model?.predict?.(horse);
+        if (value != null && Number.isFinite(Number(value))) predicted = Number(value);
+      }
+    } catch {}
+
+    const api = window.MDR_BREEDING_SHOW_BENCHMARK;
+    const benchmark = api?.getBenchmarkForHorse ? api.getBenchmarkForHorse(horse) : null;
+    const assessment = predicted != null && api?.assessHorseForecast
+      ? api.assessHorseForecast(horse, predicted, benchmark)
+      : null;
+    return { actual:null, predicted, model, benchmark, assessment };
+  }
+
+  function purchaseForecastLabel(status) {
+    if (status === 'green') return t('Gute Chancen','Good chances');
+    if (status === 'yellow') return t('Anspruchsvoll','Demanding');
+    if (status === 'red') return t('Cup-Stern erforderlich','Cup star required');
+    return t('Nicht einschätzbar','Cannot assess');
+  }
+
+  function purchaseForecastExplanation(preview) {
+    const a = preview?.assessment;
+    if (!a || a.status === 'neutral') {
+      if (preview?.predicted != null && !preview?.benchmark) {
+        return t('Für Rasse und Geschlecht liegt noch kein aktuelles Durchkommensniveau vor.','No current qualifying cutoff is available yet for this breed and sex.');
+      }
+      const model = preview?.model;
+      if (model && Number(model.n) < 8) {
+        return t(`Noch keine belastbare ZS-Prognose: aktuell ${model.n} verwertbare echte ZS-Datensätze, mindestens 8 nötig.`,`No reliable breeding-show forecast yet: ${model.n} usable actual show records are available; at least 8 are required.`);
+      }
+      return t('Die Zuchtschau-Prognose ist mit den vorhandenen Daten noch nicht berechenbar.','The breeding-show forecast cannot yet be calculated from the available data.');
+    }
+    if (a.status === 'red') {
+      const stars = Math.max(1, Number(a.extraCupStars) || 1);
+      const remaining = Math.max(0, Number(a.gap || 0) - Number(a.remainingTournamentBonus || 0));
+      return t(
+        `Selbst mit ausgeschöpftem normalem Turnierbonus fehlen rechnerisch noch ca. ${fmt(remaining)} Punkte. Dafür wären mindestens ${stars} zusätzliche ${stars === 1 ? 'Cup-Stern' : 'Cup-Sterne'} nötig.`,
+        `Even with the normal competition bonus fully used, about ${fmt(remaining)} points would still be missing. At least ${stars} additional Cup ${stars === 1 ? 'star' : 'stars'} would be required.`
+      );
+    }
+    if (Number(a.gap || 0) <= 0) {
+      return t('Der aktuelle Schätzwert liegt bereits auf oder über dem typischen Durchkommensniveau.','The current estimate is already at or above the typical qualifying cutoff.');
+    }
+    return t(
+      `Bis zum typischen Durchkommensniveau fehlen rechnerisch ca. ${fmt(a.gap)} zusätzliche Bonuspunkte.`,
+      `About ${fmt(a.gap)} additional bonus points are needed to reach the typical qualifying cutoff.`
+    );
+  }
+
+  function renderCandidateOverview(candidate) {
+    const metricsRoot = document.getElementById('purchase-core-metrics');
+    const tournamentsRoot = document.getElementById('purchase-top-tournaments');
+    const forecastCard = document.getElementById('purchase-zs-forecast-card');
+    const forecastStatus = document.getElementById('purchase-zs-status');
+    const forecastContent = document.getElementById('purchase-zs-forecast-content');
+    if (!metricsRoot || !tournamentsRoot || !forecastCard || !forecastStatus || !forecastContent) return;
+
+    const core = horseMetrics(candidate);
+    const preview = purchaseBreedingShowPreview(candidate);
+    const offspringRaw = candidate?.offspring_count != null && candidate.offspring_count !== '' ? Number(candidate.offspring_count) : null;
+    const offspring = Number.isFinite(offspringRaw) ? Math.max(0, Math.round(offspringRaw)) : null;
+    const zsDisplay = preview.actual != null
+      ? fmt(preview.actual)
+      : preview.predicted != null ? `≈ ${fmt(preview.predicted)}` : '–';
+    const zsHint = preview.actual != null ? t('echter ZS-Wert','actual show score') : preview.predicted != null ? t('DB-Prognose Grundwert','database forecast baseline') : t('noch nicht berechenbar','not yet calculable');
+
+    const metricRows = [
+      {label:t('GP','OP'), value:fmt(core.gp), hint:t('Gesamtpotenzial','Overall potential')},
+      {label:t('Ext','Confo'), value:fmt(core.ext,2), hint:t('Körperbau – niedriger ist besser','Conformation – lower is better')},
+      {label:t('Ext%','Confo%'), value:fmt(core.extPct,0,'%'), hint:t('genetisches Exterieur – höher ist besser','genetic conformation – higher is better')},
+      {label:t('Int','Inner Values'), value:fmt(core.int,2), hint:t('Interieur – niedriger ist besser','Inner values – lower is better')},
+      {label:'ZS', value:zsDisplay, hint:zsHint, accent:true},
+      {label:t('Nachkommen','Offspring'), value:offspring == null ? '?' : String(offspring), hint:offspring == null ? t('noch nicht aus MDR-Profil eingelesen','not yet imported from MDR profile') : t('Nachkommen laut MDR-Profil','offspring according to MDR profile')},
+    ];
+    metricsRoot.innerHTML = metricRows.map(row => `<div class="purchase-core-metric${row.accent?' purchase-core-metric-accent':''}" title="${esc(row.hint)}"><span>${esc(row.label)}</span><strong>${esc(row.value)}</strong><small>${esc(row.hint)}</small></div>`).join('');
+
+    const tournamentRows = purchaseTopTournamentValues(candidate,4);
+    tournamentsRoot.innerHTML = tournamentRows.length
+      ? tournamentRows.map((row,index) => `<div class="purchase-tournament-value"><span class="purchase-tournament-rank">${index+1}</span><div><strong>${esc(purchaseDisciplineLabel(row.discipline))}</strong><small>${esc(purchaseGroupLabel(row.group))}</small></div><b>${fmt(row.points)}</b></div>`).join('')
+      : `<p class="small muted purchase-overview-empty">${esc(t('Keine vollständigen Turnierwerte berechenbar.','No complete competition values can be calculated.'))}</p>`;
+
+    if (preview.actual != null) {
+      forecastCard.hidden = true;
+      forecastCard.parentElement?.classList.add('purchase-overview-no-forecast');
+      forecastStatus.textContent = '–';
+      forecastStatus.className = 'zs-forecast-status zs-forecast-neutral';
+      forecastContent.innerHTML = '';
+      return;
+    }
+
+    forecastCard.hidden = false;
+    forecastCard.parentElement?.classList.remove('purchase-overview-no-forecast');
+    const assessment = preview.assessment;
+    const status = assessment?.status || 'neutral';
+    forecastStatus.textContent = purchaseForecastLabel(status);
+    forecastStatus.className = `zs-forecast-status zs-forecast-${['green','yellow','red'].includes(status) ? status : 'neutral'}`;
+
+    if (preview.predicted == null) {
+      forecastContent.innerHTML = `<p class="small muted purchase-zs-forecast-note">${esc(purchaseForecastExplanation(preview))}</p>`;
+      return;
+    }
+
+    const benchmark = preview.benchmark;
+    const metricParts = [
+      `<div><span>${esc(t('DB-Prognose Grundwert','Database forecast baseline'))}</span><strong>${fmt(preview.predicted)}</strong></div>`,
+    ];
+    if (assessment && assessment.status !== 'neutral') {
+      metricParts.push(`<div><span>${esc(t('Schätzwert mit aktuellem Bonus','Estimate with current bonus'))}</span><strong>${fmt(assessment.currentEstimate)}</strong></div>`);
+    }
+    if (benchmark?.qualifyingMedian != null) {
+      metricParts.push(`<div class="purchase-zs-target"><span>${esc(t('Typisches Durchkommen','Typical qualifying cutoff'))}</span><strong>${fmt(benchmark.qualifyingMedian)}</strong></div>`);
+    }
+    forecastContent.innerHTML = `
+      <div class="purchase-zs-forecast-metrics">${metricParts.join('')}</div>
+      <p class="small purchase-zs-forecast-note">${esc(purchaseForecastExplanation(preview))}</p>
+      <p class="tiny muted purchase-zs-forecast-foot">${esc(t('Die Prognose ist kein echter ZS-Wert. Sie nutzt dieselbe Grundwert-, Turnierbonus-, Cup-Stern- und Durchkommenslogik wie auf der Pferdeseite.','The forecast is not an actual show score. It uses the same baseline, competition-bonus, Cup-star and qualifying-cutoff logic as the horse page.'))}</p>`;
+  }
+
   function generationLabel(generation) {
     return ({1:t('Eltern','Parents'),2:t('Großeltern','Grandparents'),3:t('3. Generation','3rd generation'),4:t('4. Generation','4th generation')})[generation] || String(generation);
   }
@@ -417,6 +586,7 @@
     setTrafficLight('purchase-partner-light',trafficLevel(analysis.partners.score,70,40));
     setTrafficLight('purchase-pedigree-light',trafficLevel(analysis.pedigree.percent,80,55));
 
+    renderCandidateOverview(candidate);
     renderLineAnalysis(analysis);
     renderQuality(analysis);
     renderPartners(analysis);
@@ -482,6 +652,10 @@
     if (!session) return;
     await renderSharedNav(session);
     allHorses=await localGetAll(LOCAL_STORES.horses);
+    if (window.MDR_BREEDING_SHOW_BENCHMARK?.ensureLoaded) {
+      try { await window.MDR_BREEDING_SHOW_BENCHMARK.ensureLoaded(); }
+      catch (error) { console.warn('Zuchtschau-Benchmark für Ankaufsberatung konnte nicht geladen werden:', error); }
+    }
     ownerNote();
     populateExisting();
 
@@ -508,7 +682,7 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports={ median, percentile, horseMetrics, pedigreeCompleteness, verdictFor, weightedScore, computeLineAnalysis, computeQuality, computePartners };
+    module.exports={ median, percentile, horseMetrics, pedigreeCompleteness, verdictFor, weightedScore, computeLineAnalysis, computeQuality, computePartners, purchaseTopTournamentValues };
   }
   if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded',()=>{ init().catch(error=>{ const el=document.getElementById('purchase-error'); if(el) el.textContent=t('Ankaufsberatung konnte nicht gestartet werden: ','Purchase advisor could not start: ')+error.message; }); });
 })();

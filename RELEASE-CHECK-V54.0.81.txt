@@ -1,0 +1,34 @@
+RELEASE-CHECK V54.0.81
+
+Zweck
+- Ankaufsberatung um eine kompakte Kandidaten-Schnellübersicht erweitern.
+- GP, Ext, Ext%, Int, ZS und Nachkommen wie in den Stammdaten schnell sichtbar machen.
+- Die vier stärksten Turnierwerte ergänzen.
+- Bei Pferden ohne echten ZS-Wert dieselbe Zuchtschau-Prognose wie auf der Pferdeseite verwenden.
+- Bestehenden Linien-, Qualitäts- und Zuchtpartner-/Bestandsabgleich fachlich unverändert lassen.
+
+Geprüft
+- JavaScript-Syntax: 40/40 Dateien OK.
+- CSS mit tinycss2 geparst: 0 Fehler; öffnende/schließende Blöcke 1791/1791.
+- HTML: 14 Dateien geprüft, 0 doppelte IDs.
+- Lokale HTML-Ressourcenreferenzen: 200 geprüft, 0 fehlend.
+- Cache-Buster: 0 alte v=5480; 201 Referenzen auf v=5481 (inkl. lazy i18n-en.js).
+- VERSION.txt = V54.0.81.
+- Neue Ankaufs-IDs vorhanden: purchase-core-metrics, purchase-top-tournaments, purchase-zs-forecast-card, purchase-zs-status, purchase-zs-forecast-content.
+- Script-Reihenfolge Ankaufsberatung: planer-common.js -> breeding-show-benchmark.js -> ankaufsberatung.js.
+- breeding-show-benchmark.js ist bytegleich zu V54.0.80; die bestehende ZS-Benchmark-/Ampellogik wurde nicht dupliziert oder verändert.
+- Alle übrigen JS-Dateien außer ankaufsberatung.js und den i18n-Dateien sind bytegleich zu V54.0.80.
+- Alle anderen HTML-Dateien sind nach Normalisierung des Cache-Busters bytegleich zu V54.0.80.
+
+Funktionstests
+- Top-4-Turnierwert-Test mit fünf vollständig berechenbaren und einer unvollständigen Disziplin: exakt vier stärkste Werte, korrekt absteigend sortiert.
+- Formeltest: 3 x Disziplinwert + sechs weitere Leistungswerte entspricht der bestehenden Turnierprofil-Formel.
+- Unvollständige Disziplinen werden nicht als Top-Turnierwert ausgegeben.
+- Deutscher und englischer Disziplin-/Gruppenname kommt aus dem zentralen Turnierkatalog.
+- Echter positiver ZS-Wert hat Vorrang; dann wird die separate Zuchtschau-Prognose ausgeblendet.
+- Ohne echten ZS-Wert wird das bestehende ZS-Lernmodell genutzt; Benchmark und Ampel kommen aus MDR_BREEDING_SHOW_BENCHMARK.
+- Nachkommen werden wie in den Stammdaten aus offspring_count des MDR-Profils angezeigt; fehlt der Wert, erscheint ?.
+
+Datenhaltung
+- Keine neue Supabase-Tabelle und kein neues Datenformat.
+- Keine Änderung an ZS-Snapshots, Benchmark-Rohdaten oder Mannschafts-/Bestandsvergleich.

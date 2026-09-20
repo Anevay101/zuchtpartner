@@ -1,0 +1,13 @@
+V54.0.81 – Ankaufsberatung: Schnellübersicht, Top-Turnierwerte & ZS-Prognose
+
+- Ankaufsberatung um eine kompakte Schnellübersicht direkt beim Kaufkandidaten erweitert.
+- Schnellübersicht zeigt GP, Exterieur, Exterieur-%, Interieur, ZS und aktuelle Nachkommen laut MDR-Profil.
+- Bei vorhandenem echtem ZS-Wert wird dieser angezeigt; eine zusätzliche Zuchtschau-Prognose wird dann bewusst ausgeblendet.
+- Ohne echten ZS-Wert wird – sofern berechenbar – der DB-Grundwert als ≈-Wert in der Schnellübersicht gezeigt.
+- Vier stärkste vollständig berechenbare Turnierwerte werden nach derselben 3×Disziplin + 6 Leistungswerte-Formel wie im Turnierprofil ermittelt und absteigend angezeigt.
+- Disziplin- und Gruppenbezeichnungen verwenden den zentralen DE/EN-Turnierkatalog.
+- Separate kompakte Zuchtschau-Prognose nutzt unverändert das V54.0.80-Modell, das aktuelle Rassen-/Geschlechts-Durchkommensniveau sowie dieselbe Grün/Gelb/Rot-Logik.
+- Zuchtschau-Prognose erscheint nur, wenn kein echter positiver ZS-Wert vorliegt.
+- Mannschafts-/Bestandsabgleich, Linienvergleich, Qualitätsvergleich und Zuchtpartneranalyse bleiben fachlich unverändert.
+- Deutsche und englische Oberfläche ergänzt.
+- Keine neue Datenbankstruktur und keine Änderung der Supabase-Datenhaltung.

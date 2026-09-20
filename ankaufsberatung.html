@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Ankaufsberatung – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5480" />
+  <link rel="stylesheet" href="css/style.css?v=5481" />
 </head>
 <body class="purchase-advisor-page">
   <header class="topbar">
@@ -73,6 +73,26 @@
         </div>
       </div>
 
+      <section class="card purchase-candidate-overview-card">
+        <div class="purchase-overview-head">
+          <div>
+            <h2>Schnellübersicht</h2>
+            <p class="small muted">Kernwerte auf einen Blick. Turnierwerte zeigen die vier stärksten vollständig berechenbaren Disziplinen; die Zuchtschau-Prognose erscheint nur ohne echten ZS-Wert.</p>
+          </div>
+        </div>
+        <div id="purchase-core-metrics" class="purchase-core-metrics"></div>
+        <div class="purchase-overview-detail-grid">
+          <section class="purchase-overview-subcard">
+            <div class="purchase-overview-subhead"><h3>4 stärkste Turnierwerte</h3><span class="tiny muted">Turnierwert</span></div>
+            <div id="purchase-top-tournaments" class="purchase-top-tournaments"></div>
+          </section>
+          <section id="purchase-zs-forecast-card" class="purchase-overview-subcard purchase-zs-forecast-card" hidden>
+            <div class="purchase-overview-subhead"><h3>Zuchtschau-Prognose</h3><span id="purchase-zs-status" class="zs-forecast-status zs-forecast-neutral">–</span></div>
+            <div id="purchase-zs-forecast-content"></div>
+          </section>
+        </div>
+      </section>
+
       <section class="card purchase-quick-card">
         <div class="purchase-quick-verdict">
           <span id="purchase-verdict-light" class="purchase-light purchase-light-neutral">●</span>
@@ -127,18 +147,19 @@
     <p id="purchase-error" class="error"></p>
   </main>
 
-  <script src="js/tournament-catalog.js?v=5480"></script>
-<script src="js/i18n.js?v=5480"></script>
-  <script src="js/core-utils.js?v=5480"></script>
-  <script src="js/supabase-loader.js?v=5480"></script>
-  <script src="js/supabase-config.js?v=5480"></script>
-  <script src="js/database-local.js?v=5480"></script>
-  <script src="js/local-app.js?v=5480"></script>
-  <script src="js/learning-file.js?v=5480"></script>
-  <script src="js/horse-data-utils.js?v=5480"></script>
-<script src="js/parser.js?v=5480"></script>
-  <script src="js/planer-common.js?v=5480"></script>
-  <script src="js/breeding-original.js?v=5480"></script>
-  <script src="js/ankaufsberatung.js?v=5480"></script>
+  <script src="js/tournament-catalog.js?v=5481"></script>
+<script src="js/i18n.js?v=5481"></script>
+  <script src="js/core-utils.js?v=5481"></script>
+  <script src="js/supabase-loader.js?v=5481"></script>
+  <script src="js/supabase-config.js?v=5481"></script>
+  <script src="js/database-local.js?v=5481"></script>
+  <script src="js/local-app.js?v=5481"></script>
+  <script src="js/learning-file.js?v=5481"></script>
+  <script src="js/horse-data-utils.js?v=5481"></script>
+<script src="js/parser.js?v=5481"></script>
+  <script src="js/planer-common.js?v=5481"></script>
+  <script src="js/breeding-show-benchmark.js?v=5481"></script>
+  <script src="js/breeding-original.js?v=5481"></script>
+  <script src="js/ankaufsberatung.js?v=5481"></script>
 </body>
 </html>
