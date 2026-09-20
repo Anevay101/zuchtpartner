@@ -21,7 +21,7 @@
     '🛒 Ankaufsberatung':'🛒 Purchase advisor',
     '🧪 LP-Prototypmodell':'🧪 Performance-test prototype model',
     'Leistungsprüfung':'Performance test',
-    'Rückwärtsprüfung der angenommenen LP-Regeln an bestätigten Prämienhengsten und Prämienstuten im gesamten gespeicherten Datenbestand.':'Backward validation of the assumed performance-test rules against confirmed premium stallions and premium mares in the entire stored dataset.',
+    'Rückwärtsprüfung der angenommenen LP-Regeln an bestätigten LP-Ergebnissen. „Nein“ bzw. fehlende Einträge werden nicht als Nichtbestehen gewertet.':'Backward validation of the assumed performance-test rules against confirmed results. “No” or missing entries are not treated as failed tests.',
     'Anmelden':'Sign in',
     'Abmelden':'Sign out',
     'Zurück':'Back',

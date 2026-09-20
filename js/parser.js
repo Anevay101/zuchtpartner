@@ -348,23 +348,36 @@ function parseHorseText(rawText) {
   }
 
   // EN Performance Test / DE HLP-SLP: zusätzlich strukturierte Punkte,
-  // ohne den Originaltext zu verlieren. Ein ausdrückliches Nein darf dabei
-  // keinesfalls als bestandene Leistungsprüfung interpretiert werden.
+  // ohne den Originaltext zu verlieren. WICHTIG: "HLP/SLP: Nein" bedeutet
+  // in MDR nur "kein bestaetigtes LP-Ergebnis" und NICHT "nicht bestanden".
+  // Ein echter Negativfall ist ausdruecklich als "nicht bestanden"/"failed"
+  // gekennzeichnet. Diese drei Zustaende muessen getrennt bleiben.
   if (result.hlp_slp) {
     const performanceText = String(result.hlp_slp).trim();
     const ptPoints = performanceText.match(/(\d+)\s*(?:points?|Punkte)/i);
     if (ptPoints) result.performance_test_points = Number(ptPoints[1]);
 
-    const performanceNegative =
-      /^(?:nein|no|false|0)$/i.test(performanceText) ||
-      /(?:failed|nicht bestanden|durchgefallen)/i.test(performanceText);
-    const performancePositive =
+    const performanceNoResult = /^(?:nein|no|false|0)$/i.test(performanceText);
+    const performanceFailed = /(?:failed|nicht bestanden|durchgefallen)/i.test(performanceText);
+    const performancePositive = !performanceFailed && !performanceNoResult && (
       /^(?:ja|yes|true|1)$/i.test(performanceText) ||
       /(?:prämienstute|praemienstute|prämienhengst|praemienhengst|premium mare|premium stallion|\bbestanden\b|\bpassed\b)/i.test(performanceText) ||
-      Boolean(ptPoints);
+      Boolean(ptPoints)
+    );
 
-    if (performanceNegative) result.performance_test_passed = false;
-    else if (performancePositive) result.performance_test_passed = true;
+    if (performanceFailed) {
+      result.performance_test_passed = false;
+      result.performance_test_status = 'failed';
+    } else if (performancePositive) {
+      result.performance_test_passed = true;
+      result.performance_test_status = 'passed';
+    } else if (performanceNoResult) {
+      // Null statt false, damit ein frischer Import den Zustand auch intern
+      // nicht mehr als echten Nichtbesteher repraesentiert. Das LP-Modell
+      // vertraut bei Altbestand ohnehin primaer dem Originaltext.
+      result.performance_test_passed = null;
+      result.performance_test_status = 'none';
+    }
   }
 
   // --- Zucht ---

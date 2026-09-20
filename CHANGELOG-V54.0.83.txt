@@ -1,0 +1,21 @@
+V54.0.83 – LP-Statusfix + Prognose/Negativvalidierung
+
+- HLP/SLP: "Nein" / "No" ist ab jetzt ausdrücklich KEIN Nichtbestehen.
+  Dieser Zustand bedeutet nur: kein bestätigtes LP-Ergebnis vorhanden.
+- Nur "nicht bestanden" / "failed" wird als echter negativer LP-Fall gewertet.
+- Prämienhengst/Prämienstute, "bestanden"/"passed" oder ein eindeutiger
+  Punkte-Eintrag wird als bestätigtes Bestehen gewertet.
+- Altbestandsschutz: ein altes performance_test_passed=false aus V54.0.82
+  wird ohne ausdrücklichen "nicht bestanden"-Text nicht mehr als Negativfall
+  interpretiert.
+- Pferdeseite: unbekannte LP-Fälle zeigen neutral "Noch kein bestätigtes
+  LP-Ergebnis" und separat die LP-Prognose des Prototypmodells.
+- Auch bei echten LP-Ergebnissen wird die Modellprognose separat angezeigt,
+  damit Übereinstimmungen und Gegenfälle transparent sichtbar sind.
+- Dashboard: Rückwärtsvalidierung nutzt nun bestätigte positive UND negative
+  LP-Ergebnisse. "Nein"/leer bleibt vollständig unbewertet.
+- Dashboard-KPIs: bestätigte Besteher, korrekt erkannte Besteher,
+  bestätigte Nichtbesteher und erkannte Nichtbesteher.
+- Regeltabelle zeigt zusätzlich, wie oft bestätigte Nichtbesteher die
+  jeweilige Regel verletzen.
+- LP-Prototyp auf v1.1 angehoben. Keine Punkteprognose.

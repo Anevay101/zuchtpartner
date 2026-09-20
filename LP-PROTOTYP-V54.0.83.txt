@@ -1,0 +1,33 @@
+LP-Prototyp v1.1 – Status- und Validierungslogik (V54.0.83)
+
+Echte MDR-Ergebniszustände
+-------------------------
+1) BESTANDEN
+   Beispiele: "Prämienhengst mit 158 Punkten", "Prämienstute mit ... Punkten",
+   "bestanden" / "passed".
+
+2) NICHT BESTANDEN
+   Nur ausdrücklich: "nicht bestanden", "durchgefallen" oder "failed".
+
+3) KEIN BESTÄTIGTES ERGEBNIS
+   "Nein" / "No" / leer.
+   Dieser Zustand darf weder als bestanden noch als nicht bestanden in die
+   Rückwärtsvalidierung eingehen.
+
+Validierung
+-----------
+- Positive Fälle: nur bestätigte Besteher.
+- Negative Fälle: nur ausdrücklich bestätigte Nichtbesteher.
+- Unbekannte Fälle: vollständig aus Trefferquoten ausgeschlossen.
+- Bei bestätigten Bestehern ist eine verletzte Modellregel ein Gegenbeispiel
+  gegen die Annahme, dass diese Regel eine harte notwendige Voraussetzung ist.
+- Bei bestätigten Nichtbestehern bedeutet "erkannt", dass das Gesamtmodell
+  mindestens eine Regel als verletzt bewertet.
+- Ein Nichtbesteher muss nicht jede einzelne Modellregel verletzen.
+
+Pferdeprognose
+--------------
+- Kein bestätigtes Ergebnis: neutraler Ist-Status + separat LP-Prognose.
+- Bestanden/nicht bestanden: echtes Ergebnis bleibt führend; die Prognose wird
+  nur als Modellvergleich darunter angezeigt.
+- Keine LP-Punkteprognose in v1.1.

@@ -1,0 +1,20 @@
+V54.0.83 – Release-Check
+
+Fachprüfung
+- "HLP/SLP: Nein" => kein bestätigtes Ergebnis (known=false), NICHT nicht bestanden.
+- Altes performance_test_passed=false + "Nein" => weiterhin kein bestätigtes Ergebnis.
+- "HLP/SLP: nicht bestanden" => bestätigter Negativfall.
+- "Prämienhengst mit 158 Punkten" => bestätigter Positivfall, Punkte 158.
+- Parser-Test derselben drei Zustände erfolgreich.
+- Pferdeansicht: unbekannter Zustand zeigt neutralen Ist-Status + separate LP-Prognose.
+- Bestätigte positive und negative Fälle werden getrennt rückwärtsvalidiert.
+- "Nein"/leer wird aus beiden Validierungsgruppen ausgeschlossen.
+
+Technische Prüfung
+- VERSION.txt: V54.0.83
+- 41/41 JavaScript-Dateien: Syntaxcheck erfolgreich.
+- CSS: 0 Parsefehler.
+- HTML: 14 Dateien, 0 doppelte IDs.
+- 202 lokale script/link/img-Referenzen geprüft, 0 fehlend.
+- Cache-Buster: 203 Referenzen auf 5483, 0 verbliebene Referenzen auf 5482 in HTML + i18n-Core.
+- Keine neue Datenbanktabelle / keine Schemaänderung.

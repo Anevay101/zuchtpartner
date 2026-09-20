@@ -7806,3 +7806,38 @@ button.keep-foal-no.active {
   .lp-rule-row { grid-template-columns:1.2rem minmax(0,1fr); }
   .lp-rule-row small { grid-column:2; white-space:normal; }
 }
+
+/* ============================================================
+   V54.0.83 – LP-Statusfix + echte Positiv-/Negativvalidierung
+   ============================================================ */
+.lp-validation-kpis > div > small {
+  display:block;
+  margin-top:.08rem;
+  color:var(--muted);
+  font-size:.66rem;
+  font-weight:750;
+}
+.lp-prediction-line {
+  display:flex;
+  align-items:center;
+  gap:.48rem;
+  flex-wrap:wrap;
+  padding:.46rem .56rem;
+  border:1px solid color-mix(in srgb, var(--border) 84%, var(--accent) 16%);
+  border-radius:.68rem;
+  background:color-mix(in srgb, var(--surface) 94%, var(--accent-soft) 6%);
+}
+.lp-prediction-label {
+  color:var(--accent-dark);
+  font-size:.72rem;
+  font-weight:850;
+}
+.lp-actual-none .lp-status-pill {
+  color:var(--muted);
+  background:var(--surface-softer);
+  border-color:var(--border);
+}
+@media (max-width: 560px) {
+  .lp-prediction-line { align-items:flex-start; }
+  .lp-prediction-line .tiny { width:100%; }
+}

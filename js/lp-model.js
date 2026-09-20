@@ -1,11 +1,12 @@
-// MDR V54.0.82 – LP-Prototypmodell v1
-// Regelbasiertes Modell aus dem User-LP-Rechner. Es wird bewusst nur an
-// bestaetigten Bestehern rueckwaerts validiert; fehlender Praemienstatus gilt
-// NICHT als Nichtbestehen. Keine Punkteprognose.
+// MDR V54.0.83 – LP-Prototypmodell v1.1
+// Regelbasiertes Modell aus dem User-LP-Rechner. Rueckwaertsvalidierung an
+// bestaetigten LP-Ergebnissen: Praemienhengst/-stute = bestanden, ausdruecklich
+// "nicht bestanden" = durchgefallen. "Nein"/leer bedeutet KEIN bestaetigtes
+// Ergebnis und wird niemals als negativer Fall gewertet. Keine Punkteprognose.
 (() => {
   'use strict';
 
-  const MODEL_VERSION = 'LP-Prototyp v1';
+  const MODEL_VERSION = 'LP-Prototyp v1.1';
   const CORE_GAITS = ['Schritt', 'Trab', 'Galopp', 'Renngalopp'];
   const EXPECTED_INTERIOR = 10;
   const EXPECTED_EXTERIOR = 14;
@@ -59,23 +60,30 @@
       if (match) points = Number(match[1]);
     }
 
-    const negative = text && (
-      /^(?:nein|no|false|0)$/i.test(text) ||
-      /(?:failed|nicht bestanden|durchgefallen)/i.test(text)
-    );
-    const positive = text && !negative && (
+    // MDR unterscheidet drei Zustaende:
+    //   Praemienhengst/-stute bzw. bestanden + Punkte = bestaetigt bestanden
+    //   "nicht bestanden" / failed                     = bestaetigt durchgefallen
+    //   "Nein" / No / leer                             = kein bestaetigtes Ergebnis
+    // Besonders wichtig: das alte strukturierte false-Feld kann aus frueheren
+    // Imports von "Nein" stammen und darf deshalb ohne expliziten Fehlertext
+    // NICHT als echter Negativfall verwendet werden.
+    const noResult = !!text && /^(?:nein|no|false|0)$/i.test(text);
+    const failed = !!text && /(?:failed|nicht bestanden|durchgefallen)/i.test(text);
+    const positive = !!text && !failed && !noResult && (
       /^(?:ja|yes|true|1)$/i.test(text) ||
       /(?:prämienstute|praemienstute|prämienhengst|praemienhengst|premium mare|premium stallion|\bbestanden\b|\bpassed\b)/i.test(text) ||
       points != null
     );
 
     let passed = null;
-    if (negative) passed = false;
-    else if (positive) passed = true;
-    else if (horse?.performance_test_passed === true) passed = true;
-    else if (horse?.performance_test_passed === false) passed = false;
+    let status = noResult ? 'none' : 'unknown';
+    if (failed) { passed = false; status = 'failed'; }
+    else if (positive) { passed = true; status = 'passed'; }
+    else if (!text && horse?.performance_test_passed === true) { passed = true; status = 'passed'; }
+    // Ein nacktes performance_test_passed=false wird absichtlich ignoriert:
+    // V54.0.82 konnte dieses false noch aus "HLP/SLP: Nein" erzeugen.
 
-    return { known: passed !== null, passed, points, text };
+    return { known: passed !== null, passed, points, text, status, noResult };
   }
 
   function scoredUnique(rows, scoreFn) {
@@ -198,41 +206,69 @@
     return `row:${index}:${String(horse?.name || '')}`;
   }
 
-  function confirmedPassers(horses) {
+  function confirmedCases(horses) {
     const seen = new Set();
-    const out = [];
+    const passers = [];
+    const failures = [];
     (Array.isArray(horses) ? horses : []).forEach((horse,index) => {
       const actual = actualResult(horse);
-      if (actual.passed !== true) return;
+      if (!actual.known) return;
       const key = horseKey(horse,index);
       if (seen.has(key)) return;
       seen.add(key);
-      out.push(horse);
+      (actual.passed ? passers : failures).push(horse);
     });
-    return out;
+    return { passers, failures };
+  }
+
+  function emptyRuleStat() {
+    return {
+      positive:{pass:0,fail:0,unknown:0},
+      negative:{pass:0,fail:0,unknown:0},
+    };
+  }
+
+  function validationBucket(horses, expectedPassed, ruleStats) {
+    let modelPass = 0, modelFail = 0, incomplete = 0;
+    const rows = [];
+    for (const horse of horses) {
+      const ev = evaluate(horse);
+      if (ev.overall === 'pass') modelPass++;
+      else if (ev.overall === 'fail') modelFail++;
+      else incomplete++;
+      const side = expectedPassed ? 'positive' : 'negative';
+      for (const criterion of ev.criteria) ruleStats[criterion.id][side][criterion.status]++;
+      rows.push({horse, evaluation:ev, actual:actualResult(horse)});
+    }
+    const assessable = modelPass + modelFail;
+    const correct = expectedPassed ? modelPass : modelFail;
+    return { total:horses.length, modelPass, modelFail, incomplete, assessable, correct, hitRate: assessable ? correct / assessable : null, rows };
   }
 
   function validate(horses) {
-    const passers = confirmedPassers(horses);
-    const ruleStats = Object.fromEntries(Object.keys(RULE_META).map(id => [id,{pass:0,fail:0,unknown:0}]));
-    let conform = 0, counterexamples = 0, incomplete = 0;
-    const rows = [];
-    for (const horse of passers) {
-      const ev = evaluate(horse);
-      if (ev.overall === 'pass') conform++;
-      else if (ev.overall === 'fail') counterexamples++;
-      else incomplete++;
-      for (const criterion of ev.criteria) ruleStats[criterion.id][criterion.status]++;
-      rows.push({horse, evaluation:ev, actual:actualResult(horse)});
-    }
-    return { total:passers.length, conform, counterexamples, incomplete, ruleStats, rows };
+    const {passers, failures} = confirmedCases(horses);
+    const ruleStats = Object.fromEntries(Object.keys(RULE_META).map(id => [id,emptyRuleStat()]));
+    const positive = validationBucket(passers, true, ruleStats);
+    const negative = validationBucket(failures, false, ruleStats);
+    return {
+      total: positive.total + negative.total,
+      positive,
+      negative,
+      // Rueckwaertskompatible Aliase fuer classify()/aeltere Aufrufer:
+      conform: positive.modelPass,
+      counterexamples: positive.modelFail,
+      incomplete: positive.incomplete,
+      ruleStats,
+      rows:[...positive.rows, ...negative.rows],
+    };
   }
 
   function supportForRule(stat) {
-    if (!stat) return 'low';
-    if (stat.fail > 0) return 'counterexample';
-    if (stat.pass >= 10) return 'strong';
-    if (stat.pass >= 5) return 'supported';
+    const pos = stat?.positive || stat;
+    if (!pos) return 'low';
+    if (pos.fail > 0) return 'counterexample';
+    if (pos.pass >= 10) return 'strong';
+    if (pos.pass >= 5) return 'supported';
     return 'low';
   }
 
@@ -259,45 +295,69 @@
   function statusIcon(status) { return status === 'pass' ? '✓' : status === 'fail' ? '✕' : '?'; }
   function statusClass(status) { return status === 'pass' ? 'lp-rule-pass' : status === 'fail' ? 'lp-rule-fail' : 'lp-rule-unknown'; }
 
+  function pctLabel(rate) {
+    return rate == null ? '–' : `${Math.round(rate * 100)} %`;
+  }
+
   function renderValidation(root, horses) {
     if (!root) return;
     const validation = validate(horses);
+    const pos = validation.positive;
+    const neg = validation.negative;
+
     if (!validation.total) {
-      root.innerHTML = `<p class="muted small">${esc(t('Noch keine bestätigten LP-Besteher im Datenbestand. Pferde ohne LP-Eintrag werden nicht als Nichtbesteher gewertet.','No confirmed performance-test passers in the dataset yet. Horses without a test entry are not treated as failures.'))}</p>`;
+      root.innerHTML = `<p class="muted small">${esc(t('Noch keine bestätigten LP-Ergebnisse im Datenbestand. „Nein“ bzw. ein fehlender LP-Eintrag wird ausdrücklich nicht als Durchfallen gewertet.','No confirmed performance-test results in the dataset yet. “No” or a missing test entry is explicitly not treated as a failed test.'))}</p>`;
       return validation;
     }
 
     const ruleRows = Object.keys(RULE_META).map(id => {
       const meta = RULE_META[id];
       const stat = validation.ruleStats[id];
-      const evaluated = stat.pass + stat.fail;
+      const p = stat.positive;
+      const nstat = stat.negative;
+      const evaluatedPos = p.pass + p.fail;
+      const evaluatedNeg = nstat.pass + nstat.fail;
       const support = supportForRule(stat);
       const supportLabel = support === 'counterexample'
-        ? t(`${stat.fail} Gegenbeispiel${stat.fail===1?'':'e'}`,`${stat.fail} counterexample${stat.fail===1?'':'s'}`)
+        ? t(`${p.fail} Gegenbeispiel${p.fail===1?'':'e'}`,`${p.fail} counterexample${p.fail===1?'':'s'}`)
         : support === 'strong' ? t('stark gestützt','strongly supported')
         : support === 'supported' ? t('gestützt','supported')
         : t('zu wenig Daten','too little data');
       return `<tr>
         <td><span class="lp-mini-group">${esc(GROUP_LABELS[meta.group][lang()])}</span></td>
         <td>${esc(meta[lang()])}</td>
-        <td><strong>${stat.pass}/${evaluated || 0}</strong>${stat.unknown ? `<span class="tiny muted"> · ${stat.unknown} ?</span>` : ''}</td>
+        <td><strong>${p.pass}/${evaluatedPos || 0}</strong>${p.unknown ? `<span class="tiny muted"> · ${p.unknown} ?</span>` : ''}</td>
+        <td><strong>${nstat.fail}/${evaluatedNeg || 0}</strong>${nstat.unknown ? `<span class="tiny muted"> · ${nstat.unknown} ?</span>` : ''}</td>
         <td><span class="lp-support lp-support-${support}">${esc(supportLabel)}</span></td>
       </tr>`;
     }).join('');
 
+    const negativeNote = neg.total
+      ? t('Bei bestätigten Nichtbestehern bedeutet „erkannt“, dass das Modell mindestens eine seiner Regeln verletzt sieht. Ein einzelner Nichtbesteher muss nicht jede Regel verletzen.','For confirmed failed tests, “detected” means the model sees at least one violated rule. A single failed horse does not have to violate every rule.')
+      : t('Noch keine ausdrücklich als „nicht bestanden“ gespeicherten LP-Fälle vorhanden. Sobald solche Fälle erfasst sind, werden sie automatisch als echte Negativbeispiele ausgewertet.','No performance tests explicitly stored as “failed” yet. As soon as such cases are recorded, they are automatically evaluated as true negative examples.');
+
     root.innerHTML = `
       <div class="lp-validation-kpis">
-        <div><span>${esc(t('bestätigte Besteher','confirmed passers'))}</span><strong>${validation.total}</strong></div>
-        <div><span>${esc(t('voll modellkonform','fully model-conform'))}</span><strong>${validation.conform}</strong></div>
-        <div><span>${esc(t('Gegenbeispiele','counterexamples'))}</span><strong>${validation.counterexamples}</strong></div>
-        <div><span>${esc(t('unvollständig prüfbar','incompletely assessable'))}</span><strong>${validation.incomplete}</strong></div>
+        <div><span>${esc(t('bestätigte Besteher','confirmed passers'))}</span><strong>${pos.total}</strong></div>
+        <div><span>${esc(t('Besteher korrekt erkannt','passers correctly predicted'))}</span><strong>${pos.assessable ? `${pos.correct}/${pos.assessable}` : '–'}</strong><small>${pctLabel(pos.hitRate)}</small></div>
+        <div><span>${esc(t('bestätigte Nichtbesteher','confirmed failed tests'))}</span><strong>${neg.total}</strong></div>
+        <div><span>${esc(t('Nichtbesteher erkannt','failed tests detected'))}</span><strong>${neg.assessable ? `${neg.correct}/${neg.assessable}` : '–'}</strong><small>${pctLabel(neg.hitRate)}</small></div>
       </div>
-      <p class="tiny muted lp-model-note"><strong>${MODEL_VERSION}.</strong> ${esc(t('Rückwärtsprüfung nur an bestätigten Prämienhengsten/-stuten; fehlender Prämienstatus ist kein negatives Ergebnis. Die Quelle bezeichnet besonders die Interieur-Regeln selbst als noch unsicher.','Backward validation uses confirmed premium stallions/mares only; missing premium status is not a negative result. The source itself marks the temperament rules as still uncertain.'))}</p>
+      <p class="tiny muted lp-model-note"><strong>${MODEL_VERSION}.</strong> ${esc(t('Rückwärtsprüfung nur an bestätigten LP-Ergebnissen. Prämienhengst/-stute bzw. „bestanden“ zählt positiv; nur ein ausdrückliches „nicht bestanden“ zählt negativ. „Nein“ und fehlende Einträge bleiben unbewertet.','Backward validation uses confirmed performance-test results only. Premium stallion/mare or “passed” counts as positive; only an explicit “failed” counts as negative. “No” and missing entries remain unlabelled.'))}</p>
       <div class="table-wrap lp-validation-table-wrap"><table class="detail-table lp-validation-table"><thead><tr>
-        <th>${esc(t('Bereich','Area'))}</th><th>${esc(t('Regel','Rule'))}</th><th>${esc(t('erfüllt / prüfbar','met / assessable'))}</th><th>${esc(t('Einordnung','Assessment'))}</th>
+        <th>${esc(t('Bereich','Area'))}</th><th>${esc(t('Regel','Rule'))}</th><th>${esc(t('Besteher erfüllen','passers meeting'))}</th><th>${esc(t('Nichtbesteher verletzt','failed tests violating'))}</th><th>${esc(t('Einordnung','Assessment'))}</th>
       </tr></thead><tbody>${ruleRows}</tbody></table></div>
+      <p class="tiny muted lp-model-note">${esc(negativeNote)}</p>
       <p class="tiny muted lp-model-note">${esc(t('Werte-Regeln: 4 Disziplinen der Begabungsgruppe sowie 8 Grundlagen + Schritt, Trab, Galopp und Renngalopp; verwendet werden die Potenzialwerte.','Value rules: the 4 disciplines of the talent group plus 8 fundamentals + walk, trot, canter and gallop; potential values are used.'))}</p>`;
     return validation;
+  }
+
+  function renderPredictionSummary(classification) {
+    return `<div class="lp-prediction-line">
+      <span class="lp-prediction-label">${esc(t('LP-Prognose','Performance-test prediction'))}</span>
+      <span class="lp-status-pill lp-status-${classification.key}">${classification.icon} ${esc(classification.label)}</span>
+      <span class="tiny muted">${MODEL_VERSION}</span>
+    </div>`;
   }
 
   function renderHorse(root, horse, horses) {
@@ -305,28 +365,8 @@
     const actual = actualResult(horse);
     const evaluation = evaluate(horse);
     const validation = validate(horses);
-
-    if (actual.known) {
-      const actualClass = actual.passed ? 'lp-actual-pass' : 'lp-actual-fail';
-      const actualLabel = actual.passed ? t('LP bestanden','Performance test passed') : t('LP nicht bestanden','Performance test failed');
-      const modelNote = actual.passed
-        ? evaluation.overall === 'pass'
-          ? t('Das Prototypmodell erfüllt bei diesem bestätigten Besteher alle aktuell prüfbaren Regeln.','The prototype model meets all currently assessable rules for this confirmed passer.')
-          : evaluation.overall === 'fail'
-            ? t(`Das Prototypmodell widerspricht dem echten Ergebnis bei ${evaluation.failed.length} Regel${evaluation.failed.length===1?'':'n'} – dieses Pferd zählt damit als Validierungsgegenbeispiel.`,`The prototype model contradicts the real result on ${evaluation.failed.length} rule${evaluation.failed.length===1?'':'s'} – this horse therefore counts as a validation counterexample.`)
-            : t('Das echte Ergebnis ist bestätigt; das Prototypmodell ist wegen fehlender Eingangsdaten nicht vollständig prüfbar.','The real result is confirmed; the prototype model cannot be fully assessed because input data is missing.')
-        : t('Ein echtes LP-Ergebnis ist gespeichert. Nichtbesteher werden in LP-Prototyp v1 noch nicht zur Modellvalidierung verwendet.','A real performance-test result is stored. Failed tests are not yet used for validation in LP Prototype v1.');
-      root.innerHTML = `
-        <div class="lp-horse-head ${actualClass}">
-          <span class="lp-status-pill">${actual.passed ? '✓' : '✕'} ${esc(actualLabel)}</span>
-          ${actual.points != null ? `<strong>${Math.round(actual.points)} ${esc(t('Punkte','points'))}</strong>` : ''}
-        </div>
-        ${actual.text ? `<div class="small lp-actual-text">${esc(actual.text)}</div>` : ''}
-        <p class="tiny muted lp-model-note">${esc(modelNote)}</p>`;
-      return { actual, evaluation, validation };
-    }
-
     const classification = classify(evaluation, validation);
+
     const groups = ['disease','interior','exterior','values'].map(group => {
       const s = groupSummary(evaluation, group);
       const state = s.fail ? 'fail' : s.unknown ? 'unknown' : 'pass';
@@ -335,16 +375,55 @@
     const problems = evaluation.criteria.filter(c => c.status !== 'pass');
     const immediate = problems.length ? `<div class="lp-problem-list">${problems.map(c=>`<div class="lp-problem ${statusClass(c.status)}"><span>${statusIcon(c.status)}</span><span>${esc(c.label)}</span></div>`).join('')}</div>` : '';
     const allRows = evaluation.criteria.map(c => `<div class="lp-rule-row ${statusClass(c.status)}"><span class="lp-rule-icon">${statusIcon(c.status)}</span><span>${esc(c.label)}</span>${c.observed ? `<small>${esc(c.observed)}</small>` : ''}</div>`).join('');
-
-    root.innerHTML = `
-      <div class="lp-horse-head">
-        <span class="lp-status-pill lp-status-${classification.key}">${classification.icon} ${esc(classification.label)}</span>
-        <span class="tiny muted">${MODEL_VERSION}</span>
-      </div>
+    const details = `
       <div class="lp-group-grid">${groups}</div>
       ${immediate}
-      <details class="lp-rule-details"><summary>${esc(t('Alle Kriterien anzeigen','Show all criteria'))}</summary><div class="lp-rule-list">${allRows}</div></details>
-      <p class="tiny muted lp-model-note">${esc(t('Prognose aus User-Vermutungen, rückwärts an bestätigten Bestehern geprüft. Kein LP-Eintrag wird nicht als Durchfallen gewertet; Punkte werden nicht prognostiziert.','Prediction from user-derived assumptions, backward-validated on confirmed passers. Missing test status is not treated as failure; points are not predicted.'))}</p>`;
+      <details class="lp-rule-details"><summary>${esc(t('Alle Kriterien anzeigen','Show all criteria'))}</summary><div class="lp-rule-list">${allRows}</div></details>`;
+
+    if (actual.known) {
+      const actualClass = actual.passed ? 'lp-actual-pass' : 'lp-actual-fail';
+      const actualLabel = actual.passed ? t('LP bestanden','Performance test passed') : t('LP nicht bestanden','Performance test failed');
+      let modelNote;
+      if (actual.passed) {
+        modelNote = evaluation.overall === 'pass'
+          ? t('Echtes Ergebnis und Prototypmodell stimmen überein.','Real result and prototype model agree.')
+          : evaluation.overall === 'fail'
+            ? t(`Das Prototypmodell widerspricht dem echten Bestehen bei ${evaluation.failed.length} Regel${evaluation.failed.length===1?'':'n'} – dieses Pferd ist damit ein positives Validierungsgegenbeispiel.`,`The prototype model contradicts the confirmed pass on ${evaluation.failed.length} rule${evaluation.failed.length===1?'':'s'} – this horse is therefore a positive validation counterexample.`)
+            : t('Das echte Bestehen ist bestätigt; die Modellprognose bleibt wegen fehlender Eingangsdaten unvollständig.','The real pass is confirmed; the model prediction remains incomplete because input data is missing.');
+      } else {
+        modelNote = evaluation.overall === 'fail'
+          ? t('Das Prototypmodell erkennt diesen bestätigten Nichtbesteher ebenfalls als nicht ausreichend.','The prototype model also flags this confirmed failed test as not sufficient.')
+          : evaluation.overall === 'pass'
+            ? t('Das Prototypmodell hätte dieses Pferd als ausreichend eingeschätzt, obwohl die LP tatsächlich nicht bestanden wurde – ein echter negativer Gegenfall für das Modell.','The prototype model would have rated this horse as sufficient even though the performance test was actually failed – a true negative counterexample for the model.')
+            : t('Das echte Nichtbestehen ist bestätigt; die Modellprognose bleibt wegen fehlender Eingangsdaten unvollständig.','The real failed test is confirmed; the model prediction remains incomplete because input data is missing.');
+      }
+      root.innerHTML = `
+        <div class="lp-horse-head ${actualClass}">
+          <span class="lp-status-pill">${actual.passed ? '✓' : '✕'} ${esc(actualLabel)}</span>
+          ${actual.points != null ? `<strong>${Math.round(actual.points)} ${esc(t('Punkte','points'))}</strong>` : ''}
+        </div>
+        ${actual.text ? `<div class="small lp-actual-text">${esc(actual.text)}</div>` : ''}
+        ${renderPredictionSummary(classification)}
+        ${details}
+        <p class="tiny muted lp-model-note">${esc(modelNote)}</p>`;
+      return { actual, evaluation, validation, classification };
+    }
+
+    const actualLabel = actual.status === 'none'
+      ? t('Noch kein bestätigtes LP-Ergebnis','No confirmed performance-test result yet')
+      : t('Kein bestätigtes LP-Ergebnis','No confirmed performance-test result');
+    const rawStatus = actual.text && actual.status !== 'none'
+      ? `<div class="small lp-actual-text">${esc(actual.text)}</div>`
+      : '';
+
+    root.innerHTML = `
+      <div class="lp-horse-head lp-actual-none">
+        <span class="lp-status-pill lp-status-neutral">○ ${esc(actualLabel)}</span>
+      </div>
+      ${rawStatus}
+      ${renderPredictionSummary(classification)}
+      ${details}
+      <p class="tiny muted lp-model-note">${esc(t('Die Prognose ist ein Prototyp aus User-Vermutungen und bestätigten LP-Ergebnissen. „Nein“ bzw. ein fehlender LP-Eintrag bedeutet ausdrücklich nicht „nicht bestanden“. Punkte werden nicht prognostiziert.','The prediction is a prototype based on user-derived assumptions and confirmed performance-test results. “No” or a missing test entry explicitly does not mean “failed”. Points are not predicted.'))}</p>`;
     return { actual, evaluation, validation, classification };
   }
 
