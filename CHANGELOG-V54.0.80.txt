@@ -1,0 +1,12 @@
+V54.0.80 – Zuchtschau-Benchmark & individuelle Prognose
+
+- Bestehenden Zuchtschau-Benchmark erweitert: P25/P75 als typischer Feldbereich zusätzlich zum Median.
+- Neues Durchkommensniveau je Rasse + Geschlecht aus jeder Schau: Stuten floor(n/3), Hengste floor(n/5); Schauen unter 3 Stuten bzw. 5 Hengsten werden nur für diese Kennzahl ignoriert.
+- Durchkommensniveau = Median des jeweils letzten erfolgreichen Platzes über die letzten bis zu 50 gespeicherten Schauen.
+- Dashboard zeigt jetzt Typischer Bereich, Meldeniveau, Durchkommen, Podium und Siegniveau.
+- Pferdeansicht > Zuchtschau zeigt das aktuelle Rassen-/Geschlechtsniveau und bei Pferden ohne echten ZS-Wert eine separate Zuchtschau-Prognose.
+- Ampel der Prognose: grün bis ca. 200 zusätzlich nötige normale Bonuspunkte; gelb darüber, solange der verbleibende Turnierbonus bis max. 500 ausreicht; rot, wenn selbst der normale Bonusdeckel nicht reicht. Rot nennt die rechnerisch mindestens zusätzlich nötigen Cup-Sterne.
+- Der bestehende Hinweis „Noch kein echter ZS-Wert eingetragen …“ und die kompakte DB-Grundwertprognose unter Stammdaten bleiben erhalten.
+- Turnierplaner > Zuchtschau ergänzt pro Pferd aktuelles Durchkommensniveau und Einordnung.
+- Echte ZS-Werte werden weiterhin strikt von Prognosen getrennt; vorhandene historische ZS-Bonus-Snapshots bleiben unverändert.
+- Keine neue Supabase-Tabelle / kein neues Cloudformat: vorhandene Roh-Punktelisten reichen für die neuen Kennzahlen.

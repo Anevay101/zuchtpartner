@@ -291,17 +291,100 @@ function renderHorseBreedingShowSummary(horse, allHorses) {
   }
 }
 
-function renderHorseBreedingShowDetails(horse) {
+function viewZsHasScore(value) {
+  return value !== null && value !== undefined && String(value).trim() !== '' && Number.isFinite(Number(value));
+}
+function viewZsScore(value) {
+  return viewZsHasScore(value) ? Math.round(Number(value)).toLocaleString('de-DE') : '–';
+}
+
+function viewZsBenchmarkHtml(horse, benchmark) {
+  const breed = normalizeBreed(horse?.breed) || horse?.breed || 'Rasselos';
+  const gender = /stute|stutfohlen|mare|filly/i.test(String(horse?.gender || '')) ? 'Stuten'
+    : /hengst|hengstfohlen|stallion|colt/i.test(String(horse?.gender || '')) ? 'Hengste' : '';
+  if (!benchmark) {
+    return `<section class="zs-benchmark-panel zs-benchmark-missing">
+      <div class="zs-section-title"><span>Aktuelles Zuchtschau-Niveau</span><small>${plannerEscape(breed)}${gender ? ` · ${gender}` : ''}</small></div>
+      <p class="small muted">Für diese Rasse und dieses Geschlecht liegt noch kein eingelesener Zuchtschau-Benchmark vor.</p>
+    </section>`;
+  }
+  const range = viewZsHasScore(benchmark.fieldP25) && viewZsHasScore(benchmark.fieldP75)
+    ? `${viewZsScore(benchmark.fieldP25)}–${viewZsScore(benchmark.fieldP75)}` : '–';
+  const quota = benchmark.gender === 'Stute' ? '1 von 3 Stuten' : '1 von 5 Hengsten';
+  return `<section class="zs-benchmark-panel">
+    <div class="zs-section-title"><span>Aktuelles Zuchtschau-Niveau</span><small>${plannerEscape(benchmark.breed)} · ${benchmark.gender === 'Stute' ? 'Stuten' : 'Hengste'}</small></div>
+    <div class="zs-benchmark-metrics">
+      <div><span>Typischer Bereich</span><strong>${range}</strong><small>P25–P75</small></div>
+      <div><span>Meldeniveau</span><strong>${viewZsScore(benchmark.fieldMedian)}</strong><small>Median</small></div>
+      <div class="zs-benchmark-target"><span>Durchkommen</span><strong>${viewZsScore(benchmark.qualifyingMedian)}</strong><small>${quota}, abgerundet</small></div>
+      <div><span>Podium</span><strong>${viewZsScore(benchmark.podiumMedian)}</strong><small>typischer 3. Platz</small></div>
+      <div><span>Siegniveau</span><strong>${viewZsScore(benchmark.winnerMedian)}</strong><small>typischer Sieger</small></div>
+    </div>
+    <p class="tiny muted zs-benchmark-basis">Datengrundlage: ${benchmark.shows} besetzte Schauen · ${benchmark.entries} Meldungen · Durchkommensniveau aus ${benchmark.qualifyingShows} auswertbaren Schauen.</p>
+  </section>`;
+}
+
+function viewZsForecastHtml(horse, allHorses, benchmark) {
+  if (typeof plannerBuildBreedingShowModel !== 'function') {
+    return `<section class="zs-forecast-panel"><div class="zs-section-title"><span>Zuchtschau-Prognose</span></div><p class="small muted">Die Grundwert-Prognose ist derzeit nicht verfügbar.</p></section>`;
+  }
+  const model = plannerBuildBreedingShowModel(allHorses || []);
+  const predicted = model.predict(horse);
+  if (predicted == null || !Number.isFinite(Number(predicted))) {
+    const reason = model.n < 8
+      ? `Noch keine Prognose: aktuell ${model.n} verwertbare echte ZS-Datensätze, mindestens 8 nötig.`
+      : (typeof plannerBreedingShowFeatureObject === 'function' && !plannerBreedingShowFeatureObject(horse))
+        ? 'Prognose nicht berechenbar: GP, Ext, Ext% oder Int fehlen.'
+        : 'Zuchtschau-Prognose derzeit nicht berechenbar.';
+    return `<section class="zs-forecast-panel"><div class="zs-section-title"><span>Zuchtschau-Prognose</span></div><p class="small muted">${plannerEscape(reason)}</p></section>`;
+  }
+  const api = window.MDR_BREEDING_SHOW_BENCHMARK;
+  const assessment = api?.assessHorseForecast ? api.assessHorseForecast(horse, predicted, benchmark) : null;
+  if (!assessment || assessment.status === 'neutral') {
+    return `<section class="zs-forecast-panel">
+      <div class="zs-section-title"><span>Zuchtschau-Prognose</span></div>
+      <div class="zs-forecast-values"><div><span>DB-Prognose Grundwert</span><strong>${viewZsScore(predicted)}</strong></div></div>
+      <p class="small muted">Für die Ampel fehlt noch ein passendes aktuelles Durchkommensniveau der Rasse.</p>
+    </section>`;
+  }
+  let explanation='';
+  if (assessment.status === 'red') {
+    const plural = assessment.extraCupStars === 1 ? 'Cup-Stern' : 'Cup-Sterne';
+    const afterTournament = Math.max(0, assessment.gap - assessment.remainingTournamentBonus);
+    explanation = `Selbst mit ausgeschöpftem normalem Turnierbonus fehlen rechnerisch noch ca. ${viewZsScore(afterTournament)} Punkte. Dafür wären mindestens ${assessment.extraCupStars} zusätzliche ${plural} nötig.`;
+  } else if (assessment.gap <= 0) {
+    explanation = 'Der aktuelle Schätzwert liegt bereits auf oder über dem typischen Durchkommensniveau.';
+  } else {
+    explanation = `Bis zum typischen Durchkommensniveau fehlen rechnerisch ca. ${viewZsScore(assessment.gap)} zusätzliche Bonuspunkte.`;
+  }
+  return `<section class="zs-forecast-panel">
+    <div class="zs-section-title"><span>Zuchtschau-Prognose</span><span class="zs-forecast-status zs-forecast-${assessment.status}">${plannerEscape(assessment.label)}</span></div>
+    <div class="zs-forecast-values">
+      <div><span>DB-Prognose Grundwert</span><strong>${viewZsScore(predicted)}</strong></div>
+      <div><span>Aktueller Turnierbonus</span><strong>${viewZsScore(assessment.tournamentBonus)} / 500</strong></div>
+      <div><span>Aktueller Cup-Stern-Bonus</span><strong>${viewZsScore(assessment.cupBonus)}</strong></div>
+      <div><span>Schätzwert mit aktuellem Bonus</span><strong>${viewZsScore(assessment.currentEstimate)}</strong></div>
+      <div class="zs-forecast-target"><span>Typisches Durchkommen</span><strong>${viewZsScore(benchmark?.qualifyingMedian)}</strong></div>
+    </div>
+    <p class="small zs-forecast-explanation">${plannerEscape(explanation)}</p>
+    <p class="tiny muted">Der Schätzwert ist kein echter ZS-Wert: Prognostizierter Grundwert + aktuell vorhandener Turnierbonus + aktuell vorhandener Cup-Stern-Bonus. Grün = höchstens ca. 200 zusätzliche normale Bonuspunkte; Gelb = mehr, aber noch innerhalb des verbleibenden 500er-Turnierbonus; Rot = normaler Turnierbonus reicht nicht aus.</p>
+  </section>`;
+}
+
+function renderHorseBreedingShowDetails(horse, allHorses = viewHorseList) {
   const root=document.getElementById('horse-zs-details');
   if (!root) return;
+  const benchmarkApi=window.MDR_BREEDING_SHOW_BENCHMARK;
+  const benchmark=benchmarkApi?.getBenchmarkForHorse ? benchmarkApi.getBenchmarkForHorse(horse) : null;
+  const benchmarkHtml=viewZsBenchmarkHtml(horse,benchmark);
   const total=typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : null;
   if (total == null) {
-    root.innerHTML='<p class="muted">Noch kein echter ZS-Wert eingetragen. Die ZS-Prognose bleibt unabhängig vom Alter kompakt unter „Stammdaten“ sichtbar, bis ein echter ZS-Wert eingetragen wird.</p>';
+    root.innerHTML=`<p class="muted">Noch kein echter ZS-Wert eingetragen. Die ZS-Prognose bleibt unabhängig vom Alter kompakt unter „Stammdaten“ sichtbar, bis ein echter ZS-Wert eingetragen wird.</p>${benchmarkHtml}${viewZsForecastHtml(horse,allHorses,benchmark)}`;
     return;
   }
   const snapshot=typeof plannerBreedingShowSnapshot === 'function' ? plannerBreedingShowSnapshot(horse) : null;
   if (!snapshot) {
-    root.innerHTML=`<div class="notice notice-warning small"><strong>ZS-Gesamtwert:</strong> ${Math.round(total)} · Historische Bonusdaten zum ZS-Eintrag fehlen noch.</div>`;
+    root.innerHTML=`${benchmarkHtml}<div class="notice notice-warning small"><strong>ZS-Gesamtwert:</strong> ${Math.round(total)} · Historische Bonusdaten zum ZS-Eintrag fehlen noch.</div>`;
     return;
   }
   const tournamentBonus=Number(snapshot.tournament_bonus || 0);
@@ -309,7 +392,10 @@ function renderHorseBreedingShowDetails(horse) {
   const base=typeof plannerBreedingShowBase === 'function' ? plannerBreedingShowBase(horse) : total-tournamentBonus-cupBonus;
   const iso=String(snapshot.snapshot_date || snapshot.captured_at || '').slice(0,10);
   const dateText=iso ? iso.split('-').reverse().join('.') : '–';
+  const levelDiff=viewZsHasScore(benchmark?.qualifyingMedian) ? total-Number(benchmark.qualifyingMedian) : null;
+  const levelNote=levelDiff == null ? '' : `<p class="small zs-current-level-note"><strong>Einordnung zum heutigen Rassen-Niveau:</strong> Der eingetragene ZS-Gesamtwert liegt ${levelDiff>=0?`ca. ${viewZsScore(levelDiff)} Punkte über`:`ca. ${viewZsScore(Math.abs(levelDiff))} Punkte unter`} dem typischen aktuellen Durchkommensniveau.</p>`;
   root.innerHTML=`
+    ${benchmarkHtml}
     <div class="zs-detail-metrics">
       <div><span>ZS-Gesamtwert</span><strong>${Math.round(total)}</strong></div>
       <div><span>ZS-Grundwert</span><strong>${Number.isFinite(Number(base))?Math.round(base):'–'}</strong></div>
@@ -317,6 +403,7 @@ function renderHorseBreedingShowDetails(horse) {
       <div><span>Cupbonus bei ZS</span><strong>${Math.round(cupBonus)}</strong></div>
       <div><span>Eintragungsdatum</span><strong>${plannerEscape(dateText)}</strong></div>
     </div>
+    ${levelNote}
     <p class="small muted zs-detail-formula">Grundwert = ZS-Gesamtwert − damaliger Turnierbonus − damaliger Cupbonus. Der Grundwert bleibt danach unverändert.</p>`;
 }
 
@@ -342,6 +429,10 @@ async function initView() {
 
   viewHorseList = await localGetAll(LOCAL_STORES.horses);
   sortViewHorseList();
+  if (window.MDR_BREEDING_SHOW_BENCHMARK?.ensureLoaded) {
+    try { await window.MDR_BREEDING_SHOW_BENCHMARK.ensureLoaded(); }
+    catch (error) { console.warn('Zuchtschau-Benchmark konnte nicht geladen werden:', error); }
+  }
 
   await loadViewHorse(viewHorseId);
   if (!extraData?.id) return;
@@ -356,7 +447,7 @@ async function initView() {
 
   renderHorseViewHeader(extraData);
   renderHorseBreedingShowSummary(extraData, viewHorseList);
-  renderHorseBreedingShowDetails(extraData);
+  renderHorseBreedingShowDetails(extraData, viewHorseList);
   renderHorseTournamentProfile(extraData, viewHorseList);
   if (typeof bpRenderBreedingPanel === 'function') await bpRenderBreedingPanel(extraData, 'breeding-progress-panel');
 

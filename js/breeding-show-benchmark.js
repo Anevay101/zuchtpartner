@@ -1,4 +1,4 @@
-// MDR V54.0.63 – gemeinsame, egress-sparsame Zuchtschau-Benchmarks.
+// MDR V54.0.80 – Zuchtschau-Benchmarks mit Streuung, Durchkommensniveau und Pferdeprognose.
 // Cloudseitig wird bewusst KEIN neuer store_name angelegt: Die kompakten Shared-Datensätze
 // liegen unter einem reservierten Key-Präfix im bereits erlaubten user_settings-Store.
 // Pro Rasse + Geschlecht existiert genau ein Datensatz; gespeichert werden ausschließlich
@@ -177,6 +177,32 @@
     return nums.length % 2 ? nums[mid] : (nums[mid-1] + nums[mid]) / 2;
   }
 
+  // Lineare Quantile auf der sortierten Gesamtmenge. P25/P75 bilden bewusst
+  // nur den typischen Feldkorridor ab; einzelne Extrempferde ziehen diesen
+  // Bereich wesentlich weniger als einen Durchschnitt.
+  function quantile(values, q) {
+    const nums = (values || []).map(Number).filter(Number.isFinite).sort((a,b) => a-b);
+    if (!nums.length) return null;
+    const p = Math.max(0, Math.min(1, Number(q)));
+    const pos = (nums.length - 1) * p;
+    const lo = Math.floor(pos), hi = Math.ceil(pos);
+    if (lo === hi) return nums[lo];
+    return nums[lo] + (nums[hi] - nums[lo]) * (pos - lo);
+  }
+
+  function benchmarkGender(value) {
+    const raw = String(value || '').toLowerCase();
+    if (/stute|stutfohlen|mare|filly/.test(raw)) return 'Stute';
+    if (/hengst|hengstfohlen|stallion|colt/.test(raw)) return 'Hengst';
+    return '';
+  }
+
+  function qualifyingCount(entryCount, gender) {
+    const divisor = gender === 'Stute' ? 3 : gender === 'Hengst' ? 5 : 0;
+    if (!divisor) return 0;
+    return Math.floor(Math.max(0, Number(entryCount) || 0) / divisor);
+  }
+
   function benchmarkFromDataset(dataset, windowSize = BENCHMARK_WINDOW) {
     const events = (dataset?.events || []).filter(e => e?.date && Array.isArray(e?.scores) && e.scores.length)
       .sort((a,b) => b.date.localeCompare(a.date)).slice(0, Math.max(1, Number(windowSize) || BENCHMARK_WINDOW));
@@ -184,9 +210,18 @@
     const allScores = events.flatMap(e => e.scores.map(Number).filter(Number.isFinite));
     const winners = events.map(e => Number(e.scores[0])).filter(Number.isFinite);
     const thirdPlaces = events.filter(e => e.scores.length >= 3).map(e => Number(e.scores[2])).filter(Number.isFinite);
+    const gender = benchmarkGender(dataset.gender);
+    const qualifyingScores = events.map(event => {
+      const count = qualifyingCount(event.scores.length, gender);
+      if (count < 1 || event.scores.length < count) return null;
+      const score = Number(event.scores[count - 1]);
+      return Number.isFinite(score) ? score : null;
+    }).filter(Number.isFinite);
     return {
       breed:dataset.breed, gender:dataset.gender, shows:events.length, entries:allScores.length,
-      fieldMedian:median(allScores), podiumMedian:median(thirdPlaces), winnerMedian:median(winners), podiumShows:thirdPlaces.length,
+      fieldP25:quantile(allScores,.25), fieldMedian:median(allScores), fieldP75:quantile(allScores,.75),
+      qualifyingMedian:median(qualifyingScores), qualifyingShows:qualifyingScores.length,
+      podiumMedian:median(thirdPlaces), winnerMedian:median(winners), podiumShows:thirdPlaces.length,
       newestDate:events[0]?.date || '', oldestDate:events[events.length-1]?.date || '',
     };
   }
@@ -196,6 +231,52 @@
     return datasetsFromRows().filter(dataset => !gender || dataset.gender === gender)
       .map(dataset => benchmarkFromDataset(dataset)).filter(Boolean)
       .sort((a,b) => String(a.breed).localeCompare(String(b.breed), 'de'));
+  }
+
+  function getBenchmark(breed, gender) {
+    const normalizedBreed = normalizeBreedName(breed);
+    const normalizedGender = benchmarkGender(gender);
+    if (!normalizedBreed || !normalizedGender) return null;
+    const breedKey = normalizedBreed.toLocaleLowerCase('de');
+    return getBenchmarks(normalizedGender).find(row => normalizeBreedName(row.breed).toLocaleLowerCase('de') === breedKey) || null;
+  }
+
+  function getBenchmarkForHorse(horse) {
+    if (!horse) return null;
+    return getBenchmark(horse.breed, horse.gender);
+  }
+
+  // Individuelle Einordnung eines Pferdes ohne echten ZS-Wert. Ziel ist das
+  // typische Durchkommensniveau der eigenen Rasse + des eigenen Geschlechts.
+  // Grün: bis ca. 200 zusätzliche normale ZS-Bonuspunkte; Gelb: darüber, aber
+  // noch innerhalb des verbleibenden 500er-Turnierbonus; Rot: selbst der
+  // ausgeschöpfte Turnierbonus reicht nicht und zusätzliche Cup-Sterne wären nötig.
+  function assessHorseForecast(horse, predictedBase, benchmark = getBenchmarkForHorse(horse)) {
+    const baseValid = predictedBase !== null && predictedBase !== undefined && String(predictedBase).trim() !== '';
+    const targetRaw = benchmark?.qualifyingMedian;
+    const targetValid = targetRaw !== null && targetRaw !== undefined && String(targetRaw).trim() !== '';
+    const base = baseValid ? Number(predictedBase) : NaN;
+    const target = targetValid ? Number(targetRaw) : NaN;
+    if (!Number.isFinite(base) || !Number.isFinite(target)) {
+      return { status:'neutral', label:t('Nicht einschätzbar'), benchmark, predictedBase:Number.isFinite(base)?base:null };
+    }
+    const tournamentBonus = typeof plannerTournamentShowBonus === 'function' ? Number(plannerTournamentShowBonus(horse) || 0) : 0;
+    const cupBonus = typeof plannerCupShowBonus === 'function' ? Number(plannerCupShowBonus(horse) || 0) : 0;
+    const currentEstimate = base + tournamentBonus + cupBonus;
+    const gap = Math.max(0, target - currentEstimate);
+    const remainingTournamentBonus = Math.max(0, 500 - Math.max(0, tournamentBonus));
+    let status='green', label=t('Gute Chancen'), extraCupStars=0;
+    if (gap > remainingTournamentBonus) {
+      status='red'; label=t('Cup-Stern erforderlich');
+      extraCupStars = Math.max(1, Math.ceil((gap - remainingTournamentBonus) / 100));
+    } else if (gap > 200) {
+      status='yellow'; label=t('Anspruchsvoll');
+    }
+    return {
+      status, label, benchmark, predictedBase:base,
+      tournamentBonus, cupBonus, currentEstimate, gap,
+      remainingTournamentBonus, extraCupStars,
+    };
   }
 
   function applyRows(rows) {
@@ -273,7 +354,8 @@
     return merged;
   }
 
-  function formatScore(value) { return Number.isFinite(Number(value)) ? Math.round(Number(value)).toLocaleString('de-DE') : '–'; }
+  function hasScore(value) { return value !== null && value !== undefined && String(value).trim() !== '' && Number.isFinite(Number(value)); }
+  function formatScore(value) { return hasScore(value) ? Math.round(Number(value)).toLocaleString('de-DE') : '–'; }
   function formatDate(value) {
     const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
     return m ? `${m[3]}.${m[2]}.${m[1]}` : (value || '–');
@@ -290,9 +372,17 @@
     }
     const body = rows.map(row => {
       const range = row.oldestDate === row.newestDate ? formatDate(row.newestDate) : `${formatDate(row.oldestDate)}–${formatDate(row.newestDate)}`;
-      return `<tr><th data-label="${escapeHtml(t('Rasse'))}">${escapeHtml(row.breed)}</th><td data-label="${escapeHtml(t('Meldeniveau'))}"><strong>${formatScore(row.fieldMedian)}</strong></td><td data-label="${escapeHtml(t('Podium'))}"><strong>${formatScore(row.podiumMedian)}</strong></td><td data-label="${escapeHtml(t('Siegniveau'))}"><strong>${formatScore(row.winnerMedian)}</strong></td><td data-label="${escapeHtml(t('Datengrundlage'))}"><strong>${row.shows}</strong> ${escapeHtml(t('Schauen'))} · ${row.entries} ${escapeHtml(t('Meldungen'))}<br><span class="tiny muted">${escapeHtml(range)}</span></td></tr>`;
+      const fieldRange = hasScore(row.fieldP25) && hasScore(row.fieldP75)
+        ? `${formatScore(row.fieldP25)}–${formatScore(row.fieldP75)}` : '–';
+      const qualifyingBasis = row.qualifyingShows === row.shows
+        ? `${row.qualifyingShows} ${t('Schauen')}`
+        : `${row.qualifyingShows}/${row.shows} ${t('Schauen')}`;
+      return `<tr><th data-label="${escapeHtml(t('Rasse'))}">${escapeHtml(row.breed)}</th><td data-label="${escapeHtml(t('Typischer Bereich'))}"><strong>${fieldRange}</strong><br><span class="tiny muted">P25–P75</span></td><td data-label="${escapeHtml(t('Meldeniveau'))}"><strong>${formatScore(row.fieldMedian)}</strong></td><td data-label="${escapeHtml(t('Durchkommen'))}"><strong>${formatScore(row.qualifyingMedian)}</strong><br><span class="tiny muted">${escapeHtml(qualifyingBasis)}</span></td><td data-label="${escapeHtml(t('Podium'))}"><strong>${formatScore(row.podiumMedian)}</strong></td><td data-label="${escapeHtml(t('Siegniveau'))}"><strong>${formatScore(row.winnerMedian)}</strong></td><td data-label="${escapeHtml(t('Datengrundlage'))}"><strong>${row.shows}</strong> ${escapeHtml(t('Schauen'))} · ${row.entries} ${escapeHtml(t('Meldungen'))}<br><span class="tiny muted">${escapeHtml(range)}</span></td></tr>`;
     }).join('');
-    root.innerHTML = `<div class="dashboard-zs-benchmark-head"><strong>${escapeHtml(t('Aktuelles Schau-Niveau'))}</strong><span class="tiny muted">${escapeHtml(t('Median der letzten bis zu 50 besetzten Schauen'))}</span></div><div class="table-wrap"><table class="detail-table dashboard-zs-benchmark-table"><thead><tr><th>${escapeHtml(t('Rasse'))}</th><th>${escapeHtml(t('Meldeniveau'))}</th><th>${escapeHtml(t('Podium'))}</th><th>${escapeHtml(t('Siegniveau'))}</th><th>${escapeHtml(t('Datengrundlage'))}</th></tr></thead><tbody>${body}</tbody></table></div><p class="tiny muted">${escapeHtml(t('Meldeniveau = Median aller Meldungen; Podium = typischer 3. Platz; Siegniveau = typischer Gewinner. Leere Schautage werden ignoriert.'))}</p>`;
+    const quotaText = (options.gender || '') === 'Hengst'
+      ? t('Durchkommen = letzter erfolgreicher Platz nach 1:5-Regel (abgerundet).')
+      : t('Durchkommen = letzter erfolgreicher Platz nach 1:3-Regel (abgerundet).');
+    root.innerHTML = `<div class="dashboard-zs-benchmark-head"><strong>${escapeHtml(t('Aktuelles Schau-Niveau'))}</strong><span class="tiny muted">${escapeHtml(t('Aus den letzten bis zu 50 besetzten Schauen'))}</span></div><div class="table-wrap"><table class="detail-table dashboard-zs-benchmark-table"><thead><tr><th>${escapeHtml(t('Rasse'))}</th><th>${escapeHtml(t('Typischer Bereich'))}</th><th>${escapeHtml(t('Meldeniveau'))}</th><th>${escapeHtml(t('Durchkommen'))}</th><th>${escapeHtml(t('Podium'))}</th><th>${escapeHtml(t('Siegniveau'))}</th><th>${escapeHtml(t('Datengrundlage'))}</th></tr></thead><tbody>${body}</tbody></table></div><p class="tiny muted">${escapeHtml(t('Typischer Bereich = P25–P75 aller Meldungen; Meldeniveau = Median aller Meldungen; Podium = typischer 3. Platz; Siegniveau = typischer Gewinner.'))} ${escapeHtml(quotaText)} ${escapeHtml(t('Schauen unter der nötigen Mindestbesetzung werden nur für das Durchkommensniveau ignoriert.'))}</p>`;
   }
 
   async function renderBenchmarkDashboard(root, options = {}) {
@@ -331,7 +421,7 @@
     if (typeof localGetAll === 'function') localGetAll(STORE_NAME).then(rows=>{applyRows(rows);rerender();}).catch(()=>{});
   });
 
-  window.MDR_BREEDING_SHOW_BENCHMARK = { STORE_NAME, ROW_KEY_PREFIX, BENCHMARK_WINDOW, parse:parseBreedingShowDataset, merge:mergeBreedingShowDataset, getBenchmarks, benchmarkFromDataset, render:renderBenchmarkDashboard, refresh:refreshSharedRows };
+  window.MDR_BREEDING_SHOW_BENCHMARK = { STORE_NAME, ROW_KEY_PREFIX, BENCHMARK_WINDOW, parse:parseBreedingShowDataset, merge:mergeBreedingShowDataset, getBenchmarks, getBenchmark, getBenchmarkForHorse, assessHorseForecast, benchmarkFromDataset, qualifyingCount, render:renderBenchmarkDashboard, refresh:refreshSharedRows, ensureLoaded };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wireImportUi,{once:true});else wireImportUi();
 })();

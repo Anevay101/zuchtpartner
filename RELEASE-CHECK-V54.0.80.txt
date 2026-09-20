@@ -1,0 +1,34 @@
+RELEASE-CHECK V54.0.80
+
+Zweck
+- Zuchtschau-Benchmark um Streuung und geschlechtsabhängiges Durchkommensniveau erweitern.
+- Aktuelles Rassen-/Geschlechtsniveau auf Pferdeseite und Zuchtschau-Übersicht sichtbar machen.
+- Separate individuelle Zuchtschau-Prognose mit Grün/Gelb/Rot-Einordnung ergänzen.
+
+Geprüft
+- JavaScript-Syntax: 40/40 Dateien OK.
+- CSS geparst: 0 Fehler.
+- HTML: 14 Dateien geprüft, 0 doppelte IDs.
+- Lokale HTML-Ressourcenreferenzen: 199 geprüft, 0 fehlend.
+- Cache-Buster: 0 alte v=5479, 199 Referenzen auf v=5480.
+- Script-Reihenfolge: breeding-show-benchmark.js lädt in Dashboard, Pferdeansicht und Turnierplaner nach planer-common.js.
+- VERSION.txt = V54.0.80.
+
+Regeltests Durchkommen
+- Stuten: 10 -> 3, 11 -> 3, 12 -> 4.
+- Hengste: 15 -> 3, 19 -> 3, 20 -> 4.
+- Beispielmediane aus synthetischen Schauen korrekt berechnet.
+- Hengstschau mit 4 Meldungen: qualifyingMedian = null, nicht 0.
+
+Ampeltests
+- Restbedarf 100 bei ausreichendem Turnierbonus-Rest -> grün.
+- Restbedarf 400 bei ausreichendem Turnierbonus-Rest -> gelb.
+- Bereits 450/500 Turnierbonus und Restbedarf 50 -> grün.
+- Bereits 450/500 Turnierbonus und Restbedarf 250 -> rot; Rest nach Bonusdeckel 200 -> 2 zusätzliche Cup-Sterne.
+- Fehlendes Durchkommensniveau -> neutral / nicht einschätzbar.
+
+Datenhaltung
+- Keine neue Supabase-Tabelle.
+- Kein neues Benchmark-Speicherformat nötig.
+- Bestehende Datum+Punktelisten reichen für P25/P75 und Durchkommensniveau.
+- Historische ZS-Bonus-Snapshots werden nicht migriert oder verändert.

@@ -1,0 +1,37 @@
+Zuchtschau-Benchmark V54.0.80
+
+Datenquelle
+- Unverändert: gemeinsame kompakte Punktelisten im bestehenden user_settings-Store.
+- Pro Rasse + Geschlecht maximal 50 belegte Schauen.
+- Keine neue Tabelle, kein neues Cloudformat, keine Pferdenamen/Besitzer in den Benchmarkdaten.
+
+Kennzahlen
+- Typischer Bereich: P25 bis P75 aller Meldungen der gespeicherten Schauen.
+- Meldeniveau: Median aller Meldungen.
+- Durchkommensniveau: pro Schau Punktwert des letzten erfolgreichen Pferdes; anschließend Median dieser Schwellen.
+- Podium: Median des 3. Platzes.
+- Siegniveau: Median des 1. Platzes.
+
+Durchkommensregel
+- Stuten: floor(Anzahl Meldungen / 3).
+  Beispiele: 10 -> 3, 11 -> 3, 12 -> 4.
+- Hengste: floor(Anzahl Meldungen / 5).
+  Beispiele: 15 -> 3, 19 -> 3, 20 -> 4.
+- Unter 3 Stuten bzw. unter 5 Hengsten ergibt die Regel 0; solche Schauen werden nur für das Durchkommensniveau ignoriert.
+- Für P25/P75, Meldeniveau und Siegniveau bleiben diese belegten Schauen Teil der Datenbasis; Podium benötigt naturgemäß mindestens drei Platzierte.
+
+Pferdeprognose ohne echten ZS-Wert
+- Grundwert: bestehende DB-ZS-Prognose; bleibt unverändert und wird weiterhin separat unter Stammdaten gezeigt.
+- Schätzwert mit aktuellem Bonus = prognostizierter Grundwert + aktueller Turnierbonus + aktueller Cup-Stern-Bonus.
+- Ziel = aktuelles Durchkommensniveau der eigenen Rasse und des passenden Geschlechts.
+
+Ampel
+- Grün / Gute Chancen: Ziel bereits erreicht oder höchstens ca. 200 zusätzliche normale Bonuspunkte nötig und diese passen noch in den verbleibenden Turnierbonus bis max. 500.
+- Gelb / Anspruchsvoll: mehr als 200 zusätzliche Bonuspunkte nötig, aber der verbleibende normale Turnierbonus bis max. 500 reicht rechnerisch noch aus.
+- Rot / Cup-Stern erforderlich: selbst bei ausgeschöpftem normalem Turnierbonus bleibt eine Lücke. Angezeigt wird ceil(Restlücke / 100) als Mindestzahl zusätzlicher Cup-Sterne.
+- Kein passender Benchmark oder keine DB-Grundwertprognose: neutral / nicht einschätzbar.
+
+Wichtig
+- Die Prognose ist kein echter ZS-Wert.
+- Ein echter positiver ZS-Gesamtwert ersetzt die Prognose weiterhin wie bisher.
+- Historische ZS-Snapshots und bestehende ZS-Grundwerte werden nicht verändert.

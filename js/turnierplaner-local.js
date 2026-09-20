@@ -27,6 +27,10 @@ async function initTurnierplaner() {
   // sichtbaren Filtern. Einmal berechnen statt bei jedem Tastendruck erneut
   // Kreuzvalidierung + Regression laufen zu lassen.
   TP_ZS_MODEL = buildBreedingShowModel();
+  if (window.MDR_BREEDING_SHOW_BENCHMARK?.ensureLoaded) {
+    try { await window.MDR_BREEDING_SHOW_BENCHMARK.ensureLoaded(); }
+    catch (error) { console.warn('Zuchtschau-Benchmark konnte nicht geladen werden:', error); }
+  }
   // Lerndatei bleibt bewusst in TP_ALL_HORSES für das ZS-Lernmodell,
   // wird aber aus allen operativen Turnier-/Cup-Listen ausgeblendet.
   TP_HORSES = TP_ALL_HORSES.filter(h => isActiveBreeder(h.owner) && !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
@@ -1023,6 +1027,42 @@ function zsOutlierDiagnosticsHtml(model) {
   </details>`;
 }
 
+function tpZsHasScore(value) {
+  return value !== null && value !== undefined && String(value).trim() !== '' && Number.isFinite(Number(value));
+}
+
+function tpZsBenchmarkCell(benchmark) {
+  if (!benchmark || !tpZsHasScore(benchmark.qualifyingMedian)) return '<span class="muted">–</span><br><span class="tiny muted">kein Benchmark</span>';
+  const range = tpZsHasScore(benchmark.fieldP25) && tpZsHasScore(benchmark.fieldP75)
+    ? `${Math.round(Number(benchmark.fieldP25))}–${Math.round(Number(benchmark.fieldP75))}` : '–';
+  return `<strong>${Math.round(Number(benchmark.qualifyingMedian))}</strong><br><span class="tiny muted">${plannerEscape(benchmark.breed)} · P25–P75 ${range}</span>`;
+}
+
+function tpZsAssessmentCell(horse, total, predicted, benchmark, forecastMode) {
+  if (!benchmark || !tpZsHasScore(benchmark.qualifyingMedian)) {
+    return '<span class="zs-forecast-status zs-forecast-neutral">Nicht einschätzbar</span><br><span class="tiny muted">kein aktuelles Rassen-Niveau</span>';
+  }
+  const target=Number(benchmark.qualifyingMedian);
+  if (!forecastMode) {
+    if (!Number.isFinite(Number(total))) return '<span class="muted">–</span>';
+    const diff=Number(total)-target;
+    const cls=diff>=0?'green':'red';
+    return `<span class="zs-forecast-status zs-forecast-${cls}">${diff>=0?'Über Schwelle':'Unter Schwelle'}</span><br><span class="tiny muted">${diff>=0?'+':''}${Math.round(diff)} Punkte zum aktuellen Durchkommen</span>`;
+  }
+  if (!tpZsHasScore(predicted) || !window.MDR_BREEDING_SHOW_BENCHMARK?.assessHorseForecast) {
+    return '<span class="zs-forecast-status zs-forecast-neutral">Nicht einschätzbar</span><br><span class="tiny muted">Grundwert-Prognose fehlt</span>';
+  }
+  const a=window.MDR_BREEDING_SHOW_BENCHMARK.assessHorseForecast(horse,predicted,benchmark);
+  if (!a || a.status==='neutral') return '<span class="zs-forecast-status zs-forecast-neutral">Nicht einschätzbar</span>';
+  let note='';
+  if (a.status==='red') {
+    const plural=a.extraCupStars===1?'Cup-Stern':'Cup-Sterne';
+    note=`mind. ${a.extraCupStars} zusätzliche ${plural} nötig`;
+  } else if (a.gap<=0) note='Schätzwert bereits auf/über Schwelle';
+  else note=`ca. ${Math.round(a.gap)} Bonuspunkte fehlen`;
+  return `<span class="zs-forecast-status zs-forecast-${a.status}">${plannerEscape(a.label)}</span><br><span class="tiny muted">${plannerEscape(note)}</span>`;
+}
+
 function renderBreedingShowOverview() {
   const body=document.getElementById('tp-zs-body');
   if (!body) return;
@@ -1123,8 +1163,8 @@ function renderBreedingShowOverview() {
     : `${rows.length} ZS-Datensätze angezeigt`;
   if (!rows.length) {
     body.innerHTML=only==='forecast'
-      ? '<tr><td colspan="7" class="muted">Keine passenden Pferde ohne echten ZS-Wert gefunden.</td></tr>'
-      : '<tr><td colspan="7" class="muted">Keine passenden auswertbaren ZS-Datensätze. Für die ZS-Auswertung zählen nur positive echte ZS-Punktangaben.</td></tr>';
+      ? '<tr><td colspan="9" class="muted">Keine passenden Pferde ohne echten ZS-Wert gefunden.</td></tr>'
+      : '<tr><td colspan="9" class="muted">Keine passenden auswertbaren ZS-Datensätze. Für die ZS-Auswertung zählen nur positive echte ZS-Punktangaben.</td></tr>';
     return;
   }
   body.innerHTML=rows.map(h=>{
@@ -1135,6 +1175,9 @@ function renderBreedingShowOverview() {
     const base=plannerBreedingShowBase(h);
     const pred=model.predict(h);
     const diff=base==null || pred==null ? null : base-pred;
+    const benchmark=window.MDR_BREEDING_SHOW_BENCHMARK?.getBenchmarkForHorse ? window.MDR_BREEDING_SHOW_BENCHMARK.getBenchmarkForHorse(h) : null;
+    const benchmarkCell=tpZsBenchmarkCell(benchmark);
+    const assessmentCell=tpZsAssessmentCell(h,total,pred,benchmark,only==='forecast');
     const st=zsTrainingStatus(h);
     let dataNote='';
     if (only==='forecast' && pred==null) {
@@ -1155,7 +1198,7 @@ function renderBreedingShowOverview() {
     return `<tr>
       <td><a href="${mdrRoute('view',{id:h.id})}"><strong>${plannerEscape(h.name || '(ohne Name)')}</strong></a><br><span class="tiny muted">${plannerEscape(h.owner || '')}</span>${dataNote}</td>
       <td>${total==null?'–':Math.round(total)}</td><td>${turnier}</td><td>${cup}</td><td>${base==null?'–':Math.round(base)}</td>
-      <td>${pred==null?'–':Math.round(pred)}</td><td>${diff==null?'–':`${diff>=0?'+':''}${Math.round(diff)}`}</td>
+      <td>${pred==null?'–':Math.round(pred)}</td><td>${benchmarkCell}</td><td>${assessmentCell}</td><td>${diff==null?'–':`${diff>=0?'+':''}${Math.round(diff)}`}</td>
     </tr>`;
   }).join('');
 }
