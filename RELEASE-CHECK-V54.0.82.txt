@@ -1,0 +1,16 @@
+V54.0.82 – Release-Check
+
+- VERSION.txt: V54.0.82
+- JavaScript-Syntax: 41/41 Dateien OK
+- CSS-Parser: 0 Fehler
+- HTML: 0 doppelte IDs
+- Lokale Ressourcenreferenzen: 337 geprüft, 0 fehlen
+- Cache-Buster: 203 Referenzen auf 5482, 0 verbliebene Referenzen auf 5481
+- LP-Modul wird nur auf Dashboard und Pferdeansicht geladen
+- Dashboard-Validierung verwendet gesamten gespeicherten Pferdebestand, unabhängig vom aktuellen Dashboardfilter
+- Fehlender LP-/Prämienstatus wird nicht als Nichtbestehen gewertet
+- Erbkrankheit: Träger erlaubt, ausgeprägt betroffen = Modellregel verletzt, unbekannt bleibt unbekannt
+- Grenzwerte gegen Excel-Regeln getestet (Interieur, Exterieur, Disziplinen, Eigenschaften, Grundlagen, Gangarten)
+- Beispieltests: Ballonflieger (158 Punkte) und Neptun (159 Punkte) erfüllen LP-Prototyp v1 vollständig
+- EN/DE: dynamische LP-Ausgabe zweisprachig; statische neue Überschriften ergänzt
+- Keine neue Datenbanktabelle / keine Änderung des Supabase-Schemas

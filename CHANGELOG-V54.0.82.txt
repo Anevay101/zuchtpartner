@@ -1,0 +1,16 @@
+V54.0.82 – LP-Prototypmodell v1
+
+- Zentrale, gemeinsam genutzte LP-Regelengine in js/lp-model.js ergänzt.
+- Regeln entsprechen dem bereitgestellten User-LP-Rechner: Erbkrankheiten, Interieur, Exterieur, vier Disziplinwerte sowie Grundlagen/Gangarten.
+- Erbkrankheiten-Regel verbessert: ausgeprägt betroffen = Ausschluss; bestätigte Träger bleiben erlaubt; unbekannte Daten werden nicht still als gesund gewertet.
+- Werte-Regeln verwenden Potenzialwerte: vier Disziplinen der Begabungsgruppe, acht Grundlagen sowie Schritt/Trab/Galopp/Renngalopp.
+- Dashboard erhält eine kompakte rückwärtige Validierung an bestätigten Prämienhengsten/-stuten im gesamten gespeicherten Datenbestand.
+- Pferde ohne LP-/Prämienstatus werden ausdrücklich NICHT als Nichtbesteher gewertet.
+- Dashboard zeigt pro Regel Erfüllung unter prüfbaren bestätigten Bestehern und markiert echte Gegenbeispiele.
+- Pferdeansicht > Zucht & Nachzucht erhält einen kompakten Leistungsprüfungs-Block.
+- Bei echtem LP-Ergebnis wird dieses priorisiert; bekannte Punkte werden angezeigt.
+- Ohne echtes Ergebnis zeigt LP-Prototyp v1 Voraussetzungen erfüllt / Grenzfall / nach aktuellem Modell nicht ausreichend / noch nicht vollständig beurteilbar.
+- Grenzfall wird nur verwendet, wenn sämtliche verletzten Regeln bereits durch bestätigte Besteher als Gegenbeispiel relativiert wurden.
+- Keine LP-Punkteprognose in v1.
+- Deutsche und englische Oberfläche berücksichtigt.
+- Keine neue Datenbanktabelle und keine Änderung des Supabase-Schemas.

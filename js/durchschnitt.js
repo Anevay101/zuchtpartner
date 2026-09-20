@@ -195,6 +195,9 @@ async function calculate() {
 
   try {
     const allData = await localGetAll(LOCAL_STORES.horses);
+    if (window.MDR_LP_MODEL?.renderValidation) {
+      window.MDR_LP_MODEL.renderValidation(document.getElementById('lp-prototype-dashboard'), allData);
+    }
     const activeData = allData.filter(h => isActiveBreeder(h.owner) && !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
     const data = localAverageFilter(activeData);
     const benchmarkData = localAverageFilter(activeData, { ignoreGender: true });

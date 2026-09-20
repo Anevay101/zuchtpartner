@@ -449,6 +449,9 @@ async function initView() {
   renderHorseBreedingShowSummary(extraData, viewHorseList);
   renderHorseBreedingShowDetails(extraData, viewHorseList);
   renderHorseTournamentProfile(extraData, viewHorseList);
+  if (window.MDR_LP_MODEL?.renderHorse) {
+    window.MDR_LP_MODEL.renderHorse(document.getElementById('horse-lp-model'), extraData, viewHorseList);
+  }
   if (typeof bpRenderBreedingPanel === 'function') await bpRenderBreedingPanel(extraData, 'breeding-progress-panel');
 
   const externalId = document.getElementById('external_id').value;

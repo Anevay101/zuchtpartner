@@ -1,0 +1,47 @@
+LP-Prototyp v1 – fachliche Grundlage (V54.0.82)
+
+Ziel
+- Regelbasierte LP-Prognose aus dem bereitgestellten User-LP-Rechner.
+- Rückwärtsvalidierung ausschließlich an bestätigten LP-Bestehern (Prämienhengst/Prämienstute bzw. eindeutig bestanden/points).
+- Pferde ohne LP-Eintrag sind KEINE Negativfälle.
+- Bekannte Nichtbesteher werden in v1 bewusst noch nicht für die Modellvalidierung genutzt.
+- Keine LP-Punkteprognose in v1.
+
+Regeln
+1. Erbkrankheiten
+   - keine ausgeprägte Erbkrankheit
+   - bestätigte Träger sind erlaubt
+   - unbekannte Krankheitsdaten bleiben unbekannt und werden nicht als gesund angenommen
+
+2. Interieur (10 Werte)
+   - kein miserabler Wert
+   - maximal 2 schlechte Werte
+   - mindestens 5 Werte gut oder exzellent
+
+3. Exterieur (14 Werte)
+   - maximal 2 sehr schlechte Werte (Score 5)
+   - mindestens 5 gelbe/grüne Werte (Score 1–3)
+   - mindestens 1 grüner Wert (Score 1–2)
+
+4. Leistungswerte
+   - 4 Disziplinen der Begabungsgruppe: alle >=20 %, mindestens eine >=25 %
+   - 12 Eigenschaften: 8 Grundlagen plus Schritt/Trab/Galopp/Renngalopp
+   - alle 12 >=15 %
+   - mindestens 6 der 12 >=20 %
+   - davon mindestens 4 Grundlagen >=20 %
+   - davon mindestens 1 Gangart >=20 %
+   - verwendet werden Potenzialwerte, nicht der aktuelle Trainingsstand
+
+Validierung / Einordnung
+- Regel ohne Gegenbeispiel und >=10 bestätigten erfüllenden Bestehern: stark gestützt
+- Regel ohne Gegenbeispiel und >=5 bestätigten erfüllenden Bestehern: gestützt
+- Regel mit bestätigtem Besteher, der sie verletzt: Gegenbeispiel vorhanden
+- darunter: zu wenig Daten
+
+Individuelle Prognose
+- Grün: alle aktuell angenommenen Regeln erfüllt
+- Gelb/Grenzfall: verletzte Regeln sind sämtlich bereits durch bestätigte Besteher als Gegenbeispiele relativiert
+- Rot: mindestens eine verletzte Regel hat in der positiven Validierung noch kein Gegenbeispiel
+- Neutral: keine Regel sicher verletzt, aber Eingangsdaten fehlen
+
+Echte LP-Ergebnisse haben immer Vorrang vor der Prognose.
