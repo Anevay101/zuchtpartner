@@ -1,0 +1,6 @@
+MDR-Datenbank V54.0.85 – Filtergruppen-Default korrigiert
+
+- Suche, Zucht, Genetik & Gesundheit und Leistungswerte starten standardmäßig ausgeklappt.
+- Der individuelle Auf-/Zuklapp-Zustand wird weiterhin lokal gespeichert.
+- Neuer Memory-Key v5485, damit der versehentlich eingeklappte V54.0.84-Default nicht aus dem Browser übernommen wird.
+- Keine Filterlogik oder Fachlogik geändert.

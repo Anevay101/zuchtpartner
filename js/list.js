@@ -616,8 +616,17 @@ async function populateFilterOptions() {
   const data = await localGetAll(LOCAL_STORES.horses);
   filterOptionHorses = data;
 
-  fillSelect('#f-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de')));
-  fillSelect('#f-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de')));
+  const ownerOptions = [...new Set(data.map((d) => String(d.owner || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+  populateCheckDropdown('f-owner-drop', ownerOptions);
+
+  // Geschlecht ist ein kleiner, stabiler MDR-Wertekatalog. Die kanonischen
+  // Werte werden immer angeboten; zusätzlich bleiben unbekannte/ältere
+  // gespeicherte Werte sichtbar. So fällt die Auswahl nie auf nur ‚Alle‘
+  // zurück, wenn der Datenbestand gerade noch asynchron aufgebaut wird.
+  const canonicalGenders = ['Stute','Hengst','Wallach','Stutfohlen','Hengstfohlen','Fohlen'];
+  const storedGenders = [...new Set(data.map((d) => String(d.gender || '').trim()).filter(Boolean))];
+  const genderOptions = [...canonicalGenders, ...storedGenders.filter((v) => !canonicalGenders.includes(v))];
+  fillSelect('#f-gender', genderOptions);
   refreshDatabaseBreedOptions();
 
   fillSelect('#cmp-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de')));
@@ -681,19 +690,18 @@ function databaseOwnerKey(value) {
   return String(value || '').trim().toLocaleLowerCase('de');
 }
 
-function databaseBreedRowsForOwner(owner) {
-  if (owner) {
-    const wanted = databaseOwnerKey(owner);
-    return filterOptionHorses.filter(h => databaseOwnerKey(h.owner) === wanted);
-  }
-  return typeof activeOwnedHorses === 'function'
-    ? activeOwnedHorses(filterOptionHorses)
-    : filterOptionHorses.filter(h => isActiveBreeder(h.owner));
+function databaseBreedRowsForOwners(owners) {
+  const wanted = new Set((owners || []).map(databaseOwnerKey).filter(Boolean));
+  // „Alle“ bedeutet hier wirklich der vollständige geladene Datenbestand.
+  // Zuvor wurde ohne Besitzer-Auswahl nur ein Teilbestand herangezogen;
+  // dadurch konnte die Rassenliste leer oder unvollständig werden.
+  if (!wanted.size) return filterOptionHorses;
+  return filterOptionHorses.filter(h => wanted.has(databaseOwnerKey(h.owner)));
 }
 
 function refreshDatabaseBreedOptions() {
-  const owner = document.querySelector('#f-owner')?.value || '';
-  const rows = databaseBreedRowsForOwner(owner);
+  const owners = getCheckDropdownSelected('f-owner-drop');
+  const rows = databaseBreedRowsForOwners(owners);
   const breeds = [...new Set(rows.map(h => normalizeBreed(h.breed) || 'Rasselos'))]
     .sort((a,b)=>a.localeCompare(b,'de'));
   replaceSelectOptions('#f-breed', breeds, {preferredOption:true});
@@ -701,7 +709,7 @@ function refreshDatabaseBreedOptions() {
 
 function refreshCompareBreedOptions() {
   const owner = document.querySelector('#cmp-owner')?.value || '';
-  const rows = owner ? databaseBreedRowsForOwner(owner) : databaseBreedRowsForOwner('');
+  const rows = databaseBreedRowsForOwners(owner ? [owner] : []);
   const breeds = [...new Set(rows.map(h => normalizeBreed(h.breed) || 'Rasselos'))]
     .sort((a,b)=>a.localeCompare(b,'de'));
   replaceSelectOptions('#cmp-breed', breeds);
@@ -744,7 +752,8 @@ async function buildQuery() {
   let data = await localGetAll(LOCAL_STORES.horses);
 
   const name = document.querySelector('#f-name').value.trim().toLowerCase();
-  const owner = document.querySelector('#f-owner').value;
+  const owners = getCheckDropdownSelected('f-owner-drop');
+  const ownerKeys = new Set(owners.map(databaseOwnerKey));
   const gender = document.querySelector('#f-gender').value;
   const breed = document.querySelector('#f-breed').value;
   const gameVersion = document.querySelector('#f-game-version').value;
@@ -758,7 +767,7 @@ async function buildQuery() {
 
   data = data.filter((row) => {
     if (name && !(row.name || '').toLowerCase().includes(name)) return false;
-    if (owner && databaseOwnerKey(row.owner) !== databaseOwnerKey(owner)) return false;
+    if (ownerKeys.size && !ownerKeys.has(databaseOwnerKey(row.owner))) return false;
     if (gender && row.gender !== gender) return false;
 
     const rowGameVersion = mdrGameWorld(row, 'DE');
@@ -1260,7 +1269,10 @@ function activeFilterChipDescriptors() {
   const chips = [];
   const add = (key, label, active=true) => { if (active && label) chips.push({key,label}); };
   add('name', `Name: ${state.name}`, Boolean(state.name));
-  add('owner', state.owner, Boolean(state.owner));
+  if (state.owners?.length) {
+    const ownerLabel = state.owners.length <= 2 ? state.owners.join(', ') : `${state.owners.length} Besitzer ausgewählt`;
+    add('owners', `Besitzer: ${ownerLabel}`, true);
+  }
   add('breed', state.breed === '__preferred__' ? 'Meine Rassenauswahl' : state.breed, Boolean(state.breed));
   add('gender', `Geschlecht: ${state.gender}`, Boolean(state.gender));
   add('gameVersion', `Spielversion: ${state.gameVersion}`, Boolean(state.gameVersion));
@@ -1290,12 +1302,12 @@ function activeFilterChipDescriptors() {
 
 function clearDatabaseFilterChip(key) {
   const direct = {
-    name:'#f-name', owner:'#f-owner', breed:'#f-breed', gender:'#f-gender', gameVersion:'#f-game-version',
+    name:'#f-name', breed:'#f-breed', gender:'#f-gender', gameVersion:'#f-game-version',
     zzl:'#f-zzl', breedingStation:'#f-breeding-station', dataQuality:'#f-data-quality', mainGroup:'#f-main-group', talent:'#f-talent',
     gpVal:'#f-gp-val', extVal:'#f-ext-val', extpctVal:'#f-extpct-val', intVal:'#f-int-val', offspringVal:'#f-offspring-val',
   };
   if (direct[key]) document.querySelector(direct[key]).value = '';
-  if (key === 'owner') refreshDatabaseBreedOptions();
+  if (key === 'owners') { resetCheckDropdown('f-owner-drop'); refreshDatabaseBreedOptions(); }
   if (key === 'mainGroup') refreshTalentFilterOptions();
   if (key === 'learningFile') document.querySelector('#f-learning-file').value = 'exclude';
   if (key === 'cupStarOnly') document.querySelector('#f-cupstar').checked = false;
@@ -1567,7 +1579,7 @@ function wireFilterForm() {
 
   // Abhängige Auswahlfelder werden sofort neu aufgebaut, damit z.B. nach
   // „Wilder Wolf“ nur noch dessen tatsächlich vorhandene Rassen auswählbar sind.
-  document.getElementById('f-owner')?.addEventListener('change', refreshDatabaseBreedOptions);
+  document.querySelector('#f-owner-drop .checkdrop-panel')?.addEventListener('change', refreshDatabaseBreedOptions);
   document.getElementById('f-main-group')?.addEventListener('change', refreshTalentFilterOptions);
 
   document.querySelector('#reset-filters').addEventListener('click', resetDatabaseFilters);
@@ -1576,7 +1588,7 @@ function wireFilterForm() {
 
 
 function wireFilterGroupMemory() {
-  const key = 'mdr-database-filter-sections-v54';
+  const key = 'mdr-database-filter-sections-v5485';
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch {}
   document.querySelectorAll('.filter-group-collapsible[data-filter-section]').forEach((details) => {
@@ -1596,6 +1608,7 @@ function resetDatabaseFilters() {
   resetTriStateDropdown('f-ekh-drop');
   resetTriStateDropdown('f-genetik-drop');
   resetTriStateDropdown('f-tag-drop');
+  resetCheckDropdown('f-owner-drop');
   if (document.querySelector('#f-learning-file')) document.querySelector('#f-learning-file').value = 'exclude';
   if (document.querySelector('#f-best-foal-toggle')) {
     document.querySelector('#f-best-foal-toggle').dataset.state = 'off';
@@ -1684,7 +1697,9 @@ function syncMobileSortControls() {
 function collectFilterState() {
   return {
     name: document.querySelector('#f-name').value,
-    owner: document.querySelector('#f-owner').value,
+    owners: getCheckDropdownSelected('f-owner-drop'),
+    // Legacy compatibility for older consumers/presets that knew one owner.
+    owner: getCheckDropdownSelected('f-owner-drop').length === 1 ? getCheckDropdownSelected('f-owner-drop')[0] : '',
     gender: document.querySelector('#f-gender').value,
     breed: document.querySelector('#f-breed').value,
     gameVersion: document.querySelector('#f-game-version').value,
@@ -1725,7 +1740,8 @@ function collectFilterState() {
 // gelöscht), bleiben dabei einfach unwirksam - kein Fehler.
 async function applyFilterState(state) {
   document.querySelector('#f-name').value = state.name || '';
-  document.querySelector('#f-owner').value = state.owner || '';
+  const savedOwners = Array.isArray(state.owners) ? state.owners : (state.owner ? [state.owner] : []);
+  setCheckDropdownSelected('f-owner-drop', savedOwners);
   refreshDatabaseBreedOptions();
   document.querySelector('#f-gender').value = state.gender || '';
   document.querySelector('#f-breed').value = [...document.querySelector('#f-breed').options].some(o=>o.value===(state.breed||'')) ? (state.breed||'') : '';

@@ -1,0 +1,8 @@
+MDR-Datenbank V54.0.84 – Datenbankfilter-Bugfixes
+
+- Besitzerfilter auf echte Mehrfachauswahl umgestellt.
+- Rassenfilter: „Alle Besitzer“ verwendet jetzt den vollständigen Datenbestand; Rassenliste bleibt vollständig.
+- Geschlechtsfilter erhält stabile kanonische Optionen plus ggf. vorhandene Altwerte.
+- Alle vier Filtergruppen starten standardmäßig eingeklappt; Auf-/Zuklapp-Zustand wird ab dieser Version neu gespeichert.
+- Zuchtfilter kompakter: „Bestes Fohlen“ steht neben „In Zuchtstation“, Nachkommen nutzt die volle Zeile.
+- Alte Filtervorlagen mit nur einem Besitzer bleiben kompatibel.

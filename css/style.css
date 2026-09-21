@@ -7841,3 +7841,42 @@ button.keep-foal-no.active {
   .lp-prediction-line { align-items:flex-start; }
   .lp-prediction-line .tiny { width:100%; }
 }
+
+
+/* ============================================================
+   V54.0.84 – Datenbankfilter: Mehrfach-Besitzer + kompakter Zuchtblock
+   ============================================================ */
+#f-owner-drop .checkdrop-toggle { width: 100%; text-align: left; }
+#f-owner-drop .checkdrop-panel { min-width: 100%; max-height: 18rem; }
+
+/* Im Zuchtblock steht „Bestes Fohlen“ neben „In Zuchtstation“ statt
+   als einzelne dritte Zeile. Nachkommen nutzt darunter die volle Breite. */
+.database-filter-bar .filter-group-breeding #best-foal-filter-field { grid-column: 2; }
+.database-filter-bar .filter-group-breeding .breeding-offspring-field { grid-column: 1 / -1; }
+.best-foal-filter-row {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  min-width: 0;
+}
+.best-foal-filter-toggle {
+  width: auto;
+  flex: 0 0 auto;
+  min-height: var(--control-height, 2.35rem);
+  white-space: nowrap;
+}
+.best-foal-filter-hint {
+  min-width: 0;
+  line-height: 1.2;
+}
+#best-foal-filter-field .bp-filter-legend {
+  display: block;
+  margin-top: .25rem;
+  white-space: normal;
+}
+
+@media (max-width: 900px) {
+  .best-foal-filter-row { align-items: flex-start; flex-direction: column; gap: .25rem; }
+  .database-filter-bar .filter-group-breeding #best-foal-filter-field,
+  .database-filter-bar .filter-group-breeding .breeding-offspring-field { grid-column: auto; }
+}

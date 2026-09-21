@@ -1,0 +1,7 @@
+MDR-Datenbank V54.0.85 – Release-Check
+
+- Vier Datenbank-Filtergruppen besitzen wieder das HTML-Attribut open.
+- Filtergruppen-Memory-Key auf v5485 angehoben.
+- Gespeicherter Zustand funktioniert nach dem ersten V54.0.85-Aufruf weiterhin.
+- Cache-Buster aktiver HTML-Dateien auf 5485.
+- VERSION.txt = V54.0.85.

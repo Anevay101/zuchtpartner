@@ -1,0 +1,20 @@
+MDR-Datenbank V54.0.84 – Release-Check
+
+Änderungsumfang
+- Datenbankseite / Filterlogik und Filterlayout.
+- Besitzerfilter: Mehrfachauswahl per Checkbox-Dropdown.
+- Rassenoptionen: ohne Besitzerfilter vollständiger Datenbestand; bei Mehrfachauswahl Vereinigungsmenge der gewählten Besitzer.
+- Geschlecht: kanonische MDR-Werte werden stabil angeboten, vorhandene Altwerte zusätzlich übernommen.
+- Filtergruppen: Suche, Zucht, Genetik & Gesundheit, Leistungswerte starten eingeklappt; neuer lokaler Memory-Key ab V54.0.84.
+- Zuchtfilter: Bestes Fohlen neben In Zuchtstation; Nachkommen kompakt darunter.
+- Bestehende Ein-Besitzer-Filtervorlagen bleiben kompatibel.
+
+Prüfungen
+- 41/41 JavaScript-Dateien: Syntax OK (node --check).
+- CSS: 0 Parsefehler (tinycss2).
+- HTML: 0 doppelte IDs.
+- 202 lokale Ressourcenreferenzen geprüft, 0 fehlen.
+- Alle vier Filter-Untergruppen ohne open-Attribut.
+- f-owner durch f-owner-drop ersetzt; keine verwaiste f-owner-Referenz in list.js.
+- Cache-Buster auf 5484; keine verbliebenen 5483-Referenzen in aktiven HTML-Dateien/i18n-core.
+- VERSION.txt = V54.0.84.
