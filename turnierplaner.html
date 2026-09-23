@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Turnier & Leistung – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5485" />
+  <link rel="stylesheet" href="css/style.css?v=5487" />
 </head>
 <body class="turnierplaner-page">
 <header class="topbar">
@@ -110,6 +110,7 @@
           <div><label for="tp-cup-search">Pferd / Besitzer</label><input id="tp-cup-search" type="text" placeholder="Name oder Besitzer" /></div>
           <div><label for="tp-cup-discipline">Disziplin</label><select id="tp-cup-discipline"><option value="">Alle Disziplinen</option></select></div>
           <div><label for="tp-cup-status">Cup-Stern</label><select id="tp-cup-status"><option value="">Alle</option><option value="star">⭐ Cup-Stern</option><option value="no-star">Ohne Cup-Stern</option><option value="near">7–14 Siege</option></select></div>
+          <div><label for="tp-cup-gender">Geschlecht</label><select id="tp-cup-gender"><option value="">Alle Geschlechter</option><option value="mare">Stuten</option><option value="male">Hengste &amp; Wallache</option><option value="stallion">Hengste</option><option value="gelding">Wallache</option></select></div>
           <div><label for="tp-cup-group">Gruppe</label><select id="tp-cup-group"><option value="">Alle Gruppen</option></select></div>
         </div>
         <div class="actions"><button class="secondary" id="tp-cup-reset" type="button">Filter zurücksetzen</button></div>
@@ -135,6 +136,9 @@
           <p><strong>Prognose:</strong> wird ausschließlich aus echten Lerndaten berechnet und nie selbst wieder zum Lerndatum. Sie bleibt bei jedem Pferd unabhängig vom Alter gültig, bis ein echter positiver ZS-Wert eingetragen wird. Sichtbare Züchter-/Rassefilter verändern das Lernen nicht.</p>
           <p><strong>Aktuelles Rassen-Niveau:</strong> stammt aus den gemeinsam eingelesenen Ergebnislisten. P25–P75 zeigt den typischen Feldbereich. Das Durchkommensniveau nimmt pro Schau den letzten erfolgreichen Platz: bei Stuten <strong>floor(Meldungen / 3)</strong>, bei Hengsten <strong>floor(Meldungen / 5)</strong>. Anschließend wird der Median dieser Schwellen gebildet; zu kleine Schauen zählen für diese eine Kennzahl nicht.</p>
           <p><strong>Prüfung:</strong> MAE = mittlere absolute Abweichung; RMSE gewichtet große Fehler stärker; R² näher an 1 ist besser. Spearman misst, wie gut die Rangfolge der Pferde getroffen wird (1 = perfekte Reihenfolge). Zusätzlich wird mit einer einfachen Durchschnitts-Prognose verglichen.</p>
+          <p><strong>Prognosekorridor:</strong> der angezeigte 80%-Bereich wird aus den echten Out-of-Fold-Abweichungen der Kreuzvalidierung abgeleitet. Er beschreibt einen typischen empirischen Fehlerkorridor und ist keine Garantie.</p>
+          <p><strong>Härtetest:</strong> zusätzlich zur normalen Kreuzvalidierung wird nach Besitzer-/Bestandskennung gruppiert geprüft. Pferde derselben Besitzergruppe liegen dabei nicht gleichzeitig in Training und Test. Das ist strenger und prüft, ob das Modell über einzelne Bestände hinaus trägt.</p>
+          <p><strong>Skalierung:</strong> Ridge-Eingaben werden innerhalb jedes Trainings-Folds per z-Score standardisiert. Die sichtbaren Koeffizienten werden danach wieder auf GP/Ext/Ext%/Int in Originalskala zurückgerechnet.</p>
           <p><strong>Datenmenge:</strong> n&lt;15 experimentell, 15–29 erste Tendenz, 30–49 brauchbar, 50–99 gut, ab 100 stabiler. Ein echter ZS-Eintrag mit historisch festgehaltenem Bonusstand 0 ist ein gültiger Lerndatensatz; Turnierplatzierungen sind keine Pflicht.</p>
           <p id="tp-zs-model-formula" class="tp-zs-current-formula"></p>
           <div id="tp-zs-model-comparison"></div>
@@ -188,19 +192,19 @@
   </section>
 </main>
 
-<script src="js/tournament-catalog.js?v=5485"></script>
-<script src="js/i18n.js?v=5485"></script>
-  <script src="js/core-utils.js?v=5485"></script>
-  <script src="js/supabase-loader.js?v=5485"></script>
-<script src="js/supabase-config.js?v=5485"></script>
-<script src="js/database-local.js?v=5485"></script>
-<script src="js/local-app.js?v=5485"></script>
-<script src="js/learning-file.js?v=5485"></script>
-<script src="js/horse-data-utils.js?v=5485"></script>
-<script src="js/data-quality.js?v=5485"></script>
-<script src="js/planer-common.js?v=5485"></script>
-<script src="js/breeding-show-benchmark.js?v=5485"></script>
-<script src="js/tournament-recommendation.js?v=5485"></script>
-<script src="js/turnierplaner-local.js?v=5485"></script>
+<script src="js/tournament-catalog.js?v=5487"></script>
+<script src="js/i18n.js?v=5487"></script>
+  <script src="js/core-utils.js?v=5487"></script>
+  <script src="js/supabase-loader.js?v=5487"></script>
+<script src="js/supabase-config.js?v=5487"></script>
+<script src="js/database-local.js?v=5487"></script>
+<script src="js/local-app.js?v=5487"></script>
+<script src="js/learning-file.js?v=5487"></script>
+<script src="js/horse-data-utils.js?v=5487"></script>
+<script src="js/data-quality.js?v=5487"></script>
+<script src="js/planer-common.js?v=5487"></script>
+<script src="js/breeding-show-benchmark.js?v=5487"></script>
+<script src="js/tournament-recommendation.js?v=5487"></script>
+<script src="js/turnierplaner-local.js?v=5487"></script>
 </body>
 </html>

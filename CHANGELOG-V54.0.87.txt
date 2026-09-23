@@ -1,0 +1,13 @@
+MDR-Datenbank V54.0.87 – ZS-Prognosemodell v1 Hardening
+
+- Bestehende zentrale ZS-Modellengine in planer-common.js gehärtet; keine neue Datenbanktabelle und keine Supabase-Schemaänderung.
+- Ridge-Skalierung verifiziert: Eingaben werden bereits innerhalb jedes Trainings-Folds per z-Score standardisiert. Die sichtbare Formel bleibt auf Originalskala.
+- Empirischer 80%-Prognosekorridor aus echten Out-of-Fold-Residuen (10.–90. Perzentil) ergänzt. Prognosen werden dadurch nicht selbst zu Lerndaten.
+- Individuelle Vertrauensstufe für ZS-Prognosen: gut abgesichert / vorsichtig interpretieren / außerhalb Lerndaten. Berücksichtigt Lage der vier Kernwerte und Zahl vergleichbarer Rasse/Geschlecht-Fälle.
+- Zusätzliche Diagnose: Fehler nach Rasse, Geschlecht, GP-Quartil und Ext-Quartil; Korrelation der Kernwerte; Koeffizientenstabilität über CV-Folds.
+- Strenger Besitzer-/Bestands-Härtetest: Besitzergruppen werden foldweise vollständig getrennt, damit ein Besitzer nicht zugleich in Training und Test liegt.
+- Dashboard um eingeklappte Karte „ZS-Prognosemodell v1“ mit kompakter Qualitäts-/Stabilitätsdiagnose ergänzt.
+- Turnier & Leistung > Zuchtschau zeigt Hardening-Diagnose im bestehenden Bereich „Modell & Diagnose“.
+- Pferdeseite und Ankaufberatung zeigen bei ZS-Prognosen kompakt den empirischen 80%-Bereich und die Vertrauensstufe.
+- Modellberechnung wird pro unverändertem Pferde-Array gecacht, damit die umfangreichere Diagnose auf einer Seite nicht mehrfach gerechnet wird.
+- DE/EN-Texte für die neuen sichtbaren Elemente ergänzt.

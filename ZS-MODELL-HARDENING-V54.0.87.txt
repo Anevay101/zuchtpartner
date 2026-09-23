@@ -1,0 +1,25 @@
+ZS-Prognosemodell v1 – Hardening V54.0.87
+
+Ziel
+Das vorhandene Lernmodell wird nicht künstlich komplexer gemacht. V54.0.87 ergänzt vor allem Diagnose, Unsicherheitsanzeige und strengere Validierung.
+
+Standardisierung
+Die bestehende Ridge-Implementierung standardisiert jedes verwendete Merkmal innerhalb des jeweiligen Trainingssatzes (Mittelwert 0, Standardabweichung 1). Das gilt auch innerhalb der Kreuzvalidierungs-Folds. Erst für die sichtbare Formel werden Koeffizienten und Intercept auf die Originalskala von GP, Ext, Ext% und Int zurückgerechnet.
+
+Empirischer Prognosekorridor
+Aus allen Out-of-Fold-Residuen (echter Grundwert minus Prognose) werden das 10. und 90. Perzentil bestimmt. Für ein neues Pferd wird dieser Residuenbereich zur Modellprognose addiert. Der angezeigte 80%-Bereich ist damit ein empirischer typischer Fehlerkorridor, kein formales Konfidenzintervall und keine Garantie.
+
+Vertrauensstufe
+Die individuelle Vertrauensstufe prüft, ob die vier Kernwerte im bekannten Wertebereich der Lerndaten liegen und wie viele Trainingsfälle derselben Kombination aus normalisierter Rasse und Geschlecht existieren. Sie verändert den prognostizierten Wert nicht.
+
+Strenger Härtetest
+Zusätzlich zur normalen deterministischen 5-Fold-CV wird eine gruppierte CV nach Besitzer-/Bestandskennung gerechnet. Ganze Besitzergruppen werden jeweils einem Fold zugewiesen. Dadurch kann derselbe Besitzer nicht zugleich in Training und Test eines Folds vorkommen. Ein eigener historischer Züchter-Schlüssel ist im aktuellen Pferdedatensatz nicht vorhanden; deshalb wird bewusst die gespeicherte Besitzerkennung verwendet und im UI so bezeichnet.
+
+Weitere Diagnose
+- CV-Fehler nach Rasse und Geschlecht
+- CV-Fehler nach GP- und Ext-Quartilen
+- Pearson-Korrelationen der Kernwerte GP/Ext/Ext%/Int
+- Koeffizientenstabilität der gewählten Modellvariante über CV-Folds
+
+Wichtig
+Prognosen werden weiterhin niemals als Lerndaten verwendet. Der historische ZS-Bonus-Snapshot und die automatische Modellwahl mit 1%-RMSE-Toleranz bleiben unverändert.

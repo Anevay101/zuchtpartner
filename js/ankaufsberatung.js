@@ -344,8 +344,10 @@
     try {
       if (typeof plannerBuildBreedingShowModel === 'function') {
         model = plannerBuildBreedingShowModel(allHorses || []);
-        const value = model?.predict?.(horse);
+        const detail = typeof model?.predictDetail === 'function' ? model.predictDetail(horse) : null;
+        const value = detail?.value ?? model?.predict?.(horse);
         if (value != null && Number.isFinite(Number(value))) predicted = Number(value);
+        if (detail) model.__purchasePredictionDetail = detail;
       }
     } catch {}
 
@@ -354,7 +356,7 @@
     const assessment = predicted != null && api?.assessHorseForecast
       ? api.assessHorseForecast(horse, predicted, benchmark)
       : null;
-    return { actual:null, predicted, model, benchmark, assessment };
+    return { actual:null, predicted, model, benchmark, assessment, predictionDetail:model?.__purchasePredictionDetail || null };
   }
 
   function purchaseForecastLabel(status) {
@@ -447,9 +449,13 @@
     }
 
     const benchmark = preview.benchmark;
+    const detail=preview.predictionDetail;
     const metricParts = [
       `<div><span>${esc(t('DB-Prognose Grundwert','Database forecast baseline'))}</span><strong>${fmt(preview.predicted)}</strong></div>`,
     ];
+    if (detail?.interval && Number.isFinite(detail.interval.low) && Number.isFinite(detail.interval.high)) {
+      metricParts.push(`<div><span>${esc(t('Typischer Prognosebereich','Typical forecast range'))}</span><strong>${fmt(detail.interval.low)}–${fmt(detail.interval.high)}</strong><small>${esc(t('empirisch 80 %','empirical 80%'))}</small></div>`);
+    }
     if (assessment && assessment.status !== 'neutral') {
       metricParts.push(`<div><span>${esc(t('Schätzwert mit aktuellem Bonus','Estimate with current bonus'))}</span><strong>${fmt(assessment.currentEstimate)}</strong></div>`);
     }
@@ -459,7 +465,8 @@
     forecastContent.innerHTML = `
       <div class="purchase-zs-forecast-metrics">${metricParts.join('')}</div>
       <p class="small purchase-zs-forecast-note">${esc(purchaseForecastExplanation(preview))}</p>
-      <p class="tiny muted purchase-zs-forecast-foot">${esc(t('Die Prognose ist kein echter ZS-Wert. Sie nutzt dieselbe Grundwert-, Turnierbonus-, Cup-Stern- und Durchkommenslogik wie auf der Pferdeseite.','The forecast is not an actual show score. It uses the same baseline, competition-bonus, Cup-star and qualifying-cutoff logic as the horse page.'))}</p>`;
+      ${detail?.confidence?`<p class="tiny muted purchase-zs-forecast-foot">${detail.confidence.status==='green'?'🟢':detail.confidence.status==='yellow'?'🟡':'⚪'} <strong>${esc(t(detail.confidence.label, detail.confidence.label==='gut abgesichert'?'well supported':detail.confidence.label==='vorsichtig interpretieren'?'interpret cautiously':'cannot assess'))}</strong>${detail.confidence.subgroupN!=null?` · ${detail.confidence.subgroupN} ${esc(t('vergleichbare Rasse/Geschlecht-Fälle','comparable breed/sex cases'))}`:''}</p>`:''}
+      <p class="tiny muted purchase-zs-forecast-foot">${esc(t('Die Prognose ist kein echter ZS-Wert. Der 80%-Bereich stammt aus echten Out-of-Fold-Fehlern des Lernmodells.','The forecast is not an actual show score. The 80% range is derived from actual out-of-fold errors of the learning model.'))}</p>`;
   }
 
   function generationLabel(generation) {

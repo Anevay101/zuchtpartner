@@ -1,0 +1,8 @@
+MDR-Datenbank V54.0.86 – Cup-Pferdeliste: Geschlechtsfilter
+
+- In Turnier & Leistung → Cups & Erfolge → Cup-Pferdeliste gibt es jetzt einen kompakten Geschlechtsfilter.
+- Optionen: Alle Geschlechter, Stuten, Hengste & Wallache, nur Hengste, nur Wallache.
+- Damit können insbesondere Stuten für Cup-Planungen schnell ausgeblendet werden.
+- Der neue Filter wirkt zusätzlich zu Suche, Disziplin, Cup-Stern und Gruppe und wird mit „Filter zurücksetzen“ geleert.
+- Deutsche und englische UI-Bezeichnungen ergänzt.
+- Keine Änderung an Cup-Regeln, Cup-Kalender, Turnierwerten oder sonstiger Fachlogik.

@@ -276,10 +276,16 @@ function renderHorseBreedingShowSummary(horse, allHorses) {
   }
 
   const model = plannerBuildBreedingShowModel(allHorses);
-  const predicted = model.predict(horse);
+  const detail = typeof model.predictDetail === 'function' ? model.predictDetail(horse) : null;
+  const predicted = detail?.value ?? model.predict(horse);
   if (predicted != null && Number.isFinite(predicted)) {
     field.value = String(Math.round(predicted));
-    if (note) note.textContent = 'ZS-Prognose (Grundwert). Sie bleibt unabhängig vom Alter sichtbar und wird erst durch einen echten eingetragenen ZS-Wert ersetzt.';
+    if (note) {
+      const range=detail?.interval && Number.isFinite(detail.interval.low) && Number.isFinite(detail.interval.high)
+        ? ` Empirischer 80%-Bereich: ${Math.round(detail.interval.low)}–${Math.round(detail.interval.high)}.` : '';
+      const confidence=detail?.confidence?.label ? ` ${detail.confidence.status==='green'?'🟢':detail.confidence.status==='yellow'?'🟡':'⚪'} ${detail.confidence.label}.` : '';
+      note.textContent = `ZS-Prognose (Grundwert).${range}${confidence} Sie wird erst durch einen echten eingetragenen ZS-Wert ersetzt.`;
+    }
     return;
   }
 
@@ -329,7 +335,8 @@ function viewZsForecastHtml(horse, allHorses, benchmark) {
     return `<section class="zs-forecast-panel"><div class="zs-section-title"><span>Zuchtschau-Prognose</span></div><p class="small muted">Die Grundwert-Prognose ist derzeit nicht verfügbar.</p></section>`;
   }
   const model = plannerBuildBreedingShowModel(allHorses || []);
-  const predicted = model.predict(horse);
+  const predictionDetail = typeof model.predictDetail === 'function' ? model.predictDetail(horse) : null;
+  const predicted = predictionDetail?.value ?? model.predict(horse);
   if (predicted == null || !Number.isFinite(Number(predicted))) {
     const reason = model.n < 8
       ? `Noch keine Prognose: aktuell ${model.n} verwertbare echte ZS-Datensätze, mindestens 8 nötig.`
@@ -340,10 +347,15 @@ function viewZsForecastHtml(horse, allHorses, benchmark) {
   }
   const api = window.MDR_BREEDING_SHOW_BENCHMARK;
   const assessment = api?.assessHorseForecast ? api.assessHorseForecast(horse, predicted, benchmark) : null;
+  const confidence=predictionDetail?.confidence || null;
+  const confidenceSymbol=confidence?.status==='green'?'🟢':confidence?.status==='yellow'?'🟡':'⚪';
+  const rangeText=predictionDetail?.interval && Number.isFinite(predictionDetail.interval.low) && Number.isFinite(predictionDetail.interval.high)
+    ? `${viewZsScore(predictionDetail.interval.low)}–${viewZsScore(predictionDetail.interval.high)}` : null;
   if (!assessment || assessment.status === 'neutral') {
     return `<section class="zs-forecast-panel">
       <div class="zs-section-title"><span>Zuchtschau-Prognose</span></div>
-      <div class="zs-forecast-values"><div><span>DB-Prognose Grundwert</span><strong>${viewZsScore(predicted)}</strong></div></div>
+      <div class="zs-forecast-values"><div><span>DB-Prognose Grundwert</span><strong>${viewZsScore(predicted)}</strong></div>${rangeText?`<div><span>Typischer Prognosebereich</span><strong>${rangeText}</strong><small>empirisch 80 %</small></div>`:''}</div>
+      ${confidence?`<p class="small muted">${confidenceSymbol} <strong>${plannerEscape(confidence.label)}</strong>${confidence.subgroupN!=null?` · ${confidence.subgroupN} vergleichbare Rasse/Geschlecht-Fälle`:''}</p>`:''}
       <p class="small muted">Für die Ampel fehlt noch ein passendes aktuelles Durchkommensniveau der Rasse.</p>
     </section>`;
   }
@@ -361,13 +373,15 @@ function viewZsForecastHtml(horse, allHorses, benchmark) {
     <div class="zs-section-title"><span>Zuchtschau-Prognose</span><span class="zs-forecast-status zs-forecast-${assessment.status}">${plannerEscape(assessment.label)}</span></div>
     <div class="zs-forecast-values">
       <div><span>DB-Prognose Grundwert</span><strong>${viewZsScore(predicted)}</strong></div>
+      ${rangeText?`<div><span>Typischer Prognosebereich</span><strong>${rangeText}</strong><small>empirisch 80 %</small></div>`:''}
       <div><span>Aktueller Turnierbonus</span><strong>${viewZsScore(assessment.tournamentBonus)} / 500</strong></div>
       <div><span>Aktueller Cup-Stern-Bonus</span><strong>${viewZsScore(assessment.cupBonus)}</strong></div>
       <div><span>Schätzwert mit aktuellem Bonus</span><strong>${viewZsScore(assessment.currentEstimate)}</strong></div>
       <div class="zs-forecast-target"><span>Typisches Durchkommen</span><strong>${viewZsScore(benchmark?.qualifyingMedian)}</strong></div>
     </div>
     <p class="small zs-forecast-explanation">${plannerEscape(explanation)}</p>
-    <p class="tiny muted">Der Schätzwert ist kein echter ZS-Wert: Prognostizierter Grundwert + aktuell vorhandener Turnierbonus + aktuell vorhandener Cup-Stern-Bonus. Grün = höchstens ca. 200 zusätzliche normale Bonuspunkte; Gelb = mehr, aber noch innerhalb des verbleibenden 500er-Turnierbonus; Rot = normaler Turnierbonus reicht nicht aus.</p>
+    ${confidence?`<p class="tiny muted">${confidenceSymbol} <strong>${plannerEscape(confidence.label)}</strong>${confidence.subgroupN!=null?` · ${confidence.subgroupN} vergleichbare Rasse/Geschlecht-Fälle`:''}${confidence.reasons?.length?` · ${plannerEscape(confidence.reasons.join(' · '))}`:''}</p>`:''}
+    <p class="tiny muted">Der Schätzwert ist kein echter ZS-Wert. Der 80%-Bereich stammt aus echten Out-of-Fold-Fehlern des Lernmodells und ist ein empirischer Prognosekorridor, kein garantierter Grenzwert.</p>
   </section>`;
 }
 

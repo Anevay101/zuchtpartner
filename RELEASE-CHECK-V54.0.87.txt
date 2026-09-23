@@ -1,0 +1,24 @@
+MDR-Datenbank V54.0.87 – Release-Check
+
+Umfang
+- ZS-Prognosemodell v1 Hardening: Prognosekorridor, individuelle Vertrauensstufe, zusätzliche Diagnose, Besitzer-gruppierter CV-Härtetest, Dashboard-Karte.
+- Keine neue Datenbanktabelle und keine Supabase-Schemaänderung.
+
+Prüfungen
+- 41/41 JavaScript-Dateien: Syntaxprüfung erfolgreich.
+- css/style.css: 0 Parserfehler (tinycss2).
+- HTML: 0 doppelte IDs.
+- 337 lokale src/href-Referenzen geprüft: 0 fehlende Dateien.
+- Cache-Buster aktiver HTML-Dateien sowie Lazy-i18n auf 5487; keine alten 5486/5485/5484-Referenzen in aktiven HTML/JS-Dateien.
+- VERSION.txt = V54.0.87.
+- Zentrale API window.MDR_ZS_MODEL vorhanden.
+- predictDetail(), gruppierte CV, Dashboard-Karte und Turnierplaner-Härtetest vorhanden.
+- Synthetischer Modelltest: Standard-CV, Besitzer-Gruppen-CV, Residuenkorridor, Vertrauensstufe und Array-Cache erfolgreich durchlaufen.
+
+Fachliche Schutzregeln
+- Lerndaten bleiben ausschließlich echte positive ZS-Werte mit historischem Bonus-Snapshot und vollständigen GP/Ext/Ext%/Int-Daten.
+- Prognosen werden niemals als Lerndaten zurückgeführt.
+- Die automatische Modellwahl (RMSE-Referenz + 1%-Toleranz + Vorrang fachlich gerichteter/einfacherer Varianten) bleibt unverändert.
+- Ridge-Standardisierung erfolgt innerhalb des jeweiligen Trainingssatzes/Folds; die sichtbare Formel wird auf Originalskala zurückgerechnet.
+- Der 80%-Bereich ist ein empirischer Out-of-Fold-Prognosekorridor, kein garantiertes Konfidenzintervall.
+- Der strengere Härtetest gruppiert nach gespeicherter Besitzer-/Bestandskennung, da kein separater historischer Züchter-Schlüssel im Pferdedatensatz vorliegt.

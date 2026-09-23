@@ -1,6 +1,7 @@
 const durchschnittDerivedCache = new WeakMap();
 let DASHBOARD_FILTER_HORSES = [];
 let DASHBOARD_ZS_GENDER = 'Stute';
+let DASHBOARD_ZS_MODEL = null;
 const DASHBOARD_ZS_GENDER_SESSION_KEY = 'mdr-dashboard-zs-gender';
 
 function dashboardOwnerKey(value) { return String(value || '').trim().toLocaleLowerCase('de'); }
@@ -128,6 +129,42 @@ function renderBreedingDashboard(rows) {
 }
 
 
+
+function dashboardZsFmt(value,digits=0) {
+  return Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : '–';
+}
+
+function renderZsModelDashboard(model) {
+  const root=document.getElementById('zs-model-dashboard');
+  if (!root) return;
+  if (!model || !model.fit) {
+    root.innerHTML=`<p class="small muted">Noch keine belastbare ZS-Prognose. ${model?.n||0} verwertbare echte Grundwerte; mindestens 8 nötig.</p>`;
+    return;
+  }
+  const cv=model.diagnostics?.cv;
+  const grouped=model.diagnostics?.ownerGroupedCv;
+  const residual=model.residualProfile;
+  const range=residual&&Number.isFinite(residual.q10)&&Number.isFinite(residual.q90)
+    ? `${residual.q10>=0?'+':''}${Math.round(residual.q10)} bis ${residual.q90>=0?'+':''}${Math.round(residual.q90)}` : '–';
+  const confidenceBand=model.n>=100?'stabiler':model.n>=50?'gut':model.n>=30?'brauchbar':'experimentell';
+  const breedRows=(model.diagnostics?.breedMetrics||[]).slice(0,12);
+  const corr=(model.diagnostics?.correlations||[]).slice().sort((a,b)=>Math.abs(Number(b.r)||0)-Math.abs(Number(a.r)||0));
+  const stability=model.diagnostics?.coefficientStability||[];
+  root.innerHTML=`
+    <div class="dashboard-zs-model-kpis">
+      <div><span>Lerndaten</span><strong>n=${model.n}</strong><small>${confidenceBand}</small></div>
+      <div><span>Normale CV</span><strong>MAE ${dashboardZsFmt(cv?.mae)} · RMSE ${dashboardZsFmt(cv?.rmse)}</strong><small>R² ${dashboardZsFmt(cv?.r2,2)} · Spearman ${dashboardZsFmt(cv?.spearman,2)}</small></div>
+      <div><span>80%-Fehlerbereich</span><strong>${range}</strong><small>Out-of-Fold, relativ zur Prognose</small></div>
+      <div><span>Besitzer-Härtetest</span><strong>${grouped?`RMSE ${dashboardZsFmt(grouped.rmse)}`:'–'}</strong><small>${grouped?`Spearman ${dashboardZsFmt(grouped.spearman,2)} · ${grouped.groups} Gruppen`:'nicht genügend Gruppen'}</small></div>
+    </div>
+    <p class="tiny muted">Ausgewählt: <strong>${escapeHtml(model.selectedCandidate?.label||'Modell')}</strong> · λ=${model.lambda} · Ridge-Eingaben werden je Trainings-Fold standardisiert. Der Härtetest trennt Besitzergruppen vollständig zwischen Training und Test.</p>
+    <details class="dashboard-zs-model-diagnostics"><summary>Diagnose nach Rasse &amp; Modellstabilität</summary>
+      ${breedRows.length?`<div class="table-wrap"><table class="detail-table"><thead><tr><th>Rasse</th><th>n</th><th>MAE</th><th>RMSE</th><th>Spearman</th></tr></thead><tbody>${breedRows.map(r=>`<tr><td>${escapeHtml(r.label)}</td><td>${r.n}</td><td>${dashboardZsFmt(r.mae)}</td><td>${dashboardZsFmt(r.rmse)}</td><td>${dashboardZsFmt(r.spearman,2)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="tiny muted">Noch nicht genügend Fälle je Rasse.</p>'}
+      ${corr.length?`<p class="tiny muted"><strong>Stärkste Kernwert-Korrelation:</strong> ${escapeHtml(corr[0].a)} ↔ ${escapeHtml(corr[0].b)} = ${dashboardZsFmt(corr[0].r,2)}</p>`:''}
+      ${stability.length?`<p class="tiny muted"><strong>Koeffizientenrichtung stabil:</strong> ${stability.map(r=>`${escapeHtml(r.key)} ${Number.isFinite(r.signAgreement)?Math.round(r.signAgreement*100)+'%':'–'}`).join(' · ')}</p>`:''}
+    </details>`;
+}
+
 function dashboardGenderKey(value) {
   const raw=String(value||'').trim().toLowerCase();
   if (/stute|mare|female/.test(raw)) return 'Stute';
@@ -198,6 +235,10 @@ async function calculate() {
     if (window.MDR_LP_MODEL?.renderValidation) {
       window.MDR_LP_MODEL.renderValidation(document.getElementById('lp-prototype-dashboard'), allData);
     }
+    if (!DASHBOARD_ZS_MODEL && typeof plannerBuildBreedingShowModel === 'function') {
+      DASHBOARD_ZS_MODEL = plannerBuildBreedingShowModel(allData);
+    }
+    renderZsModelDashboard(DASHBOARD_ZS_MODEL);
     const activeData = allData.filter(h => isActiveBreeder(h.owner) && !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
     const data = localAverageFilter(activeData);
     const benchmarkData = localAverageFilter(activeData, { ignoreGender: true });

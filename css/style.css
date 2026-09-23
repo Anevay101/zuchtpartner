@@ -7880,3 +7880,27 @@ button.keep-foal-no.active {
   .database-filter-bar .filter-group-breeding #best-foal-filter-field,
   .database-filter-bar .filter-group-breeding .breeding-offspring-field { grid-column: auto; }
 }
+
+
+/* V54.0.87 – ZS-Prognosemodell v1 Hardening */
+.zs-hardening-details { margin-top:.75rem; }
+.zs-hardening-details > summary { cursor:pointer; }
+.zs-hardening-details details { margin:.45rem 0; padding:.45rem .6rem; border:1px solid var(--border-soft, #d8e1d8); border-radius:10px; background:rgba(255,255,255,.62); }
+.zs-hardening-details details > summary { cursor:pointer; font-weight:600; }
+.zs-hardening-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; margin:.55rem 0 .7rem; }
+.zs-hardening-summary > div { padding:.55rem .65rem; border:1px solid var(--border-soft, #d8e1d8); border-radius:10px; background:var(--surface, #fff); display:flex; flex-direction:column; gap:.16rem; }
+.zs-hardening-summary span { font-size:.78rem; color:var(--text-muted, #66736a); }
+.zs-hardening-summary strong { font-size:.9rem; }
+.zs-hardening-summary small { color:var(--text-muted, #66736a); }
+.zs-hardening-table, .zs-correlation-table, .zs-stability-table { min-width:620px; }
+@media (max-width:760px) { .zs-hardening-summary { grid-template-columns:1fr; } }
+
+.dashboard-zs-model-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.55rem; margin:.55rem 0; }
+.dashboard-zs-model-kpis > div { padding:.55rem .65rem; border:1px solid var(--border-soft,#d8e1d8); border-radius:10px; background:var(--surface,#fff); display:flex; flex-direction:column; gap:.12rem; }
+.dashboard-zs-model-kpis span { font-size:.78rem; color:var(--text-muted,#66736a); }
+.dashboard-zs-model-kpis strong { font-size:.92rem; }
+.dashboard-zs-model-kpis small { color:var(--text-muted,#66736a); }
+.dashboard-zs-model-diagnostics { margin-top:.5rem; }
+.dashboard-zs-model-diagnostics > summary { cursor:pointer; font-weight:600; }
+@media (max-width:1000px) { .dashboard-zs-model-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:620px) { .dashboard-zs-model-kpis { grid-template-columns:1fr; } }

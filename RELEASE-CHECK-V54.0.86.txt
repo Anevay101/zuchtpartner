@@ -1,0 +1,13 @@
+MDR-Datenbank V54.0.86 – Release-Check
+
+- Cup-Pferdeliste besitzt den neuen Filter tp-cup-gender.
+- Optionen: Alle Geschlechter, Stuten, Hengste & Wallache, nur Hengste, nur Wallache.
+- Geschlechtsnormalisierung verwendet die bestehende plannerGender()-Logik; Stutfohlen/Hengstfohlen werden konsistent zugeordnet.
+- Filterkombination Hengste & Wallache schließt Stuten aus.
+- Filter-Reset setzt auch den Geschlechtsfilter auf Alle zurück.
+- DE/EN-Schlüssel für Alle Geschlechter, Wallache sowie Hengste & Wallache ergänzt.
+- 41/41 JS-Dateien bestehen node --check.
+- 0 doppelte HTML-IDs.
+- 337 lokale HTML-Ressourcenreferenzen geprüft, 0 fehlen.
+- Cache-Buster aktiver HTML-Dateien auf 5486; keine alten 5485/5484-Referenzen in aktiven HTML/JS-Dateien.
+- VERSION.txt = V54.0.86.

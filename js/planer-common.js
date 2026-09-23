@@ -1,4 +1,4 @@
-// MDR V54.0.75 – Turnierdefinitionen kommen zentral aus tournament-catalog.js.
+// MDR V54.0.87 – Turnierdefinitionen kommen zentral aus tournament-catalog.js.
 function plannerNorm(value) {
   return String(value ?? '').trim().toLocaleLowerCase('de');
 }
@@ -878,6 +878,196 @@ function plannerBreedingShowMetrics(actual, predicted) {
   return {mae, rmse, medianAe, r2, spearman, n:actual.length};
 }
 
+
+
+// ---------------------------------------------------------------------
+// V54.0.87 – ZS-Prognosemodell v1: Hardening / Diagnose
+// ---------------------------------------------------------------------
+function plannerBreedingShowQuantile(values, q) {
+  const rows=(Array.isArray(values)?values:[]).map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
+  if (!rows.length) return null;
+  const pos=(rows.length-1)*Math.min(1,Math.max(0,Number(q)||0));
+  const lo=Math.floor(pos), hi=Math.ceil(pos);
+  if (lo===hi) return rows[lo];
+  const weight=pos-lo;
+  return rows[lo]*(1-weight)+rows[hi]*weight;
+}
+
+function plannerBreedingShowPearson(a,b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length!==b.length || a.length<2) return null;
+  const pairs=a.map((v,i)=>[Number(v),Number(b[i])]).filter(([x,y])=>Number.isFinite(x)&&Number.isFinite(y));
+  if (pairs.length<2) return null;
+  const am=pairs.reduce((s,[x])=>s+x,0)/pairs.length;
+  const bm=pairs.reduce((s,[,y])=>s+y,0)/pairs.length;
+  let cov=0,av=0,bv=0;
+  for (const [x,y] of pairs) { const dx=x-am, dy=y-bm; cov+=dx*dy; av+=dx*dx; bv+=dy*dy; }
+  return av>0&&bv>0 ? cov/Math.sqrt(av*bv) : null;
+}
+
+function plannerBreedingShowGenderGroup(horse) {
+  const g=plannerNorm(horse?.gender);
+  if (/stute|stutfohlen|mare|filly/.test(g)) return 'Stute';
+  if (/hengst|hengstfohlen|stallion|colt/.test(g)) return 'Hengst';
+  if (/wallach|gelding/.test(g)) return 'Wallach';
+  return 'Unbekannt';
+}
+
+function plannerBreedingShowBreedGroup(horse) {
+  const raw=horse?.breed;
+  if (typeof normalizeBreed==='function') return normalizeBreed(raw)||'Rasselos';
+  return String(raw||'Rasselos').trim()||'Rasselos';
+}
+
+function plannerBreedingShowMetricsForObservations(observations) {
+  const rows=(Array.isArray(observations)?observations:[]).filter(r=>Number.isFinite(Number(r.actual))&&Number.isFinite(Number(r.predicted)));
+  if (!rows.length) return null;
+  const metrics=plannerBreedingShowMetrics(rows.map(r=>Number(r.actual)),rows.map(r=>Number(r.predicted)));
+  if (!metrics) return null;
+  const bias=rows.reduce((s,r)=>s+(Number(r.predicted)-Number(r.actual)),0)/rows.length;
+  return {...metrics,bias};
+}
+
+function plannerBreedingShowGroupedObservationMetrics(observations,keyFn,minN=3) {
+  const groups=new Map();
+  for (const row of Array.isArray(observations)?observations:[]) {
+    const key=String(keyFn(row)||'Unbekannt');
+    if (!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push(row);
+  }
+  return [...groups.entries()].map(([label,rows])=>({label,rows,metrics:plannerBreedingShowMetricsForObservations(rows)}))
+    .filter(row=>row.metrics && row.metrics.n>=minN)
+    .sort((a,b)=>b.metrics.n-a.metrics.n || a.label.localeCompare(b.label,'de'))
+    .map(({label,metrics})=>({label,...metrics}));
+}
+
+function plannerBreedingShowInputProfile(training) {
+  const keys=['gp','ext','extpct','int'];
+  const features={};
+  for (const key of keys) {
+    const values=training.map(r=>Number(r.x?.[key])).filter(Number.isFinite).sort((a,b)=>a-b);
+    if (!values.length) continue;
+    const mean=values.reduce((s,v)=>s+v,0)/values.length;
+    const variance=values.reduce((s,v)=>s+(v-mean)**2,0)/values.length;
+    features[key]={
+      min:values[0], max:values[values.length-1], mean, std:Math.sqrt(variance)||1,
+      p05:plannerBreedingShowQuantile(values,.05), p25:plannerBreedingShowQuantile(values,.25),
+      p50:plannerBreedingShowQuantile(values,.50), p75:plannerBreedingShowQuantile(values,.75),
+      p95:plannerBreedingShowQuantile(values,.95),
+    };
+  }
+  const correlations=[];
+  for (let i=0;i<keys.length;i++) for (let j=i+1;j<keys.length;j++) {
+    const a=training.map(r=>r.x?.[keys[i]]), b=training.map(r=>r.x?.[keys[j]]);
+    correlations.push({a:keys[i],b:keys[j],r:plannerBreedingShowPearson(a,b)});
+  }
+  return {features,correlations};
+}
+
+function plannerBreedingShowResidualProfile(cv) {
+  const residuals=(cv?.observations||[]).map(row=>Number(row.actual)-Number(row.predicted)).filter(Number.isFinite);
+  if (!residuals.length) return null;
+  return {
+    n:residuals.length,
+    q10:plannerBreedingShowQuantile(residuals,.10),
+    q25:plannerBreedingShowQuantile(residuals,.25),
+    q50:plannerBreedingShowQuantile(residuals,.50),
+    q75:plannerBreedingShowQuantile(residuals,.75),
+    q90:plannerBreedingShowQuantile(residuals,.90),
+    coverage:.80,
+  };
+}
+
+function plannerBreedingShowBandDiagnostics(training, observations, key) {
+  const values=training.map(r=>Number(r.x?.[key])).filter(Number.isFinite);
+  if (values.length<8) return [];
+  const q1=plannerBreedingShowQuantile(values,.25), q2=plannerBreedingShowQuantile(values,.50), q3=plannerBreedingShowQuantile(values,.75);
+  const labels=[`≤ ${q1.toFixed(key==='gp'?0:2)}`,`${q1.toFixed(key==='gp'?0:2)}–${q2.toFixed(key==='gp'?0:2)}`,`${q2.toFixed(key==='gp'?0:2)}–${q3.toFixed(key==='gp'?0:2)}`,`> ${q3.toFixed(key==='gp'?0:2)}`];
+  const bins=[[],[],[],[]];
+  for (const row of observations||[]) {
+    const v=Number(row.x?.[key]); if (!Number.isFinite(v)) continue;
+    const idx=v<=q1?0:v<=q2?1:v<=q3?2:3; bins[idx].push(row);
+  }
+  return bins.map((rows,i)=>({label:labels[i],...plannerBreedingShowMetricsForObservations(rows)})).filter(r=>r.n);
+}
+
+function plannerBreedingShowGroupCrossValidate(rows,candidate,lambda,keyFn) {
+  if (!Array.isArray(rows) || rows.length<8) return null;
+  const grouped=new Map();
+  for (const row of rows) {
+    const key=String(keyFn(row)||'').trim()||'__unknown__';
+    if (!grouped.has(key)) grouped.set(key,[]);
+    grouped.get(key).push(row);
+  }
+  if (grouped.size<2) return null;
+  const foldCount=Math.min(5,grouped.size);
+  const folds=Array.from({length:foldCount},()=>[]);
+  const sizes=Array(foldCount).fill(0);
+  const groups=[...grouped.entries()].sort((a,b)=>b[1].length-a[1].length || a[0].localeCompare(b[0],'de'));
+  for (const [,groupRows] of groups) {
+    let target=0;
+    for (let i=1;i<foldCount;i++) if (sizes[i]<sizes[target]) target=i;
+    folds[target].push(...groupRows); sizes[target]+=groupRows.length;
+  }
+  const actual=[],predicted=[],baselinePredicted=[],observations=[];
+  for (let fold=0;fold<folds.length;fold++) {
+    const testSet=new Set(folds[fold]);
+    const train=rows.filter(r=>!testSet.has(r));
+    const test=folds[fold];
+    if (!train.length || !test.length) continue;
+    const fit=plannerBreedingShowFitCandidate(train,candidate,lambda); if (!fit) continue;
+    const trainingMean=train.reduce((s,r)=>s+r.y,0)/train.length;
+    for (const row of test) {
+      const pred=fit.predictX(row.x); if (!Number.isFinite(Number(pred))) continue;
+      actual.push(row.y); predicted.push(pred); baselinePredicted.push(trainingMean);
+      observations.push({horse:row.horse,x:row.x,actual:row.y,predicted:pred,difference:row.y-pred,absError:Math.abs(row.y-pred),fold});
+    }
+  }
+  const metrics=plannerBreedingShowMetrics(actual,predicted); if (!metrics) return null;
+  const baseline=plannerBreedingShowMetrics(actual,baselinePredicted);
+  return {...metrics,baseline,observations,groups:grouped.size,folds:foldCount,
+    improvementRmsePct:baseline?.rmse>0?((baseline.rmse-metrics.rmse)/baseline.rmse)*100:null};
+}
+
+function plannerBreedingShowCoefficientStability(rows,candidate,lambda,fullFit) {
+  if (!rows.length || !candidate || !fullFit) return [];
+  const folds=Math.min(5,Math.max(2,Math.floor(rows.length/4)));
+  const ordered=[...rows].sort((a,b)=>String(a.horse?.id||a.horse?.name||'').localeCompare(String(b.horse?.id||b.horse?.name||''),'de'));
+  const samples=[];
+  for (let fold=0;fold<folds;fold++) {
+    const train=ordered.filter((_,i)=>i%folds!==fold);
+    const fit=plannerBreedingShowFitCandidate(train,candidate,lambda); if (fit) samples.push(fit.rawCoefficients);
+  }
+  return candidate.featureKeys.map((key,index)=>{
+    const values=samples.map(row=>Number(row?.[index])).filter(Number.isFinite);
+    const mean=values.length?values.reduce((s,v)=>s+v,0)/values.length:null;
+    const sd=values.length?Math.sqrt(values.reduce((s,v)=>s+(v-mean)**2,0)/values.length):null;
+    const full=Number(fullFit.rawCoefficients?.[index]);
+    const sign=Math.abs(full)<1e-9?0:Math.sign(full);
+    const signAgreement=values.length ? values.filter(v=>(Math.abs(v)<1e-9?0:Math.sign(v))===sign).length/values.length : null;
+    return {key,n:values.length,full,mean,sd,min:values.length?Math.min(...values):null,max:values.length?Math.max(...values):null,signAgreement};
+  });
+}
+
+function plannerBreedingShowConfidence(model,horse) {
+  const x=plannerBreedingShowFeatureObject(horse);
+  if (!x || !model?.inputProfile?.features) return {status:'neutral',label:'nicht einschätzbar',reasons:['Grundwerte unvollständig']};
+  if ((Number(model.n)||0)<30) return {status:'neutral',label:'noch geringe Datenbasis',reasons:['Gesamtstichprobe noch klein']};
+  let outside=0,central=0;
+  for (const key of ['gp','ext','extpct','int']) {
+    const p=model.inputProfile.features[key]; const v=Number(x[key]); if (!p||!Number.isFinite(v)) continue;
+    if (v<p.min || v>p.max) outside++;
+    if (v>=p.p05 && v<=p.p95) central++;
+  }
+  const breed=plannerBreedingShowBreedGroup(horse), gender=plannerBreedingShowGenderGroup(horse);
+  const subgroupN=model.subgroupCounts?.[`${breed}|||${gender}`]||0;
+  const reasons=[];
+  if (outside) reasons.push(`${outside} Kernwert${outside===1?'':'e'} außerhalb der Lerndaten`);
+  if (subgroupN<5) reasons.push(`nur ${subgroupN} vergleichbare Rasse/Geschlecht-Fälle`);
+  if (outside>=2) return {status:'neutral',label:'außerhalb Lerndaten',reasons,subgroupN};
+  if (outside || central<3 || subgroupN<8) return {status:'yellow',label:'vorsichtig interpretieren',reasons,subgroupN};
+  return {status:'green',label:'gut abgesichert',reasons:[],subgroupN};
+}
+
 function plannerBreedingShowFitCandidate(rows, candidate, lambda) {
   return candidate.fitType === 'constrained-ridge'
     ? plannerBreedingShowFitConstrainedRidge(rows, candidate.featureKeys, lambda, candidate.constraints || {})
@@ -973,7 +1163,7 @@ function plannerBreedingShowSelectCandidate(evaluated, tolerance=PLANNER_ZS_RMSE
   };
 }
 
-function plannerBuildBreedingShowModel(allHorses) {
+function plannerComputeBreedingShowModel(allHorses) {
   const training = [];
   const exclusions = {noZs:0, missingFeatures:0, missingSnapshot:0, invalidBase:0};
   for (const horse of Array.isArray(allHorses) ? allHorses : []) {
@@ -1015,14 +1205,40 @@ function plannerBuildBreedingShowModel(allHorses) {
   const trainPred = training.map(row => fit.predictX(row.x));
   const trainMetrics = plannerBreedingShowMetrics(trainActual, trainPred);
 
-  return {
+  // V54.0.87: zusätzliche Diagnose wird ausschließlich aus den Out-of-Fold-
+  // Prognosen der gewählten Variante abgeleitet. Sie fließt nicht zurück in
+  // das Lernen und verändert die ausgewählte Formel nicht.
+  const cv=best.metrics;
+  const inputProfile=plannerBreedingShowInputProfile(training);
+  const residualProfile=plannerBreedingShowResidualProfile(cv);
+  const breedMetrics=plannerBreedingShowGroupedObservationMetrics(cv?.observations,row=>plannerBreedingShowBreedGroup(row.horse),5);
+  const genderMetrics=plannerBreedingShowGroupedObservationMetrics(cv?.observations,row=>plannerBreedingShowGenderGroup(row.horse),5);
+  const gpBands=plannerBreedingShowBandDiagnostics(training,cv?.observations||[],'gp');
+  const extBands=plannerBreedingShowBandDiagnostics(training,cv?.observations||[],'ext');
+  // Im Datensatz wird kein eigener historischer Züchter-Schlüssel gespeichert.
+  // Deshalb ist der Härtetest bewusst nach Besitzer/Bestandskennung gruppiert:
+  // kein Besitzer darf gleichzeitig in Train und Test desselben Folds liegen.
+  const ownerGroupedCv=plannerBreedingShowGroupCrossValidate(training,best.candidate,best.lambda,row=>row.horse?.owner||'');
+  const coefficientStability=plannerBreedingShowCoefficientStability(training,best.candidate,best.lambda,fit);
+  const subgroupCounts={};
+  for (const row of training) {
+    const key=`${plannerBreedingShowBreedGroup(row.horse)}|||${plannerBreedingShowGenderGroup(row.horse)}`;
+    subgroupCounts[key]=(subgroupCounts[key]||0)+1;
+  }
+
+  const model={
     ...base,
+    modelVersion:'ZS-Prognosemodell v1',
     lambda:best.lambda,
     fit,
     coefficients:fit.rawCoefficients,
     intercept:fit.rawIntercept,
     candidates:evaluated,
     selectedCandidate:best.candidate,
+    preprocessing:{standardized:true,method:'z-score per training fold'},
+    inputProfile,
+    residualProfile,
+    subgroupCounts,
     selectionInfo: selection ? {
       tolerance: selection.tolerance,
       thresholdRmse: selection.thresholdRmse,
@@ -1030,11 +1246,54 @@ function plannerBuildBreedingShowModel(allHorses) {
       exactBestRmse: selection.exactBest?.metrics?.rmse ?? null,
       nearBestIds: selection.nearBestIds || [],
     } : null,
-    diagnostics:{cv:best.metrics, train:trainMetrics},
+    diagnostics:{
+      cv,
+      train:trainMetrics,
+      breedMetrics,
+      genderMetrics,
+      gpBands,
+      extBands,
+      ownerGroupedCv,
+      coefficientStability,
+      correlations:inputProfile.correlations,
+    },
     predict(horse) {
       const x = plannerBreedingShowFeatureObject(horse);
       if (!x) return null;
       return fit.predictX(x);
     },
   };
+  model.predictDetail=function(horse) {
+    const value=model.predict(horse);
+    if (value==null || !Number.isFinite(Number(value))) return {value:null,interval:null,confidence:plannerBreedingShowConfidence(model,horse)};
+    const rp=model.residualProfile;
+    const interval=rp && Number.isFinite(rp.q10) && Number.isFinite(rp.q90)
+      ? {low:Math.max(0,Number(value)+rp.q10),high:Math.max(0,Number(value)+rp.q90),coverage:rp.coverage||.80}
+      : null;
+    return {value:Number(value),interval,confidence:plannerBreedingShowConfidence(model,horse)};
+  };
+  return model;
 }
+
+// Die Hardening-Diagnose ist bewusst umfangreicher als die alte Regression.
+// Auf einer Seite wird dasselbe, unveränderte Pferde-Array mehrfach von
+// Schnellübersicht, ZS-Tab und Kopierfunktion benötigt. Per Array-Referenz
+// cachen wir deshalb das fertige Modell und rechnen die CV nicht mehrfach.
+const PLANNER_ZS_MODEL_CACHE = new WeakMap();
+function plannerBuildBreedingShowModel(allHorses) {
+  if (Array.isArray(allHorses) && PLANNER_ZS_MODEL_CACHE.has(allHorses)) return PLANNER_ZS_MODEL_CACHE.get(allHorses);
+  const model=plannerComputeBreedingShowModel(allHorses);
+  if (Array.isArray(allHorses)) PLANNER_ZS_MODEL_CACHE.set(allHorses,model);
+  return model;
+}
+
+// Stabile zentrale API für alle Ansichten. Bestehende globale Funktionen
+// bleiben aus Kompatibilitätsgründen erhalten.
+window.MDR_ZS_MODEL = window.MDR_ZS_MODEL || {};
+Object.assign(window.MDR_ZS_MODEL, {
+  version:'1.0',
+  build:plannerBuildBreedingShowModel,
+  features:plannerBreedingShowFeatureObject,
+  trainingStatus:plannerBreedingShowTrainingStatus,
+  confidence:plannerBreedingShowConfidence,
+});

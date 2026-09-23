@@ -187,13 +187,13 @@ function wireTurnierMainTabs() {
     });
   });
 
-  ['tp-cup-search','tp-cup-discipline','tp-cup-status','tp-cup-group'].forEach(id => {
+  ['tp-cup-search','tp-cup-discipline','tp-cup-status','tp-cup-gender','tp-cup-group'].forEach(id => {
     const el=document.getElementById(id);
     if (!el) return;
     el.addEventListener(el.tagName==='INPUT' ? 'input' : 'change', renderCupAchievements);
   });
   document.getElementById('tp-cup-reset')?.addEventListener('click', () => {
-    ['tp-cup-search','tp-cup-discipline','tp-cup-status','tp-cup-group'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    ['tp-cup-search','tp-cup-discipline','tp-cup-status','tp-cup-gender','tp-cup-group'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
     renderCupAchievements();
   });
 
@@ -857,6 +857,7 @@ function renderCupAchievements() {
   const q=(document.getElementById('tp-cup-search')?.value || '').trim().toLowerCase();
   const discipline=document.getElementById('tp-cup-discipline')?.value || '';
   const status=document.getElementById('tp-cup-status')?.value || '';
+  const gender=document.getElementById('tp-cup-gender')?.value || '';
   const group=document.getElementById('tp-cup-group')?.value || '';
 
   let rows=cupAchievementRows().map(row=>{
@@ -866,6 +867,14 @@ function renderCupAchievements() {
     if (q && !`${row.horse.name || ''} ${row.horse.owner || ''}`.toLowerCase().includes(q)) return false;
     if (discipline && row.discipline!==discipline) return false;
     if (group && MDR_TOURNAMENT_DISCIPLINES[row.discipline]?.group!==group) return false;
+
+    if (gender) {
+      const horseGender=plannerGender(row.horse);
+      if (gender==='mare' && horseGender!=='stute') return false;
+      if (gender==='stallion' && horseGender!=='hengst') return false;
+      if (gender==='gelding' && horseGender!=='wallach') return false;
+      if (gender==='male' && horseGender!=='hengst' && horseGender!=='wallach') return false;
+    }
 
     const hasStar=Boolean(row.result.cup_star);
     const wins=Number(row.result.first || 0);
@@ -1027,6 +1036,61 @@ function zsOutlierDiagnosticsHtml(model) {
   </details>`;
 }
 
+
+function zsDiagNum(value,digits=0) {
+  return Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : '–';
+}
+
+function zsMetricRowsHtml(rows,labelTitle='Gruppe') {
+  if (!Array.isArray(rows) || !rows.length) return '<p class="tiny muted">Noch nicht genügend Fälle für diese Aufteilung.</p>';
+  return `<div class="table-wrap"><table class="detail-table zs-hardening-table"><thead><tr><th>${plannerEscape(labelTitle)}</th><th>n</th><th>MAE</th><th>RMSE</th><th>Bias</th><th>Spearman</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${plannerEscape(row.label)}</td><td>${row.n}</td><td>${zsDiagNum(row.mae)}</td><td>${zsDiagNum(row.rmse)}</td><td>${Number.isFinite(Number(row.bias))?`${Number(row.bias)>=0?'+':''}${zsDiagNum(row.bias)}`:'–'}</td><td>${zsDiagNum(row.spearman,2)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function zsHardeningDiagnosticsHtml(model) {
+  if (!model?.fit) return '';
+  const d=model.diagnostics||{};
+  const residual=model.residualProfile;
+  const owner=d.ownerGroupedCv;
+  const correlations=Array.isArray(d.correlations)?d.correlations:[];
+  const stability=Array.isArray(d.coefficientStability)?d.coefficientStability:[];
+  const featureLabel=key=>ZS_FEATURES.find(f=>f.key===key)?.label||key;
+  const residualText=residual && Number.isFinite(residual.q10) && Number.isFinite(residual.q90)
+    ? `${residual.q10>=0?'+':''}${Math.round(residual.q10)} bis ${residual.q90>=0?'+':''}${Math.round(residual.q90)} Punkte relativ zur Prognose`
+    : '–';
+  const ownerText=owner
+    ? `MAE ${zsDiagNum(owner.mae)} · RMSE ${zsDiagNum(owner.rmse)}${owner.r2==null?'':` · R² ${zsDiagNum(owner.r2,2)}`} · Spearman ${zsDiagNum(owner.spearman,2)} · ${owner.groups} Besitzergruppen`
+    : 'Nicht genügend getrennte Besitzergruppen für den Härtetest.';
+  const corrHtml=correlations.length
+    ? `<div class="table-wrap"><table class="detail-table zs-correlation-table"><thead><tr><th>Wertepaar</th><th>Korrelation r</th></tr></thead><tbody>${correlations.map(row=>`<tr><td>${plannerEscape(featureLabel(row.a))} ↔ ${plannerEscape(featureLabel(row.b))}</td><td>${zsDiagNum(row.r,2)}</td></tr>`).join('')}</tbody></table></div>`
+    : '<p class="tiny muted">Keine Korrelationsdiagnose verfügbar.</p>';
+  const stabilityHtml=stability.length
+    ? `<div class="table-wrap"><table class="detail-table zs-stability-table"><thead><tr><th>Koeffizient</th><th>Gesamtmodell</th><th>CV-Mittel</th><th>Streuung</th><th>Spanne</th><th>Richtung stabil</th></tr></thead><tbody>${stability.map(row=>`<tr><td>${plannerEscape(featureLabel(row.key))}</td><td>${zsDiagNum(row.full,4)}</td><td>${zsDiagNum(row.mean,4)}</td><td>${zsDiagNum(row.sd,4)}</td><td>${Number.isFinite(Number(row.min))&&Number.isFinite(Number(row.max))?`${zsDiagNum(row.min,4)} … ${zsDiagNum(row.max,4)}`:'–'}</td><td>${Number.isFinite(Number(row.signAgreement))?`${Math.round(row.signAgreement*100)} %`:'–'}</td></tr>`).join('')}</tbody></table></div>`
+    : '<p class="tiny muted">Keine Koeffizientenstabilität verfügbar.</p>';
+  return `<details class="zs-hardening-details"><summary><strong>Modell-Härtetest &amp; Stabilität</strong></summary>
+    <p class="tiny muted">Ridge-Eingaben werden innerhalb jedes Trainings-Folds per z-Score standardisiert; die angezeigte Formel wird anschließend zurück auf die Originalskalen gerechnet.</p>
+    <div class="zs-hardening-summary">
+      <div><span>Empirischer 80%-Fehlerbereich</span><strong>${plannerEscape(residualText)}</strong></div>
+      <div><span>Besitzer-gruppierte CV</span><strong>${ownerText}</strong><small>Kein Besitzer liegt im selben Fold zugleich in Training und Test.</small></div>
+    </div>
+    <details><summary>Fehler nach Rasse</summary>${zsMetricRowsHtml(d.breedMetrics,'Rasse')}</details>
+    <details><summary>Fehler nach Geschlecht</summary>${zsMetricRowsHtml(d.genderMetrics,'Geschlecht')}</details>
+    <details><summary>Fehler nach GP-Bereich</summary>${zsMetricRowsHtml(d.gpBands,'GP-Quartil')}</details>
+    <details><summary>Fehler nach Ext-Bereich</summary>${zsMetricRowsHtml(d.extBands,'Ext-Quartil')}</details>
+    <details><summary>Korrelation der Kernwerte</summary>${corrHtml}</details>
+    <details><summary>Koeffizientenstabilität über CV-Folds</summary>${stabilityHtml}</details>
+  </details>`;
+}
+
+function zsPredictionDetailCell(model,horse,predicted) {
+  if (!Number.isFinite(Number(predicted))) return '–';
+  const detail=typeof model?.predictDetail==='function'?model.predictDetail(horse):null;
+  const range=detail?.interval && Number.isFinite(detail.interval.low) && Number.isFinite(detail.interval.high)
+    ? `${Math.round(detail.interval.low)}–${Math.round(detail.interval.high)}` : '';
+  const c=detail?.confidence;
+  const symbol=c?.status==='green'?'🟢':c?.status==='yellow'?'🟡':'⚪';
+  return `<strong>${Math.round(Number(predicted))}</strong>${range?`<br><span class="tiny muted">80%: ${range}</span>`:''}${c?`<br><span class="tiny muted">${symbol} ${plannerEscape(c.label)}</span>`:''}`;
+}
+
 function tpZsHasScore(value) {
   return value !== null && value !== undefined && String(value).trim() !== '' && Number.isFinite(Number(value));
 }
@@ -1100,7 +1164,11 @@ function renderBreedingShowOverview() {
       const toleranceNote=model.selectionInfo && model.selectionInfo.exactBestCandidate?.id!==model.selectedCandidate?.id
         ? ` Auswahl mit ${tolerancePct}% RMSE-Toleranz: ${plannerEscape(selected)} wird als fachlich stabilere, praktisch gleich gute Variante gegenüber dem reinen RMSE-Minimum ${plannerEscape(exactBest)} bevorzugt.`
         : ` Auswahlregel: ${tolerancePct}% RMSE-Toleranz mit Vorrang für fachlich gerichtete und einfachere gleichwertige Modelle.`;
-      info.innerHTML=`Lernmodell: <strong>n=${model.n}</strong> · <strong>${zsModelDataBand(model.n)}</strong> · ausgewählt: <strong>${plannerEscape(selected)}</strong>${quality} · λ=${model.lambda}.<br><span class="tiny">${diseaseNote}${directionNote}${toleranceNote}${waiting.length?` Nicht zum Lernen verwendet: ${waiting.join(' · ')}.`:''}</span>`;
+      const residual=model.residualProfile;
+      const residualNote=residual&&Number.isFinite(residual.q10)&&Number.isFinite(residual.q90)
+        ? ` · empirischer 80%-Fehlerbereich ${residual.q10>=0?'+':''}${Math.round(residual.q10)} bis ${residual.q90>=0?'+':''}${Math.round(residual.q90)} Punkte`
+        : '';
+      info.innerHTML=`<strong>${plannerEscape(model.modelVersion||'ZS-Prognosemodell v1')}</strong>: n=${model.n} · <strong>${zsModelDataBand(model.n)}</strong> · ausgewählt: <strong>${plannerEscape(selected)}</strong>${quality}${residualNote} · λ=${model.lambda}.<br><span class="tiny">${diseaseNote}${directionNote}${toleranceNote} Ridge-Eingaben werden je Trainings-Fold standardisiert.${waiting.length?` Nicht zum Lernen verwendet: ${waiting.join(' · ')}.`:''}</span>`;
     }
   }
   if (formula) {
@@ -1108,7 +1176,7 @@ function renderBreedingShowOverview() {
       ? `<strong>Formel des automatisch gewählten Modells:</strong> ${plannerEscape(zsFormulaText(model))}<br><span class="muted">Ext und Ext% bleiben getrennte Eingangsgrößen. Zusatzterme werden nur verwendet, wenn sie in der Kreuzvalidierung besser prognostizieren.</span>`
       : 'Noch keine Formel – mindestens 8 verwertbare ZS-Datensätze nötig.';
   }
-  if (comparison) comparison.innerHTML=zsModelComparisonHtml(model)+zsOutlierDiagnosticsHtml(model);
+  if (comparison) comparison.innerHTML=zsModelComparisonHtml(model)+zsHardeningDiagnosticsHtml(model)+zsOutlierDiagnosticsHtml(model);
 
   const nameQ=(document.getElementById('tp-zs-name')?.value || '').trim().toLowerCase();
   const selectedOwners=[...document.querySelectorAll('#tp-zs-owners input[type="checkbox"]:checked')].map(cb=>cb.value);
@@ -1198,7 +1266,7 @@ function renderBreedingShowOverview() {
     return `<tr>
       <td><a href="${mdrRoute('view',{id:h.id})}"><strong>${plannerEscape(h.name || '(ohne Name)')}</strong></a><br><span class="tiny muted">${plannerEscape(h.owner || '')}</span>${dataNote}</td>
       <td>${total==null?'–':Math.round(total)}</td><td>${turnier}</td><td>${cup}</td><td>${base==null?'–':Math.round(base)}</td>
-      <td>${pred==null?'–':Math.round(pred)}</td><td>${benchmarkCell}</td><td>${assessmentCell}</td><td>${diff==null?'–':`${diff>=0?'+':''}${Math.round(diff)}`}</td>
+      <td>${zsPredictionDetailCell(model,h,pred)}</td><td>${benchmarkCell}</td><td>${assessmentCell}</td><td>${diff==null?'–':`${diff>=0?'+':''}${Math.round(diff)}`}</td>
     </tr>`;
   }).join('');
 }

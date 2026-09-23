@@ -1,4 +1,4 @@
-// MDR V54.0.75 – englische Übersetzungsdaten.
+// MDR V54.0.87 – englische Übersetzungsdaten.
 // Wird nur geladen, wenn die UI-Sprache tatsächlich EN ist.
 (() => {
   'use strict';
@@ -77,7 +77,7 @@
     'Name':'Name', 'Name *':'Name *', 'ID':'ID', 'MDR-ID:':'MDR ID:', 'Alter':'Age',
     'Besitzer':'Owner', 'Besitzername':'Owner name', 'Züchter':'Breeder', 'Rasse':'Breed',
     'Geschlecht':'Sex', 'Stute':'Mare', 'Hengst':'Stallion', 'Wallach':'Gelding',
-    'Hengstfohlen':'Colt', 'Stutfohlen':'Filly', 'Fohlen':'Foal', 'Stuten':'Mares', 'Hengste':'Stallions',
+    'Hengstfohlen':'Colt', 'Stutfohlen':'Filly', 'Fohlen':'Foal', 'Stuten':'Mares', 'Hengste':'Stallions', 'Wallache':'Geldings', 'Alle Geschlechter':'All sexes', 'Hengste & Wallache':'Stallions & geldings',
     'Fellfarbe':'Coat colour', 'Farbe':'Colour', 'Geburtsdatum':'Date of birth',
     'Bild':'Image', 'Bild-URL':'Image URL', 'Notizen':'Notes', 'Sonstiges':'Other',
     'Spielversion':'Game version', 'Stammdaten':'Basic data', 'Verwaltung':'Management',
@@ -861,6 +861,40 @@
     'Der Empfehlungswert 0–100 kombiniert Pxx mit einer serverbezogenen Punktekurve. DE und EN werden nie miteinander vermischt. EN-LK10 startet bei 130 Punkten; weitere EN-LKs werden erst bei ausreichender eigener EN-Datenbasis kalibriert. Pxx vergleicht primär exakt dieselbe Disziplin + LK und fällt nur innerhalb derselben Spielwelt zurück. INT wird separat bewertet.':'The 0–100 recommendation score combines Pxx with a server-specific points curve. DE and EN are never mixed. EN LK10 starts at 130 points; additional EN levels are calibrated only when enough EN-only data is available. Pxx primarily compares the exact same discipline + level and only falls back within the same game world. INT is assessed separately.'
   });
 
+  // V54.0.87 – ZS-Prognosemodell v1 Hardening
+  Object.assign(EN, {
+    'ZS-Prognosemodell v1':'Breeding-show forecast model v1',
+    '🧠 ZS-Prognosemodell v1':'🧠 Breeding-show forecast model v1',
+    'Kompakte Qualitäts- und Stabilitätsdiagnose des globalen ZS-Grundwertmodells. Sichtbare Dashboard-Filter verändern das Lernen nicht.':'Compact quality and stability diagnostics for the global breeding-show baseline model. Visible dashboard filters do not affect learning.',
+    'Lerndaten':'Learning data', 'Normale CV':'Standard CV', '80%-Fehlerbereich':'80% error range', 'Besitzer-Härtetest':'Owner stress test',
+    'Out-of-Fold, relativ zur Prognose':'Out-of-fold, relative to forecast', 'Diagnose nach Rasse & Modellstabilität':'Diagnostics by breed & model stability',
+    'Stärkste Kernwert-Korrelation:':'Strongest core-value correlation:', 'Koeffizientenrichtung stabil:':'Coefficient direction stable:',
+    'Prognosekorridor:':'Forecast range:',
+    'Härtetest:':'Stress test:',
+    'Skalierung:':'Scaling:',
+    'Modell-Härtetest & Stabilität':'Model stress test & stability',
+    'Empirischer 80%-Fehlerbereich':'Empirical 80% error range',
+    'Besitzer-gruppierte CV':'Owner-grouped CV',
+    'Fehler nach Rasse':'Error by breed',
+    'Fehler nach Geschlecht':'Error by sex',
+    'Fehler nach GP-Bereich':'Error by OP range',
+    'Fehler nach Ext-Bereich':'Error by conformation range',
+    'Korrelation der Kernwerte':'Core-value correlation',
+    'Koeffizientenstabilität über CV-Folds':'Coefficient stability across CV folds',
+    'Wertepaar':'Value pair', 'Korrelation r':'Correlation r', 'Koeffizient':'Coefficient',
+    'Gesamtmodell':'Full model', 'CV-Mittel':'CV mean', 'Streuung':'Spread', 'Spanne':'Range', 'Richtung stabil':'Direction stable',
+    'GP-Quartil':'OP quartile', 'Ext-Quartil':'Conformation quartile',
+    'Typischer Prognosebereich':'Typical forecast range', 'empirisch 80 %':'empirical 80%',
+    'gut abgesichert':'well supported', 'vorsichtig interpretieren':'interpret cautiously', 'außerhalb Lerndaten':'outside learning data',
+    'nicht einschätzbar':'cannot assess', 'noch geringe Datenbasis':'limited data basis',
+    'vergleichbare Rasse/Geschlecht-Fälle':'comparable breed/sex cases',
+    'Der Schätzwert ist kein echter ZS-Wert. Der 80%-Bereich stammt aus echten Out-of-Fold-Fehlern des Lernmodells und ist ein empirischer Prognosekorridor, kein garantierter Grenzwert.':'The estimate is not an actual show score. The 80% range is derived from actual out-of-fold errors of the learning model and is an empirical forecast range, not a guaranteed boundary.',
+    'Die Prognose ist kein echter ZS-Wert. Der 80%-Bereich stammt aus echten Out-of-Fold-Fehlern des Lernmodells.':'The forecast is not an actual show score. The 80% range is derived from actual out-of-fold errors of the learning model.',
+    'Ridge-Eingaben werden innerhalb jedes Trainings-Folds per z-Score standardisiert; die angezeigte Formel wird anschließend zurück auf die Originalskalen gerechnet.':'Ridge inputs are z-score standardized within each training fold; the displayed formula is then converted back to the original scales.',
+    'Kein Besitzer liegt im selben Fold zugleich in Training und Test.':'No owner appears in both training and test within the same fold.',
+    'Noch nicht genügend Fälle für diese Aufteilung.':'Not enough cases for this breakdown yet.',
+  });
+
   // V54.0.75: Disziplinen, Turniergruppen sowie Grundlagen/Gangarten
   // werden zuletzt aus dem zentralen Katalog übernommen. So kann keine ältere
   // i18n-Zeile einen abweichenden EN-Namen zurückschreiben.
@@ -869,6 +903,10 @@
   }
 
   const DYNAMIC_EN = [
+    [/^Empirischer 80%-Bereich:\s*(\d+)–(\d+)\.$/s, 'Empirical 80% range: $1–$2.'],
+    [/^(\d+) vergleichbare Rasse\/Geschlecht-Fälle$/s, '$1 comparable breed/sex cases'],
+    [/^nur (\d+) vergleichbare Rasse\/Geschlecht-Fälle$/s, 'only $1 comparable breed/sex cases'],
+    [/^(\d+) Kernwert(?:e)? außerhalb der Lerndaten$/s, '$1 core value(s) outside the learning data'],
     [/^Hauptbegabung (sehr stark|gut|durchschnittlich|eher schwach|schwach)$/s, (m,x) => `Main talent ${EN[x] || x}`],
     [/^Hauptbegabung (sehr stark|gut|durchschnittlich|eher schwach|schwach) · Nebenbegabung (.+)$/s, (m,a,b) => `Main talent ${EN[a] || a} · secondary talent ${EN[b] || b}`],
     [/^(\d+) Pferde · (\d+) auswertbare Disziplin\/LK-Werte · Pxx primär aus exakt gleicher Disziplin \+ LK\. Berechnung vollständig lokal aus dem bereits synchronisierten Bestand\.$/s, '$1 horses · $2 evaluable discipline/level values · Pxx primarily from the exact same discipline + level. Calculated entirely locally from the already synchronised stock.'],
