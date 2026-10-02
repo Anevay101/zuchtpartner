@@ -1,4 +1,4 @@
-/* MDR V54.0.88 – Bestands- und Zuchtgemeinschaftsabgleich aus kopierten MDR-Seiten.
+/* MDR V54.0.89 – Bestands- und Zuchtgemeinschaftsabgleich aus kopierten MDR-Seiten.
    Abgleich ausschließlich über normalisierte Pferdenamen. Keine automatische
    Löschung oder Besitzeränderung. Der Vergleich arbeitet nur auf dem bereits
    synchronisierten lokalen Pferdebestand.
@@ -723,7 +723,7 @@
       <p class="tiny muted">${irText('Hinweis, keine sichere Historie: Diese Hengste haben in der DB eine Zuchtzulassung, gehören aktuellen ZG-Mitgliedern und entsprechen einer aktuell vertretenen Hengstrasse, stehen aber nicht in der eingelesenen ZG-Liste. Das kann auf Rente, Verkauf oder eine nicht erfolgte ZG-Eintragung hindeuten. Erst ein gespeicherter Vorher-Nachher-Abgleich kann „früher gelistet, jetzt entfernt“ sicher unterscheiden.','Hint only, not confirmed history: these stallions are licensed in the DB, belong to current club members and match a breed currently represented among the stallions, but are not in the pasted club list. This may indicate retirement, sale or simply that they were never registered with the club. Only a stored before/after comparison can reliably distinguish “previously listed, now removed”.')}</p>
       <div class="table-wrap"><table class="detail-table inventory-result-table inventory-club-mare-table">
         <thead><tr><th>${irText('Hengst','Stallion')}</th><th>${irText('Besitzer','Owner')}</th><th>${irText('Rasse','Breed')}</th><th>GP/OP</th><th>${irText('Decktaxe DB','DB stud fee')}</th><th>${irText('Aktion','Action')}</th></tr></thead>
-        <tbody>${rows.map(h=>`<tr><th>${irEsc(h.name||'–')}</th><td>${irEsc(h.owner||'–')}</td><td>${irEsc(h.breed||'–')}</td><td>${irClubLocalGp(h)??'–'}</td><td>${irEsc(irClubFeeLabel(irClubLocalFee(h),true))}</td><td>${h.id!=null?`<a class="btn secondary small" href="${mdrRoute('view',{id:h.id})}">${irText('Öffnen','Open')}</a>`:'–'}</td></tr>`).join('')}</tbody>
+        <tbody>${rows.map(h=>`<tr><td class="inventory-club-name-cell">${irClubCopyNameHtml(h.name||'–')}</td><td>${irEsc(h.owner||'–')}</td><td>${irEsc(h.breed||'–')}</td><td>${irClubLocalGp(h)??'–'}</td><td>${irEsc(irClubFeeLabel(irClubLocalFee(h),true))}</td><td>${h.id!=null?`<a class="btn secondary small" href="${mdrRoute('view',{id:h.id})}">${irText('Öffnen','Open')}</a>`:'–'}</td></tr>`).join('')}</tbody>
       </table></div>
     </details>`;
   }
@@ -748,6 +748,52 @@
     return {key:'ok',label:irText('✓ stimmt','✓ matches'),cls:'ok'};
   }
 
+  function irClubDataQuality(item) {
+    if (!item?.local) return {level:'none',label:'',icon:'',rank:3};
+    try {
+      if (typeof analyzeHorseDataQuality==='function') {
+        const q=analyzeHorseDataQuality(item.local) || {};
+        if (q.level==='green') return {level:'green',label:irText('vollständig','complete'),icon:'🟢',rank:0};
+        if (q.level==='yellow') return {level:'yellow',label:irText('teilweise vollständig','partly complete'),icon:'🟡',rank:1};
+        if (q.level==='red') return {level:'red',label:irText('unvollständig','incomplete'),icon:'🔴',rank:2};
+      }
+    } catch {}
+    return {level:'unknown',label:irText('Datenqualität unbekannt','data quality unknown'),icon:'○',rank:2};
+  }
+
+  function irClubSortRank(item) {
+    const status=irClubStatus(item);
+    // Fehlende Pferde bewusst ganz ans Ende. Davor kommen historische/unklare
+    // Fälle; vorhandene DB-Pferde werden zuerst nach Datenqualität sortiert.
+    if (status.key==='missing') return 900;
+    if (status.key==='ambiguous') return 800;
+    if (status.key==='removed') return 700;
+    const quality=irClubDataQuality(item);
+    const diffPenalty=status.key==='ok' ? 0 : 20;
+    return quality.rank*100 + diffPenalty;
+  }
+
+  function irClubSortStallions(items) {
+    return [...(items||[])].sort((a,b)=>{
+      const rank=irClubSortRank(a)-irClubSortRank(b);
+      if (rank) return rank;
+      const owner=String(a.remote?.owner||a.local?.owner||'').localeCompare(String(b.remote?.owner||b.local?.owner||''),irLang()==='en'?'en':'de',{sensitivity:'base'});
+      if (owner) return owner;
+      return String(a.remote?.name||a.local?.name||'').localeCompare(String(b.remote?.name||b.local?.name||''),irLang()==='en'?'en':'de',{sensitivity:'base'});
+    });
+  }
+
+  function irClubCopyNameHtml(name) {
+    const safe=String(name||'–');
+    return `<div class="inventory-club-name-wrap"><span class="inventory-copyable-name">${irEsc(safe)}</span>${safe!=='–'?`<button type="button" class="inventory-copy-name" data-club-copy-name="${irEsc(safe)}" title="${irText('Namen kopieren','Copy name')}" aria-label="${irText('Namen kopieren','Copy name')}">⧉</button>`:''}</div>`;
+  }
+
+  function irClubQualityHtml(item) {
+    const q=irClubDataQuality(item);
+    if (!item?.local || q.level==='none') return '';
+    return `<span class="inventory-club-quality ${irEsc(q.level)}">${q.icon} ${irEsc(q.label)}</span>`;
+  }
+
   function irClubRowHtml(item) {
     const remote=item.remote || {};
     const local=item.local || null;
@@ -767,14 +813,14 @@
       ? `<br><span class="tiny muted">${irText('seit','since')} ${irEsc(new Date(item.removedAt).toLocaleDateString(irLang()==='en'?'en-GB':'de-DE'))}</span>`
       : '';
     return `<tr data-club-status="${irEsc(status.key)}" data-club-owner="${irEsc(remote.owner||local?.owner||'')}" data-club-breed="${irEsc(remote.breed||local?.breed||'')}">
-      <th>${irEsc(remote.name||local?.name||'–')}</th>
+      <td class="inventory-club-name-cell">${irClubCopyNameHtml(remote.name||local?.name||'–')}</td>
       <td>${irEsc(remote.owner||'–')}${item.ownerDiff && local ? `<br><span class="tiny muted">DB: ${irEsc(local.owner||'–')}</span>`:''}</td>
       <td>${irEsc(remote.breed||'–')}</td>
-      <td>${rgp??'–'}${local ? `<br><span class="tiny ${item.gpDiff?'inventory-diff':''}">DB: ${lgp??'–'}</span>`:''}</td>
-      <td>${remoteFee}</td>
-      <td class="${item.feeDiff?'inventory-diff':''}">${localFee}</td>
-      <td><span class="inventory-status ${status.cls}">${irEsc(status.label)}</span>${removedHint}</td>
-      <td class="inventory-club-actions">${actionBits.join(' ') || '–'}</td>
+      <td class="inventory-club-number">${rgp??'–'}${local ? `<br><span class="tiny ${item.gpDiff?'inventory-diff':''}">DB: ${lgp??'–'}</span>`:''}</td>
+      <td class="inventory-club-fee">${remoteFee}</td>
+      <td class="inventory-club-fee ${item.feeDiff?'inventory-diff':''}">${localFee}</td>
+      <td class="inventory-club-status-cell"><span class="inventory-status ${status.cls}">${irEsc(status.label)}</span>${irClubQualityHtml(item)}${removedHint}</td>
+      <td><div class="inventory-club-actions">${actionBits.join(' ') || '–'}</div></td>
     </tr>`;
   }
 
@@ -786,7 +832,7 @@
         const status=irClubStatus(item);
         const rgp=Number.isFinite(Number(item.remote?.gp)) ? Number(item.remote.gp) : null;
         const action=item.local?.id!=null ? `<a class="btn secondary small" href="${mdrRoute('view',{id:item.local.id})}">${irText('Öffnen','Open')}</a>`:'–';
-        return `<tr><th>${irEsc(item.remote?.name||'–')}</th><td>${irEsc(item.remote?.owner||'–')}</td><td>${irEsc(item.remote?.breed||'–')}</td><td>${rgp??'–'}${item.local?`<br><span class="tiny ${item.gpDiff?'inventory-diff':''}">DB: ${item.localGp??'–'}</span>`:''}</td><td><span class="inventory-status ${status.cls}">${irEsc(status.label)}</span></td><td>${action}</td></tr>`;
+        return `<tr><td class="inventory-club-name-cell">${irClubCopyNameHtml(item.remote?.name||'–')}</td><td>${irEsc(item.remote?.owner||'–')}</td><td>${irEsc(item.remote?.breed||'–')}</td><td>${rgp??'–'}${item.local?`<br><span class="tiny ${item.gpDiff?'inventory-diff':''}">DB: ${item.localGp??'–'}</span>`:''}</td><td class="inventory-club-status-cell"><span class="inventory-status ${status.cls}">${irEsc(status.label)}</span>${irClubQualityHtml(item)}</td><td>${action}</td></tr>`;
       }).join('')}</tbody></table></div>`;
   }
 
@@ -798,17 +844,21 @@
     const owner=irNorm(document.getElementById('club-filter-owner')?.value || '');
     const breed=irNorm(document.getElementById('club-filter-breed')?.value || '');
     const status=document.getElementById('club-filter-status')?.value || 'all';
-    return irClubLast.stallionItems.filter(item=>{
+    const filtered=irClubLast.stallionItems.filter(item=>{
       const st=irClubStatus(item).key;
+      const quality=irClubDataQuality(item);
       if (search && !irNorm(`${item.remote?.name||''} ${item.remote?.owner||''} ${item.remote?.breed||''}`).includes(search)) return false;
       if (owner && irNorm(item.remote?.owner||item.local?.owner||'')!==owner) return false;
       if (breed && irNorm(item.remote?.breed||item.local?.breed||'')!==breed) return false;
       if (status==='fee' && !item.feeDiff) return false;
+      if (status==='complete' && (!item.local || quality.level!=='green')) return false;
+      if (status==='incomplete' && (!item.local || quality.level==='green')) return false;
       if (status==='missing' && st!=='missing') return false;
       if (status==='removed' && st!=='removed') return false;
       if (status==='diff' && st==='ok') return false;
       return true;
     });
+    return irClubSortStallions(filtered);
   }
 
   function irClubRenderStallionBody() {
@@ -871,6 +921,8 @@
         <label>${irText('Rasse','Breed')}<select id="club-filter-breed"><option value="">${irText('Alle','All')}</option>${irClubOptionHtml(breeds)}</select></label>
         <label>${irText('Status','Status')}<select id="club-filter-status">
           <option value="all">${irText('Alle','All')}</option>
+          <option value="complete">${irText('DB vollständig','DB complete')}</option>
+          <option value="incomplete">${irText('DB unvollständig','DB incomplete')}</option>
           <option value="diff">${irText('Nur Abweichungen','Differences only')}</option>
           <option value="fee">${irText('Decktaxe abweichend','Stud fee differs')}</option>
           <option value="missing">${irText('Fehlt in DB','Missing from DB')}</option>
@@ -879,6 +931,7 @@
         <span id="club-filter-count" class="small muted"></span>
       </div>
 
+      <p class="tiny muted inventory-club-sort-hint">${irText('Sortierung: vollständige DB-Einträge zuerst, danach teilweise/unvollständige bzw. abweichende Treffer; fehlende Pferde stehen am Ende. Pferdenamen sind markierbar und über ⧉ direkt kopierbar.','Sorting: complete DB records first, followed by partly complete/incomplete or differing matches; missing horses are listed last. Horse names can be selected and copied directly via ⧉.')}</p>
       <div class="table-wrap"><table class="detail-table inventory-result-table inventory-club-stallion-table">
         <thead><tr>
           <th>${irText('Hengst','Stallion')}</th><th>${irText('Besitzer','Owner')}</th><th>${irText('Rasse','Breed')}</th><th>GP/OP</th>
@@ -1039,6 +1092,37 @@
     irRenderResults(result,irHorses);
   }
 
+  async function irClubCopyText(value, button) {
+    const text=String(value||'').trim();
+    if (!text) return;
+    let copied=false;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        copied=true;
+      }
+    } catch {}
+    if (!copied) {
+      try {
+        const ta=document.createElement('textarea');
+        ta.value=text;
+        ta.setAttribute('readonly','');
+        ta.style.position='fixed';
+        ta.style.opacity='0';
+        document.body.appendChild(ta);
+        ta.select();
+        copied=document.execCommand('copy');
+        ta.remove();
+      } catch {}
+    }
+    if (button && copied) {
+      const old=button.textContent;
+      button.textContent='✓';
+      button.classList.add('copied');
+      setTimeout(()=>{button.textContent=old;button.classList.remove('copied');},900);
+    }
+  }
+
   function irInit() {
     document.getElementById('inventory-reconcile-btn')?.addEventListener('click',()=>irOpen().catch(err=>alert(err.message)));
     document.getElementById('inventory-reconcile-close')?.addEventListener('click',irClose);
@@ -1054,6 +1138,11 @@
     document.getElementById('inventory-owner-all')?.addEventListener('click',()=>document.querySelectorAll('#inventory-owner-options input').forEach(cb=>{cb.checked=true;}));
     document.getElementById('inventory-owner-none')?.addEventListener('click',()=>document.querySelectorAll('#inventory-owner-options input').forEach(cb=>{cb.checked=false;}));
     document.getElementById('club-results')?.addEventListener('click',event=>{
+      const copyBtn=event.target.closest('[data-club-copy-name]');
+      if (copyBtn) {
+        irClubCopyText(copyBtn.dataset.clubCopyName,copyBtn);
+        return;
+      }
       const btn=event.target.closest('[data-club-fee-apply]');
       if (btn) irClubApplyFeeByLocalId(btn.dataset.clubFeeApply).catch(err=>alert(err.message));
     });
