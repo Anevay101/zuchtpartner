@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Pferde – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5487" />
+  <link rel="stylesheet" href="css/style.css?v=5488" />
 </head>
 <body class="list-page">
   <header class="topbar">
@@ -379,26 +379,53 @@
     <div id="inventory-reconcile-modal" class="modal-overlay" hidden>
       <div class="modal-box inventory-reconcile-modal-box">
         <div class="inventory-modal-head">
-          <div><h2>🔄 Bestandsabgleich</h2><p class="small muted">Eine oder mehrere vollständige MDR-Profilseiten einfügen und mit frei gewählten Besitzern aus der Datenbank vergleichen.</p></div>
+          <div>
+            <h2>🔄 Bestandsabgleich</h2>
+            <p id="inventory-reconcile-subtitle" class="small muted">Eigene Pferde oder eine Zuchtgemeinschaft mit der Datenbank abgleichen.</p>
+          </div>
           <button type="button" id="inventory-reconcile-close" class="secondary small" aria-label="Schließen">×</button>
         </div>
-        <div class="inventory-reconcile-layout">
-          <section>
-            <div class="inventory-owner-head"><strong>Besitzer einbeziehen</strong><span><button type="button" id="inventory-owner-all" class="link-button">Alle auswählen</button> · <button type="button" id="inventory-owner-none" class="link-button">Alle abwählen</button></span></div>
-            <div id="inventory-owner-options" class="inventory-owner-options"></div>
-          </section>
-          <section>
-            <label for="inventory-reconcile-text"><strong>MDR-Profilseite(n)</strong></label>
-            <textarea id="inventory-reconcile-text" rows="10" placeholder="Vollständige Profilseite hier einfügen …"></textarea>
-            <p class="tiny muted">Der Abgleich erfolgt ausschließlich über den Pferdenamen. Partnerprofile werden am eigentlichen Profilblock („Dabei seit“ / „Member since“) erkannt; „Willkommen/Welcome“ bezeichnet nur den eingeloggten Account. Mehrdeutige Namen werden nicht geraten. „Nicht mehr im MDR-Bestand“ wird nur für vollständig erkannte Spielwelten berechnet.</p>
-          </section>
+
+        <div class="inventory-reconcile-tabs" role="tablist" aria-label="Abgleich wählen">
+          <button type="button" class="inventory-reconcile-tab active" data-ir-tab="stock" role="tab" aria-selected="true">Eigene Pferde</button>
+          <button type="button" class="inventory-reconcile-tab" data-ir-tab="club" role="tab" aria-selected="false">Zuchtgemeinschaft</button>
         </div>
-        <p id="inventory-reconcile-status" class="small muted"></p>
-        <div class="modal-actions">
-          <button type="button" id="inventory-reconcile-cancel" class="secondary">Abbrechen</button>
-          <button type="button" id="inventory-reconcile-run">Bestand abgleichen</button>
-        </div>
-        <div id="inventory-results" class="inventory-results"></div>
+
+        <section id="inventory-pane-stock" class="inventory-reconcile-pane" data-ir-pane="stock">
+          <div class="inventory-reconcile-layout">
+            <section>
+              <div class="inventory-owner-head"><strong>Besitzer einbeziehen</strong><span><button type="button" id="inventory-owner-all" class="link-button">Alle auswählen</button> · <button type="button" id="inventory-owner-none" class="link-button">Alle abwählen</button></span></div>
+              <div id="inventory-owner-options" class="inventory-owner-options"></div>
+            </section>
+            <section>
+              <label for="inventory-reconcile-text"><strong>MDR-Profilseite(n)</strong></label>
+              <textarea id="inventory-reconcile-text" rows="10" placeholder="Vollständige Profilseite hier einfügen …"></textarea>
+              <p class="tiny muted">Der Abgleich erfolgt ausschließlich über den Pferdenamen. Partnerprofile werden am eigentlichen Profilblock („Dabei seit“ / „Member since“) erkannt; „Willkommen/Welcome“ bezeichnet nur den eingeloggten Account. Mehrdeutige Namen werden nicht geraten. „Nicht mehr im MDR-Bestand“ wird nur für vollständig erkannte Spielwelten berechnet.</p>
+            </section>
+          </div>
+          <p id="inventory-reconcile-status" class="small muted"></p>
+          <div class="modal-actions">
+            <button type="button" id="inventory-reconcile-cancel" class="secondary">Abbrechen</button>
+            <button type="button" id="inventory-reconcile-run">Bestand abgleichen</button>
+          </div>
+          <div id="inventory-results" class="inventory-results"></div>
+        </section>
+
+        <section id="inventory-pane-club" class="inventory-reconcile-pane" data-ir-pane="club" hidden>
+          <div class="inventory-club-layout">
+            <section>
+              <label for="club-reconcile-text"><strong>Zuchtgemeinschaft / Breeding Club</strong></label>
+              <textarea id="club-reconcile-text" rows="12" placeholder="Vollständige ZG-/Breeding-Club-Seite hier einfügen …"></textarea>
+              <p class="tiny muted">Deutsch und Englisch werden automatisch erkannt. Zuchthengste und Zuchtstuten werden eingelesen. Bei Hengsten werden insbesondere Besitzer, GP/OP und Decktaxe/Stud fee mit der Datenbank verglichen. Der erste vollständige Abgleich legt den Ausgangsstand fest; ab dem nächsten Abgleich können ehemals gelistete Hengste zuverlässig als „nicht mehr in der Zuchtgemeinschaft“ erkannt werden.</p>
+            </section>
+          </div>
+          <p id="club-reconcile-status" class="small muted"></p>
+          <div class="modal-actions">
+            <button type="button" id="club-reconcile-cancel" class="secondary">Abbrechen</button>
+            <button type="button" id="club-reconcile-run">Zuchtgemeinschaft abgleichen</button>
+          </div>
+          <div id="club-results" class="inventory-results"></div>
+        </section>
       </div>
     </div>
 
@@ -485,18 +512,18 @@
     <button type="button" id="scroll-top-btn" class="scroll-top-btn" hidden title="Nach oben">↑</button>
   </main>
 
-  <script src="js/tournament-catalog.js?v=5487"></script>
-<script src="js/i18n.js?v=5487"></script>
-  <script src="js/core-utils.js?v=5487"></script>
-  <script src="js/supabase-loader.js?v=5487"></script>
-<script src="js/supabase-config.js?v=5487"></script>
-<script src="js/database-local.js?v=5487"></script>
-  <script src="js/local-app.js?v=5487"></script>
-  <script src="js/learning-file.js?v=5487"></script>
-  <script src="js/horse-data-utils.js?v=5487"></script>
-  <script src="js/data-quality.js?v=5487"></script>
-  <script src="js/breeding-progress.js?v=5487"></script>
-  <script src="js/planer-common.js?v=5487"></script>
-  <script src="js/list.js?v=5487"></script>
+  <script src="js/tournament-catalog.js?v=5488"></script>
+<script src="js/i18n.js?v=5488"></script>
+  <script src="js/core-utils.js?v=5488"></script>
+  <script src="js/supabase-loader.js?v=5488"></script>
+<script src="js/supabase-config.js?v=5488"></script>
+<script src="js/database-local.js?v=5488"></script>
+  <script src="js/local-app.js?v=5488"></script>
+  <script src="js/learning-file.js?v=5488"></script>
+  <script src="js/horse-data-utils.js?v=5488"></script>
+  <script src="js/data-quality.js?v=5488"></script>
+  <script src="js/breeding-progress.js?v=5488"></script>
+  <script src="js/planer-common.js?v=5488"></script>
+  <script src="js/list.js?v=5488"></script>
 </body>
 </html>

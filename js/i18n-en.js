@@ -1,4 +1,4 @@
-// MDR V54.0.87 – englische Übersetzungsdaten.
+// MDR V54.0.88 – englische Übersetzungsdaten.
 // Wird nur geladen, wenn die UI-Sprache tatsächlich EN ist.
 (() => {
   'use strict';
@@ -849,6 +849,14 @@
     'Vollständige Profilseite hier einfügen …':'Paste complete profile page here …',
     'Der Abgleich erfolgt ausschließlich über den Pferdenamen. Partnerprofile werden am eigentlichen Profilblock („Dabei seit“ / „Member since“) erkannt; „Willkommen/Welcome“ bezeichnet nur den eingeloggten Account. Mehrdeutige Namen werden nicht geraten. „Nicht mehr im MDR-Bestand“ wird nur für vollständig erkannte Spielwelten berechnet.':'Matching uses the horse name only. Partner profiles are identified from the actual profile block (“Dabei seit” / “Member since”); “Willkommen/Welcome” only identifies the logged-in account. Ambiguous names are never guessed. “No longer in MDR stock” is only calculated for fully parsed game worlds.',
     'Bestand abgleichen':'Compare stock',
+    'Eigene Pferde':'Own horses',
+    'Zuchtgemeinschaft':'Breeding club',
+    'Eigene Pferde oder eine Zuchtgemeinschaft mit der Datenbank abgleichen.':'Compare your own horses or a breeding club with the database.',
+    'Abgleich wählen':'Choose comparison',
+    'Zuchtgemeinschaft / Breeding Club':'Breeding club',
+    'Vollständige ZG-/Breeding-Club-Seite hier einfügen …':'Paste the complete breeding-club page here …',
+    'Deutsch und Englisch werden automatisch erkannt. Zuchthengste und Zuchtstuten werden eingelesen. Bei Hengsten werden insbesondere Besitzer, GP/OP und Decktaxe/Stud fee mit der Datenbank verglichen. Der erste vollständige Abgleich legt den Ausgangsstand fest; ab dem nächsten Abgleich können ehemals gelistete Hengste zuverlässig als „nicht mehr in der Zuchtgemeinschaft“ erkannt werden.':'German and English are detected automatically. Stallions and broodmares are parsed. For stallions, owner, GP/OP and stud fee are compared with the database. The first complete comparison establishes the baseline; from the next comparison onward, formerly listed stallions can reliably be detected as “no longer in the breeding club”.',
+    'Zuchtgemeinschaft abgleichen':'Compare breeding club',
     'Fehlt in der Datenbank':'Missing from database',
     'Nicht mehr im MDR-Bestand':'No longer in MDR stock',
     'Spielwelt':'Game world', 'Nicht eindeutig':'Ambiguous',

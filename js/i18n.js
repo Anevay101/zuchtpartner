@@ -1,4 +1,4 @@
-// MDR V54.0.75 – leichter bilingualer UI-Kern.
+// MDR V54.0.88 – leichter bilingualer UI-Kern.
 // Die große EN-Wortliste wird auf deutschen Seiten nicht mehr geladen.
 (() => {
   'use strict';
@@ -43,7 +43,7 @@
         return;
       }
       const script = document.createElement('script');
-      script.src = 'js/i18n-en.js?v=5487';
+      script.src = 'js/i18n-en.js?v=5488';
       script.async = true;
       script.dataset.mdrI18nEn = '1';
       script.addEventListener('load', () => resolve(installEnglishData(window.MDR_I18N_EN_DATA)), { once:true });

@@ -1,0 +1,35 @@
+MDR-Datenbank V54.0.88 – Release-Check
+
+Basis
+- Aus dem gelieferten GitHub.zip wurde die aktuelle Anwendung unter zuchtpartner/ verwendet: V54.0.87.
+- Die parallele Root-Anwendung war V54.0.78 und wurde als veraltete Dublette nicht übernommen.
+- .git-Metadaten und historische Zwischen-Dokumentation wurden aus dem Ausgabepaket entfernt.
+
+ZG-/Breeding-Club-Abgleich
+- Bestehender Bestandsabgleich enthält die Unterbereiche „Eigene Pferde“ und „Zuchtgemeinschaft“.
+- DE-Hengsttabellen mit Decktaxe/NK/GS werden erkannt.
+- EN-Hengsttabellen mit Stud fee/Offspring/CM werden erkannt.
+- Reduzierte EN-Hengsttabellen ohne Stud-fee-Spalte werden erkannt; fehlende Gebühren werden nicht geraten.
+- Zuchtstuten werden ebenfalls eingelesen.
+- Decktaxen werden nur bei eindeutigem DB-Match und nur nach Nutzeraktion übernommen.
+- Erster vollständiger ZG-Abgleich setzt einen Snapshot-Ausgangsstand.
+- Folgende vollständige Abgleiche können zuvor gelistete und jetzt entfernte Hengste erkennen.
+- Unvollständige Hengsttabellen erzeugen keine neuen „entfernt“-Markierungen.
+- Zusätzlicher vorsichtiger Hinweis auf lizenzierte DB-Hengste aktueller ZG-Mitglieder derselben vertretenen Rassen, die nicht aktuell gelistet sind.
+
+Automatische Prüfungen
+- 41/41 JavaScript-Dateien: node --check erfolgreich.
+- ZG-Parser-Smoke-Test DE: erfolgreich.
+- ZG-Parser-Smoke-Test EN mit Stud fee: erfolgreich.
+- ZG-Parser-Smoke-Test EN ohne Stud fee: erfolgreich.
+- Matching/Decktaxen-Abweichung: erfolgreich.
+- Snapshot-Folgeprüfung (gelistet -> nicht mehr gelistet): erfolgreich.
+- CSS: 0 Parsefehler (tinycss2).
+- HTML: 14 Dateien, 0 doppelte IDs.
+- Lokale HTML-Ressourcenreferenzen: 337 geprüft, 0 fehlend.
+- Runtime-Cache-Buster auf 5488 aktualisiert.
+- VERSION.txt = V54.0.88.
+
+Hinweis
+- Kein Browser-End-to-End-Test gegen eine echte Supabase-Sitzung durchgeführt.
+- Keine neue Datenbanktabelle und keine Schemaänderung erforderlich; ZG-Snapshots verwenden den vorhandenen user_settings-Store.

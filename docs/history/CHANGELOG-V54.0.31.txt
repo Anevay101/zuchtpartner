@@ -1,8 +1,0 @@
-V54.0.31 – Snowflake-Detektiv
-
-- Dashboard > Farbgenetik > Appaloosa: neuer aufklappbarer Bereich „❄️ Snowflake-Detektiv“.
-- Datenbasis kombiniert reguläre Pferdedatenbank und Lerndatei; identische MDR-IDs werden nur einmal gezählt.
-- Musteranalyse für Snowflake mit LP/PATN1-Kombinationen.
-- Familienanalyse über Eltern, Voll-/Halbgeschwister und Nachkommen, soweit in den gespeicherten Stammbäumen verknüpfbar.
-- Explorative Träger-/Linien-Hinweise mit Verdachtsindex; keine Behauptung eines nicht testbaren PATN2-Genotyps.
-- Dashboard-Filter beeinflussen die normale Farbstatistik, nicht die genetische Gesamtdatenbasis des Snowflake-Detektivs.

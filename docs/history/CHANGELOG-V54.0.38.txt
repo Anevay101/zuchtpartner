@@ -1,9 +1,0 @@
-MDR-Datenbank V54.0.38
-
-- Verwandtschaftsfix: Unknown/Unbekannt/N/A/-/? und Projekt-Platzhalter gelten nie als Eltern/Vorfahren.
-- Systempferde mit unbekanntem Stammbaum werden dadurch weder als Voll-/Halbgeschwister noch als Inzucht-Treffer zusammengefasst.
-- Derselbe Schutz gilt für Zuchtplaner/COI-Tiefensuche und Snowflake-Familienanalyse.
-- Zuchtplaner: neuer kompakter Grundfarbenwunsch mit Chestnut, Wild Bay, Bay, Sealbrown, Black und Grey.
-- Grundfarbenchance aus Extension/Agouti; Grey aus dem G-Locus.
-- Grundfarben- und Appaloosa-Wunsch können gleichzeitig aktiv sein; Ranking nutzt die sichere gemeinsame Mindestchance und danach das mögliche Maximum.
-- Cache 5438.

@@ -1,0 +1,39 @@
+MDR Datenbank V54.0.88 – Zuchtgemeinschaft / Breeding Club Abgleich
+
+Neu
+- Bestehender Bestandsabgleich auf der Datenbankseite hat jetzt zwei Unterbereiche:
+  1) Eigene Pferde
+  2) Zuchtgemeinschaft / Breeding Club
+- Vollständige deutsche und englische MDR-ZG-/BC-Seiten können direkt eingefügt werden.
+- Zuchthengste und Zuchtstuten werden automatisch erkannt.
+- Hengstabgleich: Name, Besitzer, Rasse, GP/OP und Decktaxe/Stud fee.
+- Decktaxen-Abweichungen werden hervorgehoben und können einzeln oder gesammelt übernommen werden.
+- GP/OP, Besitzer und sonstige Vergleichswerte werden niemals still überschrieben.
+- Filter für Suche, Besitzer, Rasse und Status im Hengstabgleich.
+- Zuchtstuten werden kompakt auf Name, Besitzer, Rasse und GP/OP geprüft.
+
+ZG-Historie
+- Pro Zuchtgemeinschaft wird im vorhandenen user_settings-Store ein kleiner Snapshot geführt.
+- Der erste vollständige Import setzt den Ausgangsstand.
+- Ab dem folgenden vollständigen Import werden zuvor gelistete, jetzt fehlende Hengste dauerhaft als
+  „Nicht mehr in Zuchtgemeinschaft“ markiert, solange sie noch in der DB vorhanden sind.
+- Unvollständig erkannte Hengsttabellen dürfen keine Pferde als entfernt markieren.
+- Zusätzlich werden lizenzierte DB-Hengste aktueller ZG-Mitglieder derselben vertretenen Hengstrassen,
+  die aktuell nicht gelistet sind, als vorsichtiger Hinweis gezeigt. Das ist ausdrücklich keine bestätigte Historie.
+
+Parser
+- DE: Pferd / Rasse / Begabung / Alter / GP / Fellfarbe / Decktaxe / NK / GS / Besitzer
+- EN: Horse / Breed / Talent / Age / OP / Colour / Stud fee / Offspring / CM / Owner
+- Reduzierte englische Listen ohne Stud-fee-Spalte bleiben lesbar; die Decktaxe wird dann nicht geraten.
+
+Sicherheit
+- Kein automatisches Löschen, kein automatischer Besitzerwechsel.
+- Decktaxe nur bei eindeutigem DB-Treffer und nur nach expliziter Nutzeraktion.
+- Keine neue Datenbanktabelle und keine Schemaänderung erforderlich.
+
+Bereinigung des gelieferten GitHub-Archivs
+- Als Basis wurde die aktuelle Unterkopie zuchtpartner/ V54.0.87 verwendet.
+- Die veraltete parallele Root-Kopie V54.0.78 wurde nicht in das bereinigte Paket übernommen.
+- Eingebettete .git-Metadaten wurden entfernt.
+- Historische Zwischen-Release-Notizen wurden aus dem Ausgabepaket entfernt; enthalten bleiben Laufzeitdateien,
+  GitHub-Pages-Hinweise, VERSION, dieses Changelog und der aktuelle Release-Check.

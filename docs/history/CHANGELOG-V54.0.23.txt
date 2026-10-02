@@ -1,7 +1,0 @@
-V54.0.23 – ZS-Fohlen-Erkennung korrigiert
-
-- Ursache für leere ZS-Prognosen behoben: Fohlen wurden bisher nur über den Geschlechtstext (z. B. „Stutfohlen“) erkannt.
-- MDR speichert junge Tiere häufig schon als „Stute“ bzw. „Hengst“. Deshalb erfolgt die Fohlen-Erkennung jetzt primär über das Geburtsdatum/Spielalter.
-- Als Fohlen gelten für die ZS-Prognose Pferde unter 3 Spieljahren; bei fehlendem Geburtsdatum bleibt der alte Geschlechtstext als Fallback.
-- Dadurch erscheinen junge Pferde ohne echte ZS-Punkte wieder im Turnierplaner und erhalten auf der Pferdeansicht eine Prognose, sofern das Lernmodell mindestens 8 verwertbare echte ZS-Datensätze und die nötigen Grundwerte hat.
-- Cache-Version von planer-common.js auf 5423 erhöht, damit GitHub Pages/Browser den Fix sicher neu laden.

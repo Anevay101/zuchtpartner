@@ -1,13 +1,21 @@
-Repository-Bereinigung – V54.0.23
+Bereinigte Ausgabe ab V54.0.88
 
-Die Website lädt JavaScript ausschließlich aus dem Ordner js/ und CSS ausschließlich aus css/.
-Die früher zusätzlich im Hauptordner liegenden *.js- und *.css-Dateien waren redundante/alte Kopien und wurden in dieser bereinigten Version entfernt.
+Aus dem gelieferten GitHub.zip wurde ausschließlich die aktuelle Anwendung unter zuchtpartner/ (V54.0.87) als Basis verwendet.
+Die daneben liegende Root-Kopie war V54.0.78 und wurde deshalb als veraltetes Duplikat verworfen.
 
-Wichtig für GitHub Desktop:
-- js/ NICHT löschen.
-- css/ NICHT löschen.
-- Die HTML-Dateien bleiben im Hauptordner.
-- Dateien wie „database-local (5).js“ entstehen typischerweise, wenn ein Browser/Windows eine bereits vorhandene Download-Datei nicht überschreibt und stattdessen eine Nummer anhängt.
-- Für Updates ZIP-Dateien immer in einen frischen temporären Ordner entpacken und dann die vorgesehenen Dateien/Ordner in das Repository kopieren. Keine einzelnen mehrfach heruntergeladenen JS-Dateien aus dem Download-Ordner in den Repository-Hauptordner ziehen.
+Nicht im bereinigten Paket:
+- eingebetteter .git/-Ordner
+- veraltete parallele V54.0.78-Anwendung
+- historische CHANGELOG-/RELEASE-CHECK-/Feature-Notizen älterer Zwischenversionen
 
-Wenn dein bestehendes Repository die alten Root-Kopien noch enthält, kannst du sie einmalig löschen. GitHub Desktop zeigt diese Löschungen anschließend unter Changes an; danach Commit + Push.
+Im Paket verbleiben:
+- alle HTML-Laufzeitseiten
+- css/
+- js/
+- .nojekyll und .gitignore
+- VERSION.txt
+- GITHUB-PAGES-ANLEITUNG.txt
+- GITHUB-DESKTOP-UPDATE.txt
+- CHANGELOG-V54.0.88.txt
+- RELEASE-CHECK-V54.0.88.txt
+- REPOSITORY-CLEANUP.txt

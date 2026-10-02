@@ -1,4 +1,4 @@
-/* MDR V54.0.74 – lokaler Bestandsabgleich aus kopierten MDR-Profilseiten.
+/* MDR V54.0.88 – Bestands- und Zuchtgemeinschaftsabgleich aus kopierten MDR-Seiten.
    Abgleich ausschließlich über normalisierte Pferdenamen. Keine automatische
    Löschung oder Besitzeränderung. Der Vergleich arbeitet nur auf dem bereits
    synchronisierten lokalen Pferdebestand.
@@ -361,6 +361,640 @@
       <p class="tiny muted">${irText('Es werden niemals automatisch Pferde gelöscht oder Besitzer geändert. Der Abgleich erfolgt ausschließlich über normalisierte Pferdenamen und nutzt den bereits synchronisierten lokalen Bestand.','Horses are never deleted and owners are never changed automatically. Matching uses normalized horse names only and the already synchronised local stock.')}</p>`;
   }
 
+
+  // ---------------------------------------------------------------------------
+  // V54.0.88 – Zuchtgemeinschaft / Breeding Club
+  // ---------------------------------------------------------------------------
+  const IR_CLUB_SNAPSHOT_PREFIX='breeding_club_snapshot_v1:';
+
+  function irClubNumber(value) {
+    const raw=String(value ?? '').trim();
+    if (!raw || raw==='–' || raw==='-') return null;
+    const cleaned=raw.replace(/\u00a0/g,' ').replace(/[^\d,.\-]/g,'');
+    if (!cleaned) return null;
+    // MDR-Werte hier sind Ganzzahlen. Punkte/Kommas fungieren in DD/GP-Angaben
+    // überwiegend als Tausendertrenner; für diese Felder reicht eine Ziffernlese.
+    const digits=cleaned.replace(/[^\d\-]/g,'');
+    if (!digits || digits==='-') return null;
+    const n=Number(digits);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function irClubCells(line) {
+    const raw=String(line ?? '');
+    let cells=null;
+    if (raw.includes('\t')) cells=raw.split('\t').map(irStripMarkdown);
+    else if (/^\s*\|/.test(raw) && raw.includes('|')) cells=raw.split('|').map(irStripMarkdown);
+    if (!cells) return [];
+    while (cells.length && !String(cells[0]||'').trim()) cells.shift();
+    while (cells.length && !String(cells[cells.length-1]||'').trim()) cells.pop();
+    return cells.map(c=>String(c||'').trim());
+  }
+
+  function irClubColumnKey(label) {
+    const key=irNorm(label).replace(/[?:]/g,'').trim();
+    const map={
+      'pferd':'name','horse':'name',
+      'rasse':'breed','breed':'breed',
+      'begabung':'talent','talent':'talent',
+      'alter':'age','age':'age',
+      'gp':'gp','op':'gp',
+      'fellfarbe':'color','farbe':'color','colour':'color','color':'color',
+      'decktaxe':'stud_fee','stud fee':'stud_fee',
+      'nk':'offspring_count','offspring':'offspring_count',
+      'gs':'club_metric','cm':'club_metric',
+      'besitzer':'owner','owner':'owner',
+      'tragend':'in_foal','in foal':'in_foal'
+    };
+    return map[key] || '';
+  }
+
+  function irClubIsHeader(cells, kind) {
+    if (!Array.isArray(cells) || cells.length<5) return false;
+    const keys=cells.map(irClubColumnKey).filter(Boolean);
+    if (!keys.includes('name') || !keys.includes('breed') || !keys.includes('owner') || !keys.includes('gp')) return false;
+    if (kind==='stallions') return true;
+    if (kind==='mares') return true;
+    return false;
+  }
+
+  function irClubParseRow(cells, header, kind) {
+    if (!cells.length || !header.length) return null;
+    if (/^[-:]+$/.test(cells.join('').replace(/\s/g,''))) return null;
+    const row={kind};
+    for (let i=0;i<header.length;i++) {
+      const field=irClubColumnKey(header[i]);
+      if (!field) continue;
+      const value=cells[i] ?? '';
+      row[field]=value;
+    }
+    row.name=String(row.name||'').trim();
+    if (!row.name || /^(?:Pferd|Horse)$/i.test(row.name)) return null;
+    row.owner=String(row.owner||'').trim();
+    row.breed=String(row.breed||'').trim();
+    row.talent=String(row.talent||'').trim();
+    row.color=String(row.color||'').trim();
+    row.gp=irClubNumber(row.gp);
+    row.age=irClubNumber(row.age);
+    row.offspring_count=irClubNumber(row.offspring_count);
+    row.club_metric=irClubNumber(row.club_metric);
+    // null = Spalte/Wert nicht vorhanden; 0 = ausdrücklich kostenlos.
+    row.stud_fee=Object.prototype.hasOwnProperty.call(row,'stud_fee') ? irClubNumber(row.stud_fee) : null;
+    row._nameKey=irNorm(row.name);
+    row._ownerKey=irNorm(row.owner);
+    return row;
+  }
+
+  function irClubExtractTable(lines, kind) {
+    const headingRe=kind==='stallions'
+      ? /^(?:Die\s+Zuchthengste|The\s+Stallions)$/i
+      : /^(?:Die\s+Zuchtstuten|The\s+Broodmares)$/i;
+    const stopRe=kind==='stallions'
+      ? /^(?:Die\s+Zuchtstuten|The\s+Broodmares|Modbox)$/i
+      : /^(?:Modbox|Das\s+Team|The\s+Team)$/i;
+
+    let heading=-1, headerIndex=-1, end=lines.length, hasEnd=false;
+    for (let i=0;i<lines.length;i++) {
+      const plain=irStripMarkdown(lines[i]).trim();
+      if (heading<0 && headingRe.test(plain)) { heading=i; continue; }
+      if (heading>=0 && headerIndex<0) {
+        const cells=irClubCells(lines[i]);
+        if (irClubIsHeader(cells,kind)) { headerIndex=i; continue; }
+      }
+      if (headerIndex>=0 && stopRe.test(plain)) { end=i; hasEnd=true; break; }
+    }
+    if (heading<0 || headerIndex<0) return {rows:[],found:false,complete:false,heading,headerIndex,end};
+    const header=irClubCells(lines[headerIndex]);
+    const rows=[];
+    for (let i=headerIndex+1;i<end;i++) {
+      const plain=irStripMarkdown(lines[i]).trim();
+      if (!plain) continue;
+      if (stopRe.test(plain)) { hasEnd=true; break; }
+      const cells=irClubCells(lines[i]);
+      if (!cells.length) continue;
+      // Tabellenkopien können vorne eine leere Bildspalte enthalten. Wenn die
+      // Zeile eine Zelle mehr als der Header hat, die führende Leerspalte ist
+      // durch irClubCells bereits entfernt; weitere Überhänge ignorieren wir.
+      const row=irClubParseRow(cells,header,kind);
+      if (row) rows.push(row);
+    }
+    return {rows,found:true,complete:hasEnd && rows.length>=0,heading,headerIndex,end};
+  }
+
+  function irClubName(lines) {
+    for (let i=0;i<lines.length;i++) {
+      const plain=irStripMarkdown(lines[i]).trim();
+      if (!/^(?:Gründer|Founder)\s*:/i.test(plain)) continue;
+      for (let j=i-1;j>=Math.max(0,i-12);j--) {
+        const candidate=irStripMarkdown(lines[j]).trim();
+        if (!candidate) continue;
+        if (/^(?:Zucht|Breeding|Über uns|About Us|Maximal \d+ Zeichen|Maximum \d+ characters)$/i.test(candidate)) continue;
+        if (/^(?:Gründer|Founder|Gründungsdatum|Date of foundation|Spezialisierung|Specialisation)\s*:/i.test(candidate)) continue;
+        return candidate;
+      }
+    }
+    return '';
+  }
+
+  function irClubParsePage(raw) {
+    const text=String(raw||'').replace(/\r\n?/g,'\n');
+    const lines=text.split('\n');
+    const plain=irPlain(text);
+    const server=/\bGründer\s*:|\bZuchthengste\b|\bZuchtstuten\b/i.test(plain)
+      ? 'DE'
+      : (/\bFounder\s*:|\bThe Stallions\b|\bThe Broodmares\b/i.test(plain) ? 'EN' : irDetectServer(text));
+    const stallionTable=irClubExtractTable(lines,'stallions');
+    const mareTable=irClubExtractTable(lines,'mares');
+    const name=irClubName(lines);
+    const founderMatch=plain.match(/^(?:Gründer|Founder)\s*:\s*(.+)$/im);
+    const spec1=plain.match(/^(?:Spezialisierung 1|Specialisation 1)\s*:\s*(.+)$/im);
+    const spec2=plain.match(/^(?:Spezialisierung 2|Specialisation 2)\s*:\s*(.+)$/im);
+    return {
+      name,
+      server,
+      founder:founderMatch?.[1]?.trim() || '',
+      specialisation1:spec1?.[1]?.trim() || '',
+      specialisation2:spec2?.[1]?.trim() || '',
+      stallions:stallionTable.rows,
+      mares:mareTable.rows,
+      stallionsComplete:stallionTable.complete,
+      maresComplete:mareTable.complete,
+      valid:!!name && stallionTable.found,
+    };
+  }
+
+  function irClubGender(horse) {
+    const raw=irNorm(horse?.gender || horse?.sex || horse?.geschlecht || '');
+    if (/hengst|stallion|male|colt/.test(raw)) return 'stallion';
+    if (/stute|mare|female|filly/.test(raw)) return 'mare';
+    if (/wallach|gelding/.test(raw)) return 'gelding';
+    return '';
+  }
+
+  function irClubBreed(value) {
+    try { return typeof normalizeBreed==='function' ? normalizeBreed(value) : String(value||'').trim(); }
+    catch { return String(value||'').trim(); }
+  }
+
+  function irClubLocalGp(horse) {
+    try {
+      if (typeof computeDerived==='function') {
+        const gp=Number(computeDerived(horse)?.gp);
+        if (Number.isFinite(gp)) return gp;
+      }
+    } catch {}
+    const candidates=[horse?.gp,horse?.overall_potential,horse?.gesamtpotential];
+    for (const value of candidates) {
+      const n=Number(value);
+      if (Number.isFinite(n)) return n;
+    }
+    return null;
+  }
+
+  function irClubLocalTalent(horse) {
+    try {
+      if (typeof plannerHorseTalent==='function') return String(plannerHorseTalent(horse)||'').trim();
+    } catch {}
+    return String(horse?.talent || horse?.Begabung || '').trim();
+  }
+
+  function irClubLocalFee(horse) {
+    const raw=horse?.stud_fee;
+    if (raw==null || raw==='') return 0;
+    const n=Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function irClubMatchRemote(remote, localHorses, server, kind) {
+    const nameKey=remote?._nameKey || irNorm(remote?.name);
+    let candidates=(localHorses||[]).filter(h=>{
+      if (irLearning(h) || irNorm(h.name)!==nameKey) return false;
+      if (!irServerCompatible(h,{server})) return false;
+      const g=irClubGender(h);
+      if (kind==='stallions' && g && g!=='stallion') return false;
+      if (kind==='mares' && g && g!=='mare') return false;
+      return true;
+    });
+    if (!candidates.length) return {state:'missing',local:null,candidates:0};
+    if (remote?._ownerKey) {
+      const ownerMatches=candidates.filter(h=>irNorm(h.owner)===remote._ownerKey);
+      if (ownerMatches.length===1) return {state:'matched',local:ownerMatches[0],candidates:candidates.length};
+      if (ownerMatches.length>1) return {state:'ambiguous',local:null,candidates:ownerMatches.length};
+    }
+    if (candidates.length===1) return {state:'matched',local:candidates[0],candidates:1};
+    return {state:'ambiguous',local:null,candidates:candidates.length};
+  }
+
+  function irClubRefreshItem(item) {
+    const remote=item?.remote, local=item?.local;
+    item.ownerDiff=!!(remote && local && remote.owner && irNorm(remote.owner)!==irNorm(local.owner));
+    item.breedDiff=!!(remote && local && remote.breed && irClubBreed(remote.breed) && irNorm(irClubBreed(remote.breed))!==irNorm(irClubBreed(local.breed)));
+    const rgp=Number(remote?.gp), lgp=Number(irClubLocalGp(local));
+    item.localGp=Number.isFinite(lgp) ? lgp : null;
+    item.gpDiff=!!(local && Number.isFinite(rgp) && Number.isFinite(lgp) && Math.abs(rgp-lgp)>=1);
+    item.feeComparable=!!(local && remote?.stud_fee!=null && Number.isFinite(Number(remote.stud_fee)));
+    item.localFee=local ? irClubLocalFee(local) : null;
+    item.feeDiff=!!(item.feeComparable && Number(remote.stud_fee)!==Number(item.localFee));
+    item.talentDiff=!!(remote && local && remote.talent && irClubLocalTalent(local) && irNorm(remote.talent)!==irNorm(irClubLocalTalent(local)));
+    return item;
+  }
+
+  function irClubCompareRows(rows, localHorses, server, kind) {
+    return (rows||[]).map(remote=>{
+      const match=irClubMatchRemote(remote,localHorses,server,kind);
+      return irClubRefreshItem({remote,local:match.local,matchState:match.state,candidates:match.candidates,kind,isRemoved:false});
+    });
+  }
+
+  function irClubSnapshotKey(club) {
+    const safe=irNorm(club?.name).replace(/[^a-z0-9äöüß._-]+/gi,'-').slice(0,90) || 'unknown';
+    return `${IR_CLUB_SNAPSHOT_PREFIX}${String(club?.server||'UNKNOWN').toUpperCase()}:${safe}`;
+  }
+
+  function irClubSnapshotRow(remote, item, old, now) {
+    return {
+      name:remote.name,
+      name_key:remote._nameKey || irNorm(remote.name),
+      owner:remote.owner || '',
+      breed:remote.breed || '',
+      talent:remote.talent || '',
+      gp:remote.gp,
+      color:remote.color || '',
+      stud_fee:remote.stud_fee,
+      offspring_count:remote.offspring_count,
+      club_metric:remote.club_metric,
+      local_id:item?.local?.id ?? old?.local_id ?? null,
+      first_seen:old?.first_seen || now,
+      last_seen:now,
+      active:true,
+      removed_at:null
+    };
+  }
+
+  function irClubMergeSnapshot(club, previous, comparedStallions) {
+    const now=new Date().toISOString();
+    const oldRows=Array.isArray(previous?.known_stallions) ? previous.known_stallions : [];
+    const map=new Map(oldRows.map(r=>[String(r.name_key||irNorm(r.name)),{...r}]));
+    const currentKeys=new Set();
+
+    for (const item of comparedStallions) {
+      const remote=item.remote;
+      const key=remote._nameKey || irNorm(remote.name);
+      currentKeys.add(key);
+      const old=map.get(key);
+      map.set(key,irClubSnapshotRow(remote,item,old,now));
+    }
+
+    if (club.stallionsComplete) {
+      for (const [key,row] of map) {
+        if (currentKeys.has(key)) continue;
+        if (row.active!==false) {
+          row.active=false;
+          row.removed_at=row.removed_at || now;
+        }
+      }
+    }
+
+    return {
+      key:irClubSnapshotKey(club),
+      type:'breeding_club_snapshot_v1',
+      club_name:club.name,
+      server:club.server,
+      founder:club.founder || '',
+      specialisation1:club.specialisation1 || '',
+      specialisation2:club.specialisation2 || '',
+      known_stallions:[...map.values()],
+      last_complete_stallion_import:club.stallionsComplete ? now : (previous?.last_complete_stallion_import || null),
+      updated_at:now
+    };
+  }
+
+  function irClubRemovedItems(snapshot, localHorses, server) {
+    const out=[];
+    for (const row of snapshot?.known_stallions || []) {
+      if (row.active!==false) continue;
+      let local=null;
+      if (row.local_id!=null) local=(localHorses||[]).find(h=>String(h.id)===String(row.local_id)) || null;
+      const remote={
+        name:row.name,owner:row.owner,breed:row.breed,talent:row.talent,gp:row.gp,
+        color:row.color,stud_fee:row.stud_fee,offspring_count:row.offspring_count,club_metric:row.club_metric,
+        _nameKey:row.name_key || irNorm(row.name),_ownerKey:irNorm(row.owner)
+      };
+      if (!local) local=irClubMatchRemote(remote,localHorses,server,'stallions').local;
+      // Gewünscht ist explizit "in der Datenbank, aber nicht mehr in der ZG".
+      if (!local) continue;
+      out.push(irClubRefreshItem({
+        remote,local,matchState:'matched',candidates:1,kind:'stallions',isRemoved:true,
+        removedAt:row.removed_at || null,lastSeen:row.last_seen || null
+      }));
+    }
+    return out;
+  }
+
+  function irClubUnlistedDbCandidates(club, localHorses, removedItems=[]) {
+    // Beim allerersten Import existiert noch keine Historie. Als vorsichtiger
+    // Zusatzhinweis zeigen wir deshalb lizenzierte DB-Hengste aktueller
+    // ZG-Mitglieder derselben aktuell vertretenen Hengstrassen, die nicht in
+    // der aktuellen Liste stehen. Das ist bewusst KEIN Beweis für "entfernt":
+    // ein Hengst kann auch nie in die ZG eingetragen gewesen sein.
+    const owners=new Set([...(club?.stallions||[]),...(club?.mares||[])].map(r=>irNorm(r.owner)).filter(Boolean));
+    const breeds=new Set((club?.stallions||[]).map(r=>irNorm(irClubBreed(r.breed))).filter(Boolean));
+    const currentNames=new Set((club?.stallions||[]).map(r=>r._nameKey||irNorm(r.name)).filter(Boolean));
+    const removedIds=new Set((removedItems||[]).map(x=>String(x.local?.id??'')).filter(Boolean));
+    const removedNames=new Set((removedItems||[]).map(x=>x.remote?._nameKey||irNorm(x.remote?.name)).filter(Boolean));
+    if (!owners.size || !breeds.size) return [];
+    return (localHorses||[]).filter(h=>{
+      if (irLearning(h) || h?.breeding_allowed!==true) return false;
+      if (irClubGender(h)!=='stallion') return false;
+      if (!irServerCompatible(h,{server:club.server})) return false;
+      if (!owners.has(irNorm(h.owner))) return false;
+      if (!breeds.has(irNorm(irClubBreed(h.breed)))) return false;
+      const nameKey=irNorm(h.name);
+      if (!nameKey || currentNames.has(nameKey) || removedNames.has(nameKey)) return false;
+      if (removedIds.has(String(h.id??''))) return false;
+      return true;
+    }).sort((a,b)=>String(a.owner||'').localeCompare(String(b.owner||''),'de') || String(a.name||'').localeCompare(String(b.name||''),'de'));
+  }
+
+  function irClubUnlistedTable(rows) {
+    if (!rows.length) return '';
+    return `<details class="inventory-result-group inventory-club-unlisted">
+      <summary>○ ${irText('Weitere DB-Hengste aktueller ZG-Mitglieder, nicht aktuell gelistet','Other DB stallions of current club members, not currently listed')} · ${rows.length}</summary>
+      <p class="tiny muted">${irText('Hinweis, keine sichere Historie: Diese Hengste haben in der DB eine Zuchtzulassung, gehören aktuellen ZG-Mitgliedern und entsprechen einer aktuell vertretenen Hengstrasse, stehen aber nicht in der eingelesenen ZG-Liste. Das kann auf Rente, Verkauf oder eine nicht erfolgte ZG-Eintragung hindeuten. Erst ein gespeicherter Vorher-Nachher-Abgleich kann „früher gelistet, jetzt entfernt“ sicher unterscheiden.','Hint only, not confirmed history: these stallions are licensed in the DB, belong to current club members and match a breed currently represented among the stallions, but are not in the pasted club list. This may indicate retirement, sale or simply that they were never registered with the club. Only a stored before/after comparison can reliably distinguish “previously listed, now removed”.')}</p>
+      <div class="table-wrap"><table class="detail-table inventory-result-table inventory-club-mare-table">
+        <thead><tr><th>${irText('Hengst','Stallion')}</th><th>${irText('Besitzer','Owner')}</th><th>${irText('Rasse','Breed')}</th><th>GP/OP</th><th>${irText('Decktaxe DB','DB stud fee')}</th><th>${irText('Aktion','Action')}</th></tr></thead>
+        <tbody>${rows.map(h=>`<tr><th>${irEsc(h.name||'–')}</th><td>${irEsc(h.owner||'–')}</td><td>${irEsc(h.breed||'–')}</td><td>${irClubLocalGp(h)??'–'}</td><td>${irEsc(irClubFeeLabel(irClubLocalFee(h),true))}</td><td>${h.id!=null?`<a class="btn secondary small" href="${mdrRoute('view',{id:h.id})}">${irText('Öffnen','Open')}</a>`:'–'}</td></tr>`).join('')}</tbody>
+      </table></div>
+    </details>`;
+  }
+
+  function irClubFeeLabel(value, known=true) {
+    if (!known || value==null || !Number.isFinite(Number(value))) return '–';
+    const n=Number(value);
+    return n===0 ? irText('kostenlos','free') : `${n.toLocaleString(irLang()==='en'?'en-US':'de-DE')} DD`;
+  }
+
+  function irClubStatus(item) {
+    if (item.isRemoved) return {key:'removed',label:irText('⚠ Nicht mehr in Zuchtgemeinschaft','⚠ No longer in breeding club'),cls:'warn'};
+    if (item.matchState==='missing') return {key:'missing',label:irText('＋ Fehlt in DB','＋ Missing from DB'),cls:'bad'};
+    if (item.matchState==='ambiguous') return {key:'ambiguous',label:irText('⚠ Nicht eindeutig','⚠ Ambiguous'),cls:'warn'};
+    const diffs=[];
+    if (item.feeDiff) diffs.push(irText('Decktaxe','Stud fee'));
+    if (item.ownerDiff) diffs.push(irText('Besitzer','Owner'));
+    if (item.gpDiff) diffs.push('GP');
+    if (item.breedDiff) diffs.push(irText('Rasse','Breed'));
+    if (item.talentDiff) diffs.push(irText('Begabung','Talent'));
+    if (diffs.length) return {key:item.feeDiff?'fee':'diff',label:`△ ${diffs.join(', ')}`,cls:'warn'};
+    return {key:'ok',label:irText('✓ stimmt','✓ matches'),cls:'ok'};
+  }
+
+  function irClubRowHtml(item) {
+    const remote=item.remote || {};
+    const local=item.local || null;
+    const status=irClubStatus(item);
+    const rgp=Number.isFinite(Number(remote.gp)) ? Number(remote.gp) : null;
+    const lgp=item.localGp;
+    const remoteFee=item.isRemoved
+      ? `<span class="muted">–</span><br><span class="tiny muted">${irText('zuletzt','last')}: ${irEsc(irClubFeeLabel(remote.stud_fee,remote.stud_fee!=null))}</span>`
+      : irEsc(irClubFeeLabel(remote.stud_fee,remote.stud_fee!=null));
+    const localFee=local ? irEsc(irClubFeeLabel(irClubLocalFee(local),true)) : '–';
+    const actionBits=[];
+    if (local?.id!=null) actionBits.push(`<a class="btn secondary small" href="${mdrRoute('view',{id:local.id})}">${irText('Öffnen','Open')}</a>`);
+    if (!item.isRemoved && item.feeDiff && local?.id!=null && remote.stud_fee!=null) {
+      actionBits.push(`<button type="button" class="small" data-club-fee-apply="${irEsc(local.id)}">${irText('Decktaxe übernehmen','Apply stud fee')}</button>`);
+    }
+    const removedHint=item.isRemoved && item.removedAt
+      ? `<br><span class="tiny muted">${irText('seit','since')} ${irEsc(new Date(item.removedAt).toLocaleDateString(irLang()==='en'?'en-GB':'de-DE'))}</span>`
+      : '';
+    return `<tr data-club-status="${irEsc(status.key)}" data-club-owner="${irEsc(remote.owner||local?.owner||'')}" data-club-breed="${irEsc(remote.breed||local?.breed||'')}">
+      <th>${irEsc(remote.name||local?.name||'–')}</th>
+      <td>${irEsc(remote.owner||'–')}${item.ownerDiff && local ? `<br><span class="tiny muted">DB: ${irEsc(local.owner||'–')}</span>`:''}</td>
+      <td>${irEsc(remote.breed||'–')}</td>
+      <td>${rgp??'–'}${local ? `<br><span class="tiny ${item.gpDiff?'inventory-diff':''}">DB: ${lgp??'–'}</span>`:''}</td>
+      <td>${remoteFee}</td>
+      <td class="${item.feeDiff?'inventory-diff':''}">${localFee}</td>
+      <td><span class="inventory-status ${status.cls}">${irEsc(status.label)}</span>${removedHint}</td>
+      <td class="inventory-club-actions">${actionBits.join(' ') || '–'}</td>
+    </tr>`;
+  }
+
+  function irClubMareTable(items) {
+    if (!items.length) return `<p class="small muted">${irText('Keine Zuchtstuten erkannt.','No broodmares detected.')}</p>`;
+    return `<div class="table-wrap"><table class="detail-table inventory-result-table inventory-club-mare-table">
+      <thead><tr><th>${irText('Pferd','Horse')}</th><th>${irText('Besitzer','Owner')}</th><th>${irText('Rasse','Breed')}</th><th>GP</th><th>${irText('Status','Status')}</th><th>${irText('Aktion','Action')}</th></tr></thead>
+      <tbody>${items.map(item=>{
+        const status=irClubStatus(item);
+        const rgp=Number.isFinite(Number(item.remote?.gp)) ? Number(item.remote.gp) : null;
+        const action=item.local?.id!=null ? `<a class="btn secondary small" href="${mdrRoute('view',{id:item.local.id})}">${irText('Öffnen','Open')}</a>`:'–';
+        return `<tr><th>${irEsc(item.remote?.name||'–')}</th><td>${irEsc(item.remote?.owner||'–')}</td><td>${irEsc(item.remote?.breed||'–')}</td><td>${rgp??'–'}${item.local?`<br><span class="tiny ${item.gpDiff?'inventory-diff':''}">DB: ${item.localGp??'–'}</span>`:''}</td><td><span class="inventory-status ${status.cls}">${irEsc(status.label)}</span></td><td>${action}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+  }
+
+  let irClubLast=null;
+
+  function irClubFilteredStallions() {
+    if (!irClubLast) return [];
+    const search=irNorm(document.getElementById('club-filter-search')?.value || '');
+    const owner=irNorm(document.getElementById('club-filter-owner')?.value || '');
+    const breed=irNorm(document.getElementById('club-filter-breed')?.value || '');
+    const status=document.getElementById('club-filter-status')?.value || 'all';
+    return irClubLast.stallionItems.filter(item=>{
+      const st=irClubStatus(item).key;
+      if (search && !irNorm(`${item.remote?.name||''} ${item.remote?.owner||''} ${item.remote?.breed||''}`).includes(search)) return false;
+      if (owner && irNorm(item.remote?.owner||item.local?.owner||'')!==owner) return false;
+      if (breed && irNorm(item.remote?.breed||item.local?.breed||'')!==breed) return false;
+      if (status==='fee' && !item.feeDiff) return false;
+      if (status==='missing' && st!=='missing') return false;
+      if (status==='removed' && st!=='removed') return false;
+      if (status==='diff' && st==='ok') return false;
+      return true;
+    });
+  }
+
+  function irClubRenderStallionBody() {
+    const body=document.getElementById('club-stallion-body');
+    const count=document.getElementById('club-filter-count');
+    if (!body || !irClubLast) return;
+    const rows=irClubFilteredStallions();
+    body.innerHTML=rows.length ? rows.map(irClubRowHtml).join('') : `<tr><td colspan="8" class="muted">${irText('Keine Treffer für diese Filter.','No matches for these filters.')}</td></tr>`;
+    if (count) count.textContent=irText(`${rows.length} Hengste angezeigt`,`${rows.length} stallions shown`);
+  }
+
+  function irClubOptionHtml(values) {
+    return values.map(v=>`<option value="${irEsc(v)}">${irEsc(v)}</option>`).join('');
+  }
+
+  function irRenderClubResults(state) {
+    irClubLast=state;
+    const root=document.getElementById('club-results');
+    if (!root) return;
+    const {club,currentStallions,removedStallions,mares,hadPrevious,snapshot,unlistedCandidates=[]}=state;
+    const stallionItems=[...currentStallions,...removedStallions];
+    state.stallionItems=stallionItems;
+    stallionItems.forEach(irClubRefreshItem);
+    mares.forEach(irClubRefreshItem);
+
+    const matched=currentStallions.filter(x=>x.matchState==='matched').length;
+    const missing=currentStallions.filter(x=>x.matchState==='missing').length;
+    const ambiguous=currentStallions.filter(x=>x.matchState==='ambiguous').length;
+    const feeDiff=currentStallions.filter(x=>x.feeDiff).length;
+    const owners=[...new Set(stallionItems.map(x=>x.remote?.owner||x.local?.owner||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+    const breeds=[...new Set(stallionItems.map(x=>x.remote?.breed||x.local?.breed||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+
+    const snapshotNotice=!hadPrevious
+      ? `<div class="notice small">${irText('Erster ZG-Abgleich für diese Zuchtgemeinschaft: Dieser vollständige Hengstbestand wird als Ausgangsstand gespeichert. Entfernte Hengste können ab dem nächsten vollständigen Abgleich zuverlässig erkannt werden.','First breeding-club comparison for this club: this complete stallion list is stored as the baseline. Removed stallions can be detected reliably from the next complete comparison onward.')}</div>`
+      : '';
+    const incompleteNotice=!club.stallionsComplete
+      ? `<div class="notice notice-warning small">${irText('Die Hengsttabelle wurde nicht vollständig erkannt. Der aktuelle Stand wird verglichen, aber es werden keine Pferde als „nicht mehr in der Zuchtgemeinschaft“ markiert.','The stallion table was not parsed completely. Current rows are compared, but no horses are marked as “no longer in the breeding club”.')}</div>`
+      : '';
+
+    root.innerHTML=`
+      <div class="inventory-club-head">
+        <div>
+          <h3>${irEsc(club.name||irText('Zuchtgemeinschaft','Breeding club'))}</h3>
+          <p class="small muted">${irEsc(club.server)}${club.founder?` · ${irText('Gründer','Founder')}: ${irEsc(club.founder)}`:''}${club.specialisation1?` · ${irEsc(club.specialisation1)}`:''}</p>
+        </div>
+        ${feeDiff ? `<button type="button" id="club-apply-all-fees">${irText(`Alle eindeutigen Decktaxen übernehmen (${feeDiff})`,`Apply all unambiguous stud fees (${feeDiff})`)}</button>`:''}
+      </div>
+      ${snapshotNotice}${incompleteNotice}
+      <div class="inventory-count-grid inventory-club-count-grid">
+        <div><strong>${matched}</strong><span>✓ ${irText('in DB gefunden','found in DB')}</span></div>
+        <div><strong>${feeDiff}</strong><span>△ ${irText('Decktaxe abweichend','stud fee differs')}</span></div>
+        <div><strong>${missing}</strong><span>＋ ${irText('fehlt in DB','missing from DB')}</span></div>
+        <div><strong>${removedStallions.length}</strong><span>− ${irText('nicht mehr in ZG','no longer in club')}</span></div>
+      </div>
+      ${ambiguous?`<div class="notice notice-warning small">⚠ ${ambiguous} ${irText('Hengst(e) konnten wegen mehrfacher Namens-Treffer nicht eindeutig zugeordnet werden.','stallion(s) could not be matched unambiguously because the name occurs more than once.')}</div>`:''}
+
+      <div class="inventory-club-filters">
+        <label>${irText('Suche','Search')}<input id="club-filter-search" type="search" placeholder="${irText('Pferd oder Besitzer …','Horse or owner …')}"></label>
+        <label>${irText('Besitzer','Owner')}<select id="club-filter-owner"><option value="">${irText('Alle','All')}</option>${irClubOptionHtml(owners)}</select></label>
+        <label>${irText('Rasse','Breed')}<select id="club-filter-breed"><option value="">${irText('Alle','All')}</option>${irClubOptionHtml(breeds)}</select></label>
+        <label>${irText('Status','Status')}<select id="club-filter-status">
+          <option value="all">${irText('Alle','All')}</option>
+          <option value="diff">${irText('Nur Abweichungen','Differences only')}</option>
+          <option value="fee">${irText('Decktaxe abweichend','Stud fee differs')}</option>
+          <option value="missing">${irText('Fehlt in DB','Missing from DB')}</option>
+          <option value="removed">${irText('Nicht mehr in ZG','No longer in club')}</option>
+        </select></label>
+        <span id="club-filter-count" class="small muted"></span>
+      </div>
+
+      <div class="table-wrap"><table class="detail-table inventory-result-table inventory-club-stallion-table">
+        <thead><tr>
+          <th>${irText('Hengst','Stallion')}</th><th>${irText('Besitzer','Owner')}</th><th>${irText('Rasse','Breed')}</th><th>GP/OP</th>
+          <th>${irText('Decktaxe ZG','Club stud fee')}</th><th>${irText('Decktaxe DB','DB stud fee')}</th><th>${irText('Status','Status')}</th><th>${irText('Aktion','Action')}</th>
+        </tr></thead>
+        <tbody id="club-stallion-body"></tbody>
+      </table></div>
+
+      ${irClubUnlistedTable(unlistedCandidates)}
+      <details class="inventory-result-group">
+        <summary>${irText('Zuchtstuten','Broodmares')} · ${mares.length}</summary>
+        <p class="tiny muted">${irText('Stuten werden ebenfalls eingelesen und auf Name, Besitzer, Rasse und GP abgeglichen. Die historische „nicht mehr gelistet“-Überwachung ist in dieser Version bewusst auf Hengste beschränkt.','Broodmares are also parsed and compared by name, owner, breed and OP. Historical “no longer listed” tracking is intentionally limited to stallions in this version.')}</p>
+        ${irClubMareTable(mares)}
+      </details>
+      <p class="tiny muted">${irText('Decktaxen werden nie still überschrieben. Nur eindeutige Treffer können einzeln oder gesammelt übernommen werden. GP/OP, Besitzer und andere Felder werden ausschließlich angezeigt und nicht automatisch verändert.','Stud fees are never overwritten silently. Only unambiguous matches can be applied individually or in bulk. OP, owner and other fields are display-only and are not changed automatically.')}</p>`;
+
+    irClubRenderStallionBody();
+    for (const id of ['club-filter-search','club-filter-owner','club-filter-breed','club-filter-status']) {
+      document.getElementById(id)?.addEventListener(id==='club-filter-search'?'input':'change',irClubRenderStallionBody);
+    }
+    document.getElementById('club-apply-all-fees')?.addEventListener('click',()=>irClubApplyAllFees().catch(err=>alert(err.message)));
+  }
+
+  async function irClubApplyFeeItem(item) {
+    if (!item?.local?.id || !item.feeDiff || item.remote?.stud_fee==null) return false;
+    const updated={
+      ...item.local,
+      stud_fee:Number(item.remote.stud_fee),
+      updated_at:new Date().toISOString(),
+      last_change_source:'ZG-Abgleich'
+    };
+    await localPut(LOCAL_STORES.horses,updated);
+    Object.assign(item.local,updated);
+    const memory=(irHorses||[]).find(h=>String(h.id)===String(updated.id));
+    if (memory && memory!==item.local) Object.assign(memory,updated);
+    irClubRefreshItem(item);
+    return true;
+  }
+
+  async function irClubApplyAllFees() {
+    if (!irClubLast) return;
+    const targets=irClubLast.currentStallions.filter(x=>x.feeDiff && x.local?.id!=null && x.remote?.stud_fee!=null);
+    if (!targets.length) return;
+    const ok=confirm(irText(
+      `${targets.length} eindeutige Decktaxe(n) aus der Zuchtgemeinschaft in die Datenbank übernehmen?`,
+      `Apply ${targets.length} unambiguous stud fee(s) from the breeding club to the database?`
+    ));
+    if (!ok) return;
+    let changed=0;
+    for (const item of targets) if (await irClubApplyFeeItem(item)) changed++;
+    irRenderClubResults(irClubLast);
+    const status=document.getElementById('club-reconcile-status');
+    if (status) status.textContent=irText(`${changed} Decktaxe(n) übernommen.`,`${changed} stud fee(s) applied.`);
+  }
+
+  async function irClubApplyFeeByLocalId(localId) {
+    if (!irClubLast) return;
+    const item=irClubLast.currentStallions.find(x=>String(x.local?.id)===String(localId) && x.feeDiff);
+    if (!item) return;
+    if (await irClubApplyFeeItem(item)) {
+      irRenderClubResults(irClubLast);
+      const status=document.getElementById('club-reconcile-status');
+      if (status) status.textContent=irText(`Decktaxe für ${item.remote.name} übernommen.`,`Stud fee applied for ${item.remote.name}.`);
+    }
+  }
+
+  async function irClubRun() {
+    const status=document.getElementById('club-reconcile-status');
+    const raw=document.getElementById('club-reconcile-text')?.value || '';
+    if (!raw.trim()) {
+      if (status) status.textContent=irText('Bitte eine vollständige Zuchtgemeinschafts-/Breeding-Club-Seite einfügen.','Please paste a complete breeding-club page.');
+      return;
+    }
+    if (!irHorses.length) irHorses=await localGetAll(LOCAL_STORES.horses);
+    const club=irClubParsePage(raw);
+    if (!club.valid) {
+      if (status) status.textContent=irText('Keine vollständige Hengsttabelle einer Zuchtgemeinschaft erkannt. Bitte die gesamte Seite inklusive „Die Zuchthengste“ / „The Stallions“ einfügen.','No complete breeding-club stallion table was detected. Please paste the entire page including “Die Zuchthengste” / “The Stallions”.');
+      return;
+    }
+
+    const currentStallions=irClubCompareRows(club.stallions,irHorses,club.server,'stallions');
+    const mares=irClubCompareRows(club.mares,irHorses,club.server,'mares');
+    const key=irClubSnapshotKey(club);
+    const previous=await localGet(LOCAL_STORES.userSettings,key).catch(()=>null);
+    const snapshot=irClubMergeSnapshot(club,previous,currentStallions);
+    const removedStallions=previous ? irClubRemovedItems(snapshot,irHorses,club.server) : [];
+    const unlistedCandidates=irClubUnlistedDbCandidates(club,irHorses,removedStallions);
+
+    // Ein unvollständiger Import darf zwar den zuletzt gesehenen Datenstand
+    // aktualisieren, aber niemals vorhandene Hengste als entfernt markieren.
+    await localPut(LOCAL_STORES.userSettings,snapshot);
+
+    const state={club,currentStallions,removedStallions,unlistedCandidates,mares,hadPrevious:!!previous,snapshot};
+    if (status) status.textContent=irText(
+      `${club.stallions.length} Hengste und ${club.mares.length} Stuten erkannt · ${club.server}.`,
+      `${club.stallions.length} stallions and ${club.mares.length} broodmares detected · ${club.server}.`
+    );
+    irRenderClubResults(state);
+  }
+
+  function irSelectTab(tab) {
+    const next=tab==='club'?'club':'stock';
+    document.querySelectorAll('.inventory-reconcile-tab').forEach(btn=>{
+      const active=btn.dataset.irTab===next;
+      btn.classList.toggle('active',active);
+      btn.setAttribute('aria-selected',active?'true':'false');
+    });
+    document.querySelectorAll('.inventory-reconcile-pane').forEach(pane=>{
+      pane.hidden=pane.dataset.irPane!==next;
+    });
+    const subtitle=document.getElementById('inventory-reconcile-subtitle');
+    if (subtitle) subtitle.textContent=next==='club'
+      ? irText('Zuchtgemeinschaft einlesen, Hengste und Stuten mit der Datenbank vergleichen und Decktaxen gezielt übernehmen.','Parse a breeding club, compare stallions and broodmares with the database, and selectively apply stud fees.')
+      : irText('Eine oder mehrere vollständige MDR-Profilseiten einfügen und mit frei gewählten Besitzern aus der Datenbank vergleichen.','Paste one or more complete MDR profile pages and compare them with selected owners in the database.');
+  }
+
   let irHorses=[];
   async function irOpen() {
     const modal=document.getElementById('inventory-reconcile-modal');
@@ -369,8 +1003,16 @@
       ? filterOptionHorses.slice()
       : await localGetAll(LOCAL_STORES.horses);
     irRenderOwners(irHorses);
-    document.getElementById('inventory-results').innerHTML='';
-    document.getElementById('inventory-reconcile-status').textContent='';
+    const stockResults=document.getElementById('inventory-results');
+    const stockStatus=document.getElementById('inventory-reconcile-status');
+    const clubResults=document.getElementById('club-results');
+    const clubStatus=document.getElementById('club-reconcile-status');
+    if (stockResults) stockResults.innerHTML='';
+    if (stockStatus) stockStatus.textContent='';
+    if (clubResults) clubResults.innerHTML='';
+    if (clubStatus) clubStatus.textContent='';
+    irClubLast=null;
+    irSelectTab('stock');
     modal.hidden=false;
   }
   function irClose() { const m=document.getElementById('inventory-reconcile-modal'); if (m) m.hidden=true; }
@@ -401,13 +1043,34 @@
     document.getElementById('inventory-reconcile-btn')?.addEventListener('click',()=>irOpen().catch(err=>alert(err.message)));
     document.getElementById('inventory-reconcile-close')?.addEventListener('click',irClose);
     document.getElementById('inventory-reconcile-cancel')?.addEventListener('click',irClose);
+    document.getElementById('club-reconcile-cancel')?.addEventListener('click',irClose);
     document.getElementById('inventory-reconcile-run')?.addEventListener('click',irRun);
+    document.getElementById('club-reconcile-run')?.addEventListener('click',()=>irClubRun().catch(err=>{
+      console.error('ZG-Abgleich fehlgeschlagen:',err);
+      const status=document.getElementById('club-reconcile-status');
+      if (status) status.textContent=irText(`ZG-Abgleich fehlgeschlagen: ${err?.message||err}`,`Breeding-club comparison failed: ${err?.message||err}`);
+    }));
+    document.querySelectorAll('.inventory-reconcile-tab').forEach(btn=>btn.addEventListener('click',()=>irSelectTab(btn.dataset.irTab)));
     document.getElementById('inventory-owner-all')?.addEventListener('click',()=>document.querySelectorAll('#inventory-owner-options input').forEach(cb=>{cb.checked=true;}));
     document.getElementById('inventory-owner-none')?.addEventListener('click',()=>document.querySelectorAll('#inventory-owner-options input').forEach(cb=>{cb.checked=false;}));
+    document.getElementById('club-results')?.addEventListener('click',event=>{
+      const btn=event.target.closest('[data-club-fee-apply]');
+      if (btn) irClubApplyFeeByLocalId(btn.dataset.clubFeeApply).catch(err=>alert(err.message));
+    });
     document.getElementById('inventory-reconcile-modal')?.addEventListener('click',e=>{if(e.target?.id==='inventory-reconcile-modal')irClose();});
   }
 
-  window.MDR_INVENTORY_RECONCILE={parseProfiles:irParseProfiles,parseProfile:irParseProfile,compare:irCompare,assignDetectedServers:irAssignDetectedServers,normalizeName:irNorm};
+  window.MDR_INVENTORY_RECONCILE={
+    parseProfiles:irParseProfiles,
+    parseProfile:irParseProfile,
+    compare:irCompare,
+    assignDetectedServers:irAssignDetectedServers,
+    normalizeName:irNorm,
+    parseClub:irClubParsePage,
+    compareClubRows:irClubCompareRows,
+    mergeClubSnapshot:irClubMergeSnapshot,
+    clubSnapshotKey:irClubSnapshotKey
+  };
   if (typeof document!=='undefined') {
     if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',irInit,{once:true}); else irInit();
   }
