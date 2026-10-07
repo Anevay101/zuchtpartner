@@ -857,6 +857,13 @@
     'Vollständige ZG-/Breeding-Club-Seite hier einfügen …':'Paste the complete breeding-club page here …',
     'Deutsch und Englisch werden automatisch erkannt. Zuchthengste und Zuchtstuten werden eingelesen. Bei Hengsten werden insbesondere Besitzer, GP/OP und Decktaxe/Stud fee mit der Datenbank verglichen. Der erste vollständige Abgleich legt den Ausgangsstand fest; ab dem nächsten Abgleich können ehemals gelistete Hengste zuverlässig als „nicht mehr in der Zuchtgemeinschaft“ erkannt werden.':'German and English are detected automatically. Stallions and broodmares are parsed. For stallions, owner, GP/OP and stud fee are compared with the database. The first complete comparison establishes the baseline; from the next comparison onward, formerly listed stallions can reliably be detected as “no longer in the breeding club”.',
     'Zuchtgemeinschaft abgleichen':'Compare breeding club',
+
+    'Eigene Pferde, Zuchtgemeinschaft oder Deckstation mit der Datenbank abgleichen.':'Compare your own horses, a breeding club or a stud station with the database.',
+    'Zucht / Deckstation':'Breeding / Stud station',
+    'Zuchtgemeinschaft / Deckstation':'Breeding club / Stud station',
+    'Vollständige ZG-/Breeding-Club- oder Deckstationsseite hier einfügen …':'Paste the complete breeding-club or stud-station page here …',
+    'Zuchtgemeinschaften und Deckstationen werden automatisch erkannt. ZG-Seiten können Deutsch oder Englisch sein; bei Deckstationen wird die Rasse aus der Überschrift übernommen. Hengste werden auf Name, Besitzer, GP/OP und besonders Decktaxe/Stud fee abgeglichen. MDR-Namensbestandteile wie ~Ts~, ~~APH~~ und HTML-Leerzeichen bleiben beim Matching erhalten. Ein vollständiger Import speichert außerdem einen Ausgangsstand für spätere „nicht mehr gelistet“-Hinweise.':'Breeding clubs and stud stations are detected automatically. Club pages can be German or English; for stud stations, the breed is taken from the heading. Stallions are compared by name, owner, GP/OP and especially stud fee. MDR name elements such as ~Ts~, ~~APH~~ and HTML spaces are preserved during matching. A complete import also stores a baseline for later “no longer listed” notices.',
+    'Abgleich starten':'Start comparison',
     'Fehlt in der Datenbank':'Missing from database',
     'Nicht mehr im MDR-Bestand':'No longer in MDR stock',
     'Spielwelt':'Game world', 'Nicht eindeutig':'Ambiguous',

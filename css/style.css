@@ -7966,3 +7966,18 @@ button.keep-foal-no.active {
   .inventory-club-filters{grid-template-columns:1fr}
   .inventory-club-filters #club-filter-count{grid-column:1}
 }
+
+/* V54.0.90 – Deckstationsabgleich + MDR-Namensnormalisierung */
+.inventory-club-filters.has-availability{grid-template-columns:repeat(5,minmax(0,1fr))}
+.inventory-station-table{min-width:1080px}
+.inventory-station-table th:nth-child(7){min-width:150px}
+.inventory-station-table th:nth-child(8){min-width:155px}
+.inventory-station-table th:nth-child(9){min-width:90px}
+.inventory-club-availability{min-width:150px;max-width:240px}
+.inventory-availability{display:inline-flex;align-items:center;border-radius:999px;padding:.2rem .48rem;font-size:.78rem;font-weight:750;border:1px solid var(--border,#bbb);white-space:nowrap}
+.inventory-availability.ok{background:color-mix(in srgb,#3f8b52 12%,transparent);border-color:color-mix(in srgb,#3f8b52 45%,var(--border,#bbb))}
+.inventory-availability.warn{background:color-mix(in srgb,#b8860b 13%,transparent);border-color:color-mix(in srgb,#b8860b 50%,var(--border,#bbb))}
+.inventory-availability.neutral{background:var(--surface-soft,#eef3ec);color:var(--text-muted,#66736a)}
+@media (max-width:1050px){.inventory-club-filters.has-availability{grid-template-columns:1fr 1fr 1fr}}
+@media (max-width:760px){.inventory-club-filters.has-availability{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.inventory-club-filters.has-availability{grid-template-columns:1fr}}

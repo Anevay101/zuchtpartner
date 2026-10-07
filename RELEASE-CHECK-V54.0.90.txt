@@ -1,0 +1,17 @@
+MDR-Datenbank V54.0.90 – Release Check
+
+- 41/41 JavaScript-Dateien: Syntaxprüfung erfolgreich.
+- CSS: Klammer-/Strukturprüfung erfolgreich.
+- 14 HTML-Dateien: keine doppelten IDs.
+- 202 lokale Script-/Stylesheet-Referenzen geprüft: keine fehlenden Dateien.
+- Cache-Buster konsistent: v=5490.
+- MDR-Namensnormalisierung getestet:
+  - Markdown/HTML-Variante von ~Ts~ Hechicero ~APH~ wird exakt zu ~Ts~ Hechicero ~APH~.
+  - ~~APH~~ Don -Cookie- behält echte Doppeltilden.
+- Deckstationsparser getestet (DE + EN): Rasse, Hengstname, GP/OP, Decktaxe, Besitzer,
+  HLP/SLP-Punkte und Deckstatus werden erkannt.
+- Statushinweise getestet: extern verfügbar / deckt nicht extern / nur Übersicht.
+- Matchingtest: bereinigter MDR-Name wird eindeutig gegen den lokalen DB-Namen gematcht;
+  abweichende Decktaxe wird erkannt.
+- Zuchtgemeinschaftsparser Regressionstest: Hengste/Stuten und Tilden-Namen weiterhin erkannt.
+- ZIP-Integrität: siehe finalen Build-Test.
