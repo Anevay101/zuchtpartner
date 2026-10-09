@@ -1,7 +1,8 @@
-/* MDR V54.0.91 – Bestands-, Zuchtgemeinschafts- und Deckstationsabgleich aus kopierten MDR-Seiten.
-   Abgleich ausschließlich über normalisierte Pferdenamen. Keine automatische
-   Löschung oder Besitzeränderung. Der Vergleich arbeitet nur auf dem bereits
-   synchronisierten lokalen Pferdebestand.
+/* MDR V54.0.92 – Bestands-, Zuchtgemeinschafts- und Deckstationsabgleich aus kopierten MDR-Seiten.
+   Eindeutige normalisierte Pferdenamen sind der primäre Match-Schlüssel.
+   Spielwelt, Geschlecht, Besitzer, Rasse und GP dienen bei Mehrdeutigkeiten
+   bzw. als Plausibilitäts-Hinweise. Kritische Bestandsaktionen sind explizit
+   auswählbar und nutzen den bestehenden Ein-Schritt-Undo.
 */
 (() => {
   'use strict';
@@ -145,6 +146,25 @@
     }
     return {lines:start>=0 ? lines.slice(start,end) : [],hasStart:start>=0,hasEnd};
   }
+  function irSexKey(value) {
+    const raw=irNorm(value);
+    if (/^(?:hengst|stallion|male|colt)$/.test(raw)) return 'stallion';
+    if (/^(?:stute|mare|female|filly)$/.test(raw)) return 'mare';
+    if (/^(?:wallach|gelding)$/.test(raw)) return 'gelding';
+    return '';
+  }
+  function irParseProfileHorseCells(name, cells) {
+    const clean=(cells||[]).map(irStripMarkdown);
+    const ageIndex=clean.findIndex(c=>/^\d+\s*(?:Jahre?|years?)/i.test(c));
+    if (ageIndex<2) return null;
+    const breed=String(clean[ageIndex-2]||'').trim();
+    const sexRaw=String(clean[ageIndex-1]||'').trim();
+    const gpCell=clean.slice(ageIndex+1).find(c=>/^\d{2,4}$/.test(c));
+    return {
+      name:irHorseName(name), external_id:null, breed, sex:irSexKey(sexRaw), sex_raw:sexRaw,
+      gp:gpCell ? Number(gpCell) : null, source:'name'
+    };
+  }
   function irParseMarkdownHorseRow(line) {
     if (!/^\s*\|/.test(line) || !/site=pferd/i.test(line)) return null;
     const link=line.match(/\[([^\]]+?)\]\([^)]*site=pferd[^)]*\)/i);
@@ -153,21 +173,16 @@
     if (!name || /^(Pferd|Horse)$/i.test(name)) return null;
     const after=line.slice((link.index || 0)+link[0].length);
     const cells=after.split('|').map(irStripMarkdown).filter(Boolean);
-    let gp=null;
-    for (const cell of cells) {
-      if (/^\d{2,4}$/.test(cell)) { gp=Number(cell); break; }
-    }
-    return {name, external_id:null, gp, source:'name'};
+    return irParseProfileHorseCells(name,cells);
   }
   function irParseTsvHorseRow(line) {
     if (!line.includes('\t')) return null;
-    const cells=line.split('\t').map(irStripMarkdown).filter(Boolean);
+    const cells=line.split('\t').map(irStripMarkdown);
+    while (cells.length && !String(cells[0]||'').trim()) cells.shift();
+    while (cells.length && !String(cells[cells.length-1]||'').trim()) cells.pop();
     if (cells.length<4) return null;
     if (/^(Pferd|Horse)$/i.test(cells[0]) || /^(PferdRasse|HorseBreed)/i.test(cells[0])) return null;
-    const ageIndex=cells.findIndex(c=>/^\d+\s*(?:Jahre?|years?)/i.test(c));
-    if (ageIndex<2) return null;
-    const gpCell=cells.slice(ageIndex+1).find(c=>/^\d{2,4}$/.test(c));
-    return {name:cells[0], external_id:null, gp:gpCell ? Number(gpCell) : null, source:'name'};
+    return irParseProfileHorseCells(cells[0],cells.slice(1));
   }
   function irParseProfile(raw) {
     const owner=irProfileOwner(raw);
@@ -198,7 +213,13 @@
   }
 
   function irLearning(horse) {
-    try { return typeof mdrIsLearningHorse==='function' && mdrIsLearningHorse(horse); } catch { return false; }
+    try { return typeof mdrIsLearningHorse==='function' && mdrIsLearningHorse(horse); } catch { return horse?.learning_file===true; }
+  }
+  function irComparableOwner(horse) {
+    if (!horse || typeof horse!=='object') return '';
+    const original=String(horse.learning_original_owner||'').trim();
+    if (irLearning(horse) && original) return original;
+    return String(horse.owner||'').trim();
   }
   function irHorseServer(horse) {
     return mdrGameWorld(horse, 'UNKNOWN');
@@ -209,9 +230,70 @@
     if (ps!=='DE' && ps!=='EN') return true;
     return hs==='UNKNOWN' || hs===ps;
   }
+  function irLocalSex(horse) {
+    return irSexKey(horse?.gender || horse?.sex || horse?.geschlecht || '');
+  }
+  function irLocalGp(horse) {
+    const values=[horse?.gp,horse?.overall_potential,horse?.gesamtpotential];
+    for (const value of values) {
+      const n=Number(value);
+      if (Number.isFinite(n)) return n;
+    }
+    try {
+      if (typeof computeDerived==='function') {
+        const n=Number(computeDerived(horse)?.gp);
+        if (Number.isFinite(n)) return n;
+      }
+    } catch {}
+    return null;
+  }
+  function irNarrowCandidates(candidates,predicate) {
+    const narrowed=(candidates||[]).filter(predicate);
+    return narrowed.length ? narrowed : candidates;
+  }
+  function irResolveProfileNameMatch(remote,profile,localByName) {
+    const nameKey=remote?._nameKey || irNorm(remote?.name);
+    const all=(localByName.get(nameKey) || []).slice();
+    if (!all.length) return {state:'missing',local:null,candidates:0,all:[]};
+    if (all.length===1) return {state:'matched',local:all[0],candidates:1,all};
+
+    let pool=all.slice();
+    const ps=String(profile?.server||'').toUpperCase();
+    if (ps==='DE' || ps==='EN') {
+      const exact=pool.filter(h=>irHorseServer(h)===ps);
+      if (exact.length) pool=exact;
+    }
+    if (remote?.sex) pool=irNarrowCandidates(pool,h=>irLocalSex(h)===remote.sex);
+    if (remote?.breed) pool=irNarrowCandidates(pool,h=>irNorm(h?.breed)===irNorm(remote.breed));
+    if (Number.isFinite(Number(remote?.gp))) pool=irNarrowCandidates(pool,h=>Number(irLocalGp(h))===Number(remote.gp));
+    const ownerKey=irNorm(profile?.owner);
+    if (ownerKey) pool=irNarrowCandidates(pool,h=>irNorm(irComparableOwner(h))===ownerKey);
+
+    if (pool.length===1) return {state:'matched',local:pool[0],candidates:all.length,all};
+    return {state:'ambiguous',local:null,candidates:all.length,all};
+  }
+  function irMatchWarnings(local,remote,profile) {
+    if (!local) return [];
+    const warnings=[];
+    const ps=String(profile?.server||'').toUpperCase();
+    const hs=irHorseServer(local);
+    if ((ps==='DE'||ps==='EN') && (hs==='DE'||hs==='EN') && ps!==hs) {
+      warnings.push(irText(`Spielwelt abweichend (DB ${hs}, Profil ${ps})`,`game world differs (DB ${hs}, profile ${ps})`));
+    }
+    const ls=irLocalSex(local);
+    if (remote?.sex && ls && remote.sex!==ls) warnings.push(irText('Geschlecht abweichend','sex differs'));
+    if (remote?.breed && local?.breed && irNorm(remote.breed)!==irNorm(local.breed)) warnings.push(irText('Rasse abweichend','breed differs'));
+    const rgp=Number(remote?.gp), lgp=Number(irLocalGp(local));
+    if (Number.isFinite(rgp) && Number.isFinite(lgp) && rgp!==lgp) warnings.push(`GP/OP ${lgp}→${rgp}`);
+    if (irLearning(local)) warnings.push(irText('DB: GBH/Lerndatei','DB: GBH/learning file'));
+    return warnings;
+  }
   function irCompare(localHorses, profiles, selectedOwners) {
     const selected=new Set([...selectedOwners].map(irNorm));
-    const local=(localHorses || []).filter(h=>!irLearning(h));
+    // V54.0.92: Lerndatei-/GBH-Pferde bleiben Teil des Bestandsabgleichs.
+    // Sonst würden gerade bereits aussortierte/alte Pferde aus negativen
+    // Bestandsaussagen verschwinden.
+    const local=(localHorses || []).slice();
     const localByName=new Map();
     for (const h of local) {
       const key=irNorm(h.name);
@@ -227,20 +309,6 @@
       const ownerKey=irNorm(p.owner);
       if (!profilesByOwner.has(ownerKey)) profilesByOwner.set(ownerKey,[]);
       profilesByOwner.get(ownerKey).push(p);
-    }
-
-    // Wenn derselbe Name auf DE und EN vorkommt, darf ein noch nicht klassifiziertes
-    // lokales Pferd nicht geraten werden. Bekannte Spielwelten lösen diesen Fall auf.
-    const remoteWorlds=new Map();
-    for (const p of selectedProfiles) {
-      const ownerKey=irNorm(p.owner);
-      for (const r of p.horses) {
-        const nameKey=r._nameKey || irNorm(r.name);
-        if (!nameKey) continue;
-        const key=`${ownerKey}|${nameKey}`;
-        if (!remoteWorlds.has(key)) remoteWorlds.set(key,new Set());
-        if (p.server==='DE' || p.server==='EN') remoteWorlds.get(key).add(p.server);
-      }
     }
 
     for (const ownerKey of selected) {
@@ -267,24 +335,26 @@
         for (const remote of profile.horses) {
           const nameKey=remote._nameKey || irNorm(remote.name);
           if (!nameKey) continue;
-          const allNameHits=(localByName.get(nameKey) || []).filter(h=>irServerCompatible(h,profile));
           const remoteDuplicate=(remoteNameCounts.get(nameKey)||0)>1;
-          const worlds=remoteWorlds.get(`${ownerKey}|${nameKey}`) || new Set();
-          const unknownCrossWorld=worlds.size>1 && allNameHits.some(h=>irHorseServer(h)==='UNKNOWN');
+          const resolved=irResolveProfileNameMatch(remote,profile,localByName);
 
-          if (remoteDuplicate || allNameHits.length>1 || unknownCrossWorld) {
-            for (const h of allNameHits) ownerUncertainIds.add(String(h.id));
-            ambiguous.push({remote,profile,local:null,candidates:allNameHits.length,note:irText('Name ist mehrfach vorhanden und kann nicht eindeutig zugeordnet werden.','Name occurs more than once and cannot be matched unambiguously.')});
+          if (remoteDuplicate || resolved.state==='ambiguous') {
+            for (const h of resolved.all||[]) ownerUncertainIds.add(String(h.id));
+            ambiguous.push({remote,profile,local:null,candidates:resolved.candidates,note:irText('Name ist mehrfach vorhanden und kann trotz Spielwelt/Geschlecht/Rasse/GP nicht eindeutig zugeordnet werden.','Name occurs more than once and remains ambiguous after game world/sex/breed/OP checks.')});
             continue;
           }
 
-          if (allNameHits.length===1) {
-            const match=allNameHits[0];
-            if (irNorm(match.owner)===ownerKey) {
-              present.push({remote,profile,local:match,matchedBy:'name'});
+          if (resolved.state==='matched' && resolved.local) {
+            const match=resolved.local;
+            const warnings=irMatchWarnings(match,remote,profile);
+            if (irNorm(irComparableOwner(match))===ownerKey) {
+              present.push({remote,profile,local:match,matchedBy:'name',warnings});
               ownerMatchedIds.add(String(match.id));
             } else {
-              ownerMismatch.push({remote,profile,local:match,note:irText('Gleicher Pferdename ist in der Datenbank einem anderen Besitzer zugeordnet.','The same horse name is assigned to a different owner in the database.')});
+              ownerMismatch.push({
+                remote,profile,local:match,warnings,
+                note:irText('Gleicher Pferdename ist in der Datenbank einem anderen Besitzer zugeordnet.','The same horse name is assigned to a different owner in the database.')
+              });
             }
             continue;
           }
@@ -292,17 +362,16 @@
         }
       }
 
-      // Negative Aussagen nur bei vollständig erkannter Spielwelt. Pferde mit
-      // unbekannter Spielwelt werden erst dann als "nicht mehr vorhanden" gewertet,
-      // wenn für denselben Besitzer DE UND EN vollständig geprüft wurden.
-      for (const h of local.filter(x=>irNorm(x.owner)===ownerKey)) {
+      // Negative Aussagen nur bei vollständig erkannter Spielwelt. Lern-/GBH-
+      // Pferde werden über ihren ursprünglichen Besitzer einsortiert.
+      for (const h of local.filter(x=>irNorm(irComparableOwner(x))===ownerKey)) {
         const id=String(h.id);
         if (ownerMatchedIds.has(id) || ownerUncertainIds.has(id)) continue;
         const hs=irHorseServer(h);
         if ((hs==='DE' || hs==='EN') && completeServers.has(hs)) {
-          notInMdr.push({local:h,profile:profileForServer.get(hs),checkedServers:[hs]});
+          notInMdr.push({local:h,profile:profileForServer.get(hs),checkedServers:[hs],warnings:irLearning(h)?[irText('DB: GBH/Lerndatei','DB: GBH/learning file')]:[]});
         } else if (hs==='UNKNOWN' && completeServers.has('DE') && completeServers.has('EN')) {
-          notInMdr.push({local:h,profile:profileForServer.get('DE') || profileForServer.get('EN'),checkedServers:['DE','EN']});
+          notInMdr.push({local:h,profile:profileForServer.get('DE') || profileForServer.get('EN'),checkedServers:['DE','EN'],warnings:irLearning(h)?[irText('DB: GBH/Lerndatei','DB: GBH/learning file')]:[]});
         }
       }
     }
@@ -332,37 +401,115 @@
   }
 
   function irOwnerLabel(ownerKey, horses) {
-    return (horses || []).find(h=>irNorm(h.owner)===ownerKey)?.owner || ownerKey;
+    return (horses || []).find(h=>irNorm(irComparableOwner(h))===ownerKey)?.learning_original_owner
+      || (horses || []).find(h=>irNorm(irComparableOwner(h))===ownerKey)?.owner
+      || ownerKey;
   }
   function irRenderOwners(horses) {
     const root=document.getElementById('inventory-owner-options');
     if (!root) return;
-    const owners=[...new Set((horses || []).map(h=>String(h.owner||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+    const owners=[...new Set((horses || []).map(irComparableOwner).map(v=>String(v||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
     root.innerHTML=owners.map(owner=>`<label class="inventory-owner-chip"><input type="checkbox" value="${irEsc(owner)}"><span>${irEsc(owner)}</span></label>`).join('');
+  }
+
+  let irStockSelectedIds=new Set();
+  let irLastStockResult=null;
+
+  function irStockItemMap(result) {
+    const map=new Map();
+    for (const [type,rows] of [
+      ['mismatch',result?.ownerMismatch||[]],['gone',result?.notInMdr||[]],['present',result?.present||[]]
+    ]) {
+      for (const item of rows) {
+        if (item?.local?.id==null) continue;
+        const id=String(item.local.id);
+        if (!map.has(id) || type==='mismatch') map.set(id,{item,type});
+      }
+    }
+    return map;
+  }
+  function irStockSelectedRows() {
+    const map=irStockItemMap(irLastStockResult);
+    return [...irStockSelectedIds].map(id=>map.get(String(id))).filter(Boolean);
+  }
+  function irStockOwnerUpdateTargets() {
+    const targets=new Map();
+    for (const entry of irStockSelectedRows()) {
+      if (entry.type!=='mismatch') continue;
+      const id=String(entry.item.local.id);
+      const target=String(entry.item.profile?.owner||'').trim();
+      if (!target) continue;
+      if (!targets.has(id)) targets.set(id,new Set());
+      targets.get(id).add(target);
+    }
+    return [...targets.entries()].filter(([,owners])=>owners.size===1).map(([id,owners])=>({id,owner:[...owners][0]}));
+  }
+  function irUpdateStockBulkBar() {
+    const bar=document.getElementById('inventory-bulk-actions');
+    if (!bar) return;
+    // Entfernte/neu gerenderte Zeilen automatisch aus der Auswahl lösen.
+    const available=new Set([...document.querySelectorAll('#inventory-results [data-inventory-select]')].map(cb=>String(cb.dataset.inventorySelect)));
+    irStockSelectedIds=new Set([...irStockSelectedIds].filter(id=>available.has(String(id))));
+    document.querySelectorAll('#inventory-results [data-inventory-select]').forEach(cb=>{cb.checked=irStockSelectedIds.has(String(cb.dataset.inventorySelect));});
+    const count=irStockSelectedIds.size;
+    bar.hidden=count===0;
+    const label=document.getElementById('inventory-bulk-count');
+    if (label) label.textContent=irText(`${count} Pferd${count===1?'':'e'} ausgewählt`,`${count} horse${count===1?'':'s'} selected`);
+    const ownerBtn=document.querySelector('#inventory-bulk-actions [data-inventory-bulk="owner"]');
+    const ownerTargets=irStockOwnerUpdateTargets();
+    if (ownerBtn) {
+      ownerBtn.disabled=ownerTargets.length===0;
+      ownerBtn.textContent=irText(`Besitzer aktualisieren${ownerTargets.length?` (${ownerTargets.length})`:''}`,`Update owner${ownerTargets.length?` (${ownerTargets.length})`:''}`);
+    }
+    document.querySelectorAll('#inventory-results [data-inventory-select-group]').forEach(master=>{
+      const type=master.dataset.inventorySelectGroup;
+      const boxes=[...document.querySelectorAll(`#inventory-results [data-inventory-select-type="${CSS.escape(type)}"]`)];
+      const checked=boxes.filter(cb=>irStockSelectedIds.has(String(cb.dataset.inventorySelect))).length;
+      master.checked=boxes.length>0 && checked===boxes.length;
+      master.indeterminate=checked>0 && checked<boxes.length;
+    });
+  }
+  function irStockWarningsHtml(item) {
+    const warnings=Array.isArray(item?.warnings)?item.warnings.filter(Boolean):[];
+    return warnings.length ? `<br><span class="tiny inventory-stock-warning">⚠ ${irEsc(warnings.join(' · '))}</span>` : '';
   }
   function irResultTable(rows, type) {
     if (!rows.length) return `<p class="small muted">${irText('Keine Einträge.','No entries.')}</p>`;
-    return `<div class="table-wrap"><table class="detail-table inventory-result-table"><thead><tr><th>${irText('Pferd','Horse')}</th><th>${irText('Spielwelt','Game world')}</th><th>${irText('Besitzer','Owner')}</th><th>${irText('Hinweis','Note')}</th><th>${irText('Aktion','Action')}</th></tr></thead><tbody>${rows.map(item=>{
+    const selectable=rows.some(item=>item?.local?.id!=null);
+    const selectHead=selectable
+      ? `<label class="inventory-select-all" title="${irText('Alle in dieser Gruppe auswählen','Select all in this group')}"><input type="checkbox" data-inventory-select-group="${irEsc(type)}"><span>${irText('Alle','All')}</span></label>`
+      : '–';
+    return `<div class="table-wrap"><table class="detail-table inventory-result-table"><thead><tr><th>${irText('Pferd','Horse')}</th><th>${irText('Spielwelt','Game world')}</th><th>${irText('Besitzer','Owner')}</th><th>${irText('Hinweis','Note')}</th><th class="inventory-select-head">${selectHead}</th></tr></thead><tbody>${rows.map(item=>{
       const local=item.local || null;
       const remote=item.remote || null;
       const horseName=remote?.name || local?.name || '–';
       const server=item.profile?.server || (item.checkedServers?.join('+')) || irHorseServer(local);
-      const owner=local?.owner || item.profile?.owner || '–';
+      const comparableOwner=local ? irComparableOwner(local) : '';
+      const owner=comparableOwner || item.profile?.owner || '–';
       let note='';
-      if (type==='present') note=irText('Name stimmt eindeutig überein','unique name match');
-      if (type==='missing') note=irText('kein Namens-Treffer in dieser Spielwelt','no name match in this game world');
-      if (type==='mismatch') note=item.note || irText('Besitzer abweichend','owner differs');
+      if (type==='present') note=irText('Name eindeutig in der Datenbank gefunden','unique name found in database');
+      if (type==='missing') note=irText('kein Pferd mit diesem Namen in der Datenbank','no horse with this name in the database');
+      if (type==='mismatch') {
+        const target=String(item.profile?.owner||'').trim();
+        note=target
+          ? irText(`Besitzer DB: ${owner} → MDR: ${target}`,`Owner DB: ${owner} → MDR: ${target}`)
+          : (item.note || irText('Besitzer abweichend','owner differs'));
+      }
       if (type==='gone') note=(item.checkedServers?.length||0)>1
         ? irText('auf keiner der vollständig geprüften DE-/EN-Profilseiten enthalten','not present on either fully checked DE/EN profile page')
         : irText('nicht auf der vollständig erkannten MDR-Profilseite enthalten','not present on the fully parsed MDR profile page');
       if (type==='ambiguous') note=item.note || irText('nicht eindeutig','ambiguous');
-      const action=local?.id!=null ? `<a class="btn secondary small" href="${mdrRoute('view',{id:local.id})}">${irText('Pferd öffnen','Open horse')}</a>` : '–';
-      return `<tr><th>${irEsc(horseName)}</th><td>${irEsc(server||'–')}</td><td>${irEsc(owner)}</td><td>${irEsc(note)}</td><td>${action}</td></tr>`;
+      const action=local?.id!=null
+        ? `<label class="inventory-row-select" title="${irText('Für Mehrfachaktion auswählen','Select for bulk action')}"><input type="checkbox" data-inventory-select="${irEsc(local.id)}" data-inventory-select-type="${irEsc(type)}"><span class="sr-only">${irText('Auswählen','Select')}</span></label>`
+        : '–';
+      const ownerSuffix=local && irLearning(local) ? `<br><span class="tiny muted">${irText('GBH/Lerndatei','GBH/learning file')}</span>` : '';
+      return `<tr><td class="inventory-stock-name-cell">${irEsc(horseName)}</td><td>${irEsc(server||'–')}</td><td>${irEsc(owner)}${ownerSuffix}</td><td>${irEsc(note)}${irStockWarningsHtml(item)}</td><td class="inventory-select-cell">${action}</td></tr>`;
     }).join('')}</tbody></table></div>`;
   }
   function irRenderResults(result, allHorses) {
     const root=document.getElementById('inventory-results');
     if (!root) return;
+    irLastStockResult=result;
     const profileInfo=result.profileSummaries.map(p=>{
       const status=p.complete ? '✓' : '⚠';
       const countText=p.expected==null
@@ -375,7 +522,7 @@
       <div class="inventory-profile-summary">${profileInfo || `<span class="muted">${irText('Keine ausgewählte Profilseite erkannt.','No selected profile page detected.')}</span>`}</div>
       ${unchecked.length ? `<div class="notice notice-warning small">${irText('Nicht geprüft – keine Profilseite erkannt:','Not checked – no profile page detected:')} ${irEsc(unchecked.join(', '))}</div>` : ''}
       ${result.profileSummaries.some(p=>!p.complete) ? `<div class="notice notice-warning small">${irText('Mindestens eine Profilseite wurde nicht vollständig erkannt. „Nicht mehr im MDR-Bestand“ wird für diese Spielwelt bewusst nicht berechnet.','At least one profile page was not parsed completely. “No longer in MDR stock” is intentionally not calculated for that game world.')}</div>` : ''}
-      ${result.ambiguous.length ? `<div class="notice notice-warning small">⚠ ${result.ambiguous.length} ${irText('Namens-Treffer sind nicht eindeutig und werden weder als vorhanden noch als fehlend gewertet.','name matches are ambiguous and are counted as neither present nor missing.')}</div>` : ''}
+      ${result.ambiguous.length ? `<div class="notice notice-warning small">⚠ ${result.ambiguous.length} ${irText('Namens-Treffer sind nicht eindeutig. Sie werden nicht als „fehlt“ gewertet.','name matches are ambiguous. They are not counted as missing.')}</div>` : ''}
       ${Number(result.serverAssignments)>0 ? `<div class="notice small">${irText(`Spielwelt bei ${result.serverAssignments} bisher unbekannten Pferd(en) eindeutig ergänzt.`,`Game world assigned unambiguously to ${result.serverAssignments} previously unclassified horse(s).`)}</div>` : ''}
       <div class="inventory-count-grid">
         <div><strong>${result.present.length}</strong><span>✓ ${irText('Vorhanden','Present')}</span></div>
@@ -383,12 +530,120 @@
         <div><strong>${result.notInMdr.length}</strong><span>− ${irText('Nicht mehr im MDR-Bestand','No longer in MDR stock')}</span></div>
         <div><strong>${result.ownerMismatch.length}</strong><span>↔ ${irText('Besitzer abweichend','Owner differs')}</span></div>
       </div>
+      <div id="inventory-bulk-actions" class="inventory-bulk-actions" hidden>
+        <strong id="inventory-bulk-count"></strong>
+        <div class="inventory-bulk-buttons">
+          <button type="button" class="secondary small" data-inventory-bulk="owner" disabled>${irText('Besitzer aktualisieren','Update owner')}</button>
+          <button type="button" class="secondary small" data-inventory-bulk="learning">${irText('Auf GBH / Lerndatei','Move to GBH / learning file')}</button>
+          <button type="button" class="danger small" data-inventory-bulk="delete">${irText('Aus Datenbank löschen','Delete from database')}</button>
+          <button type="button" class="link-button small" data-inventory-bulk="clear">${irText('Auswahl aufheben','Clear selection')}</button>
+        </div>
+      </div>
       ${result.ambiguous.length ? `<details class="inventory-result-group" open><summary>⚠ ${irText('Nicht eindeutig','Ambiguous')} · ${result.ambiguous.length}</summary>${irResultTable(result.ambiguous,'ambiguous')}</details>` : ''}
       <details class="inventory-result-group" ${result.missing.length?'open':''}><summary>＋ ${irText('Fehlt in der Datenbank','Missing from database')} · ${result.missing.length}</summary>${irResultTable(result.missing,'missing')}</details>
       <details class="inventory-result-group" ${result.notInMdr.length?'open':''}><summary>− ${irText('Nicht mehr im MDR-Bestand','No longer in MDR stock')} · ${result.notInMdr.length}</summary>${irResultTable(result.notInMdr,'gone')}</details>
       <details class="inventory-result-group" ${result.ownerMismatch.length?'open':''}><summary>↔ ${irText('Besitzer abweichend','Owner differs')} · ${result.ownerMismatch.length}</summary>${irResultTable(result.ownerMismatch,'mismatch')}</details>
       <details class="inventory-result-group"><summary>✓ ${irText('Vorhanden','Present')} · ${result.present.length}</summary>${irResultTable(result.present,'present')}</details>
-      <p class="tiny muted">${irText('Es werden niemals automatisch Pferde gelöscht oder Besitzer geändert. Der Abgleich erfolgt ausschließlich über normalisierte Pferdenamen und nutzt den bereits synchronisierten lokalen Bestand.','Horses are never deleted and owners are never changed automatically. Matching uses normalized horse names only and the already synchronised local stock.')}</p>`;
+      <p class="tiny muted">${irText('Eindeutige Pferdenamen gelten als Treffer – auch wenn Spielwelt, Geschlecht oder andere Plausibilitätsdaten in der DB abweichen. Änderungen passieren nur über deine Auswahl und können über den vorhandenen Rückgängig-Punkt abgesichert werden.','A unique horse name counts as a match even when game world, sex, or other plausibility data differs in the database. Changes only happen through your selection and use the existing undo point.')}</p>`;
+    irUpdateStockBulkBar();
+  }
+
+  async function irGetLocalHorseById(id) {
+    let row=await localGet(LOCAL_STORES.horses,id).catch(()=>null);
+    if (row) return row;
+    const n=Number(id);
+    if (Number.isFinite(n) && String(n)===String(id)) row=await localGet(LOCAL_STORES.horses,n).catch(()=>null);
+    return row||null;
+  }
+  async function irRefreshStockAfterMutation(message='') {
+    irHorses=await localGetAll(LOCAL_STORES.horses);
+    if (typeof loadHorses==='function') {
+      try { await loadHorses(); } catch (error) { console.warn('Datenbankliste konnte nach Bestandsaktion nicht neu geladen werden:',error); }
+    }
+    irStockSelectedIds.clear();
+    await irRun({fromMutation:true});
+    if (typeof renderUndoActionBar==='function') {
+      try { await renderUndoActionBar(); } catch {}
+    }
+    if (message) {
+      const status=document.getElementById('inventory-reconcile-status');
+      if (status) status.textContent=`${status.textContent ? `${status.textContent} ` : ''}${message}`;
+    }
+  }
+  async function irBulkDeleteSelected() {
+    const ids=[...irStockSelectedIds];
+    if (!ids.length) return;
+    const rows=(await Promise.all(ids.map(irGetLocalHorseById))).filter(Boolean);
+    if (!rows.length) return;
+    const ok=window.confirm(irText(
+      `${rows.length} ausgewählte${rows.length===1?'s':'e'} Pferd${rows.length===1?'':'e'} wirklich aus der Datenbank löschen? Die letzte Löschaktion kann rückgängig gemacht werden.`,
+      `Really delete ${rows.length} selected horse${rows.length===1?'':'s'} from the database? The latest deletion can be undone.`
+    ));
+    if (!ok) return;
+    if (rows.length>1 && typeof writeExternalBackupNow==='function') {
+      try { await writeExternalBackupNow('vor Mehrfachlöschung im Bestandsabgleich'); } catch {}
+    }
+    if (typeof mdrStoreHorseUndoPoint==='function') await mdrStoreHorseUndoPoint({
+      label:irText(`${rows.length} Pferd${rows.length===1?'':'e'} wiederherstellen`,`${rows.length} horse${rows.length===1?'':'s'} restore`),
+      beforeRows:rows.map(r=>JSON.parse(JSON.stringify(r)))
+    });
+    for (const row of rows) await localDelete(LOCAL_STORES.horses,row.id);
+    await irRefreshStockAfterMutation(irText(`${rows.length} Pferd${rows.length===1?'':'e'} gelöscht.`,`${rows.length} horse${rows.length===1?'':'s'} deleted.`));
+  }
+  async function irBulkMoveLearningSelected() {
+    const ids=[...irStockSelectedIds];
+    if (!ids.length) return;
+    const before=[],updates=[];
+    for (const id of ids) {
+      const stored=await irGetLocalHorseById(id);
+      if (!stored) continue;
+      const updated={...stored};
+      const tags=Array.isArray(stored.tags) ? stored.tags.map(t=>(t && typeof t==='object')?{...t}:t) : [];
+      if (!tags.some(t=>irNorm(typeof t==='string'?t:t?.label)==='gbh')) tags.push({label:'GBH'});
+      updated.tags=tags;
+      updated.learning_file=true;
+      if (typeof mdrLearningFileForSave==='function') mdrLearningFileForSave(updated,stored);
+      updated.updated_at=new Date().toISOString();
+      updated.last_change_source='Bestandsabgleich: GBH/Lerndatei';
+      if (JSON.stringify(updated)===JSON.stringify(stored)) continue;
+      before.push(JSON.parse(JSON.stringify(stored)));
+      updates.push(updated);
+    }
+    if (!updates.length) return;
+    if (typeof mdrStoreHorseUndoPoint==='function') await mdrStoreHorseUndoPoint({
+      label:irText(`GBH/Lerndatei rückgängig (${updates.length} Pferde)`,`Undo GBH/learning file (${updates.length} horses)`),beforeRows:before
+    });
+    if (typeof localBulkPut==='function') await localBulkPut(LOCAL_STORES.horses,updates,100);
+    else for (const row of updates) await localPut(LOCAL_STORES.horses,row);
+    await irRefreshStockAfterMutation(irText(`${updates.length} Pferd${updates.length===1?'':'e'} auf GBH/Lerndatei gestellt.`,`${updates.length} horse${updates.length===1?'':'s'} moved to GBH/learning file.`));
+  }
+  async function irBulkUpdateOwnersSelected() {
+    const targets=irStockOwnerUpdateTargets();
+    if (!targets.length) return;
+    const before=[],updates=[];
+    for (const target of targets) {
+      const stored=await irGetLocalHorseById(target.id);
+      if (!stored) continue;
+      const updated={...stored};
+      if (irLearning(stored)) {
+        updated.learning_original_owner=target.owner;
+        updated.owner='Lerndatei';
+      } else {
+        updated.owner=target.owner;
+      }
+      updated.updated_at=new Date().toISOString();
+      updated.last_change_source='Bestandsabgleich: Besitzer aktualisiert';
+      if (JSON.stringify(updated)===JSON.stringify(stored)) continue;
+      before.push(JSON.parse(JSON.stringify(stored)));
+      updates.push(updated);
+    }
+    if (!updates.length) return;
+    if (typeof mdrStoreHorseUndoPoint==='function') await mdrStoreHorseUndoPoint({
+      label:irText(`Besitzeränderung rückgängig (${updates.length} Pferde)`,`Undo owner update (${updates.length} horses)`),beforeRows:before
+    });
+    if (typeof localBulkPut==='function') await localBulkPut(LOCAL_STORES.horses,updates,100);
+    else for (const row of updates) await localPut(LOCAL_STORES.horses,row);
+    await irRefreshStockAfterMutation(irText(`${updates.length} Besitzer aktualisiert.`,`${updates.length} owner value${updates.length===1?'':'s'} updated.`));
   }
 
 
@@ -723,27 +978,34 @@
 
   function irClubMatchRemote(remote, localHorses, server, kind) {
     const nameKey=remote?._nameKey || irNorm(remote?.name);
-    let candidates=(localHorses||[]).filter(h=>{
-      if (irLearning(h) || irNorm(h.name)!==nameKey) return false;
-      if (!irServerCompatible(h,{server})) return false;
-      const g=irClubGender(h);
-      if (kind==='stallions' && g && g!=='stallion') return false;
-      if (kind==='mares' && g && g!=='mare') return false;
-      return true;
-    });
-    if (!candidates.length) return {state:'missing',local:null,candidates:0};
-    if (remote?._ownerKey) {
-      const ownerMatches=candidates.filter(h=>irNorm(h.owner)===remote._ownerKey);
-      if (ownerMatches.length===1) return {state:'matched',local:ownerMatches[0],candidates:candidates.length};
-      if (ownerMatches.length>1) return {state:'ambiguous',local:null,candidates:ownerMatches.length};
+    const all=(localHorses||[]).filter(h=>irNorm(h.name)===nameKey);
+    // V54.0.92: Ein eindeutiger Name ist auch im ZG-/Deckstationsabgleich der
+    // primäre Beweis. Falsche/veraltete Spielwelt-, Geschlechts- oder
+    // Lerndatei-Metadaten dürfen einen real vorhandenen Hengst nicht zu
+    // „Fehlt in DB“ machen. Zusatzdaten lösen nur echte Namens-Dubletten auf.
+    if (!all.length) return {state:'missing',local:null,candidates:0};
+    if (all.length===1) return {state:'matched',local:all[0],candidates:1};
+
+    let candidates=all.slice();
+    const ps=String(server||'').toUpperCase();
+    if (ps==='DE' || ps==='EN') {
+      const exact=candidates.filter(h=>irHorseServer(h)===ps);
+      if (exact.length) candidates=exact;
     }
-    if (candidates.length===1) return {state:'matched',local:candidates[0],candidates:1};
-    return {state:'ambiguous',local:null,candidates:candidates.length};
+    if (kind==='stallions') candidates=irNarrowCandidates(candidates,h=>irClubGender(h)==='stallion');
+    if (kind==='mares') candidates=irNarrowCandidates(candidates,h=>irClubGender(h)==='mare');
+    if (remote?.breed) candidates=irNarrowCandidates(candidates,h=>irNorm(irClubBreed(h?.breed))===irNorm(irClubBreed(remote.breed)));
+    if (Number.isFinite(Number(remote?.gp))) candidates=irNarrowCandidates(candidates,h=>Number(irClubLocalGp(h))===Number(remote.gp));
+    if (remote?._ownerKey) candidates=irNarrowCandidates(candidates,h=>irNorm(irComparableOwner(h))===remote._ownerKey);
+
+    if (candidates.length===1) return {state:'matched',local:candidates[0],candidates:all.length};
+    return {state:'ambiguous',local:null,candidates:all.length};
   }
 
   function irClubRefreshItem(item) {
     const remote=item?.remote, local=item?.local;
-    item.ownerDiff=!!(remote && local && remote.owner && irNorm(remote.owner)!==irNorm(local.owner));
+    item.ownerDiff=!!(remote && local && remote.owner && irNorm(remote.owner)!==irNorm(irComparableOwner(local)));
+    item.learningStatus=!!(local && irLearning(local));
     item.breedDiff=!!(remote && local && remote.breed && irClubBreed(remote.breed) && irNorm(irClubBreed(remote.breed))!==irNorm(irClubBreed(local.breed)));
     const rgp=Number(remote?.gp), lgp=Number(irClubLocalGp(local));
     item.localGp=Number.isFinite(lgp) ? lgp : null;
@@ -858,7 +1120,7 @@
   function irClubCurrentDbOnlyItems(club, localHorses, currentStallions, snapshot=null) {
     if (club?.sourceType==='station' || !club?.stallionsComplete) return [];
 
-    // V54.0.91: Der aktuelle ZG-Abgleich ist absichtlich direkt. Für dieselbe
+    // V54.0.92: Der aktuelle ZG-Abgleich ist absichtlich direkt. Für dieselbe
     // Spielwelt und die in der aktuellen Hengstliste vertretenen Rassen gilt:
     // Steht ein DB-Hengst nicht in der eingelesenen Liste, wird er als
     // „nicht in aktueller ZG-Liste“ gezeigt. Zuchtzulassung und Besitzerstatus
@@ -873,7 +1135,7 @@
     const result=[];
 
     for (const h of (localHorses||[])) {
-      if (irLearning(h) || irClubGender(h)!=='stallion') continue;
+      if (irClubGender(h)!=='stallion') continue;
       if (!irServerCompatible(h,{server:club.server})) continue;
       if (!breeds.has(irNorm(irClubBreed(h.breed)))) continue;
 
@@ -887,10 +1149,10 @@
       ) || null;
 
       const remote={
-        name:String(h.name||'').trim(), owner:String(h.owner||'').trim(),
+        name:String(h.name||'').trim(), owner:String(irComparableOwner(h)||'').trim(),
         breed:String(h.breed||'').trim(), talent:'', gp:null, color:'',
         stud_fee:null, offspring_count:null, club_metric:null,
-        _nameKey:nameKey, _ownerKey:irNorm(h.owner), _sourceType:'club'
+        _nameKey:nameKey, _ownerKey:irNorm(irComparableOwner(h)), _sourceType:'club'
       };
       result.push(irClubRefreshItem({
         remote, local:h, matchState:'matched', candidates:1, kind:'stallions',
@@ -956,7 +1218,7 @@
     return [...(items||[])].sort((a,b)=>{
       const rank=irClubSortRank(a)-irClubSortRank(b);
       if (rank) return rank;
-      const owner=String(a.remote?.owner||a.local?.owner||'').localeCompare(String(b.remote?.owner||b.local?.owner||''),irLang()==='en'?'en':'de',{sensitivity:'base'});
+      const owner=String(a.remote?.owner||irComparableOwner(a.local)||'').localeCompare(String(b.remote?.owner||irComparableOwner(b.local)||''),irLang()==='en'?'en':'de',{sensitivity:'base'});
       if (owner) return owner;
       return String(a.remote?.name||a.local?.name||'').localeCompare(String(b.remote?.name||b.local?.name||''),irLang()==='en'?'en':'de',{sensitivity:'base'});
     });
@@ -1007,9 +1269,9 @@
     const availabilityCell=station
       ? `<td class="inventory-club-availability"><span class="inventory-availability ${availability.cls}">${irEsc(availability.label)}</span>${remote.station_note?`<br><span class="tiny muted">${irEsc(remote.station_note)}</span>`:''}${Number.isFinite(Number(remote.performance_test_points))?`<br><span class="tiny muted">HLP/SLP: ${Number(remote.performance_test_points)}</span>`:''}</td>`
       : '';
-    return `<tr data-club-status="${irEsc(status.key)}" data-club-owner="${irEsc(remote.owner||local?.owner||'')}" data-club-breed="${irEsc(remote.breed||local?.breed||'')}" data-club-availability="${irEsc(remote.station_availability||'')}">
+    return `<tr data-club-status="${irEsc(status.key)}" data-club-owner="${irEsc(remote.owner||irComparableOwner(local)||'')}" data-club-breed="${irEsc(remote.breed||local?.breed||'')}" data-club-availability="${irEsc(remote.station_availability||'')}">
       <td class="inventory-club-name-cell">${irClubCopyNameHtml(remote.name||local?.name||'–')}</td>
-      <td>${irEsc(remote.owner||'–')}${item.ownerDiff && local ? `<br><span class="tiny muted">DB: ${irEsc(local.owner||'–')}</span>`:''}</td>
+      <td>${irEsc(remote.owner||'–')}${item.ownerDiff && local ? `<br><span class="tiny muted">DB: ${irEsc(irComparableOwner(local)||'–')}</span>`:''}</td>
       <td>${irEsc(remote.breed||'–')}</td>
       <td class="inventory-club-number">${rgp??'–'}${local ? `<br><span class="tiny ${item.gpDiff?'inventory-diff':''}">DB: ${lgp??'–'}</span>`:''}</td>
       <td class="inventory-club-fee">${remoteFee}</td>
@@ -1046,7 +1308,7 @@
       const quality=irClubDataQuality(item);
       const remoteAvailability=item.remote?.station_availability || 'external';
       if (search && !irNorm(`${item.remote?.name||''} ${item.remote?.owner||''} ${item.remote?.breed||''}`).includes(search)) return false;
-      if (owner && irNorm(item.remote?.owner||item.local?.owner||'')!==owner) return false;
+      if (owner && irNorm(item.remote?.owner||irComparableOwner(item.local)||'')!==owner) return false;
       if (breed && irNorm(item.remote?.breed||item.local?.breed||'')!==breed) return false;
       if (availability!=='all' && remoteAvailability!==availability) return false;
       if (status==='fee' && !item.feeDiff) return false;
@@ -1090,7 +1352,7 @@
     const missing=currentStallions.filter(x=>x.matchState==='missing').length;
     const ambiguous=currentStallions.filter(x=>x.matchState==='ambiguous').length;
     const feeDiff=currentStallions.filter(x=>x.feeDiff).length;
-    const owners=[...new Set(stallionItems.map(x=>x.remote?.owner||x.local?.owner||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+    const owners=[...new Set(stallionItems.map(x=>x.remote?.owner||irComparableOwner(x.local)||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
     const breeds=[...new Set(stallionItems.map(x=>x.remote?.breed||x.local?.breed||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
 
     const snapshotNotice=!hadPrevious
@@ -1291,17 +1553,20 @@
     if (clubResults) clubResults.innerHTML='';
     if (clubStatus) clubStatus.textContent='';
     irClubLast=null;
+    irStockSelectedIds.clear();
+    irLastStockResult=null;
     irSelectTab('stock');
     modal.hidden=false;
   }
   function irClose() { const m=document.getElementById('inventory-reconcile-modal'); if (m) m.hidden=true; }
-  async function irRun() {
+  async function irRun(options={}) {
     const status=document.getElementById('inventory-reconcile-status');
     const raw=document.getElementById('inventory-reconcile-text')?.value || '';
     const selected=new Set([...document.querySelectorAll('#inventory-owner-options input:checked')].map(cb=>irNorm(cb.value)));
     if (!selected.size) { if(status)status.textContent=irText('Bitte mindestens einen Besitzer auswählen.','Please select at least one owner.'); return; }
     if (!raw.trim()) { if(status)status.textContent=irText('Bitte mindestens eine MDR-Profilseite einfügen.','Please paste at least one MDR profile page.'); return; }
     const profiles=irParseProfiles(raw);
+    if (!options.fromMutation) irStockSelectedIds.clear();
     const result=irCompare(irHorses,profiles,selected);
     let serverAssignments=0;
     try {
@@ -1371,6 +1636,36 @@
       }
       const btn=event.target.closest('[data-club-fee-apply]');
       if (btn) irClubApplyFeeByLocalId(btn.dataset.clubFeeApply).catch(err=>alert(err.message));
+    });
+    document.getElementById('inventory-results')?.addEventListener('change',event=>{
+      const master=event.target.closest('[data-inventory-select-group]');
+      if (master) {
+        const type=master.dataset.inventorySelectGroup;
+        document.querySelectorAll(`#inventory-results [data-inventory-select-type=\"${CSS.escape(type)}\"]`).forEach(cb=>{
+          cb.checked=master.checked;
+          const id=String(cb.dataset.inventorySelect);
+          if (master.checked) irStockSelectedIds.add(id); else irStockSelectedIds.delete(id);
+        });
+        irUpdateStockBulkBar();
+        return;
+      }
+      const cb=event.target.closest('[data-inventory-select]');
+      if (!cb) return;
+      const id=String(cb.dataset.inventorySelect);
+      if (cb.checked) irStockSelectedIds.add(id); else irStockSelectedIds.delete(id);
+      irUpdateStockBulkBar();
+    });
+    document.getElementById('inventory-results')?.addEventListener('click',event=>{
+      const btn=event.target.closest('[data-inventory-bulk]');
+      if (!btn) return;
+      const action=btn.dataset.inventoryBulk;
+      if (action==='clear') { irStockSelectedIds.clear(); irUpdateStockBulkBar(); return; }
+      btn.disabled=true;
+      const task=action==='delete' ? irBulkDeleteSelected()
+        : action==='learning' ? irBulkMoveLearningSelected()
+        : action==='owner' ? irBulkUpdateOwnersSelected()
+        : Promise.resolve();
+      Promise.resolve(task).catch(err=>alert(err?.message||err)).finally(()=>{ if (document.body.contains(btn)) { btn.disabled=false; irUpdateStockBulkBar(); } });
     });
     document.getElementById('inventory-reconcile-modal')?.addEventListener('click',e=>{if(e.target?.id==='inventory-reconcile-modal')irClose();});
   }

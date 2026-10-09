@@ -67,7 +67,7 @@ function loadInventoryReconcileModule() {
   if (inventoryReconcileModulePromise) return inventoryReconcileModulePromise;
   inventoryReconcileModulePromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = 'js/inventory-reconcile.js?v=5488';
+    script.src = 'js/inventory-reconcile.js?v=5492';
     script.async = true;
     script.addEventListener('load', () => resolve(window.MDR_INVENTORY_RECONCILE), { once:true });
     script.addEventListener('error', () => {

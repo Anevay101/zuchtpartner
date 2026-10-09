@@ -7987,3 +7987,18 @@ button.keep-foal-no.active {
 
 /* V54.0.91 – aktueller ZG-Listenstatus */
 .inventory-status.neutral{background:color-mix(in srgb,var(--surface-2,#eef1ed) 78%,transparent);border-color:var(--border,#bbb);color:var(--text,#263229)}
+
+/* V54.0.92 – Bestandsabgleich: Auswahl und Mehrfachaktionen */
+.inventory-result-table{min-width:780px}
+.inventory-result-table tbody td{vertical-align:middle}
+.inventory-stock-name-cell{font-weight:700;user-select:text!important;cursor:text;overflow-wrap:anywhere}
+.inventory-select-head,.inventory-select-cell{width:82px;text-align:center;white-space:nowrap}
+.inventory-row-select{display:inline-flex;align-items:center;justify-content:center;min-width:2rem;min-height:2rem;cursor:pointer}
+.inventory-row-select input,.inventory-select-all input{width:1.05rem;height:1.05rem;margin:0;accent-color:var(--accent,#557b5c)}
+.inventory-select-all{display:inline-flex;align-items:center;gap:.3rem;font-size:.78rem;font-weight:700;cursor:pointer}
+.inventory-stock-warning{color:#8a6500;font-weight:650}
+.inventory-bulk-actions{position:sticky;bottom:.45rem;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:.8rem;flex-wrap:wrap;margin:.75rem 0;padding:.65rem .75rem;border:1px solid color-mix(in srgb,var(--accent,#557b5c) 38%,var(--border,#bbb));border-radius:.75rem;background:color-mix(in srgb,var(--card-bg,#fff) 94%,var(--surface-soft,#eef3ec));box-shadow:0 5px 18px rgba(30,45,34,.10)}
+.inventory-bulk-actions[hidden]{display:none!important}
+.inventory-bulk-buttons{display:flex;align-items:center;justify-content:flex-end;gap:.4rem;flex-wrap:wrap}
+.inventory-bulk-buttons button{white-space:nowrap}
+@media (max-width:700px){.inventory-bulk-actions{align-items:stretch}.inventory-bulk-buttons{justify-content:flex-start}.inventory-bulk-buttons button{flex:1 1 auto}}

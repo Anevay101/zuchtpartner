@@ -1,8 +1,0 @@
-MDR-Datenbank V54.0.91 – Release Check
-
-- 41/41 JavaScript-Dateien: Syntax OK (node --check).
-- Aktuelle INT/EN-ZG-Seite erkannt: First Class Thoroughbreds, 51 Hengste, 150 Stuten, vollständige Hengsttabelle.
-- Aktuelle DE-ZG-Seite erkannt: APH-Züchter, 119 Hengste, 230 Stuten, vollständige Hengsttabelle.
-- Regressionstest aktueller ZG-Listenstatus: Rentner ohne Zuchtzulassung und Hengst eines Nichtmitglied-Besitzers werden als DB-only erkannt; falsche Rasse/Spielwelt nicht.
-- Aktuell gelistete Hengste werden nicht fälschlich als DB-only markiert.
-- Cache-Buster: v=5491.

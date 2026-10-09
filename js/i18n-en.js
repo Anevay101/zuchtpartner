@@ -847,7 +847,7 @@
     'Besitzer einbeziehen':'Include owners',
     'MDR-Profilseite(n)':'MDR profile page(s)',
     'Vollständige Profilseite hier einfügen …':'Paste complete profile page here …',
-    'Der Abgleich erfolgt ausschließlich über den Pferdenamen. Partnerprofile werden am eigentlichen Profilblock („Dabei seit“ / „Member since“) erkannt; „Willkommen/Welcome“ bezeichnet nur den eingeloggten Account. Mehrdeutige Namen werden nicht geraten. „Nicht mehr im MDR-Bestand“ wird nur für vollständig erkannte Spielwelten berechnet.':'Matching uses the horse name only. Partner profiles are identified from the actual profile block (“Dabei seit” / “Member since”); “Willkommen/Welcome” only identifies the logged-in account. Ambiguous names are never guessed. “No longer in MDR stock” is only calculated for fully parsed game worlds.',
+    'Ein eindeutiger Pferdename gilt als Treffer. Spielwelt, Geschlecht, Rasse, GP/OP und Besitzer dienen bei Namens-Dubletten zur Zuordnung bzw. werden als Hinweis angezeigt. Partnerprofile werden am eigentlichen Profilblock („Dabei seit“ / „Member since“) erkannt. Nach dem Abgleich können vorhandene DB-Pferde per Kästchen gesammelt gelöscht, auf GBH/Lerndatei gestellt oder bei Besitzerabweichung aktualisiert werden.':'A unique horse name counts as a match. Game world, sex, breed, OP and owner are used to resolve duplicate names or shown as plausibility hints. Partner profiles are identified from the actual profile block (“Dabei seit” / “Member since”). After the comparison, existing database horses can be selected in bulk to delete them, move them to GBH/learning file, or update the owner when it differs.',
     'Bestand abgleichen':'Compare stock',
     'Eigene Pferde':'Own horses',
     'Zuchtgemeinschaft':'Breeding club',
