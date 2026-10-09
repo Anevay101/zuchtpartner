@@ -1,0 +1,16 @@
+MDR-Datenbank V54.0.94
+
+Bestandsabgleich – Begabungsfilter Deckstation und kompakter Züchterpicker
+
+- Deckstation: neuer Begabungsfilter mit echter Mehrfachauswahl.
+- Der Begabungsfilter wirkt gleichzeitig auf alle drei Deckstations-Ergebnislisten.
+- Alle erkannten Begabungen sind standardmäßig aktiv; einzelne Begabungen lassen sich per Klick ein-/ausblenden.
+- Schnellaktionen „Alle“ und „Keine“ im Begabungsfilter.
+- Bei DB-Hengsten, die aktuell nicht in der Deckstation stehen, wird die Begabung aus dem lokalen Pferdedatensatz verwendet.
+- Die Begabung wird in der Deckstation zusätzlich kompakt unter der Rasse angezeigt.
+- „Weitere Züchter“ im Eigene-Pferde-Abgleich sind jetzt eine scrollbare Klickliste ohne sichtbare Checkboxen.
+- Klick auf einen weiteren Züchter aktiviert/deaktiviert ihn; aktive Einträge werden deutlich hervorgehoben.
+- „Aktive auswählen“, „Alle auswählen“ und „Alle abwählen“ funktionieren weiterhin über beide Züchtergruppen hinweg.
+- Bestehende drei Reiter, name-first Matching, Mehrfachaktionen und DE/EN-Unterstützung bleiben erhalten.
+
+Technische Version: 54.0.94 / Cache-Buster 5494

@@ -1,4 +1,4 @@
-/* MDR V54.0.93 – Bestandsabgleich mit drei Fach-Reitern.
+/* MDR V54.0.94 – Bestandsabgleich mit drei Fach-Reitern.
    Eigene Pferde, Zuchtgemeinschaft und Deckstation werden getrennt dargestellt,
    teilen sich aber denselben name-first Matching-Kern. ZG/Deckstation zeigen
    aktuelle Treffer, passende DB-only Hengste und externe Listen-Hengste ohne
@@ -405,6 +405,35 @@
       || (horses || []).find(h=>irNorm(irComparableOwner(h))===ownerKey)?.owner
       || ownerKey;
   }
+  function irOwnerChoiceElements() {
+    return [...document.querySelectorAll('#inventory-owner-options [data-owner-choice]')];
+  }
+  function irOwnerChoiceValue(el) {
+    return String(el?.dataset?.ownerValue || el?.value || '').trim();
+  }
+  function irOwnerChoiceSelected(el) {
+    if (!el) return false;
+    if (el.matches('input[type="checkbox"]')) return !!el.checked;
+    return el.getAttribute('aria-pressed')==='true';
+  }
+  function irSetOwnerChoice(el, selected) {
+    if (!el) return;
+    const on=!!selected;
+    if (el.matches('input[type="checkbox"]')) el.checked=on;
+    else {
+      el.setAttribute('aria-pressed',on?'true':'false');
+      el.classList.toggle('selected',on);
+    }
+  }
+  function irSelectedOwnerKeys() {
+    return new Set(irOwnerChoiceElements().filter(irOwnerChoiceSelected).map(el=>irNorm(irOwnerChoiceValue(el))).filter(Boolean));
+  }
+  function irSetOwnerSelection(mode) {
+    for (const el of irOwnerChoiceElements()) {
+      const group=el.dataset.ownerGroup || '';
+      irSetOwnerChoice(el, mode==='all' || (mode==='active' && group==='active'));
+    }
+  }
   function irRenderOwners(horses) {
     const root=document.getElementById('inventory-owner-options');
     if (!root) return;
@@ -413,13 +442,14 @@
     const activeSet=configured==null ? new Set(owners) : new Set(configured.map(v=>String(v||'').trim()).filter(Boolean));
     const active=owners.filter(owner=>activeSet.has(owner));
     const other=owners.filter(owner=>!activeSet.has(owner));
-    const chips=list=>list.map(owner=>`<label class="inventory-owner-chip"><input type="checkbox" value="${irEsc(owner)}"><span>${irEsc(owner)}</span></label>`).join('');
+    const activeChips=active.map(owner=>`<label class="inventory-owner-chip"><input type="checkbox" data-owner-choice data-owner-group="active" data-owner-value="${irEsc(owner)}" value="${irEsc(owner)}"><span>${irEsc(owner)}</span></label>`).join('');
+    const otherRows=other.map(owner=>`<button type="button" class="inventory-owner-list-item" data-owner-choice data-owner-group="other" data-owner-value="${irEsc(owner)}" aria-pressed="false"><span>${irEsc(owner)}</span><span class="inventory-owner-list-check" aria-hidden="true">✓</span></button>`).join('');
     root.innerHTML=`
       <div class="inventory-owner-section">
         <div class="inventory-owner-section-title">${irText('Aktive Züchter','Active breeders')} <span class="muted">· ${active.length}</span></div>
-        <div class="inventory-owner-chip-grid">${chips(active) || `<span class="tiny muted">${irText('Keine aktiven Züchter konfiguriert.','No active breeders configured.')}</span>`}</div>
+        <div class="inventory-owner-chip-grid">${activeChips || `<span class="tiny muted">${irText('Keine aktiven Züchter konfiguriert.','No active breeders configured.')}</span>`}</div>
       </div>
-      ${other.length ? `<details class="inventory-owner-more"><summary>${irText('Weitere Züchter','Other breeders')} · ${other.length}</summary><div class="inventory-owner-chip-grid">${chips(other)}</div></details>` : ''}`;
+      ${other.length ? `<details class="inventory-owner-more"><summary>${irText('Weitere Züchter','Other breeders')} · ${other.length}</summary><div class="inventory-owner-scroll-list" role="listbox" aria-multiselectable="true" aria-label="${irText('Weitere Züchter auswählen','Select other breeders')}">${otherRows}</div></details>` : ''}`;
   }
 
   let irStockSelectedIds=new Set();
@@ -1219,7 +1249,7 @@
 
   function irClubSortRank(item) {
     const status=irClubStatus(item);
-    // Die fachlichen Zustände stehen in V54.0.93 in getrennten Listen. Innerhalb
+    // Die fachlichen Zustände stehen in V54.0.94 in getrennten Listen. Innerhalb
     // einer Liste priorisieren wir vorhandene DB-Datensätze nach Datenqualität;
     // echte fehlende/mehrdeutige Treffer bleiben am Ende ihrer jeweiligen Liste.
     if (status.key==='missing') return 900;
@@ -1290,7 +1320,7 @@
     return `<tr data-club-status="${irEsc(status.key)}" data-club-owner="${irEsc(remote.owner||irComparableOwner(local)||'')}" data-club-breed="${irEsc(remote.breed||local?.breed||'')}" data-club-availability="${irEsc(remote.station_availability||'')}">
       <td class="inventory-club-name-cell">${irClubCopyNameHtml(remote.name||local?.name||'–')}</td>
       <td>${irEsc(remote.owner||'–')}${item.ownerDiff && local ? `<br><span class="tiny muted">DB: ${irEsc(irComparableOwner(local)||'–')}</span>`:''}</td>
-      <td>${irEsc(remote.breed||'–')}</td>
+      <td>${irEsc(remote.breed||local?.breed||'–')}${station && irBreedingTalent(item)?`<br><span class="tiny muted">${irText('Begabung','Talent')}: ${irEsc(irBreedingTalent(item))}</span>`:''}</td>
       <td class="inventory-club-number">${rgp??'–'}${local ? `<br><span class="tiny ${item.gpDiff?'inventory-diff':''}">DB: ${lgp??'–'}</span>`:''}</td>
       <td class="inventory-club-fee">${remoteFee}</td>
       <td class="inventory-club-fee ${item.feeDiff?'inventory-diff':''}">${localFee}</td>
@@ -1323,6 +1353,61 @@
     return sourceType==='station' ? irStationLast : irClubLast;
   }
 
+  function irBreedingTalent(item) {
+    const remote=String(item?.remote?.talent || '').trim();
+    if (remote) return remote;
+    return String(irClubLocalTalent(item?.local) || '').trim();
+  }
+
+  function irStationTalentButtons() {
+    return [...document.querySelectorAll('#station-filter-talent-list [data-station-talent]')];
+  }
+
+  function irStationSelectedTalents() {
+    const buttons=irStationTalentButtons();
+    if (!buttons.length) return null;
+    const selected=buttons.filter(btn=>btn.getAttribute('aria-pressed')==='true');
+    // Alle ausgewählt = kein aktiver Filter. So bleiben auch DB-Hengste ohne
+    // erkennbare Begabung sichtbar, solange der Nutzer den Filter nicht einschränkt.
+    if (selected.length===buttons.length) return null;
+    return new Set(selected.map(btn=>irNorm(btn.dataset.stationTalent)).filter(Boolean));
+  }
+
+  function irUpdateStationTalentSummary() {
+    const buttons=irStationTalentButtons();
+    const summary=document.getElementById('station-filter-talent-summary');
+    if (!summary || !buttons.length) return;
+    const selected=buttons.filter(btn=>btn.getAttribute('aria-pressed')==='true').length;
+    if (selected===buttons.length) summary.textContent=irText(`Alle (${buttons.length})`,`All (${buttons.length})`);
+    else if (selected===0) summary.textContent=irText('Keine ausgewählt','None selected');
+    else summary.textContent=irText(`${selected} von ${buttons.length}`,`${selected} of ${buttons.length}`);
+  }
+
+  function irSetStationTalentSelection(mode) {
+    for (const btn of irStationTalentButtons()) {
+      const on=mode==='all';
+      btn.setAttribute('aria-pressed',on?'true':'false');
+      btn.classList.toggle('selected',on);
+    }
+    irUpdateStationTalentSummary();
+    irBreedingRenderBodies('station');
+  }
+
+  function irStationTalentFilterHtml(talents) {
+    if (!talents?.length) return '';
+    const rows=talents.map(talent=>`<button type="button" class="inventory-talent-option selected" data-station-talent="${irEsc(talent)}" aria-pressed="true"><span>${irEsc(talent)}</span><span class="inventory-talent-check" aria-hidden="true">✓</span></button>`).join('');
+    return `<div class="inventory-filter-field inventory-talent-filter">
+      <span class="inventory-filter-label">${irText('Begabung','Talent')}</span>
+      <details class="inventory-multiselect" id="station-filter-talent">
+        <summary id="station-filter-talent-summary">${irText(`Alle (${talents.length})`,`All (${talents.length})`)}</summary>
+        <div class="inventory-multiselect-panel">
+          <div class="inventory-multiselect-actions"><button type="button" class="link-button" data-station-talent-action="all">${irText('Alle','All')}</button><span>·</span><button type="button" class="link-button" data-station-talent-action="none">${irText('Keine','None')}</button></div>
+          <div id="station-filter-talent-list" class="inventory-talent-list" role="listbox" aria-multiselectable="true">${rows}</div>
+        </div>
+      </details>
+    </div>`;
+  }
+
   function irBreedingFilteredItems(sourceType, items) {
     const prefix=irBreedingPrefix(sourceType);
     const search=irNorm(document.getElementById(`${prefix}-filter-search`)?.value || '');
@@ -1330,14 +1415,17 @@
     const breed=irNorm(document.getElementById(`${prefix}-filter-breed`)?.value || '');
     const dataState=document.getElementById(`${prefix}-filter-data`)?.value || 'all';
     const availability=document.getElementById(`${prefix}-filter-availability`)?.value || 'all';
+    const selectedTalents=sourceType==='station' ? irStationSelectedTalents() : null;
     return irClubSortStallions((items||[]).filter(item=>{
       const status=irClubStatus(item).key;
       const quality=irClubDataQuality(item);
       const remoteAvailability=item.isCurrentUnlisted ? 'not_offered' : (item.remote?.station_availability || 'external');
-      const haystack=irNorm(`${item.remote?.name||item.local?.name||''} ${item.remote?.owner||irComparableOwner(item.local)||''} ${item.remote?.breed||item.local?.breed||''}`);
+      const talent=irBreedingTalent(item);
+      const haystack=irNorm(`${item.remote?.name||item.local?.name||''} ${item.remote?.owner||irComparableOwner(item.local)||''} ${item.remote?.breed||item.local?.breed||''} ${talent}`);
       if (search && !haystack.includes(search)) return false;
       if (owner && irNorm(item.remote?.owner||irComparableOwner(item.local)||'')!==owner) return false;
       if (breed && irNorm(item.remote?.breed||item.local?.breed||'')!==breed) return false;
+      if (sourceType==='station' && selectedTalents && !selectedTalents.has(irNorm(talent))) return false;
       if (sourceType==='station' && availability!=='all' && remoteAvailability!==availability) return false;
       if (dataState==='complete' && (!item.local || quality.level!=='green')) return false;
       if (dataState==='incomplete' && (!item.local || quality.level==='green')) return false;
@@ -1417,6 +1505,9 @@
     const ambiguous=currentStallions.filter(x=>x.matchState==='ambiguous').length;
     const owners=[...new Set(state.stallionItems.map(x=>x.remote?.owner||irComparableOwner(x.local)||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
     const breeds=[...new Set(state.stallionItems.map(x=>x.remote?.breed||x.local?.breed||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+    const talents=sourceType==='station'
+      ? [...new Set(state.stallionItems.map(irBreedingTalent).filter(Boolean))].sort((a,b)=>a.localeCompare(b,irLang()==='en'?'en':'de'))
+      : [];
     const historyCount=currentDbOnly.filter(x=>x.wasPreviouslyListed).length;
 
     const wrongSourceText=sourceType==='station'
@@ -1440,6 +1531,7 @@
       <option value="not_external">${irText('Nicht extern','Not external')}</option>
       <option value="overview">${irText('Nur Übersicht','Overview only')}</option>
     </select></label>` : '';
+    const talentFilter=sourceType==='station' ? irStationTalentFilterHtml(talents) : '';
 
     const title=club.name || (sourceType==='station'?irText('Deckstation','Stud station'):irText('Zuchtgemeinschaft','Breeding club'));
     const card1Label=sourceType==='station'?irText('aktuell in Deckstation','currently in station'):irText('aktuell in ZG','currently in club');
@@ -1489,6 +1581,7 @@
           <option value="diff">${irText('Nur Abweichungen','Differences only')}</option>
           <option value="fee">${irText('Decktaxe abweichend','Stud fee differs')}</option>
         </select></label>
+        ${talentFilter}
         ${availabilityFilter}
         <span id="${prefix}-filter-count" class="small muted"></span>
       </div>
@@ -1512,6 +1605,19 @@
     for (const id of [`${prefix}-filter-search`,`${prefix}-filter-owner`,`${prefix}-filter-breed`,`${prefix}-filter-data`,`${prefix}-filter-availability`]) {
       const el=document.getElementById(id);
       if (el) el.addEventListener(id.endsWith('search')?'input':'change',()=>irBreedingRenderBodies(sourceType));
+    }
+    if (sourceType==='station') {
+      document.getElementById('station-filter-talent-list')?.addEventListener('click',event=>{
+        const btn=event.target.closest('[data-station-talent]');
+        if (!btn) return;
+        const on=btn.getAttribute('aria-pressed')!=='true';
+        btn.setAttribute('aria-pressed',on?'true':'false');
+        btn.classList.toggle('selected',on);
+        irUpdateStationTalentSummary();
+        irBreedingRenderBodies('station');
+      });
+      document.querySelectorAll('[data-station-talent-action]').forEach(btn=>btn.addEventListener('click',()=>irSetStationTalentSelection(btn.dataset.stationTalentAction==='all'?'all':'none')));
+      irUpdateStationTalentSummary();
     }
     document.getElementById(`${prefix}-apply-all-fees`)?.addEventListener('click',()=>irClubApplyAllFees(sourceType).catch(err=>alert(err.message)));
   }
@@ -1678,7 +1784,7 @@
   async function irRun(options={}) {
     const status=document.getElementById('inventory-reconcile-status');
     const raw=document.getElementById('inventory-reconcile-text')?.value || '';
-    const selected=new Set([...document.querySelectorAll('#inventory-owner-options input:checked')].map(cb=>irNorm(cb.value)));
+    const selected=irSelectedOwnerKeys();
     if (!selected.size) { if(status)status.textContent=irText('Bitte mindestens einen Besitzer auswählen.','Please select at least one owner.'); return; }
     if (!raw.trim()) { if(status)status.textContent=irText('Bitte mindestens eine MDR-Profilseite einfügen.','Please paste at least one MDR profile page.'); return; }
     const profiles=irParseProfiles(raw);
@@ -1748,12 +1854,14 @@
       if (status) status.textContent=irText(`Deckstationsabgleich fehlgeschlagen: ${err?.message||err}`,`Stud-station comparison failed: ${err?.message||err}`);
     }));
     document.querySelectorAll('.inventory-reconcile-tab').forEach(btn=>btn.addEventListener('click',()=>irSelectTab(btn.dataset.irTab)));
-    document.getElementById('inventory-owner-active')?.addEventListener('click',()=>{
-      document.querySelectorAll('#inventory-owner-options input').forEach(cb=>{cb.checked=false;});
-      document.querySelectorAll('#inventory-owner-options .inventory-owner-section input').forEach(cb=>{cb.checked=true;});
+    document.getElementById('inventory-owner-active')?.addEventListener('click',()=>irSetOwnerSelection('active'));
+    document.getElementById('inventory-owner-all')?.addEventListener('click',()=>irSetOwnerSelection('all'));
+    document.getElementById('inventory-owner-none')?.addEventListener('click',()=>irSetOwnerSelection('none'));
+    document.getElementById('inventory-owner-options')?.addEventListener('click',event=>{
+      const btn=event.target.closest('.inventory-owner-list-item[data-owner-choice]');
+      if (!btn) return;
+      irSetOwnerChoice(btn,!irOwnerChoiceSelected(btn));
     });
-    document.getElementById('inventory-owner-all')?.addEventListener('click',()=>document.querySelectorAll('#inventory-owner-options input').forEach(cb=>{cb.checked=true;}));
-    document.getElementById('inventory-owner-none')?.addEventListener('click',()=>document.querySelectorAll('#inventory-owner-options input').forEach(cb=>{cb.checked=false;}));
 
     for (const sourceType of ['club','station']) {
       document.getElementById(`${irBreedingPrefix(sourceType)}-results`)?.addEventListener('click',event=>{

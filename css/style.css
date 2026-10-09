@@ -8003,7 +8003,7 @@ button.keep-foal-no.active {
 .inventory-bulk-buttons button{white-space:nowrap}
 @media (max-width:700px){.inventory-bulk-actions{align-items:stretch}.inventory-bulk-buttons{justify-content:flex-start}.inventory-bulk-buttons button{flex:1 1 auto}}
 
-/* V54.0.93 – Bestandsabgleich: drei Fach-Reiter, getrennte Ergebnislisten, Züchtergruppen */
+/* V54.0.94 – Bestandsabgleich: drei Fach-Reiter, getrennte Ergebnislisten, Züchtergruppen */
 .inventory-owner-options{display:block;max-height:260px;overflow:auto;padding:.2rem .1rem .35rem}
 .inventory-owner-section-title{display:flex;align-items:center;gap:.3rem;margin:.15rem 0 .45rem;font-size:.86rem;font-weight:800;color:var(--text,#263229)}
 .inventory-owner-chip-grid{display:flex;flex-wrap:wrap;gap:.42rem}
@@ -8019,3 +8019,105 @@ button.keep-foal-no.active {
 @media (max-width:900px){.inventory-reconcile-tabs{gap:.35rem}.inventory-reconcile-tab{flex:1 1 auto}}
 @media (max-width:560px){.inventory-breeding-section>summary{align-items:flex-start}.inventory-club-filters [id$="-filter-count"]{grid-column:1}}
 .inventory-owner-head>span{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.25rem .35rem}
+
+/* V54.0.94 – Bestandsabgleich: Deckstations-Begabungsfilter + kompakte weitere Züchter */
+.inventory-owner-scroll-list{
+  display:flex;
+  flex-direction:column;
+  gap:.24rem;
+  max-height:190px;
+  overflow-y:auto;
+  padding:.18rem .22rem .18rem .08rem;
+  scrollbar-gutter:stable;
+}
+.inventory-owner-list-item,
+.inventory-talent-option{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.65rem;
+  width:100%;
+  min-height:34px;
+  padding:.38rem .58rem;
+  border:1px solid var(--border,#d1dbd2) !important;
+  border-radius:8px !important;
+  background:#fff !important;
+  color:var(--text,#263229) !important;
+  box-shadow:none !important;
+  font:inherit;
+  font-size:.84rem;
+  font-weight:600;
+  text-align:left;
+  cursor:pointer;
+}
+.inventory-owner-list-item:hover,
+.inventory-talent-option:hover{
+  background:var(--surface-soft,#eef3ec) !important;
+  border-color:color-mix(in srgb,var(--accent,#557b5c) 45%,var(--border,#d1dbd2)) !important;
+}
+.inventory-owner-list-item.selected,
+.inventory-owner-list-item[aria-pressed="true"],
+.inventory-talent-option.selected,
+.inventory-talent-option[aria-pressed="true"]{
+  background:color-mix(in srgb,var(--accent,#557b5c) 13%,#fff) !important;
+  border-color:color-mix(in srgb,var(--accent,#557b5c) 62%,var(--border,#d1dbd2)) !important;
+  color:color-mix(in srgb,var(--accent,#557b5c) 82%,#172219) !important;
+  font-weight:750;
+}
+.inventory-owner-list-check,
+.inventory-talent-check{
+  opacity:0;
+  flex:0 0 auto;
+  font-weight:900;
+}
+.inventory-owner-list-item.selected .inventory-owner-list-check,
+.inventory-owner-list-item[aria-pressed="true"] .inventory-owner-list-check,
+.inventory-talent-option.selected .inventory-talent-check,
+.inventory-talent-option[aria-pressed="true"] .inventory-talent-check{opacity:1}
+
+.inventory-club-filters.has-availability{grid-template-columns:repeat(6,minmax(0,1fr))}
+.inventory-filter-field{display:flex;flex-direction:column;gap:.25rem;font-size:.86rem;font-weight:700;min-width:0}
+.inventory-filter-label{display:block}
+.inventory-multiselect{position:relative;min-width:0}
+.inventory-multiselect>summary{
+  list-style:none;
+  min-height:38px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.5rem;
+  padding:.5rem .65rem;
+  border:1px solid var(--ui-border-strong,#aebcaf);
+  border-radius:var(--radius-control,8px);
+  background:#fff;
+  color:#203024;
+  cursor:pointer;
+  font-weight:600;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.inventory-multiselect>summary::-webkit-details-marker{display:none}
+.inventory-multiselect>summary::after{content:'▾';font-size:.78rem;flex:0 0 auto;color:var(--text-muted,#66736a)}
+.inventory-multiselect[open]>summary::after{content:'▴'}
+.inventory-multiselect-panel{
+  position:absolute;
+  z-index:30;
+  top:calc(100% + .28rem);
+  left:0;
+  min-width:210px;
+  width:max-content;
+  max-width:min(320px,80vw);
+  padding:.5rem;
+  border:1px solid var(--border,#d1dbd2);
+  border-radius:10px;
+  background:var(--card-bg,#fff);
+  box-shadow:0 10px 25px rgba(30,45,34,.14);
+}
+.inventory-multiselect-actions{display:flex;align-items:center;gap:.35rem;margin:0 .15rem .4rem;font-size:.78rem;font-weight:600}
+.inventory-talent-list{display:flex;flex-direction:column;gap:.24rem;max-height:190px;overflow-y:auto;min-width:190px;padding-right:.12rem;scrollbar-gutter:stable}
+.inventory-station-table td:nth-child(3) .tiny{white-space:nowrap}
+@media (max-width:1180px){.inventory-club-filters.has-availability{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:760px){.inventory-club-filters.has-availability{grid-template-columns:1fr 1fr}.inventory-multiselect-panel{width:100%;min-width:100%}}
+@media (max-width:560px){.inventory-club-filters.has-availability{grid-template-columns:1fr}}
+.inventory-owner-options{max-height:none;overflow:visible}

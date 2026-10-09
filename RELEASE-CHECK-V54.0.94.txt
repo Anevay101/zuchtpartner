@@ -1,0 +1,10 @@
+MDR V54.0.94 Release Check
+
+- Bestandsabgleich: 3 Reiter unverändert
+- Deckstation: Begabung/Talent als Mehrfachfilter
+- Filter bezieht aktuelle Deckstationshengste, DB-only Hengste und fehlende DB-Hengste ein
+- DB-only Begabung stammt aus dem lokalen Pferdedatensatz
+- Weitere Züchter: scrollbare Klickliste ohne sichtbare Checkboxen
+- Schnellaktionen für Züchterauswahl weiterhin vorhanden
+- DE/EN Parser unverändert unterstützt
+- Cache-Buster: 5494

@@ -1,9 +1,0 @@
-MDR V54.0.93 Release Check
-
-- 3 Bestandsabgleich-Reiter: Eigene Pferde / Zuchtgemeinschaft / Deckstation
-- ZG: 3 getrennte Hengstlisten
-- Deckstation: 3 getrennte Hengstlisten + direkte DB-nicht-angeboten-Prüfung
-- Besitzerpicker: aktive Züchter + einklappbare weitere Züchter
-- Namens-Matching V54.0.92 unverändert name-first
-- DE/EN Parser weiterhin unterstützt
-- Cache-Buster: 5493
