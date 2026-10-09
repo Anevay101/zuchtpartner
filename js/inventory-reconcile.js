@@ -1,4 +1,4 @@
-/* MDR V54.0.90 – Bestands-, Zuchtgemeinschafts- und Deckstationsabgleich aus kopierten MDR-Seiten.
+/* MDR V54.0.91 – Bestands-, Zuchtgemeinschafts- und Deckstationsabgleich aus kopierten MDR-Seiten.
    Abgleich ausschließlich über normalisierte Pferdenamen. Keine automatische
    Löschung oder Besitzeränderung. Der Vergleich arbeitet nur auf dem bereits
    synchronisierten lokalen Pferdebestand.
@@ -855,42 +855,52 @@
     return out;
   }
 
-  function irClubUnlistedDbCandidates(club, localHorses, removedItems=[]) {
-    if (club?.sourceType==='station') return [];
-    // Beim allerersten Import existiert noch keine Historie. Als vorsichtiger
-    // Zusatzhinweis zeigen wir deshalb lizenzierte DB-Hengste aktueller
-    // ZG-Mitglieder derselben aktuell vertretenen Hengstrassen, die nicht in
-    // der aktuellen Liste stehen. Das ist bewusst KEIN Beweis für "entfernt":
-    // ein Hengst kann auch nie in die ZG eingetragen gewesen sein.
-    const owners=new Set([...(club?.stallions||[]),...(club?.mares||[])].map(r=>irNorm(r.owner)).filter(Boolean));
-    const breeds=new Set((club?.stallions||[]).map(r=>irNorm(irClubBreed(r.breed))).filter(Boolean));
-    const currentNames=new Set((club?.stallions||[]).map(r=>r._nameKey||irNorm(r.name)).filter(Boolean));
-    const removedIds=new Set((removedItems||[]).map(x=>String(x.local?.id??'')).filter(Boolean));
-    const removedNames=new Set((removedItems||[]).map(x=>x.remote?._nameKey||irNorm(x.remote?.name)).filter(Boolean));
-    if (!owners.size || !breeds.size) return [];
-    return (localHorses||[]).filter(h=>{
-      if (irLearning(h) || h?.breeding_allowed!==true) return false;
-      if (irClubGender(h)!=='stallion') return false;
-      if (!irServerCompatible(h,{server:club.server})) return false;
-      if (!owners.has(irNorm(h.owner))) return false;
-      if (!breeds.has(irNorm(irClubBreed(h.breed)))) return false;
-      const nameKey=irNorm(h.name);
-      if (!nameKey || currentNames.has(nameKey) || removedNames.has(nameKey)) return false;
-      if (removedIds.has(String(h.id??''))) return false;
-      return true;
-    }).sort((a,b)=>String(a.owner||'').localeCompare(String(b.owner||''),'de') || String(a.name||'').localeCompare(String(b.name||''),'de'));
-  }
+  function irClubCurrentDbOnlyItems(club, localHorses, currentStallions, snapshot=null) {
+    if (club?.sourceType==='station' || !club?.stallionsComplete) return [];
 
-  function irClubUnlistedTable(rows) {
-    if (!rows.length) return '';
-    return `<details class="inventory-result-group inventory-club-unlisted">
-      <summary>○ ${irText('Weitere DB-Hengste aktueller ZG-Mitglieder, nicht aktuell gelistet','Other DB stallions of current club members, not currently listed')} · ${rows.length}</summary>
-      <p class="tiny muted">${irText('Hinweis, keine sichere Historie: Diese Hengste haben in der DB eine Zuchtzulassung, gehören aktuellen ZG-Mitgliedern und entsprechen einer aktuell vertretenen Hengstrasse, stehen aber nicht in der eingelesenen ZG-Liste. Das kann auf Rente, Verkauf oder eine nicht erfolgte ZG-Eintragung hindeuten. Erst ein gespeicherter Vorher-Nachher-Abgleich kann „früher gelistet, jetzt entfernt“ sicher unterscheiden.','Hint only, not confirmed history: these stallions are licensed in the DB, belong to current club members and match a breed currently represented among the stallions, but are not in the pasted club list. This may indicate retirement, sale or simply that they were never registered with the club. Only a stored before/after comparison can reliably distinguish “previously listed, now removed”.')}</p>
-      <div class="table-wrap"><table class="detail-table inventory-result-table inventory-club-mare-table">
-        <thead><tr><th>${irText('Hengst','Stallion')}</th><th>${irText('Besitzer','Owner')}</th><th>${irText('Rasse','Breed')}</th><th>GP/OP</th><th>${irText('Decktaxe DB','DB stud fee')}</th><th>${irText('Aktion','Action')}</th></tr></thead>
-        <tbody>${rows.map(h=>`<tr><td class="inventory-club-name-cell">${irClubCopyNameHtml(h.name||'–')}</td><td>${irEsc(h.owner||'–')}</td><td>${irEsc(h.breed||'–')}</td><td>${irClubLocalGp(h)??'–'}</td><td>${irEsc(irClubFeeLabel(irClubLocalFee(h),true))}</td><td>${h.id!=null?`<a class="btn secondary small" href="${mdrRoute('view',{id:h.id})}">${irText('Öffnen','Open')}</a>`:'–'}</td></tr>`).join('')}</tbody>
-      </table></div>
-    </details>`;
+    // V54.0.91: Der aktuelle ZG-Abgleich ist absichtlich direkt. Für dieselbe
+    // Spielwelt und die in der aktuellen Hengstliste vertretenen Rassen gilt:
+    // Steht ein DB-Hengst nicht in der eingelesenen Liste, wird er als
+    // „nicht in aktueller ZG-Liste“ gezeigt. Zuchtzulassung und Besitzerstatus
+    // sind keine Filterkriterien – dadurch bleiben Rentner und verkaufte Hengste
+    // im Vergleich sichtbar.
+    const breeds=new Set((club?.stallions||[]).map(r=>irNorm(irClubBreed(r.breed))).filter(Boolean));
+    if (!breeds.size) return [];
+
+    const currentNames=new Set((club?.stallions||[]).map(r=>r._nameKey||irNorm(r.name)).filter(Boolean));
+    const currentLocalIds=new Set((currentStallions||[]).map(x=>String(x.local?.id??'')).filter(Boolean));
+    const snapshotRows=Array.isArray(snapshot?.known_stallions) ? snapshot.known_stallions : [];
+    const result=[];
+
+    for (const h of (localHorses||[])) {
+      if (irLearning(h) || irClubGender(h)!=='stallion') continue;
+      if (!irServerCompatible(h,{server:club.server})) continue;
+      if (!breeds.has(irNorm(irClubBreed(h.breed)))) continue;
+
+      const nameKey=irNorm(h.name);
+      const localId=String(h.id??'');
+      if (!nameKey || currentNames.has(nameKey) || (localId && currentLocalIds.has(localId))) continue;
+
+      const historical=snapshotRows.find(row=>
+        (row.local_id!=null && localId && String(row.local_id)===localId) ||
+        String(row.name_key||irNorm(row.name))===nameKey
+      ) || null;
+
+      const remote={
+        name:String(h.name||'').trim(), owner:String(h.owner||'').trim(),
+        breed:String(h.breed||'').trim(), talent:'', gp:null, color:'',
+        stud_fee:null, offspring_count:null, club_metric:null,
+        _nameKey:nameKey, _ownerKey:irNorm(h.owner), _sourceType:'club'
+      };
+      result.push(irClubRefreshItem({
+        remote, local:h, matchState:'matched', candidates:1, kind:'stallions',
+        isRemoved:false, isCurrentUnlisted:true,
+        wasPreviouslyListed:!!historical,
+        removedAt:historical?.active===false ? (historical.removed_at||null) : null,
+        sourceType:'club'
+      }));
+    }
+    return result;
   }
 
   function irClubFeeLabel(value, known=true) {
@@ -900,6 +910,7 @@
   }
 
   function irClubStatus(item) {
+    if (item.isCurrentUnlisted) return {key:'not_listed',label:irText('○ Nicht in aktueller ZG-Liste','○ Not in current club list'),cls:'neutral'};
     if (item.isRemoved) return item?.sourceType==='station'
       ? {key:'removed',label:irText('⚠ Nicht mehr in Deckstation','⚠ No longer in stud station'),cls:'warn'}
       : {key:'removed',label:irText('⚠ Nicht mehr in Zuchtgemeinschaft','⚠ No longer in breeding club'),cls:'warn'};
@@ -935,6 +946,7 @@
     if (status.key==='missing') return 900;
     if (status.key==='ambiguous') return 800;
     if (status.key==='removed') return 700;
+    if (status.key==='not_listed') return 650;
     const quality=irClubDataQuality(item);
     const diffPenalty=status.key==='ok' ? 0 : 20;
     return quality.rank*100 + diffPenalty;
@@ -975,18 +987,22 @@
     const station=item?.sourceType==='station' || irClubLast?.club?.sourceType==='station';
     const rgp=Number.isFinite(Number(remote.gp)) ? Number(remote.gp) : null;
     const lgp=item.localGp;
-    const remoteFee=item.isRemoved
-      ? `<span class="muted">–</span><br><span class="tiny muted">${irText('zuletzt','last')}: ${irEsc(irClubFeeLabel(remote.stud_fee,remote.stud_fee!=null))}</span>`
-      : irEsc(irClubFeeLabel(remote.stud_fee,remote.stud_fee!=null));
+    const remoteFee=item.isCurrentUnlisted
+      ? '<span class="muted">–</span>'
+      : (item.isRemoved
+        ? `<span class="muted">–</span><br><span class="tiny muted">${irText('zuletzt','last')}: ${irEsc(irClubFeeLabel(remote.stud_fee,remote.stud_fee!=null))}</span>`
+        : irEsc(irClubFeeLabel(remote.stud_fee,remote.stud_fee!=null)));
     const localFee=local ? irEsc(irClubFeeLabel(irClubLocalFee(local),true)) : '–';
     const actionBits=[];
     if (local?.id!=null) actionBits.push(`<a class="btn secondary small" href="${mdrRoute('view',{id:local.id})}">${irText('Öffnen','Open')}</a>`);
-    if (!item.isRemoved && item.feeDiff && local?.id!=null && remote.stud_fee!=null) {
+    if (!item.isRemoved && !item.isCurrentUnlisted && item.feeDiff && local?.id!=null && remote.stud_fee!=null) {
       actionBits.push(`<button type="button" class="small" data-club-fee-apply="${irEsc(local.id)}">${irText('Decktaxe übernehmen','Apply stud fee')}</button>`);
     }
-    const removedHint=item.isRemoved && item.removedAt
-      ? `<br><span class="tiny muted">${irText('seit','since')} ${irEsc(new Date(item.removedAt).toLocaleDateString(irLang()==='en'?'en-GB':'de-DE'))}</span>`
-      : '';
+    const removedHint=item.isCurrentUnlisted && item.wasPreviouslyListed
+      ? `<br><span class="tiny muted">${item.removedAt ? `${irText('seit','since')} ${irEsc(new Date(item.removedAt).toLocaleDateString(irLang()==='en'?'en-GB':'de-DE'))} · ` : ''}${irText('zuvor gelistet','previously listed')}</span>`
+      : (item.isRemoved && item.removedAt
+        ? `<br><span class="tiny muted">${irText('seit','since')} ${irEsc(new Date(item.removedAt).toLocaleDateString(irLang()==='en'?'en-GB':'de-DE'))}</span>`
+        : '');
     const availability=irStationAvailabilityLabel(remote);
     const availabilityCell=station
       ? `<td class="inventory-club-availability"><span class="inventory-availability ${availability.cls}">${irEsc(availability.label)}</span>${remote.station_note?`<br><span class="tiny muted">${irEsc(remote.station_note)}</span>`:''}${Number.isFinite(Number(remote.performance_test_points))?`<br><span class="tiny muted">HLP/SLP: ${Number(remote.performance_test_points)}</span>`:''}</td>`
@@ -1038,7 +1054,8 @@
       if (status==='incomplete' && (!item.local || quality.level==='green')) return false;
       if (status==='missing' && st!=='missing') return false;
       if (status==='removed' && st!=='removed') return false;
-      if (status==='diff' && st==='ok') return false;
+      if (status==='not_listed' && st!=='not_listed') return false;
+      if (status==='diff' && !['fee','diff'].includes(st)) return false;
       return true;
     });
     return irClubSortStallions(filtered);
@@ -1062,9 +1079,9 @@
     irClubLast=state;
     const root=document.getElementById('club-results');
     if (!root) return;
-    const {club,currentStallions,removedStallions,mares,hadPrevious,unlistedCandidates=[]}=state;
+    const {club,currentStallions,removedStallions,currentDbOnly=[],mares,hadPrevious}=state;
     const isStation=club?.sourceType==='station';
-    const stallionItems=[...currentStallions,...removedStallions];
+    const stallionItems=[...currentStallions,...(isStation?removedStallions:currentDbOnly)];
     state.stallionItems=stallionItems;
     stallionItems.forEach(irClubRefreshItem);
     mares.forEach(irClubRefreshItem);
@@ -1079,16 +1096,16 @@
     const snapshotNotice=!hadPrevious
       ? `<div class="notice small">${isStation
           ? irText('Erster Abgleich für diese Deckstation: Der erkannte Hengstbestand wird als Ausgangsstand gespeichert. Ab dem nächsten vollständigen Import können zuvor gelistete, jetzt fehlende Hengste erkannt werden.','First comparison for this stud station: the detected stallion list is stored as the baseline. From the next complete import onward, stallions that were previously listed but are now missing can be detected.')
-          : irText('Erster ZG-Abgleich für diese Zuchtgemeinschaft: Dieser vollständige Hengstbestand wird als Ausgangsstand gespeichert. Entfernte Hengste können ab dem nächsten vollständigen Abgleich zuverlässig erkannt werden.','First breeding-club comparison for this club: this complete stallion list is stored as the baseline. Removed stallions can be detected reliably from the next complete comparison onward.')}</div>`
+          : irText('Der ZG-Status wird direkt aus der aktuell eingelesenen Hengstliste bestimmt. Der erste vollständige Import wird zusätzlich als Verlauf gespeichert, damit spätere Abgänge mit „zuvor gelistet“ ergänzt werden können.','Club membership is determined directly from the currently pasted stallion list. The first complete import is also stored as history so later removals can be annotated as “previously listed”.')}</div>`
       : '';
     const incompleteNotice=!club.stallionsComplete
       ? `<div class="notice notice-warning small">${isStation
           ? irText('Die Deckstationsliste wurde nicht als vollständig erkannt. Der aktuelle Stand wird verglichen, aber es werden keine Hengste als „nicht mehr in der Deckstation“ markiert.','The stud-station list was not detected as complete. Current rows are compared, but no stallions are marked as “no longer in the stud station”.')
-          : irText('Die Hengsttabelle wurde nicht vollständig erkannt. Der aktuelle Stand wird verglichen, aber es werden keine Pferde als „nicht mehr in der Zuchtgemeinschaft“ markiert.','The stallion table was not parsed completely. Current rows are compared, but no horses are marked as “no longer in the breeding club”.')}</div>`
+          : irText('Die Hengsttabelle wurde nicht vollständig erkannt. Die gelesenen Zeilen werden abgeglichen, aber DB-Hengste werden vorsichtshalber nicht als „nicht in aktueller ZG-Liste“ markiert.','The stallion table was not parsed completely. Parsed rows are compared, but DB stallions are not marked as “not in current club list” to avoid false positives.')}</div>`
       : '';
 
     const remoteFeeLabel=isStation ? irText('Decktaxe Station','Station stud fee') : irText('Decktaxe ZG','Club stud fee');
-    const removedLabel=isStation ? irText('nicht mehr in Deckstation','no longer in station') : irText('nicht mehr in ZG','no longer in club');
+    const removedLabel=isStation ? irText('nicht mehr in Deckstation','no longer in station') : irText('nicht in aktueller ZG-Liste','not in current club list');
     const availabilityFilter=isStation ? `<label>${irText('Deckstatus','Availability')}<select id="club-filter-availability">
           <option value="all">${irText('Alle','All')}</option>
           <option value="external">${irText('Extern verfügbar','Externally available')}</option>
@@ -1110,7 +1127,7 @@
         <div><strong>${matched}</strong><span>✓ ${irText('in DB gefunden','found in DB')}</span></div>
         <div><strong>${feeDiff}</strong><span>△ ${irText('Decktaxe abweichend','stud fee differs')}</span></div>
         <div><strong>${missing}</strong><span>＋ ${irText('fehlt in DB','missing from DB')}</span></div>
-        <div><strong>${removedStallions.length}</strong><span>− ${removedLabel}</span></div>
+        <div><strong>${isStation?removedStallions.length:currentDbOnly.length}</strong><span>− ${removedLabel}</span></div>
       </div>
       ${ambiguous?`<div class="notice notice-warning small">⚠ ${ambiguous} ${irText('Hengst(e) konnten wegen mehrfacher Namens-Treffer nicht eindeutig zugeordnet werden.','stallion(s) could not be matched unambiguously because the name occurs more than once.')}</div>`:''}
 
@@ -1125,13 +1142,15 @@
           <option value="diff">${irText('Nur Abweichungen','Differences only')}</option>
           <option value="fee">${irText('Decktaxe abweichend','Stud fee differs')}</option>
           <option value="missing">${irText('Fehlt in DB','Missing from DB')}</option>
-          <option value="removed">${isStation?irText('Nicht mehr in Deckstation','No longer in stud station'):irText('Nicht mehr in ZG','No longer in club')}</option>
+          ${isStation
+            ? `<option value="removed">${irText('Nicht mehr in Deckstation','No longer in stud station')}</option>`
+            : `<option value="not_listed">${irText('Nicht in aktueller ZG-Liste','Not in current club list')}</option>`}
         </select></label>
         ${availabilityFilter}
         <span id="club-filter-count" class="small muted"></span>
       </div>
 
-      <p class="tiny muted inventory-club-sort-hint">${irText('Sortierung: vollständige DB-Einträge zuerst, danach teilweise/unvollständige bzw. abweichende Treffer; fehlende Pferde stehen am Ende. Pferdenamen sind markierbar und über ⧉ direkt kopierbar.','Sorting: complete DB records first, followed by partly complete/incomplete or differing matches; missing horses are listed last. Horse names can be selected and copied directly via ⧉.')}</p>
+      <p class="tiny muted inventory-club-sort-hint">${irText('Sortierung: vollständige DB-Treffer zuerst, danach teilweise/unvollständige bzw. abweichende Treffer; DB-Hengste außerhalb der aktuellen ZG-Liste folgen danach, fehlende DB-Pferde stehen ganz am Ende. Pferdenamen sind markierbar und über ⧉ direkt kopierbar.','Sorting: complete DB matches first, followed by partly complete/incomplete or differing matches; DB stallions outside the current club list follow, and horses missing from the DB are listed last. Horse names can be selected and copied directly via ⧉.')}</p>
       <div class="table-wrap"><table class="detail-table inventory-result-table inventory-club-stallion-table ${isStation?'inventory-station-table':''}">
         <thead><tr>
           <th>${irText('Hengst','Stallion')}</th><th>${irText('Besitzer','Owner')}</th><th>${irText('Rasse','Breed')}</th><th>GP/OP</th>
@@ -1140,13 +1159,14 @@
         <tbody id="club-stallion-body"></tbody>
       </table></div>
 
-      ${!isStation?irClubUnlistedTable(unlistedCandidates):''}
       ${!isStation?`<details class="inventory-result-group">
         <summary>${irText('Zuchtstuten','Broodmares')} · ${mares.length}</summary>
         <p class="tiny muted">${irText('Stuten werden ebenfalls eingelesen und auf Name, Besitzer, Rasse und GP abgeglichen. Die historische „nicht mehr gelistet“-Überwachung ist in dieser Version bewusst auf Hengste beschränkt.','Broodmares are also parsed and compared by name, owner, breed and OP. Historical “no longer listed” tracking is intentionally limited to stallions in this version.')}</p>
         ${irClubMareTable(mares)}
       </details>`:''}
-      <p class="tiny muted">${irText('Decktaxen werden nie still überschrieben. Nur eindeutige Treffer können einzeln oder gesammelt übernommen werden. GP/OP, Besitzer und andere Felder werden ausschließlich angezeigt und nicht automatisch verändert.','Stud fees are never overwritten silently. Only unambiguous matches can be applied individually or in bulk. OP, owner and other fields are display-only and are not changed automatically.')}</p>`;
+      <p class="tiny muted">${isStation
+        ? irText('Decktaxen werden nie still überschrieben. Nur eindeutige Treffer können einzeln oder gesammelt übernommen werden. GP/OP, Besitzer und andere Felder werden ausschließlich angezeigt und nicht automatisch verändert.','Stud fees are never overwritten silently. Only unambiguous matches can be applied individually or in bulk. OP, owner and other fields are display-only and are not changed automatically.')
+        : irText('ZG-Status = aktueller Listenabgleich: Für dieselbe Spielwelt und die aktuell vertretenen Hengstrassen wird jeder DB-Hengst entweder in der ZG-Liste gefunden oder als „nicht in aktueller ZG-Liste“ gezeigt. Zuchtzulassung und aktueller Besitzerstatus filtern diese Prüfung nicht. Decktaxen werden nie still überschrieben.','Club status = current-list comparison: for the same game world and stallion breeds currently represented, every DB stallion is either found in the club list or shown as “not in current club list”. Breeding approval and current owner status do not filter this check. Stud fees are never overwritten silently.')}</p>`;
 
     irClubRenderStallionBody();
     for (const id of ['club-filter-search','club-filter-owner','club-filter-breed','club-filter-status','club-filter-availability']) {
@@ -1222,14 +1242,16 @@
     const key=irClubSnapshotKey(club);
     const previous=await localGet(LOCAL_STORES.userSettings,key).catch(()=>null);
     const snapshot=irClubMergeSnapshot(club,previous,currentStallions);
-    const removedStallions=previous ? irClubRemovedItems(snapshot,irHorses,club.server) : [];
-    const unlistedCandidates=irClubUnlistedDbCandidates(club,irHorses,removedStallions);
+    const removedStallions=club.sourceType==='station' && previous ? irClubRemovedItems(snapshot,irHorses,club.server) : [];
+    const currentDbOnly=club.sourceType==='club' ? irClubCurrentDbOnlyItems(club,irHorses,currentStallions,snapshot) : [];
 
     // Ein unvollständiger Import darf zwar den zuletzt gesehenen Datenstand
     // aktualisieren, aber niemals vorhandene Hengste als entfernt markieren.
+    // Bei ZGs ist der Snapshot nur Verlauf; der aktuelle Status kommt direkt
+    // aus der eingelesenen Liste.
     await localPut(LOCAL_STORES.userSettings,snapshot);
 
-    const state={club,currentStallions,removedStallions,unlistedCandidates,mares,hadPrevious:!!previous,snapshot};
+    const state={club,currentStallions,removedStallions,currentDbOnly,mares,hadPrevious:!!previous,snapshot};
     if (status) status.textContent=club.sourceType==='station'
       ? irText(`${club.stallions.length} Hengste aus ${club.name} erkannt · ${club.server}.`,`${club.stallions.length} stallions detected from ${club.name} · ${club.server}.`)
       : irText(`${club.stallions.length} Hengste und ${club.mares.length} Stuten erkannt · ${club.server}.`,`${club.stallions.length} stallions and ${club.mares.length} broodmares detected · ${club.server}.`);
@@ -1364,6 +1386,7 @@
     parseBreedingSource:irParseBreedingSource,
     cleanHorseName:irHorseName,
     compareClubRows:irClubCompareRows,
+    currentClubDbOnly:irClubCurrentDbOnlyItems,
     mergeClubSnapshot:irClubMergeSnapshot,
     clubSnapshotKey:irClubSnapshotKey
   };

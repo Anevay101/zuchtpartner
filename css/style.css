@@ -7981,3 +7981,9 @@ button.keep-foal-no.active {
 @media (max-width:1050px){.inventory-club-filters.has-availability{grid-template-columns:1fr 1fr 1fr}}
 @media (max-width:760px){.inventory-club-filters.has-availability{grid-template-columns:1fr 1fr}}
 @media (max-width:560px){.inventory-club-filters.has-availability{grid-template-columns:1fr}}
+
+/* V54.0.91 – aktueller ZG-Listenstatus */
+.inventory-status.neutral{background:color-mix(in srgb,var(--surface-2,#eef1ed) 78%,transparent);border-color:var(--border,#bbb);color:var(--text,#263229)}
+
+/* V54.0.91 – aktueller ZG-Listenstatus */
+.inventory-status.neutral{background:color-mix(in srgb,var(--surface-2,#eef1ed) 78%,transparent);border-color:var(--border,#bbb);color:var(--text,#263229)}

@@ -1,0 +1,9 @@
+MDR-Datenbank V54.0.91 – ZG-Hengstabgleich: aktueller Listenstatus
+
+- ZG-/Breeding-Club-Abgleich nutzt für Hengste jetzt direkt die aktuell eingelesene Hengstliste.
+- DB-Hengste derselben Spielwelt und aktuell vertretenen Hengstrassen, die nicht in der Liste stehen, werden als „Nicht in aktueller ZG-Liste“ angezeigt.
+- Zuchtzulassung und aktueller Besitzer-/Mitgliedsstatus sind dafür keine Filterkriterien mehr; Rentner und verkaufte/umgezogene Hengste bleiben sichtbar.
+- Snapshot-Historie bleibt nur Zusatzinformation („zuvor gelistet“ / Datum), ist aber keine Voraussetzung für den aktuellen Status.
+- Bei unvollständig erkannter ZG-Hengsttabelle werden keine DB-Hengste als nicht gelistet markiert, um Fehlalarme zu vermeiden.
+- DE und INT/EN mit den aktuellen bereitgestellten ZG-Seiten geprüft: APH-Züchter 119 Hengste / 230 Stuten; First Class Thoroughbreds 51 Hengste / 150 Stuten.
+- Deckstationslogik bleibt unverändert snapshotbasiert.
