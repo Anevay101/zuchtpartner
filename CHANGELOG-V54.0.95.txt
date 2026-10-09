@@ -1,0 +1,16 @@
+MDR-Datenbank V54.0.95
+
+Bestandsabgleich – kompaktere Ergebnisbereiche, Lerndatei-Ausblendung und Begabungsgruppen
+
+- Alle Ergebnisbereiche im Bestandsabgleich sind weiterhin ein-/ausklappbar und starten jetzt kompakt eingeklappt.
+- Eigene Pferde: bereits auf GBH / in der Lerndatei befindliche Pferde werden nicht mehr unter „Nicht mehr im MDR-Bestand“ angezeigt oder mitgezählt.
+- Ein Hinweis zeigt an, wie viele bereits archivierte Pferde dadurch ausgeblendet wurden.
+- Nach „Auf GBH / Lerndatei“ verschwindet ein erledigtes Pferd beim erneuten Abgleich automatisch aus der offenen Arbeitsliste.
+- Deckstation: der Mehrfachfilter „Begabung“ arbeitet nur noch mit den 7 MDR-Begabungsgruppen: Englisch, Rennen, Western, Rodeo, Fahren, Barock und Mehrgang.
+- Einzelne Disziplinen werden für den Deckstationsfilter automatisch ihrer Begabungsgruppe zugeordnet (DE und EN).
+- Im Filter werden nur Begabungsgruppen angeboten, die in der aktuell eingelesenen Deckstation tatsächlich vorkommen.
+- Auch „Alle“ bedeutet damit: alle Begabungsgruppen der aktuellen Deckstation; fachfremde DB-Hengste werden nicht automatisch eingeblendet.
+- Zuchtgemeinschaft: Priorisierung der Ergebnislisten geändert. Reihenfolge jetzt 1) aktuell in ZG + DB-Treffer, 2) in ZG aber nicht in DB, 3) in DB aber nicht in ZG.
+- Die zugehörigen Zählerkarten folgen derselben Reihenfolge.
+
+Technische Version: 54.0.95 / Cache-Buster 5495

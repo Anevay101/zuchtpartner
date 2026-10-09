@@ -8121,3 +8121,5 @@ button.keep-foal-no.active {
 @media (max-width:760px){.inventory-club-filters.has-availability{grid-template-columns:1fr 1fr}.inventory-multiselect-panel{width:100%;min-width:100%}}
 @media (max-width:560px){.inventory-club-filters.has-availability{grid-template-columns:1fr}}
 .inventory-owner-options{max-height:none;overflow:visible}
+
+/* V54.0.95 – Ergebnisgruppen starten kompakt eingeklappt; Verhalten in inventory-reconcile.js. */

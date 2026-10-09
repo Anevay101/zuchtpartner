@@ -1,0 +1,11 @@
+MDR V54.0.95 Release Check
+
+- Eigene Pferde: GBH-/Lerndatei-Pferde aus „Nicht mehr im MDR-Bestand“ ausgeblendet
+- Ausgeblendete Archiv-Pferde werden separat als Hinweis gezählt
+- Ergebnisbereiche standardmäßig eingeklappt
+- Deckstation: Begabungsfilter auf 7 Überbegabungen/Begabungsgruppen normalisiert
+- DE-/EN-Disziplinen werden der passenden Gruppe zugeordnet
+- Filteroptionen stammen ausschließlich aus aktuell in der Deckstation vorkommenden Begabungsgruppen
+- ZG-Reihenfolge: aktuell / ZG fehlt in DB / DB fehlt in ZG
+- Drei Hauptreiter bleiben bestehen: Eigene Pferde / Zuchtgemeinschaft / Deckstation
+- Cache-Buster: 5495
