@@ -1,8 +1,8 @@
-/* MDR V54.0.92 – Bestands-, Zuchtgemeinschafts- und Deckstationsabgleich aus kopierten MDR-Seiten.
-   Eindeutige normalisierte Pferdenamen sind der primäre Match-Schlüssel.
-   Spielwelt, Geschlecht, Besitzer, Rasse und GP dienen bei Mehrdeutigkeiten
-   bzw. als Plausibilitäts-Hinweise. Kritische Bestandsaktionen sind explizit
-   auswählbar und nutzen den bestehenden Ein-Schritt-Undo.
+/* MDR V54.0.93 – Bestandsabgleich mit drei Fach-Reitern.
+   Eigene Pferde, Zuchtgemeinschaft und Deckstation werden getrennt dargestellt,
+   teilen sich aber denselben name-first Matching-Kern. ZG/Deckstation zeigen
+   aktuelle Treffer, passende DB-only Hengste und externe Listen-Hengste ohne
+   DB-Datensatz in getrennten Ergebnislisten.
 */
 (() => {
   'use strict';
@@ -409,7 +409,17 @@
     const root=document.getElementById('inventory-owner-options');
     if (!root) return;
     const owners=[...new Set((horses || []).map(irComparableOwner).map(v=>String(v||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
-    root.innerHTML=owners.map(owner=>`<label class="inventory-owner-chip"><input type="checkbox" value="${irEsc(owner)}"><span>${irEsc(owner)}</span></label>`).join('');
+    const configured=typeof getActiveBreeders==='function' ? getActiveBreeders() : null;
+    const activeSet=configured==null ? new Set(owners) : new Set(configured.map(v=>String(v||'').trim()).filter(Boolean));
+    const active=owners.filter(owner=>activeSet.has(owner));
+    const other=owners.filter(owner=>!activeSet.has(owner));
+    const chips=list=>list.map(owner=>`<label class="inventory-owner-chip"><input type="checkbox" value="${irEsc(owner)}"><span>${irEsc(owner)}</span></label>`).join('');
+    root.innerHTML=`
+      <div class="inventory-owner-section">
+        <div class="inventory-owner-section-title">${irText('Aktive Züchter','Active breeders')} <span class="muted">· ${active.length}</span></div>
+        <div class="inventory-owner-chip-grid">${chips(active) || `<span class="tiny muted">${irText('Keine aktiven Züchter konfiguriert.','No active breeders configured.')}</span>`}</div>
+      </div>
+      ${other.length ? `<details class="inventory-owner-more"><summary>${irText('Weitere Züchter','Other breeders')} · ${other.length}</summary><div class="inventory-owner-chip-grid">${chips(other)}</div></details>` : ''}`;
   }
 
   let irStockSelectedIds=new Set();
@@ -1118,15 +1128,18 @@
   }
 
   function irClubCurrentDbOnlyItems(club, localHorses, currentStallions, snapshot=null) {
-    if (club?.sourceType==='station' || !club?.stallionsComplete) return [];
+    if (!club?.stallionsComplete) return [];
 
-    // V54.0.92: Der aktuelle ZG-Abgleich ist absichtlich direkt. Für dieselbe
-    // Spielwelt und die in der aktuellen Hengstliste vertretenen Rassen gilt:
-    // Steht ein DB-Hengst nicht in der eingelesenen Liste, wird er als
-    // „nicht in aktueller ZG-Liste“ gezeigt. Zuchtzulassung und Besitzerstatus
-    // sind keine Filterkriterien – dadurch bleiben Rentner und verkaufte Hengste
-    // im Vergleich sichtbar.
-    const breeds=new Set((club?.stallions||[]).map(r=>irNorm(irClubBreed(r.breed))).filter(Boolean));
+    // Direkter Ist-Abgleich: Für dieselbe Spielwelt und die aktuell vertretene(n)
+    // Hengstrasse(n) wird jeder DB-Hengst gezeigt, der in der eingelesenen Liste
+    // nicht vorkommt. Zuchtzulassung und aktueller Besitzerstatus sind bewusst
+    // keine Ausschlusskriterien. Das gilt für ZGs und Deckstationen gleichermaßen.
+    const sourceType=club?.sourceType==='station' ? 'station' : 'club';
+    const breeds=new Set(
+      sourceType==='station'
+        ? [irNorm(irClubBreed(club?.stationBreed || club?.specialisation1 || ''))].filter(Boolean)
+        : (club?.stallions||[]).map(r=>irNorm(irClubBreed(r.breed))).filter(Boolean)
+    );
     if (!breeds.size) return [];
 
     const currentNames=new Set((club?.stallions||[]).map(r=>r._nameKey||irNorm(r.name)).filter(Boolean));
@@ -1150,16 +1163,17 @@
 
       const remote={
         name:String(h.name||'').trim(), owner:String(irComparableOwner(h)||'').trim(),
-        breed:String(h.breed||'').trim(), talent:'', gp:null, color:'',
+        breed:String(h.breed||club?.stationBreed||'').trim(), talent:'', gp:null, color:'',
         stud_fee:null, offspring_count:null, club_metric:null,
-        _nameKey:nameKey, _ownerKey:irNorm(irComparableOwner(h)), _sourceType:'club'
+        station_availability:'',station_note:'',
+        _nameKey:nameKey, _ownerKey:irNorm(irComparableOwner(h)), _sourceType:sourceType
       };
       result.push(irClubRefreshItem({
         remote, local:h, matchState:'matched', candidates:1, kind:'stallions',
         isRemoved:false, isCurrentUnlisted:true,
         wasPreviouslyListed:!!historical,
         removedAt:historical?.active===false ? (historical.removed_at||null) : null,
-        sourceType:'club'
+        sourceType
       }));
     }
     return result;
@@ -1172,7 +1186,9 @@
   }
 
   function irClubStatus(item) {
-    if (item.isCurrentUnlisted) return {key:'not_listed',label:irText('○ Nicht in aktueller ZG-Liste','○ Not in current club list'),cls:'neutral'};
+    if (item.isCurrentUnlisted) return item?.sourceType==='station'
+      ? {key:'not_offered',label:irText('○ Nicht aktuell angeboten','○ Not currently offered'),cls:'neutral'}
+      : {key:'not_listed',label:irText('○ Nicht in aktueller ZG-Liste','○ Not in current club list'),cls:'neutral'};
     if (item.isRemoved) return item?.sourceType==='station'
       ? {key:'removed',label:irText('⚠ Nicht mehr in Deckstation','⚠ No longer in stud station'),cls:'warn'}
       : {key:'removed',label:irText('⚠ Nicht mehr in Zuchtgemeinschaft','⚠ No longer in breeding club'),cls:'warn'};
@@ -1203,14 +1219,14 @@
 
   function irClubSortRank(item) {
     const status=irClubStatus(item);
-    // Fehlende Pferde bewusst ganz ans Ende. Davor kommen historische/unklare
-    // Fälle; vorhandene DB-Pferde werden zuerst nach Datenqualität sortiert.
+    // Die fachlichen Zustände stehen in V54.0.93 in getrennten Listen. Innerhalb
+    // einer Liste priorisieren wir vorhandene DB-Datensätze nach Datenqualität;
+    // echte fehlende/mehrdeutige Treffer bleiben am Ende ihrer jeweiligen Liste.
     if (status.key==='missing') return 900;
     if (status.key==='ambiguous') return 800;
     if (status.key==='removed') return 700;
-    if (status.key==='not_listed') return 650;
     const quality=irClubDataQuality(item);
-    const diffPenalty=status.key==='ok' ? 0 : 20;
+    const diffPenalty=['ok','not_listed','not_offered'].includes(status.key) ? 0 : 20;
     return quality.rank*100 + diffPenalty;
   }
 
@@ -1246,7 +1262,7 @@
     const remote=item.remote || {};
     const local=item.local || null;
     const status=irClubStatus(item);
-    const station=item?.sourceType==='station' || irClubLast?.club?.sourceType==='station';
+    const station=item?.sourceType==='station';
     const rgp=Number.isFinite(Number(remote.gp)) ? Number(remote.gp) : null;
     const lgp=item.localGp;
     const remoteFee=item.isCurrentUnlisted
@@ -1258,7 +1274,7 @@
     const actionBits=[];
     if (local?.id!=null) actionBits.push(`<a class="btn secondary small" href="${mdrRoute('view',{id:local.id})}">${irText('Öffnen','Open')}</a>`);
     if (!item.isRemoved && !item.isCurrentUnlisted && item.feeDiff && local?.id!=null && remote.stud_fee!=null) {
-      actionBits.push(`<button type="button" class="small" data-club-fee-apply="${irEsc(local.id)}">${irText('Decktaxe übernehmen','Apply stud fee')}</button>`);
+      actionBits.push(`<button type="button" class="small" data-breeding-fee-apply="${irEsc(local.id)}" data-breeding-source="${irEsc(item?.sourceType||'club')}">${irText('Decktaxe übernehmen','Apply stud fee')}</button>`);
     }
     const removedHint=item.isCurrentUnlisted && item.wasPreviouslyListed
       ? `<br><span class="tiny muted">${item.removedAt ? `${irText('seit','since')} ${irEsc(new Date(item.removedAt).toLocaleDateString(irLang()==='en'?'en-GB':'de-DE'))} · ` : ''}${irText('zuvor gelistet','previously listed')}</span>`
@@ -1267,7 +1283,9 @@
         : '');
     const availability=irStationAvailabilityLabel(remote);
     const availabilityCell=station
-      ? `<td class="inventory-club-availability"><span class="inventory-availability ${availability.cls}">${irEsc(availability.label)}</span>${remote.station_note?`<br><span class="tiny muted">${irEsc(remote.station_note)}</span>`:''}${Number.isFinite(Number(remote.performance_test_points))?`<br><span class="tiny muted">HLP/SLP: ${Number(remote.performance_test_points)}</span>`:''}</td>`
+      ? (item.isCurrentUnlisted
+        ? `<td class="inventory-club-availability"><span class="inventory-availability neutral">${irText('Nicht aktuell angeboten','Not currently offered')}</span></td>`
+        : `<td class="inventory-club-availability"><span class="inventory-availability ${availability.cls}">${irEsc(availability.label)}</span>${remote.station_note?`<br><span class="tiny muted">${irEsc(remote.station_note)}</span>`:''}${Number.isFinite(Number(remote.performance_test_points))?`<br><span class="tiny muted">HLP/SLP: ${Number(remote.performance_test_points)}</span>`:''}</td>`)
       : '';
     return `<tr data-club-status="${irEsc(status.key)}" data-club-owner="${irEsc(remote.owner||irComparableOwner(local)||'')}" data-club-breed="${irEsc(remote.breed||local?.breed||'')}" data-club-availability="${irEsc(remote.station_availability||'')}">
       <td class="inventory-club-name-cell">${irClubCopyNameHtml(remote.name||local?.name||'–')}</td>
@@ -1295,147 +1313,215 @@
   }
 
   let irClubLast=null;
+  let irStationLast=null;
 
-  function irClubFilteredStallions() {
-    if (!irClubLast) return [];
-    const search=irNorm(document.getElementById('club-filter-search')?.value || '');
-    const owner=irNorm(document.getElementById('club-filter-owner')?.value || '');
-    const breed=irNorm(document.getElementById('club-filter-breed')?.value || '');
-    const status=document.getElementById('club-filter-status')?.value || 'all';
-    const availability=document.getElementById('club-filter-availability')?.value || 'all';
-    const filtered=irClubLast.stallionItems.filter(item=>{
-      const st=irClubStatus(item).key;
-      const quality=irClubDataQuality(item);
-      const remoteAvailability=item.remote?.station_availability || 'external';
-      if (search && !irNorm(`${item.remote?.name||''} ${item.remote?.owner||''} ${item.remote?.breed||''}`).includes(search)) return false;
-      if (owner && irNorm(item.remote?.owner||irComparableOwner(item.local)||'')!==owner) return false;
-      if (breed && irNorm(item.remote?.breed||item.local?.breed||'')!==breed) return false;
-      if (availability!=='all' && remoteAvailability!==availability) return false;
-      if (status==='fee' && !item.feeDiff) return false;
-      if (status==='complete' && (!item.local || quality.level!=='green')) return false;
-      if (status==='incomplete' && (!item.local || quality.level==='green')) return false;
-      if (status==='missing' && st!=='missing') return false;
-      if (status==='removed' && st!=='removed') return false;
-      if (status==='not_listed' && st!=='not_listed') return false;
-      if (status==='diff' && !['fee','diff'].includes(st)) return false;
-      return true;
-    });
-    return irClubSortStallions(filtered);
+  function irBreedingPrefix(sourceType) {
+    return sourceType==='station' ? 'station' : 'club';
   }
 
-  function irClubRenderStallionBody() {
-    const body=document.getElementById('club-stallion-body');
-    const count=document.getElementById('club-filter-count');
-    if (!body || !irClubLast) return;
-    const rows=irClubFilteredStallions();
-    const cols=irClubLast?.club?.sourceType==='station' ? 9 : 8;
-    body.innerHTML=rows.length ? rows.map(irClubRowHtml).join('') : `<tr><td colspan="${cols}" class="muted">${irText('Keine Treffer für diese Filter.','No matches for these filters.')}</td></tr>`;
-    if (count) count.textContent=irText(`${rows.length} Hengste angezeigt`,`${rows.length} stallions shown`);
+  function irBreedingState(sourceType) {
+    return sourceType==='station' ? irStationLast : irClubLast;
+  }
+
+  function irBreedingFilteredItems(sourceType, items) {
+    const prefix=irBreedingPrefix(sourceType);
+    const search=irNorm(document.getElementById(`${prefix}-filter-search`)?.value || '');
+    const owner=irNorm(document.getElementById(`${prefix}-filter-owner`)?.value || '');
+    const breed=irNorm(document.getElementById(`${prefix}-filter-breed`)?.value || '');
+    const dataState=document.getElementById(`${prefix}-filter-data`)?.value || 'all';
+    const availability=document.getElementById(`${prefix}-filter-availability`)?.value || 'all';
+    return irClubSortStallions((items||[]).filter(item=>{
+      const status=irClubStatus(item).key;
+      const quality=irClubDataQuality(item);
+      const remoteAvailability=item.isCurrentUnlisted ? 'not_offered' : (item.remote?.station_availability || 'external');
+      const haystack=irNorm(`${item.remote?.name||item.local?.name||''} ${item.remote?.owner||irComparableOwner(item.local)||''} ${item.remote?.breed||item.local?.breed||''}`);
+      if (search && !haystack.includes(search)) return false;
+      if (owner && irNorm(item.remote?.owner||irComparableOwner(item.local)||'')!==owner) return false;
+      if (breed && irNorm(item.remote?.breed||item.local?.breed||'')!==breed) return false;
+      if (sourceType==='station' && availability!=='all' && remoteAvailability!==availability) return false;
+      if (dataState==='complete' && (!item.local || quality.level!=='green')) return false;
+      if (dataState==='incomplete' && (!item.local || quality.level==='green')) return false;
+      if (dataState==='diff' && !['fee','diff'].includes(status)) return false;
+      if (dataState==='fee' && !item.feeDiff) return false;
+      return true;
+    }));
+  }
+
+  function irBreedingTableHtml(sourceType, bodyId) {
+    const isStation=sourceType==='station';
+    const remoteFeeLabel=isStation ? irText('Decktaxe Station','Station stud fee') : irText('Decktaxe ZG','Club stud fee');
+    const availabilityHeader=isStation ? `<th>${irText('Deckstatus','Availability')}</th>` : '';
+    return `<div class="table-wrap"><table class="detail-table inventory-result-table inventory-club-stallion-table ${isStation?'inventory-station-table':''}">
+      <thead><tr>
+        <th>${irText('Hengst','Stallion')}</th><th>${irText('Besitzer','Owner')}</th><th>${irText('Rasse','Breed')}</th><th>GP/OP</th>
+        <th>${remoteFeeLabel}</th><th>${irText('Decktaxe DB','DB stud fee')}</th>${availabilityHeader}<th>${irText('Status','Status')}</th><th>${irText('Aktion','Action')}</th>
+      </tr></thead>
+      <tbody id="${bodyId}"></tbody>
+    </table></div>`;
+  }
+
+  function irBreedingSectionHtml(sourceType, key, title, description, count, open=true) {
+    const prefix=irBreedingPrefix(sourceType);
+    return `<details class="inventory-result-group inventory-breeding-section" ${open?'open':''}>
+      <summary><span>${title}</span><strong id="${prefix}-${key}-count">${count}</strong></summary>
+      ${description?`<p class="tiny muted inventory-breeding-section-note">${description}</p>`:''}
+      ${irBreedingTableHtml(sourceType,`${prefix}-${key}-body`)}
+    </details>`;
+  }
+
+  function irBreedingRenderSection(sourceType, key, items) {
+    const prefix=irBreedingPrefix(sourceType);
+    const body=document.getElementById(`${prefix}-${key}-body`);
+    const count=document.getElementById(`${prefix}-${key}-count`);
+    if (!body) return 0;
+    const filtered=irBreedingFilteredItems(sourceType,items);
+    const cols=sourceType==='station' ? 9 : 8;
+    body.innerHTML=filtered.length
+      ? filtered.map(irClubRowHtml).join('')
+      : `<tr><td colspan="${cols}" class="muted">${irText('Keine Treffer für diese Filter.','No matches for these filters.')}</td></tr>`;
+    if (count) count.textContent=String(filtered.length);
+    return filtered.length;
+  }
+
+  function irBreedingRenderBodies(sourceType) {
+    const state=irBreedingState(sourceType);
+    if (!state) return;
+    const a=irBreedingRenderSection(sourceType,'current',state.currentInSource||[]);
+    const b=irBreedingRenderSection(sourceType,'db-only',state.currentDbOnly||[]);
+    const c=irBreedingRenderSection(sourceType,'missing',state.missingFromDb||[]);
+    const total=document.getElementById(`${irBreedingPrefix(sourceType)}-filter-count`);
+    if (total) total.textContent=irText(`${a+b+c} Hengste angezeigt`,`${a+b+c} stallions shown`);
   }
 
   function irClubOptionHtml(values) {
     return values.map(v=>`<option value="${irEsc(v)}">${irEsc(v)}</option>`).join('');
   }
 
-  function irRenderClubResults(state) {
-    irClubLast=state;
-    const root=document.getElementById('club-results');
+  function irRenderBreedingResults(state) {
+    const sourceType=state?.club?.sourceType==='station' ? 'station' : 'club';
+    const prefix=irBreedingPrefix(sourceType);
+    if (sourceType==='station') irStationLast=state; else irClubLast=state;
+    const root=document.getElementById(`${prefix}-results`);
     if (!root) return;
-    const {club,currentStallions,removedStallions,currentDbOnly=[],mares,hadPrevious}=state;
-    const isStation=club?.sourceType==='station';
-    const stallionItems=[...currentStallions,...(isStation?removedStallions:currentDbOnly)];
-    state.stallionItems=stallionItems;
-    stallionItems.forEach(irClubRefreshItem);
+
+    const {club,currentStallions,currentDbOnly=[],mares=[],hadPrevious}=state;
+    const currentInSource=currentStallions.filter(x=>x.matchState!=='missing');
+    const missingFromDb=currentStallions.filter(x=>x.matchState==='missing');
+    state.currentInSource=currentInSource;
+    state.missingFromDb=missingFromDb;
+    state.stallionItems=[...currentInSource,...currentDbOnly,...missingFromDb];
+    state.stallionItems.forEach(irClubRefreshItem);
     mares.forEach(irClubRefreshItem);
 
-    const matched=currentStallions.filter(x=>x.matchState==='matched').length;
-    const missing=currentStallions.filter(x=>x.matchState==='missing').length;
-    const ambiguous=currentStallions.filter(x=>x.matchState==='ambiguous').length;
     const feeDiff=currentStallions.filter(x=>x.feeDiff).length;
-    const owners=[...new Set(stallionItems.map(x=>x.remote?.owner||irComparableOwner(x.local)||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
-    const breeds=[...new Set(stallionItems.map(x=>x.remote?.breed||x.local?.breed||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+    const ambiguous=currentStallions.filter(x=>x.matchState==='ambiguous').length;
+    const owners=[...new Set(state.stallionItems.map(x=>x.remote?.owner||irComparableOwner(x.local)||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+    const breeds=[...new Set(state.stallionItems.map(x=>x.remote?.breed||x.local?.breed||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+    const historyCount=currentDbOnly.filter(x=>x.wasPreviouslyListed).length;
 
-    const snapshotNotice=!hadPrevious
-      ? `<div class="notice small">${isStation
-          ? irText('Erster Abgleich für diese Deckstation: Der erkannte Hengstbestand wird als Ausgangsstand gespeichert. Ab dem nächsten vollständigen Import können zuvor gelistete, jetzt fehlende Hengste erkannt werden.','First comparison for this stud station: the detected stallion list is stored as the baseline. From the next complete import onward, stallions that were previously listed but are now missing can be detected.')
-          : irText('Der ZG-Status wird direkt aus der aktuell eingelesenen Hengstliste bestimmt. Der erste vollständige Import wird zusätzlich als Verlauf gespeichert, damit spätere Abgänge mit „zuvor gelistet“ ergänzt werden können.','Club membership is determined directly from the currently pasted stallion list. The first complete import is also stored as history so later removals can be annotated as “previously listed”.')}</div>`
-      : '';
+    const wrongSourceText=sourceType==='station'
+      ? irText('Deckstations-Abgleich','Stud-station comparison')
+      : irText('ZG-Abgleich','Breeding-club comparison');
     const incompleteNotice=!club.stallionsComplete
-      ? `<div class="notice notice-warning small">${isStation
-          ? irText('Die Deckstationsliste wurde nicht als vollständig erkannt. Der aktuelle Stand wird verglichen, aber es werden keine Hengste als „nicht mehr in der Deckstation“ markiert.','The stud-station list was not detected as complete. Current rows are compared, but no stallions are marked as “no longer in the stud station”.')
-          : irText('Die Hengsttabelle wurde nicht vollständig erkannt. Die gelesenen Zeilen werden abgeglichen, aber DB-Hengste werden vorsichtshalber nicht als „nicht in aktueller ZG-Liste“ markiert.','The stallion table was not parsed completely. Parsed rows are compared, but DB stallions are not marked as “not in current club list” to avoid false positives.')}</div>`
+      ? `<div class="notice notice-warning small">${sourceType==='station'
+          ? irText('Die Deckstationsliste wurde nicht als vollständig erkannt. DB-Hengste werden deshalb vorsichtshalber nicht als „aktuell nicht angeboten“ eingestuft.','The stud-station list was not detected as complete. Database stallions are therefore not classified as “not currently offered”.')
+          : irText('Die Hengsttabelle wurde nicht vollständig erkannt. DB-Hengste werden deshalb vorsichtshalber nicht als „nicht in aktueller ZG-Liste“ eingestuft.','The stallion table was not parsed completely. Database stallions are therefore not classified as “not in current club list”.')}</div>`
       : '';
 
-    const remoteFeeLabel=isStation ? irText('Decktaxe Station','Station stud fee') : irText('Decktaxe ZG','Club stud fee');
-    const removedLabel=isStation ? irText('nicht mehr in Deckstation','no longer in station') : irText('nicht in aktueller ZG-Liste','not in current club list');
-    const availabilityFilter=isStation ? `<label>${irText('Deckstatus','Availability')}<select id="club-filter-availability">
-          <option value="all">${irText('Alle','All')}</option>
-          <option value="external">${irText('Extern verfügbar','Externally available')}</option>
-          <option value="not_external">${irText('Nicht extern','Not external')}</option>
-          <option value="overview">${irText('Nur Übersicht','Overview only')}</option>
-        </select></label>` : '';
-    const availabilityHeader=isStation ? `<th>${irText('Deckstatus','Availability')}</th>` : '';
+    const firstImportNotice=!hadPrevious
+      ? `<div class="notice small">${sourceType==='station'
+          ? irText('Der aktuelle Deckstationsbestand wird zusätzlich als Verlauf gespeichert. Spätere Abgänge können dadurch als „zuvor gelistet“ markiert werden.','The current stud-station list is also stored as history. Later removals can therefore be marked as “previously listed”.')
+          : irText('Der aktuelle ZG-Bestand wird zusätzlich als Verlauf gespeichert. Die Zugehörigkeit selbst wird aber immer direkt aus der aktuell eingelesenen Liste bestimmt.','The current breeding-club list is also stored as history. Membership itself is always determined directly from the currently pasted list.')}</div>`
+      : '';
+
+    const availabilityFilter=sourceType==='station' ? `<label>${irText('Deckstatus','Availability')}<select id="station-filter-availability">
+      <option value="all">${irText('Alle','All')}</option>
+      <option value="external">${irText('Extern verfügbar','Externally available')}</option>
+      <option value="not_external">${irText('Nicht extern','Not external')}</option>
+      <option value="overview">${irText('Nur Übersicht','Overview only')}</option>
+    </select></label>` : '';
+
+    const title=club.name || (sourceType==='station'?irText('Deckstation','Stud station'):irText('Zuchtgemeinschaft','Breeding club'));
+    const card1Label=sourceType==='station'?irText('aktuell in Deckstation','currently in station'):irText('aktuell in ZG','currently in club');
+    const card2Label=sourceType==='station'?irText('DB, nicht angeboten','DB, not offered'):irText('DB, nicht in ZG','DB, not in club');
+    const card3Label=sourceType==='station'?irText('Deckstation, fehlt in DB','station, missing from DB'):irText('ZG, fehlt in DB','club, missing from DB');
+
+    const sectionCurrentTitle=sourceType==='station'?irText('1. Aktuell in der Deckstation – in DB gefunden','1. Currently in the stud station – found in DB'):irText('1. Aktuell in der Zuchtgemeinschaft – in DB gefunden','1. Currently in the breeding club – found in DB');
+    const sectionDbOnlyTitle=sourceType==='station'?irText('2. In der DB, aber aktuell nicht angeboten','2. In the DB, but not currently offered'):irText('2. In der DB, aber nicht in der Zuchtgemeinschaft','2. In the DB, but not in the breeding club');
+    const sectionMissingTitle=sourceType==='station'?irText('3. In der Deckstation, aber nicht in der DB','3. In the stud station, but not in the DB'):irText('3. In der Zuchtgemeinschaft, aber nicht in der DB','3. In the breeding club, but not in the DB');
+
+    const sectionCurrentNote=sourceType==='station'
+      ? irText('Aktuell angebotene Hengste, die der Datenbank zugeordnet werden konnten. Abweichungen bei Decktaxe, Besitzer oder GP/OP werden direkt markiert.','Currently offered stallions that could be matched to the database. Differences in stud fee, owner or OP are marked directly.')
+      : irText('Aktuell gelistete ZG-Hengste mit DB-Zuordnung. Abweichungen bei Decktaxe, Besitzer oder GP/OP werden direkt markiert.','Currently listed club stallions with a database match. Differences in stud fee, owner or OP are marked directly.');
+    const sectionDbOnlyNote=sourceType==='station'
+      ? irText('DB-Hengste derselben Spielwelt und Deckstationsrasse, die in der aktuell eingelesenen Deckstation nicht vorkommen. „Zuvor gelistet“ ist nur ein zusätzlicher Verlaufshinweis.','Database stallions from the same game world and stud-station breed that do not appear in the currently pasted station. “Previously listed” is only an additional history note.')
+      : irText('DB-Hengste derselben Spielwelt und aktuell vertretenen ZG-Rasse(n), die in der eingelesenen Hengstliste nicht vorkommen. Zuchtzulassung und Besitzerstatus sind dafür keine Voraussetzung.','Database stallions from the same game world and currently represented club breed(s) that do not appear in the pasted stallion list. Breeding approval and owner status are not prerequisites.');
+    const sectionMissingNote=sourceType==='station'
+      ? irText('Hengste, die aktuell in der Deckstation stehen, für die aber kein eindeutiger Datensatz in der Datenbank gefunden wurde.','Stallions currently listed in the stud station for which no database record was found.')
+      : irText('Hengste, die aktuell in der ZG stehen, für die aber kein Datensatz in der Datenbank gefunden wurde.','Stallions currently listed in the club for which no database record was found.');
 
     root.innerHTML=`
       <div class="inventory-club-head">
         <div>
-          <h3>${irEsc(club.name||irText('Zuchtgemeinschaft','Breeding club'))}</h3>
+          <h3>${irEsc(title)}</h3>
           <p class="small muted">${irEsc(club.server)}${club.founder?` · ${irText('Gründer','Founder')}: ${irEsc(club.founder)}`:''}${club.specialisation1?` · ${irEsc(club.specialisation1)}`:''}</p>
         </div>
-        ${feeDiff ? `<button type="button" id="club-apply-all-fees">${irText(`Alle eindeutigen Decktaxen übernehmen (${feeDiff})`,`Apply all unambiguous stud fees (${feeDiff})`)}</button>`:''}
+        ${feeDiff ? `<button type="button" id="${prefix}-apply-all-fees">${irText(`Alle eindeutigen Decktaxen übernehmen (${feeDiff})`,`Apply all unambiguous stud fees (${feeDiff})`)}</button>`:''}
       </div>
-      ${snapshotNotice}${incompleteNotice}
+      ${firstImportNotice}${incompleteNotice}
       <div class="inventory-count-grid inventory-club-count-grid">
-        <div><strong>${matched}</strong><span>✓ ${irText('in DB gefunden','found in DB')}</span></div>
+        <div><strong>${club.stallions.length}</strong><span>✓ ${card1Label}</span></div>
+        <div><strong>${currentDbOnly.length}</strong><span>○ ${card2Label}</span></div>
+        <div><strong>${missingFromDb.length}</strong><span>＋ ${card3Label}</span></div>
         <div><strong>${feeDiff}</strong><span>△ ${irText('Decktaxe abweichend','stud fee differs')}</span></div>
-        <div><strong>${missing}</strong><span>＋ ${irText('fehlt in DB','missing from DB')}</span></div>
-        <div><strong>${isStation?removedStallions.length:currentDbOnly.length}</strong><span>− ${removedLabel}</span></div>
       </div>
-      ${ambiguous?`<div class="notice notice-warning small">⚠ ${ambiguous} ${irText('Hengst(e) konnten wegen mehrfacher Namens-Treffer nicht eindeutig zugeordnet werden.','stallion(s) could not be matched unambiguously because the name occurs more than once.')}</div>`:''}
+      ${ambiguous?`<div class="notice notice-warning small">⚠ ${ambiguous} ${irText('Hengst(e) sind zwar in der eingelesenen Liste, konnten wegen mehrfacher Namens-Treffer aber nicht eindeutig einem DB-Datensatz zugeordnet werden.','stallion(s) are in the pasted list but could not be matched unambiguously because the name occurs more than once.')}</div>`:''}
+      ${sourceType==='station' && historyCount?`<div class="notice small">↺ ${historyCount} ${irText('der aktuell nicht angebotenen DB-Hengste waren in einem früheren Deckstationsabgleich gelistet.','of the database stallions not currently offered were listed in an earlier stud-station comparison.')}</div>`:''}
 
-      <div class="inventory-club-filters ${isStation?'has-availability':''}">
-        <label>${irText('Suche','Search')}<input id="club-filter-search" type="search" placeholder="${irText('Pferd oder Besitzer …','Horse or owner …')}"></label>
-        <label>${irText('Besitzer','Owner')}<select id="club-filter-owner"><option value="">${irText('Alle','All')}</option>${irClubOptionHtml(owners)}</select></label>
-        <label>${irText('Rasse','Breed')}<select id="club-filter-breed"><option value="">${irText('Alle','All')}</option>${irClubOptionHtml(breeds)}</select></label>
-        <label>${irText('Status','Status')}<select id="club-filter-status">
+      <div class="inventory-club-filters ${sourceType==='station'?'has-availability':''}">
+        <label>${irText('Suche','Search')}<input id="${prefix}-filter-search" type="search" placeholder="${irText('Pferd oder Besitzer …','Horse or owner …')}"></label>
+        <label>${irText('Besitzer','Owner')}<select id="${prefix}-filter-owner"><option value="">${irText('Alle','All')}</option>${irClubOptionHtml(owners)}</select></label>
+        <label>${irText('Rasse','Breed')}<select id="${prefix}-filter-breed"><option value="">${irText('Alle','All')}</option>${irClubOptionHtml(breeds)}</select></label>
+        <label>${irText('Datenstatus','Data status')}<select id="${prefix}-filter-data">
           <option value="all">${irText('Alle','All')}</option>
           <option value="complete">${irText('DB vollständig','DB complete')}</option>
           <option value="incomplete">${irText('DB unvollständig','DB incomplete')}</option>
           <option value="diff">${irText('Nur Abweichungen','Differences only')}</option>
           <option value="fee">${irText('Decktaxe abweichend','Stud fee differs')}</option>
-          <option value="missing">${irText('Fehlt in DB','Missing from DB')}</option>
-          ${isStation
-            ? `<option value="removed">${irText('Nicht mehr in Deckstation','No longer in stud station')}</option>`
-            : `<option value="not_listed">${irText('Nicht in aktueller ZG-Liste','Not in current club list')}</option>`}
         </select></label>
         ${availabilityFilter}
-        <span id="club-filter-count" class="small muted"></span>
+        <span id="${prefix}-filter-count" class="small muted"></span>
       </div>
 
-      <p class="tiny muted inventory-club-sort-hint">${irText('Sortierung: vollständige DB-Treffer zuerst, danach teilweise/unvollständige bzw. abweichende Treffer; DB-Hengste außerhalb der aktuellen ZG-Liste folgen danach, fehlende DB-Pferde stehen ganz am Ende. Pferdenamen sind markierbar und über ⧉ direkt kopierbar.','Sorting: complete DB matches first, followed by partly complete/incomplete or differing matches; DB stallions outside the current club list follow, and horses missing from the DB are listed last. Horse names can be selected and copied directly via ⧉.')}</p>
-      <div class="table-wrap"><table class="detail-table inventory-result-table inventory-club-stallion-table ${isStation?'inventory-station-table':''}">
-        <thead><tr>
-          <th>${irText('Hengst','Stallion')}</th><th>${irText('Besitzer','Owner')}</th><th>${irText('Rasse','Breed')}</th><th>GP/OP</th>
-          <th>${remoteFeeLabel}</th><th>${irText('Decktaxe DB','DB stud fee')}</th>${availabilityHeader}<th>${irText('Status','Status')}</th><th>${irText('Aktion','Action')}</th>
-        </tr></thead>
-        <tbody id="club-stallion-body"></tbody>
-      </table></div>
+      <p class="tiny muted inventory-club-sort-hint">${irText('Innerhalb jeder Liste stehen vollständige DB-Treffer zuerst, danach teilweise/unvollständige bzw. abweichende Treffer. Pferdenamen sind markierbar und über ⧉ direkt kopierbar.','Within each list, complete database matches come first, followed by partly complete/incomplete or differing matches. Horse names can be selected and copied directly via ⧉.')}</p>
 
-      ${!isStation?`<details class="inventory-result-group">
+      ${irBreedingSectionHtml(sourceType,'current',sectionCurrentTitle,sectionCurrentNote,currentInSource.length,true)}
+      ${irBreedingSectionHtml(sourceType,'db-only',sectionDbOnlyTitle,sectionDbOnlyNote,currentDbOnly.length,true)}
+      ${irBreedingSectionHtml(sourceType,'missing',sectionMissingTitle,sectionMissingNote,missingFromDb.length,true)}
+
+      ${sourceType==='club'?`<details class="inventory-result-group">
         <summary>${irText('Zuchtstuten','Broodmares')} · ${mares.length}</summary>
-        <p class="tiny muted">${irText('Stuten werden ebenfalls eingelesen und auf Name, Besitzer, Rasse und GP abgeglichen. Die historische „nicht mehr gelistet“-Überwachung ist in dieser Version bewusst auf Hengste beschränkt.','Broodmares are also parsed and compared by name, owner, breed and OP. Historical “no longer listed” tracking is intentionally limited to stallions in this version.')}</p>
+        <p class="tiny muted">${irText('Stuten werden weiterhin separat eingelesen und auf Name, Besitzer, Rasse und GP abgeglichen.','Broodmares are still parsed separately and compared by name, owner, breed and OP.')}</p>
         ${irClubMareTable(mares)}
       </details>`:''}
-      <p class="tiny muted">${isStation
-        ? irText('Decktaxen werden nie still überschrieben. Nur eindeutige Treffer können einzeln oder gesammelt übernommen werden. GP/OP, Besitzer und andere Felder werden ausschließlich angezeigt und nicht automatisch verändert.','Stud fees are never overwritten silently. Only unambiguous matches can be applied individually or in bulk. OP, owner and other fields are display-only and are not changed automatically.')
-        : irText('ZG-Status = aktueller Listenabgleich: Für dieselbe Spielwelt und die aktuell vertretenen Hengstrassen wird jeder DB-Hengst entweder in der ZG-Liste gefunden oder als „nicht in aktueller ZG-Liste“ gezeigt. Zuchtzulassung und aktueller Besitzerstatus filtern diese Prüfung nicht. Decktaxen werden nie still überschrieben.','Club status = current-list comparison: for the same game world and stallion breeds currently represented, every DB stallion is either found in the club list or shown as “not in current club list”. Breeding approval and current owner status do not filter this check. Stud fees are never overwritten silently.')}</p>`;
+      <p class="tiny muted">${sourceType==='station'
+        ? irText('Decktaxen werden nie still überschrieben. Die Liste „DB, aber aktuell nicht angeboten“ ist ein reiner Ist-Abgleich derselben Spielwelt und Rasse; sie behauptet nicht, dass ein Hengst früher in der Deckstation war.','Stud fees are never overwritten silently. “DB, but not currently offered” is a direct current-state comparison for the same game world and breed; it does not claim that a stallion used to be in the stud station.')
+        : irText('Die drei ZG-Listen sind bewusst voneinander getrennt: aktueller ZG-Bestand mit DB-Treffer, passende DB-Hengste außerhalb der ZG und aktuelle ZG-Hengste ohne DB-Datensatz. Der Snapshot dient nur als Zusatzhistorie.','The three club lists are deliberately separated: current club stock with a database match, matching database stallions outside the club, and current club stallions without a database record. The snapshot is only additional history.')}</p>`;
 
-    irClubRenderStallionBody();
-    for (const id of ['club-filter-search','club-filter-owner','club-filter-breed','club-filter-status','club-filter-availability']) {
+    irBreedingRenderBodies(sourceType);
+    for (const id of [`${prefix}-filter-search`,`${prefix}-filter-owner`,`${prefix}-filter-breed`,`${prefix}-filter-data`,`${prefix}-filter-availability`]) {
       const el=document.getElementById(id);
-      if (el) el.addEventListener(id==='club-filter-search'?'input':'change',irClubRenderStallionBody);
+      if (el) el.addEventListener(id.endsWith('search')?'input':'change',()=>irBreedingRenderBodies(sourceType));
     }
-    document.getElementById('club-apply-all-fees')?.addEventListener('click',()=>irClubApplyAllFees().catch(err=>alert(err.message)));
+    document.getElementById(`${prefix}-apply-all-fees`)?.addEventListener('click',()=>irClubApplyAllFees(sourceType).catch(err=>alert(err.message)));
+  }
+
+  function irRenderClubResults(state) {
+    irRenderBreedingResults(state);
+  }
+
+  function irRenderStationResults(state) {
+    irRenderBreedingResults(state);
   }
 
   async function irClubApplyFeeItem(item) {
@@ -1454,49 +1540,68 @@
     return true;
   }
 
-  async function irClubApplyAllFees() {
-    if (!irClubLast) return;
-    const targets=irClubLast.currentStallions.filter(x=>x.feeDiff && x.local?.id!=null && x.remote?.stud_fee!=null);
+  async function irClubApplyAllFees(sourceType='club') {
+    const state=irBreedingState(sourceType);
+    if (!state) return;
+    const targets=state.currentStallions.filter(x=>x.feeDiff && x.local?.id!=null && x.remote?.stud_fee!=null);
     if (!targets.length) return;
+    const isStation=sourceType==='station';
     const ok=confirm(irText(
-      irClubLast?.club?.sourceType==='station'
+      isStation
         ? `${targets.length} eindeutige Decktaxe(n) aus der Deckstation in die Datenbank übernehmen?`
         : `${targets.length} eindeutige Decktaxe(n) aus der Zuchtgemeinschaft in die Datenbank übernehmen?`,
-      irClubLast?.club?.sourceType==='station'
+      isStation
         ? `Apply ${targets.length} unambiguous stud fee(s) from the stud station to the database?`
         : `Apply ${targets.length} unambiguous stud fee(s) from the breeding club to the database?`
     ));
     if (!ok) return;
     let changed=0;
     for (const item of targets) if (await irClubApplyFeeItem(item)) changed++;
-    irRenderClubResults(irClubLast);
-    const status=document.getElementById('club-reconcile-status');
+    irRenderBreedingResults(state);
+    const status=document.getElementById(`${irBreedingPrefix(sourceType)}-reconcile-status`);
     if (status) status.textContent=irText(`${changed} Decktaxe(n) übernommen.`,`${changed} stud fee(s) applied.`);
   }
 
-  async function irClubApplyFeeByLocalId(localId) {
-    if (!irClubLast) return;
-    const item=irClubLast.currentStallions.find(x=>String(x.local?.id)===String(localId) && x.feeDiff);
+  async function irClubApplyFeeByLocalId(sourceType, localId) {
+    const state=irBreedingState(sourceType);
+    if (!state) return;
+    const item=state.currentStallions.find(x=>String(x.local?.id)===String(localId) && x.feeDiff);
     if (!item) return;
     if (await irClubApplyFeeItem(item)) {
-      irRenderClubResults(irClubLast);
-      const status=document.getElementById('club-reconcile-status');
+      irRenderBreedingResults(state);
+      const status=document.getElementById(`${irBreedingPrefix(sourceType)}-reconcile-status`);
       if (status) status.textContent=irText(`Decktaxe für ${item.remote.name} übernommen.`,`Stud fee applied for ${item.remote.name}.`);
     }
   }
 
-  async function irClubRun() {
-    const status=document.getElementById('club-reconcile-status');
-    const raw=document.getElementById('club-reconcile-text')?.value || '';
+  async function irBreedingRun(expectedType='club') {
+    const prefix=irBreedingPrefix(expectedType);
+    const status=document.getElementById(`${prefix}-reconcile-status`);
+    const raw=document.getElementById(`${prefix}-reconcile-text`)?.value || '';
     if (!raw.trim()) {
-      if (status) status.textContent=irText('Bitte eine vollständige Zuchtgemeinschafts- oder Deckstationsseite einfügen.','Please paste a complete breeding-club or stud-station page.');
+      if (status) status.textContent=expectedType==='station'
+        ? irText('Bitte eine vollständige Deckstationsseite einfügen.','Please paste a complete stud-station page.')
+        : irText('Bitte eine vollständige Zuchtgemeinschaftsseite einfügen.','Please paste a complete breeding-club page.');
       return;
     }
     if (!irHorses.length) irHorses=await localGetAll(LOCAL_STORES.horses);
     const club=irParseBreedingSource(raw);
     if (!club.valid) {
-      if (status) status.textContent=irText('Keine Zuchtgemeinschafts- oder Deckstations-Hengstliste erkannt. Bitte die vollständige MDR-Seite einfügen.','No breeding-club or stud-station stallion list was detected. Please paste the complete MDR page.');
+      if (status) status.textContent=expectedType==='station'
+        ? irText('Keine Deckstations-Hengstliste erkannt. Bitte die vollständige MDR-Seite einfügen.','No stud-station stallion list was detected. Please paste the complete MDR page.')
+        : irText('Keine Zuchtgemeinschafts-Hengstliste erkannt. Bitte die vollständige MDR-Seite einfügen.','No breeding-club stallion list was detected. Please paste the complete MDR page.');
       return;
+    }
+
+    if (club.sourceType!==expectedType) {
+      const targetPrefix=irBreedingPrefix(club.sourceType);
+      const target=document.getElementById(`${targetPrefix}-reconcile-text`);
+      if (target) target.value=raw;
+      if (status) status.textContent=club.sourceType==='station'
+        ? irText('Deckstation erkannt – der Inhalt wurde in den Reiter „Deckstation“ übernommen.','Stud station detected – the content was moved to the “Stud station” tab.')
+        : irText('Zuchtgemeinschaft erkannt – der Inhalt wurde in den Reiter „Zuchtgemeinschaft“ übernommen.','Breeding club detected – the content was moved to the “Breeding club” tab.');
+      irSelectTab(club.sourceType);
+      return irBreedingRun(club.sourceType);
     }
 
     const currentStallions=irClubCompareRows(club.stallions,irHorses,club.server,'stallions',club.sourceType);
@@ -1505,23 +1610,25 @@
     const previous=await localGet(LOCAL_STORES.userSettings,key).catch(()=>null);
     const snapshot=irClubMergeSnapshot(club,previous,currentStallions);
     const removedStallions=club.sourceType==='station' && previous ? irClubRemovedItems(snapshot,irHorses,club.server) : [];
-    const currentDbOnly=club.sourceType==='club' ? irClubCurrentDbOnlyItems(club,irHorses,currentStallions,snapshot) : [];
+    const currentDbOnly=irClubCurrentDbOnlyItems(club,irHorses,currentStallions,snapshot);
 
-    // Ein unvollständiger Import darf zwar den zuletzt gesehenen Datenstand
-    // aktualisieren, aber niemals vorhandene Hengste als entfernt markieren.
-    // Bei ZGs ist der Snapshot nur Verlauf; der aktuelle Status kommt direkt
-    // aus der eingelesenen Liste.
+    // Unvollständige Listen dürfen keine negativen Ist-Aussagen erzeugen.
+    // Der Snapshot bleibt reine Zusatzhistorie und ist nie Voraussetzung für
+    // „DB, aber nicht in ZG / aktuell nicht angeboten“.
     await localPut(LOCAL_STORES.userSettings,snapshot);
 
     const state={club,currentStallions,removedStallions,currentDbOnly,mares,hadPrevious:!!previous,snapshot};
     if (status) status.textContent=club.sourceType==='station'
       ? irText(`${club.stallions.length} Hengste aus ${club.name} erkannt · ${club.server}.`,`${club.stallions.length} stallions detected from ${club.name} · ${club.server}.`)
       : irText(`${club.stallions.length} Hengste und ${club.mares.length} Stuten erkannt · ${club.server}.`,`${club.stallions.length} stallions and ${club.mares.length} broodmares detected · ${club.server}.`);
-    irRenderClubResults(state);
+    if (club.sourceType==='station') irRenderStationResults(state); else irRenderClubResults(state);
   }
 
+  async function irClubRun() { return irBreedingRun('club'); }
+  async function irStationRun() { return irBreedingRun('station'); }
+
   function irSelectTab(tab) {
-    const next=tab==='club'?'club':'stock';
+    const next=['stock','club','station'].includes(tab) ? tab : 'stock';
     document.querySelectorAll('.inventory-reconcile-tab').forEach(btn=>{
       const active=btn.dataset.irTab===next;
       btn.classList.toggle('active',active);
@@ -1531,9 +1638,19 @@
       pane.hidden=pane.dataset.irPane!==next;
     });
     const subtitle=document.getElementById('inventory-reconcile-subtitle');
-    if (subtitle) subtitle.textContent=next==='club'
-      ? irText('Zuchtgemeinschaft oder Deckstation einlesen, Hengste mit der Datenbank vergleichen und Decktaxen gezielt übernehmen.','Parse a breeding club or stud station, compare stallions with the database, and selectively apply stud fees.')
-      : irText('Eine oder mehrere vollständige MDR-Profilseiten einfügen und mit frei gewählten Besitzern aus der Datenbank vergleichen.','Paste one or more complete MDR profile pages and compare them with selected owners in the database.');
+    if (!subtitle) return;
+    if (next==='club') subtitle.textContent=irText(
+      'Zuchtgemeinschaft einlesen: aktueller ZG-Bestand, passende DB-Hengste außerhalb der ZG und ZG-Hengste ohne DB-Datensatz getrennt prüfen.',
+      'Parse a breeding club: review current club stock, matching database stallions outside the club, and club stallions missing from the database in separate lists.'
+    );
+    else if (next==='station') subtitle.textContent=irText(
+      'Deckstation einlesen: aktuell angebotene Hengste, passende DB-Hengste ohne aktuelles Angebot und fehlende DB-Datensätze getrennt prüfen.',
+      'Parse a stud station: review currently offered stallions, matching database stallions not currently offered, and missing database records in separate lists.'
+    );
+    else subtitle.textContent=irText(
+      'Eine oder mehrere vollständige MDR-Profilseiten einfügen und mit frei gewählten Besitzern aus der Datenbank vergleichen.',
+      'Paste one or more complete MDR profile pages and compare them with selected owners in the database.'
+    );
   }
 
   let irHorses=[];
@@ -1544,15 +1661,14 @@
       ? filterOptionHorses.slice()
       : await localGetAll(LOCAL_STORES.horses);
     irRenderOwners(irHorses);
-    const stockResults=document.getElementById('inventory-results');
-    const stockStatus=document.getElementById('inventory-reconcile-status');
-    const clubResults=document.getElementById('club-results');
-    const clubStatus=document.getElementById('club-reconcile-status');
-    if (stockResults) stockResults.innerHTML='';
-    if (stockStatus) stockStatus.textContent='';
-    if (clubResults) clubResults.innerHTML='';
-    if (clubStatus) clubStatus.textContent='';
+    for (const id of ['inventory-results','club-results','station-results']) {
+      const el=document.getElementById(id); if (el) el.innerHTML='';
+    }
+    for (const id of ['inventory-reconcile-status','club-reconcile-status','station-reconcile-status']) {
+      const el=document.getElementById(id); if (el) el.textContent='';
+    }
     irClubLast=null;
+    irStationLast=null;
     irStockSelectedIds.clear();
     irLastStockResult=null;
     irSelectTab('stock');
@@ -1619,29 +1735,46 @@
     document.getElementById('inventory-reconcile-close')?.addEventListener('click',irClose);
     document.getElementById('inventory-reconcile-cancel')?.addEventListener('click',irClose);
     document.getElementById('club-reconcile-cancel')?.addEventListener('click',irClose);
+    document.getElementById('station-reconcile-cancel')?.addEventListener('click',irClose);
     document.getElementById('inventory-reconcile-run')?.addEventListener('click',irRun);
     document.getElementById('club-reconcile-run')?.addEventListener('click',()=>irClubRun().catch(err=>{
-      console.error('Zucht-/Deckstationsabgleich fehlgeschlagen:',err);
+      console.error('Zuchtgemeinschaftsabgleich fehlgeschlagen:',err);
       const status=document.getElementById('club-reconcile-status');
-      if (status) status.textContent=irText(`Zucht-/Deckstationsabgleich fehlgeschlagen: ${err?.message||err}`,`Breeding/stud-station comparison failed: ${err?.message||err}`);
+      if (status) status.textContent=irText(`Zuchtgemeinschaftsabgleich fehlgeschlagen: ${err?.message||err}`,`Breeding-club comparison failed: ${err?.message||err}`);
+    }));
+    document.getElementById('station-reconcile-run')?.addEventListener('click',()=>irStationRun().catch(err=>{
+      console.error('Deckstationsabgleich fehlgeschlagen:',err);
+      const status=document.getElementById('station-reconcile-status');
+      if (status) status.textContent=irText(`Deckstationsabgleich fehlgeschlagen: ${err?.message||err}`,`Stud-station comparison failed: ${err?.message||err}`);
     }));
     document.querySelectorAll('.inventory-reconcile-tab').forEach(btn=>btn.addEventListener('click',()=>irSelectTab(btn.dataset.irTab)));
+    document.getElementById('inventory-owner-active')?.addEventListener('click',()=>{
+      document.querySelectorAll('#inventory-owner-options input').forEach(cb=>{cb.checked=false;});
+      document.querySelectorAll('#inventory-owner-options .inventory-owner-section input').forEach(cb=>{cb.checked=true;});
+    });
     document.getElementById('inventory-owner-all')?.addEventListener('click',()=>document.querySelectorAll('#inventory-owner-options input').forEach(cb=>{cb.checked=true;}));
     document.getElementById('inventory-owner-none')?.addEventListener('click',()=>document.querySelectorAll('#inventory-owner-options input').forEach(cb=>{cb.checked=false;}));
-    document.getElementById('club-results')?.addEventListener('click',event=>{
-      const copyBtn=event.target.closest('[data-club-copy-name]');
-      if (copyBtn) {
-        irClubCopyText(copyBtn.dataset.clubCopyName,copyBtn);
-        return;
-      }
-      const btn=event.target.closest('[data-club-fee-apply]');
-      if (btn) irClubApplyFeeByLocalId(btn.dataset.clubFeeApply).catch(err=>alert(err.message));
-    });
+
+    for (const sourceType of ['club','station']) {
+      document.getElementById(`${irBreedingPrefix(sourceType)}-results`)?.addEventListener('click',event=>{
+        const copyBtn=event.target.closest('[data-club-copy-name]');
+        if (copyBtn) {
+          irClubCopyText(copyBtn.dataset.clubCopyName,copyBtn);
+          return;
+        }
+        const btn=event.target.closest('[data-breeding-fee-apply]');
+        if (btn) {
+          const type=btn.dataset.breedingSource==='station'?'station':'club';
+          irClubApplyFeeByLocalId(type,btn.dataset.breedingFeeApply).catch(err=>alert(err.message));
+        }
+      });
+    }
+
     document.getElementById('inventory-results')?.addEventListener('change',event=>{
       const master=event.target.closest('[data-inventory-select-group]');
       if (master) {
         const type=master.dataset.inventorySelectGroup;
-        document.querySelectorAll(`#inventory-results [data-inventory-select-type=\"${CSS.escape(type)}\"]`).forEach(cb=>{
+        document.querySelectorAll(`#inventory-results [data-inventory-select-type="${CSS.escape(type)}"]`).forEach(cb=>{
           cb.checked=master.checked;
           const id=String(cb.dataset.inventorySelect);
           if (master.checked) irStockSelectedIds.add(id); else irStockSelectedIds.delete(id);

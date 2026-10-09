@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Pferde – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5492" />
+  <link rel="stylesheet" href="css/style.css?v=5493" />
 </head>
 <body class="list-page">
   <header class="topbar">
@@ -388,13 +388,14 @@
 
         <div class="inventory-reconcile-tabs" role="tablist" aria-label="Abgleich wählen">
           <button type="button" class="inventory-reconcile-tab active" data-ir-tab="stock" role="tab" aria-selected="true">Eigene Pferde</button>
-          <button type="button" class="inventory-reconcile-tab" data-ir-tab="club" role="tab" aria-selected="false">Zucht / Deckstation</button>
+          <button type="button" class="inventory-reconcile-tab" data-ir-tab="club" role="tab" aria-selected="false">Zuchtgemeinschaft</button>
+          <button type="button" class="inventory-reconcile-tab" data-ir-tab="station" role="tab" aria-selected="false">Deckstation</button>
         </div>
 
         <section id="inventory-pane-stock" class="inventory-reconcile-pane" data-ir-pane="stock">
           <div class="inventory-reconcile-layout">
             <section>
-              <div class="inventory-owner-head"><strong>Besitzer einbeziehen</strong><span><button type="button" id="inventory-owner-all" class="link-button">Alle auswählen</button> · <button type="button" id="inventory-owner-none" class="link-button">Alle abwählen</button></span></div>
+              <div class="inventory-owner-head"><strong>Besitzer einbeziehen</strong><span><button type="button" id="inventory-owner-active" class="link-button">Aktive auswählen</button> · <button type="button" id="inventory-owner-all" class="link-button">Alle auswählen</button> · <button type="button" id="inventory-owner-none" class="link-button">Alle abwählen</button></span></div>
               <div id="inventory-owner-options" class="inventory-owner-options"></div>
             </section>
             <section>
@@ -414,17 +415,33 @@
         <section id="inventory-pane-club" class="inventory-reconcile-pane" data-ir-pane="club" hidden>
           <div class="inventory-club-layout">
             <section>
-              <label for="club-reconcile-text"><strong>Zuchtgemeinschaft / Deckstation</strong></label>
-              <textarea id="club-reconcile-text" rows="12" placeholder="Vollständige ZG-/Breeding-Club- oder Deckstationsseite hier einfügen …"></textarea>
-              <p class="tiny muted">Zuchtgemeinschaften und Deckstationen werden automatisch erkannt. ZG-Seiten können Deutsch oder Englisch sein; bei Deckstationen wird die Rasse aus der Überschrift übernommen. Hengste werden auf Name, Besitzer, GP/OP und besonders Decktaxe/Stud fee abgeglichen. MDR-Namensbestandteile wie ~Ts~, ~~APH~~ und HTML-Leerzeichen bleiben beim Matching erhalten. Ein vollständiger Import speichert außerdem einen Ausgangsstand für spätere „nicht mehr gelistet“-Hinweise.</p>
+              <label for="club-reconcile-text"><strong>Zuchtgemeinschaft / Breeding Club</strong></label>
+              <textarea id="club-reconcile-text" rows="12" placeholder="Vollständige ZG-/Breeding-Club-Seite hier einfügen …"></textarea>
+              <p class="tiny muted">Deutsch und Englisch werden automatisch erkannt. Der Hengstabgleich wird anschließend in drei getrennte Listen aufgeteilt: aktuell in der ZG, in der Datenbank aber nicht in der ZG sowie in der ZG aber nicht in der Datenbank. Besitzer, GP/OP und besonders Decktaxe/Stud fee werden verglichen; MDR-Namensbestandteile wie ~Ts~ und ~~APH~~ bleiben erhalten.</p>
             </section>
           </div>
           <p id="club-reconcile-status" class="small muted"></p>
           <div class="modal-actions">
             <button type="button" id="club-reconcile-cancel" class="secondary">Abbrechen</button>
-            <button type="button" id="club-reconcile-run">Abgleich starten</button>
+            <button type="button" id="club-reconcile-run">Zuchtgemeinschaft abgleichen</button>
           </div>
           <div id="club-results" class="inventory-results"></div>
+        </section>
+
+        <section id="inventory-pane-station" class="inventory-reconcile-pane" data-ir-pane="station" hidden>
+          <div class="inventory-club-layout">
+            <section>
+              <label for="station-reconcile-text"><strong>Deckstation / Stud Station</strong></label>
+              <textarea id="station-reconcile-text" rows="12" placeholder="Vollständige Deckstations-/Stud-Station-Seite hier einfügen …"></textarea>
+              <p class="tiny muted">Deckstationen werden getrennt von Zuchtgemeinschaften ausgewertet. Angezeigt werden aktuell angebotene Hengste, passende DB-Hengste derselben Spielwelt und Rasse, die aktuell nicht angeboten werden, sowie Deckstationshengste, die in der Datenbank fehlen. Decktaxe, GP/OP und Deckstatus werden dabei direkt verglichen.</p>
+            </section>
+          </div>
+          <p id="station-reconcile-status" class="small muted"></p>
+          <div class="modal-actions">
+            <button type="button" id="station-reconcile-cancel" class="secondary">Abbrechen</button>
+            <button type="button" id="station-reconcile-run">Deckstation abgleichen</button>
+          </div>
+          <div id="station-results" class="inventory-results"></div>
         </section>
       </div>
     </div>
@@ -512,18 +529,18 @@
     <button type="button" id="scroll-top-btn" class="scroll-top-btn" hidden title="Nach oben">↑</button>
   </main>
 
-  <script src="js/tournament-catalog.js?v=5492"></script>
-<script src="js/i18n.js?v=5492"></script>
-  <script src="js/core-utils.js?v=5492"></script>
-  <script src="js/supabase-loader.js?v=5492"></script>
-<script src="js/supabase-config.js?v=5492"></script>
-<script src="js/database-local.js?v=5492"></script>
-  <script src="js/local-app.js?v=5492"></script>
-  <script src="js/learning-file.js?v=5492"></script>
-  <script src="js/horse-data-utils.js?v=5492"></script>
-  <script src="js/data-quality.js?v=5492"></script>
-  <script src="js/breeding-progress.js?v=5492"></script>
-  <script src="js/planer-common.js?v=5492"></script>
-  <script src="js/list.js?v=5492"></script>
+  <script src="js/tournament-catalog.js?v=5493"></script>
+<script src="js/i18n.js?v=5493"></script>
+  <script src="js/core-utils.js?v=5493"></script>
+  <script src="js/supabase-loader.js?v=5493"></script>
+<script src="js/supabase-config.js?v=5493"></script>
+<script src="js/database-local.js?v=5493"></script>
+  <script src="js/local-app.js?v=5493"></script>
+  <script src="js/learning-file.js?v=5493"></script>
+  <script src="js/horse-data-utils.js?v=5493"></script>
+  <script src="js/data-quality.js?v=5493"></script>
+  <script src="js/breeding-progress.js?v=5493"></script>
+  <script src="js/planer-common.js?v=5493"></script>
+  <script src="js/list.js?v=5493"></script>
 </body>
 </html>

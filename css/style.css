@@ -8002,3 +8002,20 @@ button.keep-foal-no.active {
 .inventory-bulk-buttons{display:flex;align-items:center;justify-content:flex-end;gap:.4rem;flex-wrap:wrap}
 .inventory-bulk-buttons button{white-space:nowrap}
 @media (max-width:700px){.inventory-bulk-actions{align-items:stretch}.inventory-bulk-buttons{justify-content:flex-start}.inventory-bulk-buttons button{flex:1 1 auto}}
+
+/* V54.0.93 – Bestandsabgleich: drei Fach-Reiter, getrennte Ergebnislisten, Züchtergruppen */
+.inventory-owner-options{display:block;max-height:260px;overflow:auto;padding:.2rem .1rem .35rem}
+.inventory-owner-section-title{display:flex;align-items:center;gap:.3rem;margin:.15rem 0 .45rem;font-size:.86rem;font-weight:800;color:var(--text,#263229)}
+.inventory-owner-chip-grid{display:flex;flex-wrap:wrap;gap:.42rem}
+.inventory-owner-more{margin-top:.65rem;border-top:1px solid var(--border,#d4ddd5);padding-top:.55rem}
+.inventory-owner-more>summary{cursor:pointer;font-weight:750;font-size:.86rem;color:var(--text-muted,#66736a);margin-bottom:.5rem}
+.inventory-owner-more[open]>summary{color:var(--text,#263229)}
+.inventory-reconcile-tabs{flex-wrap:wrap}
+.inventory-breeding-section{padding:.65rem .75rem;margin:.8rem 0}
+.inventory-breeding-section>summary{display:flex;align-items:center;justify-content:space-between;gap:.75rem;list-style-position:inside}
+.inventory-breeding-section>summary strong{display:inline-flex;align-items:center;justify-content:center;min-width:2rem;padding:.12rem .45rem;border-radius:999px;background:var(--surface-soft,#eef3ec);font-size:.82rem}
+.inventory-breeding-section-note{margin:.5rem 0 .2rem}
+.inventory-club-filters [id$="-filter-count"]{grid-column:1/-1;justify-self:end;align-self:auto;margin-top:-.15rem;white-space:nowrap}
+@media (max-width:900px){.inventory-reconcile-tabs{gap:.35rem}.inventory-reconcile-tab{flex:1 1 auto}}
+@media (max-width:560px){.inventory-breeding-section>summary{align-items:flex-start}.inventory-club-filters [id$="-filter-count"]{grid-column:1}}
+.inventory-owner-head>span{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.25rem .35rem}

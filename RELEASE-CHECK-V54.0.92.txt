@@ -1,4 +1,0 @@
-MDR-Datenbank V54.0.92 – Release Check
-
-Schwerpunkt: Bestandsabgleich Name-zuerst + Auswahl/Mehrfachaktionen + ZG-Matching-Härtung.
-Cache-Buster: v=5492.
