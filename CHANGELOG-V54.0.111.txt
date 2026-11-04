@@ -1,0 +1,7 @@
+V54.0.111 – Datenbank-Schätzung immer sichtbar
+
+- Im Zuchtplaner wird die durchschnittliche Datenbank-Schätzung pro Kandidat jetzt dauerhaft direkt neben Best Case und Worst Case angezeigt.
+- Sichtbar sind GP, Ext, Ext% und Int, ohne dass „Details & Prognose“ geöffnet werden muss.
+- Der ausführliche typische 80%-Datenbankbereich mit Stichprobengrößen bleibt zusätzlich im aufklappbaren Detailbereich erhalten.
+- Prognosebereich auf drei Spalten erweitert; mobil bleibt die Darstellung einspaltig.
+- Cache-Buster auf 54111 aktualisiert.

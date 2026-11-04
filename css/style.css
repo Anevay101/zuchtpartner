@@ -2620,7 +2620,7 @@ body.planner-high-contrast {
   align-items: end;
 }
 .zp-parent-panel .zp-compact-fields {
-  grid-template-columns: repeat(2, minmax(0,1fr));
+  grid-template-columns: repeat(3, minmax(0,1fr));
 }
 .zp-horse-select-wide {
   grid-column: span 1;
@@ -4073,6 +4073,10 @@ td.foal-recommendation-cell {
 }
 .zp-foal-case > span {
   white-space: nowrap;
+}
+.zp-foal-empirical {
+  background: rgba(107,157,0,.075);
+  border-color: rgba(87,120,73,.25);
 }
 .zp-candidate-card .candidate-why,
 .zp-candidate-card .turnierzucht-result,

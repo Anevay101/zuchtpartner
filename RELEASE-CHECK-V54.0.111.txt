@@ -1,0 +1,12 @@
+V54.0.111 Release-Check
+
+Schwerpunkt
+- Durchschnittliche Datenbank-Schätzung im Zuchtplaner dauerhaft sichtbar.
+
+Geprüft
+- 42/42 JavaScript-Dateien: node --check erfolgreich.
+- CSS mit tinycss2 fehlerfrei geparst.
+- Zuchtplaner-Kandidatenkarte: Reihenfolge Best Case → Datenbank-Schätzung → Worst Case bestätigt.
+- Ausführliche Datenbank-Schätzung mit typischem 80%-Bereich bleibt im Detailbereich erhalten.
+- Mobile Regel bleibt einspaltig; Desktop-Prognosebereich nutzt drei Spalten.
+- Cache-Buster aller aktuellen JS/CSS-Verweise: 54111.

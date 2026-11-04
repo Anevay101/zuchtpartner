@@ -1111,6 +1111,18 @@ function ekhWarningHtmlLocal(mare, stallion) {
   return `<div class="notice ${severe ? 'notice-warning' : 'notice-caution'}">⚠️ Erbkrankheit(en): <strong>${esc(all.join(', '))}</strong>${esc(detail)}</div>`;
 }
 
+function empiricalCompactHtml(mare, stallion, estimate = null) {
+  if (!empiricalDeviations) return '';
+  const est = estimate || estimateFoalEmpirical(mare, stallion, empiricalDeviations);
+  if (!est) return '';
+
+  return `
+    <p class="small zp-foal-case zp-foal-empirical">
+      <strong>Datenbank-Schätzung</strong>
+      <span>GP ${fmtGp(est.gp)}</span><span>Ext ${fmtScore(est.ext)}</span><span>Ext% ${fmtPct(est.extPct)}</span><span>Int ${fmtScore(est.int)}</span>
+    </p>`;
+}
+
 function empiricalHtml(mare, stallion) {
   if (!empiricalDeviations) return '';
   const est = estimateFoalEmpirical(mare, stallion, empiricalDeviations);
@@ -1658,6 +1670,8 @@ function renderBestMatches() {
             <strong>Best Case</strong>
             <span>GP ${fmtGp(c.gpBest)}</span><span>Ext ${fmtScore(c.extBest)}</span><span>Ext% ${fmtPct(c.extPctBest)}</span><span>Int ${fmtScore(c.intBest)}</span>
           </p>
+
+          ${empiricalCompactHtml(mare, stallion, c.emp)}
 
           <p class="small muted zp-foal-case zp-foal-worst">
             <strong>Worst Case</strong>
