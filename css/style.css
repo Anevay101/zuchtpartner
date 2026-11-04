@@ -8234,6 +8234,7 @@ button.keep-foal-no.active {
   .yhp-filter-grid,
   .yhp-entry-grid { grid-template-columns:1fr; }
 }
+<<<<<<< HEAD
 
 /* V54.0.99 – Hauptdisziplinen standardmäßig, Nebendisziplinen optional */
 .yhp-secondary-details {
@@ -8251,3 +8252,5 @@ button.keep-foal-no.active {
 }
 .yhp-secondary-details > p { margin:.05rem 0 .6rem; }
 .yhp-secondary-details .yhp-entry-card { background:#fff; }
+=======
+>>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
