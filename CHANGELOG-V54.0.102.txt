@@ -1,0 +1,19 @@
+MDR-Datenbank V54.0.102
+
+Paket 1: globales Aufräumen + Bestandsabgleich-Layout.
+
+- Aussortierhilfe vollständig aus dem aktiven Projekt entfernt: Seite, dedizierte JS-Datei, Navigation, Guide-FAQ, Route und alte CSS-Blöcke.
+- Lern-/GBH-Hinweis und Einstellungen an die entfernte Aussortierhilfe angepasst.
+- Globale UI leicht verdichtet: Navigation, Filterabstände, Status-Pills und Seitenrhythmus vereinheitlicht.
+- Bestandsabgleich als kompakter Arbeitsbereich neu gestaltet, Fach-/Matchinglogik unverändert.
+- Eigene Pferde: kompakte Statuszeile statt großer Zählerkarten.
+- Eigene Pferde: breite Ergebnistabellen durch kompakte Arbeitszeilen ersetzt.
+- Handlungsgruppen (MDR nicht in DB, DB nicht mehr auf MDR, Besitzerabweichungen, uneindeutig) öffnen bei Treffern automatisch; Kontrollliste „Aktuell vorhanden“ bleibt eingeklappt.
+- Aktionsleiste bleibt nur bei tatsächlich ausgewählten Pferden sichtbar.
+- Zuchtgemeinschaft: Reihenfolge bleibt 1 aktuell, 2 ZG fehlt in DB, 3 DB nicht in ZG; Handlungsgruppen öffnen bei Treffern.
+- Deckstation: Priorität nun 1 aktuell angeboten, 2 Deckstation fehlt in DB, 3 DB nicht angeboten; Handlungsgruppen öffnen bei Treffern.
+- ZG-/Deckstationsfilter und Besitzerwahl optisch kompakter, bestehende Begabungs-/Züchterlogik bleibt erhalten.
+- Kein .git-Ordner in der Release-ZIP.
+
+Version: 54.0.102
+Cache-Buster: 54102

@@ -1,0 +1,10 @@
+MDR-Datenbank V54.0.105
+
+- Pferdedatenbank-Übersicht kompakter und stärker als Arbeitsliste gestaltet.
+- Neue Bestands-Kurzleiste: Gesamtbestand, aktuell sichtbare Pferde, Jungpferde ab 2 J 6 M ohne ZZL/echten ZS, Pferde mit ZZL und Lerndatei-Anzahl.
+- Häufige Filter dauerhaft als Schnellfilter verfügbar: Name, Besitzer, Rasse, Geschlecht, Hauptbegabung und ggf. Unterkategorie.
+- Seltenere Filter unter „Weitere Filter“ gebündelt; bestehende Filterlogik und gespeicherte Filterzustände bleiben erhalten.
+- Filteraktionen und Ø-Vergleich optisch verdichtet.
+- Pferdetabelle um zwei Spalten verschlankt: MDR-Link und Schlagwörter sind jetzt direkt in der Namenszelle integriert.
+- Desktop-Tabelle kompaktere Zeilen, kleinere Vorschaubilder und geringere Mindestbreite; mobile Kartenansicht bleibt erhalten.
+- Bestandsabgleich unverändert verfügbar; fachliche Matchinglogik nicht verändert.

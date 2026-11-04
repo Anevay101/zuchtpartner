@@ -1,0 +1,15 @@
+MDR-Datenbank V54.0.106 – Release-Check
+
+[x] 43/43 JavaScript-Dateien syntaktisch gültig
+[x] CSS ohne Parserfehler
+[x] Keine doppelten HTML-IDs
+[x] Keine fehlenden lokalen HTML-Ressourcen
+[x] Cache-Buster vollständig auf 54106
+[x] Keine Git-Konfliktmarker
+[x] Kein .git-Verzeichnis
+[x] Turnier & Leistung: 5 Hauptreiter vorhanden
+[x] Jungpferde-Auswahl: 4 Spalten
+[x] Jungpferde-Vergleich: 6 Spalten
+[x] ZS-Modell-/Diagnoseoberfläche entfernt; Modelllogik weiterhin im JavaScript vorhanden
+[x] Cup-Kalender standardmäßig geöffnet
+[x] ZS-Bonusspalten kompakt zusammengeführt

@@ -291,7 +291,19 @@ async function init() {
   renderTagCheckboxes();
 
   if (editingId) {
-    document.getElementById('page-title').textContent = '🐴 Pferd bearbeiten';
+    document.getElementById('page-title').textContent = '🐴 Pferd aktualisieren';
+    const saveBtn = document.getElementById('save-btn');
+    if (saveBtn) saveBtn.textContent = 'Pferd aktualisieren';
+    const saveViewBtn = document.getElementById('save-view-btn');
+    if (saveViewBtn) {
+      saveViewBtn.hidden = false;
+      saveViewBtn.addEventListener('click', onSaveAndView);
+    }
+    const cancelLink = document.getElementById('cancel-link');
+    if (cancelLink) {
+      cancelLink.href = mdrRoute('view',{id:editingId});
+      cancelLink.textContent = 'Zur Pferdeseite';
+    }
     document.getElementById('delete-btn').hidden = false;
     // Pfeile zum Speichern + direkt zum naechsten/vorherigen Pferd
     // (alphabetisch) springen - nur beim Bearbeiten eines bestehenden
@@ -1095,6 +1107,15 @@ async function onSaveAndNew(e) {
   await runSaveFlow();
 }
 
+// Bestehendes Pferd aktualisieren und den Bearbeitungsworkflow bewusst
+// auf der normalen Pferde-Detailseite abschließen.
+async function onSaveAndView(e) {
+  e.preventDefault();
+  if (!editingId) return;
+  saveRedirect = mdrRoute('view',{id:editingId});
+  await runSaveFlow();
+}
+
 // Speichert das aktuelle Pferd wie ein normaler Save, leitet danach aber
 // nicht zur Uebersicht, sondern direkt zum alphabetisch naechsten/
 // vorherigen Pferd weiter - damit laesst sich eine ganze Liste ohne
@@ -1185,7 +1206,7 @@ async function runSaveFlow() {
   // Übersicht hinein navigieren zu müssen. Neue Pferde verhalten sich
   // weiterhin wie bisher.
   if (currentChangeSource === 'importiert' && targetId && saveRedirect === MDR_DATABASE_ROUTE) {
-    saveRedirect = mdrRoute('horse',{id:targetId});
+    saveRedirect = mdrRoute('view',{id:targetId});
   }
 
   // Zweiter Durchlauf mit dem bestehenden Datensatz: so kann beim Lösen

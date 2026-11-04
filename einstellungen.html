@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Einstellungen – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=54101" />
+  <link rel="stylesheet" href="css/style.css?v=54109" />
 </head>
 <body>
 <header class="topbar">
@@ -20,16 +20,14 @@
       <a class="btn app-nav-add-horse" href="horse.html">➕ Neues Pferd</a>
       <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
       <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
-      <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
       <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
-      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
       <a class="btn secondary" href="ankaufsberatung.html">🛒 Ankaufsberatung</a>
       <a class="btn secondary" href="guide.html">📖 Guide</a>
-      <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
+      <a class="btn secondary" href="einstellungen.html" aria-current="page">⚙️ Einstellungen</a>
     </nav>
 </header>
 
-<main class="container settings-page">
+<main class="container settings-page settings-compact-page">
   <div class="notice">
     Hier liegen die Verwaltungsfunktionen gesammelt an einer Stelle. Die Sicherheitsanzeige oben
     bleibt weiterhin sichtbar, wenn ein Backup gestoppt oder eine Wiederherstellung nötig ist.
@@ -101,8 +99,8 @@
     <div id="settings-presets"></div>
   </section>
 
-  <section class="card settings-section">
-    <h2>Dashboard-Kacheln</h2>
+  <details class="card settings-section settings-secondary-section">
+    <summary><strong>Dashboard-Kacheln</strong><span class="small muted">gespeicherte Filter als Kennzahl</span></summary>
     <p class="small muted">Kacheln verwenden gespeicherte Filtervorlagen und bleiben unabhängig vom aktuell gesetzten Dashboard-Filter.</p>
     <div class="form-grid dashboard-tile-create-grid">
       <div><label for="settings-dashboard-tile-preset">Filtervorlage</label><select id="settings-dashboard-tile-preset"><option value="">Bitte wählen…</option></select></div>
@@ -111,7 +109,7 @@
     </div>
     <div class="actions"><button id="settings-dashboard-tile-add" type="button">Kachel hinzufügen</button></div>
     <div id="settings-dashboard-tiles"></div>
-  </section>
+  </details>
 
   <section class="card settings-section">
     <h2>👥 Aktive Züchter</h2>
@@ -125,8 +123,8 @@
     <p id="active-breeders-status" class="small muted"></p>
   </section>
 
-  <section class="card settings-section">
-    <h2>🏷️ Schlagwörter konfigurieren</h2>
+  <details class="card settings-section settings-secondary-section">
+    <summary><strong>🏷️ Schlagwörter konfigurieren</strong><span class="small muted">selten benötigte Verwaltung</span></summary>
     <p class="small muted">
       Eigene Schlagwörter können ergänzt, umbenannt, eingefärbt oder gelöscht werden. <strong>GBH</strong>, <strong>Cupstern</strong> und <strong>Zuchtstation</strong> bleiben als System-Schlagwörter geschützt.
     </p>
@@ -140,21 +138,21 @@
       </div>
       <div class="actions"><button id="settings-add-tag" type="button">Schlagwort hinzufügen</button></div>
     </fieldset>
-  </section>
+  </details>
 
   <p id="settings-error" class="error"></p>
 </main>
 
-<script src="js/tournament-catalog.js?v=54101"></script>
-<script src="js/i18n.js?v=54101"></script>
-  <script src="js/core-utils.js?v=54101"></script>
-  <script src="js/supabase-loader.js?v=54101"></script>
-<script src="js/supabase-config.js?v=54101"></script>
-<script src="js/database-local.js?v=54101"></script>
-<script src="js/local-app.js?v=54101"></script>
-<script src="js/learning-file.js?v=54101"></script>
-<script src="js/horse-data-utils.js?v=54101"></script>
-<script src="js/planer-common.js?v=54101"></script>
-<script src="js/settings-local.js?v=54101"></script>
+<script src="js/tournament-catalog.js?v=54109"></script>
+<script src="js/i18n.js?v=54109"></script>
+  <script src="js/core-utils.js?v=54109"></script>
+  <script src="js/supabase-loader.js?v=54109"></script>
+<script src="js/supabase-config.js?v=54109"></script>
+<script src="js/database-local.js?v=54109"></script>
+<script src="js/local-app.js?v=54109"></script>
+<script src="js/learning-file.js?v=54109"></script>
+<script src="js/horse-data-utils.js?v=54109"></script>
+<script src="js/planer-common.js?v=54109"></script>
+<script src="js/settings-local.js?v=54109"></script>
 </body>
 </html>

@@ -926,7 +926,7 @@ function renderPairingCompare() {
           <tr><th>Int</th>${cell(c=>`<td><strong>${pairingCompareRangeText(c.snapshot,'int',fmtScore)}</strong></td>`)}</tr>
           <tr><th>Grundfarben</th>${cell(c=>`<td>${pairingCompareBaseColors(c.mare,c.stallion)}</td>`)}</tr>
           <tr><th>Decktaxe</th>${cell(c=>`<td>${esc(studFeeDisplay(c.stallion))}</td>`)}</tr>
-          <tr><th>Aktionen</th>${cell(c=>{ const blocked=c.related.length || c.overo || !plannerPairAllowedByStation(c.mare,c.stallion); return `<td><div class="zp-compare-actions"><button type="button" class="btn secondary remember-pairing-btn" data-mare-id="${esc(c.mare.id||'')}" data-stallion-id="${esc(c.stallion.id||'')}">⭐ Merken</button><button type="button" class="btn secondary decksprung-btn" data-mare="${esc(c.mare.name||'')}" data-mare-id="${esc(c.mare.id||'')}" data-stallion="${esc(c.stallion.name||'')}" data-stallion-id="${esc(c.stallion.id||'')}" data-owner="${esc(c.mare.owner||'')}" ${blocked?'disabled title="Diese Kombination ist nach den Sicherheitsregeln nicht zulässig."':''}>${blocked?'✗ Nicht zulässig':'💞 Ins Verpaarungslog'}</button><span class="small muted decksprung-status"></span></div></td>`; })}</tr>
+          <tr><th>Aktionen</th>${cell(c=>{ const blocked=c.related.length || c.overo || !plannerPairAllowedByStation(c.mare,c.stallion); return `<td><div class="zp-compare-actions"><button type="button" class="btn secondary remember-pairing-btn" data-mare-id="${esc(c.mare.id||'')}" data-stallion-id="${esc(c.stallion.id||'')}">⭐ Merken</button><button type="button" class="btn secondary decksprung-btn" data-mare="${esc(c.mare.name||'')}" data-mare-id="${esc(c.mare.id||'')}" data-stallion="${esc(c.stallion.name||'')}" data-stallion-id="${esc(c.stallion.id||'')}" data-owner="${esc(c.mare.owner||'')}" ${blocked?'disabled title="Diese Kombination ist nach den Sicherheitsregeln nicht zulässig."':''}>${blocked?'✗ Nicht zulässig':'💞 Verpaarung speichern'}</button><span class="small muted decksprung-status"></span></div></td>`; })}</tr>
         </tbody>
       </table>
     </div>
@@ -1387,12 +1387,14 @@ function renderBestMatches() {
   const candidateLabel = richtung === 'hengst' ? 'Stuten' : 'Hengste';
   const resultEl = document.getElementById('auswahl-result');
   const hint = document.getElementById('auswahl-hint');
+  const summaryEl = document.getElementById('zp-result-summary');
 
   updateDirectionLabels();
 
   if (!primary) {
     resultEl.innerHTML = `<p class="muted small">Bitte zuerst ${richtung === 'hengst' ? 'einen Hengst' : 'eine Stute'} auswählen.</p>`;
     hint.textContent = '';
+    if (summaryEl) { summaryEl.hidden = true; summaryEl.innerHTML = ''; }
     return;
   }
 
@@ -1563,6 +1565,24 @@ function renderBestMatches() {
   if (owner) activeFilterBits.push(`Besitzer: ${owner}`);
   if (breed) activeFilterBits.push(`Rasse: ${breed}`);
   
+  const healthWarnings = ranked.top.filter(c => {
+    const candidate = c.stallion;
+    const mareForHealth = richtung === 'hengst' ? candidate : primary;
+    const stallionForHealth = richtung === 'hengst' ? primary : candidate;
+    return !!ekhWarningHtmlLocal(mareForHealth, stallionForHealth);
+  }).length;
+  const excludedTotal = (ex.related || 0) + (ex.overo || 0) + (ex.colorWish || 0) + minimumRequirementsExcluded + stationEligibilityExcluded;
+  const eligibleCount = Math.max(0, (ranked.candidateCount || 0) - minimumRequirementsExcluded);
+  if (summaryEl) {
+    summaryEl.hidden = false;
+    summaryEl.innerHTML = `
+      <span class="zp-result-pill"><strong>${eligibleCount}</strong><small>passend</small></span>
+      <span class="zp-result-pill"><strong>${ranked.top.length}</strong><small>Top-Auswahl</small></span>
+      <span class="zp-result-pill ${excludedTotal ? 'warning' : ''}"><strong>${excludedTotal}</strong><small>ausgeschlossen</small></span>
+      ${healthWarnings ? `<span class="zp-result-pill warning"><strong>${healthWarnings}</strong><small>Gesundheitshinweis${healthWarnings === 1 ? '' : 'e'}</small></span>` : ''}
+    `;
+  }
+
   hint.textContent = `${ranked.candidateCount} von ${ranked.total} ${candidateLabel} passen, Top ${ranked.top.length} angezeigt.` +
     (activeFilterBits.length ? ` · Aktiver Kandidatenfilter: ${activeFilterBits.join(' · ')}.` : ' · Kandidatenfilter: Alle.') +
     (exclusionBits.length ? ` · Ausgeschlossen: ${exclusionBits.join(', ')}.` : '') +
@@ -1625,9 +1645,8 @@ function renderBestMatches() {
           </div>
         </div>
         <p class="small muted zp-candidate-meta">
-          <span>🎨 ${esc(h.coat_color || '–')}</span>
-          <span>🧬 ${esc(genesText(h))}</span>
           <span>👤 ${esc(h.owner || '–')}</span>
+          <span>🐴 ${esc(normalizeBreed(h.breed) || 'Rasselos')}</span>
           ${plannerGenderLocal(h) === 'hengst' ? `<span>${studFeeHtml(h)}</span>` : ''}
         </p>
         ${compactWhyRecommendedHtml(c, mare, stallion)}
@@ -1646,22 +1665,28 @@ function renderBestMatches() {
           </p>
         </div>
 
-        ${empiricalHtml(mare, stallion)}
-        ${sortMode === 'combo' ? comboRow(c) : complementRow(c, primaryLabel)}
-        ${baseColorWish !== 'any' && c.baseColorWishRange
-          ? `<p class="small"><strong>Grundfarbe ${esc(baseColorWish)}:</strong> ${typeof cgBaseWishRangeText === 'function' ? cgBaseWishRangeText(c.baseColorWishRange) : cgAppaloosaWishRangeText(c.baseColorWishRange)}${baseColorWish === 'Grey' ? ' · Grey (G_) überlagert die Grundfarbe' : ' · Extension/Agouti'}</p>`
-          : ''}
-        ${appaloosaWish !== 'any' && c.appaloosaWishScore != null
-          ? `<p class="small"><strong>🐆 ${esc(appaloosaWish === 'snowflake' ? 'Snowflake' : appaloosaWish)}:</strong> ${typeof cgAppaloosaWishRangeText === 'function' ? cgAppaloosaWishRangeText(c.appaloosaWishRange || {min:c.appaloosaWishScore,max:c.appaloosaWishScore}) : cgPct(c.appaloosaWishScore)} nach LP/P1/P2/P3-Modell${c.appaloosaWishRange && Math.abs(c.appaloosaWishRange.max-c.appaloosaWishRange.min)>1e-9 ? ' · Spanne wegen verdeckter Pattern-Zustände' : ''}</p>`
-          : ''}
-        ${talentWish && c.talentWishProjection ? (() => {
-          const p=c.talentWishProjection;
-          return p.n && p.probability != null
-            ? `<p class="small talent-wish-line"><strong>🎯 Begabungswunsch ${esc(talentWish)}:</strong> ${Math.round(p.probability*100)}% bisher beobachtet (n=${p.n})</p>`
-            : `<p class="small talent-wish-line"><strong>🎯 Begabungswunsch ${esc(talentWish)}:</strong> noch keine passende Eltern–Fohlen-Gruppe; nur kleiner Eltern-Tendenzbonus</p>`;
-        })() : ''}
-        ${colorGuideHtml(mare, stallion, globalThis.MDR_COLOR_EMPIRICAL_HORSES || ZH_HORSES)}
-        ${turnierzuchtResultHtml(c.turnierzucht)}
+        <details class="zp-candidate-details">
+          <summary><strong>Details &amp; Prognose</strong><span class="tiny muted">Farbe · Genetik · Schätzung · Zusatzwünsche</span></summary>
+          <div class="zp-candidate-details-body">
+            <p class="small muted zp-genetics-line"><span>🎨 ${esc(h.coat_color || '–')}</span><span>🧬 ${esc(genesText(h))}</span></p>
+            ${empiricalHtml(mare, stallion)}
+            ${sortMode === 'combo' ? comboRow(c) : complementRow(c, primaryLabel)}
+            ${baseColorWish !== 'any' && c.baseColorWishRange
+              ? `<p class="small"><strong>Grundfarbe ${esc(baseColorWish)}:</strong> ${typeof cgBaseWishRangeText === 'function' ? cgBaseWishRangeText(c.baseColorWishRange) : cgAppaloosaWishRangeText(c.baseColorWishRange)}${baseColorWish === 'Grey' ? ' · Grey (G_) überlagert die Grundfarbe' : ' · Extension/Agouti'}</p>`
+              : ''}
+            ${appaloosaWish !== 'any' && c.appaloosaWishScore != null
+              ? `<p class="small"><strong>🐆 ${esc(appaloosaWish === 'snowflake' ? 'Snowflake' : appaloosaWish)}:</strong> ${typeof cgAppaloosaWishRangeText === 'function' ? cgAppaloosaWishRangeText(c.appaloosaWishRange || {min:c.appaloosaWishScore,max:c.appaloosaWishScore}) : cgPct(c.appaloosaWishScore)} nach LP/P1/P2/P3-Modell${c.appaloosaWishRange && Math.abs(c.appaloosaWishRange.max-c.appaloosaWishRange.min)>1e-9 ? ' · Spanne wegen verdeckter Pattern-Zustände' : ''}</p>`
+              : ''}
+            ${talentWish && c.talentWishProjection ? (() => {
+              const p=c.talentWishProjection;
+              return p.n && p.probability != null
+                ? `<p class="small talent-wish-line"><strong>🎯 Begabungswunsch ${esc(talentWish)}:</strong> ${Math.round(p.probability*100)}% bisher beobachtet (n=${p.n})</p>`
+                : `<p class="small talent-wish-line"><strong>🎯 Begabungswunsch ${esc(talentWish)}:</strong> noch keine passende Eltern–Fohlen-Gruppe; nur kleiner Eltern-Tendenzbonus</p>`;
+            })() : ''}
+            ${colorGuideHtml(mare, stallion, globalThis.MDR_COLOR_EMPIRICAL_HORSES || ZH_HORSES)}
+            ${turnierzuchtResultHtml(c.turnierzucht)}
+          </div>
+        </details>
 
         <div class="actions">
           <a class="btn secondary" href="${mdrRoute('view',{id:h.id})}">Pferd ansehen</a>
@@ -1732,7 +1757,7 @@ async function onDecksprungLocal(e) {
       throw new Error('Der Eintrag konnte nach dem Speichern nicht wiedergefunden werden.');
     }
 
-    status.innerHTML = `✓ Gespeichert · <a href="${mdrRoute('pairing')}">Zum Verpaarungs-Log</a>`;
+    status.innerHTML = `✓ Gespeichert · <a href="${mdrRoute('pairing')}">Zur Verpaarungshistorie</a>`;
   } catch (err) {
     status.textContent = 'Fehler: ' + err.message;
     btn.disabled = false;
@@ -1897,6 +1922,6 @@ async function renderRememberedPairings() {
         </tbody>
       </table>
     </div>
-    <p class="tiny muted">Gemerkte Verpaarungen werden 60 Tage nach dem Merken automatisch entfernt. Echte Einträge im Verpaarungs-Log bleiben erhalten.</p>
+    <p class="tiny muted">Gemerkte Verpaarungen werden 60 Tage nach dem Merken automatisch entfernt. Echte Einträge in der Verpaarungshistorie bleiben erhalten.</p>
   `;
 }

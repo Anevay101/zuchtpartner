@@ -1,0 +1,11 @@
+MDR-Datenbank V54.0.104
+
+- Dashboard zum kompakten Kontrollzentrum umgebaut.
+- Farbgenetik vollständig aus der Dashboard-Oberfläche entfernt; Farb-/Genetikdaten bleiben in Pferdedaten und Fachbereichen erhalten.
+- LP-Prototypmodell und ausführliche ZS-Modell-Diagnostik aus dem Dashboard entfernt; Berechnungsgrundlagen bleiben unverändert verfügbar.
+- Neue Status-Kennzahlen: gefilterter Bestand, Jungpferde ab 2 J 6 M ohne ZZL/ZS, ZS-bereite Jungpferde mit Top-3, Zuchtzulassungen, echte ZS-Werte und offene Verpaarungen.
+- Neuer Bereich „Aktuell wichtig“ für Top-3-Bedarf, ZS-bereite Jungpferde, offene Verpaarungen und unvollständige Kerndaten.
+- Neuer kompakter Bereich „Zucht & Bestand“ mit ZZL-/ZS-/Datenqualitätsstatus und Verteilung der Hauptbegabungsgruppen.
+- Bestands-Durchschnitt und Pferd-vs.-Rassedurchschnitt zu einer einklappbaren Bestandsanalyse zusammengeführt.
+- Aktuelles Schau-Niveau und Zuchtbestand/Turnierausrichtung bleiben als einklappbare Detailbereiche erhalten.
+- Dashboard-Filter und eigene gespeicherte Kacheln bleiben erhalten.

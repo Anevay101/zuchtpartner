@@ -10,19 +10,17 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Pferde – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=54101" />
+  <link rel="stylesheet" href="css/style.css?v=54109" />
 </head>
 <body class="list-page">
   <header class="topbar">
     <h1>🐴 MDR Pferdedatenbank</h1>
     <nav class="app-main-nav">
-      <a class="btn secondary" href="index.html">🐴 Datenbank</a>
+      <a class="btn secondary" href="index.html" aria-current="page">🐴 Datenbank</a>
       <a class="btn app-nav-add-horse" href="horse.html">➕ Neues Pferd</a>
       <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
       <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
-      <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
       <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
-      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
       <a class="btn secondary" href="ankaufsberatung.html">🛒 Ankaufsberatung</a>
       <a class="btn secondary" href="guide.html">📖 Guide</a>
       <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
@@ -37,12 +35,18 @@
     <details id="age3-notice" class="missing-data-notice" open hidden></details>
     <details id="age25-notice" class="missing-data-notice" open hidden></details>
 
-    <details id="database-filter-details" class="database-filter-details">
+    <section class="database-overview-strip" aria-label="Bestandsübersicht">
+      <div class="database-overview-stat"><span>Gesamt</span><strong id="db-stat-total">–</strong></div>
+      <div class="database-overview-stat"><span>Sichtbar</span><strong id="db-stat-visible">–</strong></div>
+      <div class="database-overview-stat"><span>Jungpferde</span><strong id="db-stat-young">–</strong><small>ab 2 J 6 M · ohne ZZL/ZS</small></div>
+      <div class="database-overview-stat"><span>Mit ZZL</span><strong id="db-stat-zzl">–</strong></div>
+      <div class="database-overview-stat"><span>Lerndatei</span><strong id="db-stat-learning">–</strong></div>
+    </section>
+
+    <details id="database-filter-details" class="database-filter-details" open>
       <summary>🔎 Filter · <span id="database-filter-summary">0 aktiv · – Pferde</span></summary>
-    <form id="filter-form" class="filter-bar database-filter-bar">
-      <details class="filter-group filter-group-search filter-group-collapsible" data-filter-section="search" open>
-        <summary class="filter-group-title">Suche <span class="filter-group-summary-note">Name · Besitzer · Rasse</span></summary>
-        <div class="filter-group-grid">
+      <form id="filter-form" class="filter-bar database-filter-bar">
+        <div class="database-quick-filter-grid">
           <div class="field">
             <label for="f-name">Name</label>
             <input type="text" id="f-name" placeholder="Suche…" />
@@ -62,137 +66,8 @@
             </select>
           </div>
           <div class="field">
-            <label for="f-data-quality">Datenqualität</label>
-            <select id="f-data-quality" title="Verwendet dieselbe Datenqualitätsprüfung wie die grünen, gelben und roten Badges an den Pferden.">
-              <option value="">Alle</option>
-              <option value="green">🟢 Vollständig</option>
-              <option value="yellow">🟡 Teilweise vollständig</option>
-              <option value="red">🔴 Unvollständig</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="f-learning-file">🧠 Lerndatei</label>
-            <select id="f-learning-file">
-              <option value="exclude">Ausblenden</option>
-              <option value="only">Nur Lerndatei</option>
-              <option value="all">Alle</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Schlagwörter</label>
-            <div class="checkdrop" id="f-tag-drop">
-              <button type="button" class="checkdrop-toggle">Alle</button>
-              <div class="checkdrop-panel" hidden></div>
-            </div>
-            <span class="tiny muted">1× einschließen · 2× ausschließen · 3× neutral</span>
-          </div>
-          <div class="field filter-search-last-row">
-            <label for="f-game-version">Spielversion</label>
-            <select id="f-game-version">
-              <option value="">Alle</option>
-              <option value="DE">DE</option>
-              <option value="EN">EN</option>
-            </select>
-          </div>
-        </div>
-      </details>
-
-      <details class="filter-group filter-group-breeding filter-group-collapsible" data-filter-section="breeding" open>
-        <summary class="filter-group-title">Zucht <span class="filter-group-summary-note">Geschlecht · ZZL · Nachkommen</span></summary>
-        <div class="filter-group-grid">
-          <div class="field">
             <label for="f-gender">Geschlecht</label>
             <select id="f-gender"><option value="">Alle</option></select>
-          </div>
-          <div class="field">
-            <label for="f-zzl">Zuchtzulassung</label>
-            <select id="f-zzl">
-              <option value="">Alle</option>
-              <option value="true">Ja</option>
-              <option value="false">Nein</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="f-breeding-station">In Zuchtstation</label>
-            <select id="f-breeding-station">
-              <option value="">Alle</option>
-              <option value="true">Ja</option>
-              <option value="false">Nein</option>
-            </select>
-          </div>
-          <div class="field" id="best-foal-filter-field">
-            <label>Bestes Fohlen</label>
-            <div class="best-foal-filter-row">
-              <button type="button" id="f-best-foal-toggle" class="secondary best-foal-filter-toggle" data-state="off">★ Bestes Fohlen: Aus</button>
-              <span class="tiny muted best-foal-filter-hint">Klick: Aus → nur anzeigen → ausschließen</span>
-            </div>
-            <span class="tiny muted bp-filter-legend"><span class="bp-parent-dot bp-parent-better"></span> besser · <span class="bp-parent-dot bp-parent-equal"></span> gleich · <span class="bp-parent-dot bp-parent-worse"></span> schlechter</span>
-          </div>
-          <div class="field breeding-offspring-field">
-            <label for="f-offspring-op">Nachkommen</label>
-            <div class="compare-field" title="Verwendet die im MDR-Profil angegebene Anzahl der Nachkommen.">
-              <select id="f-offspring-op">
-                <option value="gte">mindestens</option>
-                <option value="lt">unter</option>
-              </select>
-              <input type="number" id="f-offspring-val" min="0" step="1" inputmode="numeric" placeholder="Anzahl" />
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <details class="filter-group filter-group-genetics filter-group-collapsible" data-filter-section="genetics" open>
-        <summary class="filter-group-title">Genetik &amp; Gesundheit <span class="filter-group-summary-note">Genetik · EKH</span></summary>
-        <div class="filter-group-grid">
-          <div class="field">
-            <label>Genetik</label>
-            <div class="checkdrop" id="f-genetik-drop">
-              <button type="button" class="checkdrop-toggle">Alle</button>
-              <div class="checkdrop-panel" hidden></div>
-            </div>
-            <span class="tiny muted">1× einschließen · 2× ausschließen · 3× neutral</span>
-          </div>
-          <div class="field">
-            <label>EKH</label>
-            <div class="checkdrop" id="f-ekh-drop">
-              <button type="button" class="checkdrop-toggle">Alle</button>
-              <div class="checkdrop-panel" hidden></div>
-            </div>
-            <span class="tiny muted">1× einschließen · 2× ausschließen · 3× neutral</span>
-          </div>
-        </div>
-      </details>
-
-      <details class="filter-group filter-group-performance filter-group-collapsible" data-filter-section="performance" open>
-        <summary class="filter-group-title">Leistungswerte <span class="filter-group-summary-note">GP · Ext · Ext% · Int</span></summary>
-        <div class="filter-group-grid">
-          <div class="field">
-            <label for="f-gp-op">GP</label>
-            <div class="compare-field">
-              <select id="f-gp-op"><option value="gt">größer als</option><option value="lt">kleiner als</option></select>
-              <input type="number" id="f-gp-val" step="0.01" />
-            </div>
-          </div>
-          <div class="field">
-            <label for="f-ext-op">Ext</label>
-            <div class="compare-field">
-              <select id="f-ext-op"><option value="gt">größer als</option><option value="lt">kleiner als</option></select>
-              <input type="number" id="f-ext-val" step="0.01" />
-            </div>
-          </div>
-          <div class="field">
-            <label for="f-extpct-op">Ext%</label>
-            <div class="compare-field">
-              <select id="f-extpct-op"><option value="gt">größer als</option><option value="lt">kleiner als</option></select>
-              <input type="number" id="f-extpct-val" step="0.01" />
-            </div>
-          </div>
-          <div class="field">
-            <label for="f-int-op">Int</label>
-            <div class="compare-field">
-              <select id="f-int-op"><option value="gt">größer als</option><option value="lt">kleiner als</option></select>
-              <input type="number" id="f-int-val" step="0.01" />
-            </div>
           </div>
           <div class="field">
             <label for="f-main-group">Hauptbegabung</label>
@@ -202,63 +77,151 @@
             <label for="f-talent">Unterkategorie</label>
             <select id="f-talent"><option value="">Alle</option></select>
           </div>
-          <div class="field filter-checkbox-field">
-            <label class="filter-checkbox-label" for="f-cupstar">
-              <input type="checkbox" id="f-cupstar" />
-              <span>⭐ Cup-Stern</span>
-            </label>
-            <span class="tiny muted">Nur Pferde mit bestätigtem Cup-Stern</span>
+        </div>
+
+        <details class="database-advanced-filters">
+          <summary>Weitere Filter</summary>
+          <div class="database-advanced-filter-grid">
+            <details class="filter-group filter-group-search filter-group-collapsible" data-filter-section="search" open>
+              <summary class="filter-group-title">Auswahl <span class="filter-group-summary-note">Datenqualität · Lerndatei · Tags · Spielwelt</span></summary>
+              <div class="filter-group-grid">
+                <div class="field">
+                  <label for="f-data-quality">Datenqualität</label>
+                  <select id="f-data-quality" title="Verwendet dieselbe Datenqualitätsprüfung wie die grünen, gelben und roten Badges an den Pferden.">
+                    <option value="">Alle</option>
+                    <option value="green">🟢 Vollständig</option>
+                    <option value="yellow">🟡 Teilweise vollständig</option>
+                    <option value="red">🔴 Unvollständig</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="f-learning-file">🧠 Lerndatei</label>
+                  <select id="f-learning-file">
+                    <option value="exclude">Ausblenden</option>
+                    <option value="only">Nur Lerndatei</option>
+                    <option value="all">Alle</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Schlagwörter</label>
+                  <div class="checkdrop" id="f-tag-drop">
+                    <button type="button" class="checkdrop-toggle">Alle</button>
+                    <div class="checkdrop-panel" hidden></div>
+                  </div>
+                  <span class="tiny muted">1× einschließen · 2× ausschließen · 3× neutral</span>
+                </div>
+                <div class="field">
+                  <label for="f-game-version">Spielversion</label>
+                  <select id="f-game-version">
+                    <option value="">Alle</option>
+                    <option value="DE">DE</option>
+                    <option value="EN">EN</option>
+                  </select>
+                </div>
+              </div>
+            </details>
+
+            <details class="filter-group filter-group-breeding filter-group-collapsible" data-filter-section="breeding" open>
+              <summary class="filter-group-title">Zucht <span class="filter-group-summary-note">ZZL · Zuchtstation · Nachkommen</span></summary>
+              <div class="filter-group-grid">
+                <div class="field">
+                  <label for="f-zzl">Zuchtzulassung</label>
+                  <select id="f-zzl">
+                    <option value="">Alle</option>
+                    <option value="true">Ja</option>
+                    <option value="false">Nein</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="f-breeding-station">In Zuchtstation</label>
+                  <select id="f-breeding-station">
+                    <option value="">Alle</option>
+                    <option value="true">Ja</option>
+                    <option value="false">Nein</option>
+                  </select>
+                </div>
+                <div class="field" id="best-foal-filter-field">
+                  <label>Bestes Fohlen</label>
+                  <div class="best-foal-filter-row">
+                    <button type="button" id="f-best-foal-toggle" class="secondary best-foal-filter-toggle" data-state="off">★ Bestes Fohlen: Aus</button>
+                    <span class="tiny muted best-foal-filter-hint">Klick: Aus → nur anzeigen → ausschließen</span>
+                  </div>
+                  <span class="tiny muted bp-filter-legend"><span class="bp-parent-dot bp-parent-better"></span> besser · <span class="bp-parent-dot bp-parent-equal"></span> gleich · <span class="bp-parent-dot bp-parent-worse"></span> schlechter</span>
+                </div>
+                <div class="field breeding-offspring-field">
+                  <label for="f-offspring-op">Nachkommen</label>
+                  <div class="compare-field" title="Verwendet die im MDR-Profil angegebene Anzahl der Nachkommen.">
+                    <select id="f-offspring-op">
+                      <option value="gte">mindestens</option>
+                      <option value="lt">unter</option>
+                    </select>
+                    <input type="number" id="f-offspring-val" min="0" step="1" inputmode="numeric" placeholder="Anzahl" />
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <details class="filter-group filter-group-genetics filter-group-collapsible" data-filter-section="genetics" open>
+              <summary class="filter-group-title">Genetik &amp; Gesundheit <span class="filter-group-summary-note">Genetik · EKH</span></summary>
+              <div class="filter-group-grid">
+                <div class="field">
+                  <label>Genetik</label>
+                  <div class="checkdrop" id="f-genetik-drop">
+                    <button type="button" class="checkdrop-toggle">Alle</button>
+                    <div class="checkdrop-panel" hidden></div>
+                  </div>
+                  <span class="tiny muted">1× einschließen · 2× ausschließen · 3× neutral</span>
+                </div>
+                <div class="field">
+                  <label>EKH</label>
+                  <div class="checkdrop" id="f-ekh-drop">
+                    <button type="button" class="checkdrop-toggle">Alle</button>
+                    <div class="checkdrop-panel" hidden></div>
+                  </div>
+                  <span class="tiny muted">1× einschließen · 2× ausschließen · 3× neutral</span>
+                </div>
+              </div>
+            </details>
+
+            <details class="filter-group filter-group-performance filter-group-collapsible" data-filter-section="performance" open>
+              <summary class="filter-group-title">Leistungswerte <span class="filter-group-summary-note">GP · Ext · Ext% · Int</span></summary>
+              <div class="filter-group-grid">
+                <div class="field"><label for="f-gp-op">GP</label><div class="compare-field"><select id="f-gp-op"><option value="gt">größer als</option><option value="lt">kleiner als</option></select><input type="number" id="f-gp-val" step="0.01" /></div></div>
+                <div class="field"><label for="f-ext-op">Ext</label><div class="compare-field"><select id="f-ext-op"><option value="gt">größer als</option><option value="lt">kleiner als</option></select><input type="number" id="f-ext-val" step="0.01" /></div></div>
+                <div class="field"><label for="f-extpct-op">Ext%</label><div class="compare-field"><select id="f-extpct-op"><option value="gt">größer als</option><option value="lt">kleiner als</option></select><input type="number" id="f-extpct-val" step="0.01" /></div></div>
+                <div class="field"><label for="f-int-op">Int</label><div class="compare-field"><select id="f-int-op"><option value="gt">größer als</option><option value="lt">kleiner als</option></select><input type="number" id="f-int-val" step="0.01" /></div></div>
+                <div class="field filter-checkbox-field">
+                  <label class="filter-checkbox-label" for="f-cupstar"><input type="checkbox" id="f-cupstar" /><span>⭐ Cup-Stern</span></label>
+                  <span class="tiny muted">Nur Pferde mit bestätigtem Cup-Stern</span>
+                </div>
+              </div>
+            </details>
           </div>
-        </div>
-      </details>
+        </details>
 
-      <div class="actions filter-actions">
-        <select id="filter-preset-select" class="control-auto" title="Gespeicherte Filter-Vorlage laden">
-          <option value="">Vorlage laden…</option>
-        </select>
-        <button type="button" id="save-filter-preset-btn" class="secondary">💾 Als Vorlage speichern</button>
-        <button type="button" id="inventory-reconcile-btn" class="secondary">🔄 Bestandsabgleich</button>
-        <button type="button" id="reset-filters" class="secondary">Alle Filter löschen</button>
-        <span class="small muted filter-live-hint">Filter wirken sofort.</span>
-      </div>
-    </form>
+        <div class="actions filter-actions">
+          <select id="filter-preset-select" class="control-auto" title="Gespeicherte Filter-Vorlage laden"><option value="">Vorlage laden…</option></select>
+          <button type="button" id="save-filter-preset-btn" class="secondary">💾 Als Vorlage speichern</button>
+          <button type="button" id="inventory-reconcile-btn" class="secondary">🔄 Bestandsabgleich</button>
+          <button type="button" id="reset-filters" class="secondary">Alle Filter löschen</button>
+          <span class="small muted filter-live-hint">Filter wirken sofort.</span>
+        </div>
+      </form>
 
-    <div id="compare-avg-block" class="compare-avg-block">
-      <label class="compare-avg-toggle">
-        <input type="checkbox" id="compare-avg-toggle" />
-        <span class="compare-avg-toggle-text">
-          <strong>Ø-Vergleich anzeigen</strong>
-          <span class="muted small">Grün = besser, rot = schlechter als Durchschnitt – GP/Ext%: höher besser, Ext/Int: niedriger besser. Die Felder „Basis“ bestimmen nur den Ø-Vergleich und filtern die Pferdeliste nicht.</span>
-        </span>
-      </label>
-      <div id="compare-avg-panel" class="filter-bar" hidden>
-        <div class="field">
-          <label for="cmp-breed">Rasse (Basis)</label>
-          <select id="cmp-breed"><option value="">Alle</option></select>
-        </div>
-        <div class="field">
-          <label for="cmp-zzl">ZZL (Basis)</label>
-          <select id="cmp-zzl">
-            <option value="">Alle</option>
-            <option value="true">Ja</option>
-            <option value="false">Nein</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="cmp-owner">Besitzer (Basis)</label>
-          <select id="cmp-owner"><option value="">Alle</option></select>
-        </div>
-        <div class="field">
-          <label for="cmp-gender">Geschlecht (Basis)</label>
-          <select id="cmp-gender"><option value="">Alle</option></select>
-        </div>
-        <label class="compare-tolerance-toggle small">
-          <input type="checkbox" id="compare-tolerance-toggle" checked />
-          Toleranz berücksichtigen
+      <div id="compare-avg-block" class="compare-avg-block">
+        <label class="compare-avg-toggle">
+          <input type="checkbox" id="compare-avg-toggle" />
+          <span class="compare-avg-toggle-text"><strong>Ø-Vergleich anzeigen</strong><span class="muted small">Grün = besser, rot = schlechter als Durchschnitt – GP/Ext%: höher besser, Ext/Int: niedriger besser.</span></span>
         </label>
-        <div id="compare-avg-values" class="compare-avg-values small muted" hidden></div>
+        <div id="compare-avg-panel" class="filter-bar" hidden>
+          <div class="field"><label for="cmp-breed">Rasse (Basis)</label><select id="cmp-breed"><option value="">Alle</option></select></div>
+          <div class="field"><label for="cmp-zzl">ZZL (Basis)</label><select id="cmp-zzl"><option value="">Alle</option><option value="true">Ja</option><option value="false">Nein</option></select></div>
+          <div class="field"><label for="cmp-owner">Besitzer (Basis)</label><select id="cmp-owner"><option value="">Alle</option></select></div>
+          <div class="field"><label for="cmp-gender">Geschlecht (Basis)</label><select id="cmp-gender"><option value="">Alle</option></select></div>
+          <label class="compare-tolerance-toggle small"><input type="checkbox" id="compare-tolerance-toggle" checked /> Toleranz berücksichtigen</label>
+          <div id="compare-avg-values" class="compare-avg-values small muted" hidden></div>
+        </div>
       </div>
-    </div>
     </details>
 
     <div id="undo-action-bar" class="undo-action-bar" hidden>
@@ -325,34 +288,30 @@
       <table id="horse-table">
         <colgroup>
           <col style="width: 3%" />
-          <col class="bp-best-col" style="width: 2.5%" />
+          <col class="bp-best-col" style="width: 2%" />
           <col style="width: 4%" />
-          <col style="width: 5%" />
-          <col style="width: 9%" />
+          <col style="width: 13%" />
+          <col style="width: 6%" />
           <col style="width: 7%" />
-          <col style="width: 6%" />
-          <col style="width: 6%" />
-          <col style="width: 9%" />
+          <col style="width: 7%" />
           <col style="width: 8%" />
           <col style="width: 5%" />
           <col style="width: 5%" />
-          <col style="width: 6%" />
           <col style="width: 5%" />
           <col style="width: 5%" />
           <col style="width: 5%" />
+          <col style="width: 4%" />
           <col style="width: 6%" />
+          <col style="width: 5%" />
           <col style="width: 6%" />
-          <col style="width: 6%" />
-          <col style="width: 6%" />
+          <col style="width: 4%" />
         </colgroup>
         <thead>
           <tr>
             <th title="Alle sichtbaren Pferde auswählen"><input type="checkbox" id="select-all" class="horse-select-checkbox" aria-label="Alle sichtbaren Pferde auswählen" /></th>
             <th class="bp-best-col" title="Bestes Fohlen in mindestens einem Vergleichswert">★</th>
             <th>Bild</th>
-            <th></th>
             <th data-sort="name">Name</th>
-            <th>Schlagwörter</th>
             <th data-sort="gender">Geschlecht</th>
             <th data-sort="breed">Rasse</th>
             <th data-sort="coat_color">Farbe</th>
@@ -369,9 +328,7 @@
             <th></th>
           </tr>
         </thead>
-        <tbody>
-          <tr><td colspan="20">Lade…</td></tr>
-        </tbody>
+        <tbody></tbody>
       </table>
     </div>
 
@@ -394,11 +351,11 @@
 
         <section id="inventory-pane-stock" class="inventory-reconcile-pane" data-ir-pane="stock">
           <div class="inventory-reconcile-layout">
-            <section>
+            <section class="inventory-input-card inventory-owner-card">
               <div class="inventory-owner-head"><strong>Besitzer einbeziehen</strong><span><button type="button" id="inventory-owner-active" class="link-button">Aktive auswählen</button> · <button type="button" id="inventory-owner-all" class="link-button">Alle auswählen</button> · <button type="button" id="inventory-owner-none" class="link-button">Alle abwählen</button></span></div>
               <div id="inventory-owner-options" class="inventory-owner-options"></div>
             </section>
-            <section>
+            <section class="inventory-input-card inventory-paste-card">
               <label for="inventory-reconcile-text"><strong>MDR-Profilseite(n)</strong></label>
               <textarea id="inventory-reconcile-text" rows="10" placeholder="Vollständige Profilseite hier einfügen …"></textarea>
               <p class="tiny muted">Ein eindeutiger Pferdename gilt als Treffer. Spielwelt, Geschlecht, Rasse, GP/OP und Besitzer dienen bei Namens-Dubletten zur Zuordnung bzw. werden als Hinweis angezeigt. Partnerprofile werden am eigentlichen Profilblock („Dabei seit“ / „Member since“) erkannt. Nach dem Abgleich können vorhandene DB-Pferde per Kästchen gesammelt gelöscht, auf GBH/Lerndatei gestellt oder bei Besitzerabweichung aktualisiert werden.</p>
@@ -414,10 +371,10 @@
 
         <section id="inventory-pane-club" class="inventory-reconcile-pane" data-ir-pane="club" hidden>
           <div class="inventory-club-layout">
-            <section>
+            <section class="inventory-input-card inventory-paste-card">
               <label for="club-reconcile-text"><strong>Zuchtgemeinschaft / Breeding Club</strong></label>
               <textarea id="club-reconcile-text" rows="12" placeholder="Vollständige ZG-/Breeding-Club-Seite hier einfügen …"></textarea>
-              <p class="tiny muted">Deutsch und Englisch werden automatisch erkannt. Der Hengstabgleich wird anschließend in drei getrennte Listen aufgeteilt: aktuell in der ZG, in der Datenbank aber nicht in der ZG sowie in der ZG aber nicht in der Datenbank. Besitzer, GP/OP und besonders Decktaxe/Stud fee werden verglichen; MDR-Namensbestandteile wie ~Ts~ und ~~APH~~ bleiben erhalten.</p>
+              <p class="tiny muted">Deutsch und Englisch werden automatisch erkannt. Der Hengstabgleich wird anschließend in drei priorisierte Listen aufgeteilt: aktuell in der ZG, in der ZG aber nicht in der Datenbank sowie in der Datenbank aber nicht in der ZG. Besitzer, GP/OP und besonders Decktaxe/Stud fee werden verglichen; MDR-Namensbestandteile wie ~Ts~ und ~~APH~~ bleiben erhalten.</p>
             </section>
           </div>
           <p id="club-reconcile-status" class="small muted"></p>
@@ -430,10 +387,10 @@
 
         <section id="inventory-pane-station" class="inventory-reconcile-pane" data-ir-pane="station" hidden>
           <div class="inventory-club-layout">
-            <section>
+            <section class="inventory-input-card inventory-paste-card">
               <label for="station-reconcile-text"><strong>Deckstation / Stud Station</strong></label>
               <textarea id="station-reconcile-text" rows="12" placeholder="Vollständige Deckstations-/Stud-Station-Seite hier einfügen …"></textarea>
-              <p class="tiny muted">Deckstationen werden getrennt von Zuchtgemeinschaften ausgewertet. Angezeigt werden aktuell angebotene Hengste, passende DB-Hengste derselben Spielwelt und Rasse, die aktuell nicht angeboten werden, sowie Deckstationshengste, die in der Datenbank fehlen. Decktaxe, GP/OP und Deckstatus werden dabei direkt verglichen. Die Begabung kann anschließend per Mehrfachauswahl gefiltert werden.</p>
+              <p class="tiny muted">Deckstationen werden getrennt von Zuchtgemeinschaften ausgewertet. Angezeigt werden aktuell angebotene Hengste, Deckstationshengste, die in der Datenbank fehlen, sowie passende DB-Hengste derselben Spielwelt und Rasse, die aktuell nicht angeboten werden. Decktaxe, GP/OP und Deckstatus werden dabei direkt verglichen. Die Begabung kann anschließend per Mehrfachauswahl gefiltert werden.</p>
             </section>
           </div>
           <p id="station-reconcile-status" class="small muted"></p>
@@ -529,18 +486,18 @@
     <button type="button" id="scroll-top-btn" class="scroll-top-btn" hidden title="Nach oben">↑</button>
   </main>
 
-  <script src="js/tournament-catalog.js?v=54101"></script>
-<script src="js/i18n.js?v=54101"></script>
-  <script src="js/core-utils.js?v=54101"></script>
-  <script src="js/supabase-loader.js?v=54101"></script>
-<script src="js/supabase-config.js?v=54101"></script>
-<script src="js/database-local.js?v=54101"></script>
-  <script src="js/local-app.js?v=54101"></script>
-  <script src="js/learning-file.js?v=54101"></script>
-  <script src="js/horse-data-utils.js?v=54101"></script>
-  <script src="js/data-quality.js?v=54101"></script>
-  <script src="js/breeding-progress.js?v=54101"></script>
-  <script src="js/planer-common.js?v=54101"></script>
-  <script src="js/list.js?v=54101"></script>
+  <script src="js/tournament-catalog.js?v=54109"></script>
+<script src="js/i18n.js?v=54109"></script>
+  <script src="js/core-utils.js?v=54109"></script>
+  <script src="js/supabase-loader.js?v=54109"></script>
+<script src="js/supabase-config.js?v=54109"></script>
+<script src="js/database-local.js?v=54109"></script>
+  <script src="js/local-app.js?v=54109"></script>
+  <script src="js/learning-file.js?v=54109"></script>
+  <script src="js/horse-data-utils.js?v=54109"></script>
+  <script src="js/data-quality.js?v=54109"></script>
+  <script src="js/breeding-progress.js?v=54109"></script>
+  <script src="js/planer-common.js?v=54109"></script>
+  <script src="js/list.js?v=54109"></script>
 </body>
 </html>

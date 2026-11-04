@@ -1,0 +1,14 @@
+V54.0.108 Release-Check
+
+- 43/43 JavaScript-Dateien: Syntax ok
+- CSS: parsebar
+- HTML: keine doppelten IDs
+- lokale Ressourcen: vollständig
+- Hauptnavigation: auf 12 Seiten identisch
+- Verpaarungshistorie: nicht mehr in Hauptnavigation, über Zuchtplaner erreichbar
+- Verpaarungstabellen: 6 Spalten, keine Prognose-/Ampelspalten
+- Guide: aktueller Dashboard-/ZS-/Verpaarungsworkflow
+- Einstellungen: seltene Bereiche einklappbar
+- Cache-Buster: 54108
+- keine aktiven Git-Merge-Marker
+- kein .git-Verzeichnis

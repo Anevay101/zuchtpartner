@@ -1,0 +1,10 @@
+MDR Datenbank V54.0.107 – Zuchtplaner kompakt
+
+- Zuchtplaner-Ergebnisse mit kompakter Statuszeile: passend, Top-Auswahl, ausgeschlossen, Gesundheitshinweise.
+- Kandidatenkarten dichter gestaltet.
+- Besitzer, Rasse und Decktaxe bleiben direkt sichtbar.
+- Farbe, Genetik, empirische Schätzung, Zusatzwünsche und Turnierzucht-Details unter „Details & Prognose“ einklappbar.
+- Best-/Worst-Case, Warnungen, Begründung und Aktionen bleiben direkt sichtbar.
+- Keine neue Bewertungs- oder Ranking-Schwelle eingeführt.
+- Zentrale Ranking-Engine unverändert gegenüber V54.0.106.
+- Cache-Buster auf 54107 aktualisiert.

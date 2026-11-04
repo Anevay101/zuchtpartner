@@ -301,6 +301,13 @@
     setOptions('yhp-group',MDR_TOURNAMENT_GROUP_ORDER || [],t('Alle','All'));
   }
 
+  function renderPoolSummary(){
+    const root=document.getElementById('yhp-pool-summary'); if(!root)return;
+    const rows=activePool();
+    const qualified=rows.filter(isQualified).length;
+    root.innerHTML=`<span><strong>${rows.length}</strong> verfügbar</span><span><strong>${selectedIds.size}</strong> ausgewählt</span><span><strong>${qualified}</strong> mit Top 3</span><span><strong>${Math.max(0,rows.length-qualified)}</strong> brauchen Top 3</span>`;
+  }
+
   function renderPicker(){
     const body=document.getElementById('yhp-picker-body'); if(!body)return;
     pruneSelectionToActivePool();
@@ -309,12 +316,14 @@
       const id=idOf(h), checked=selectedIds.has(id);
       const group=plannerHorseMainGroup?.(h)||'–';
       const qualified=isQualified(h);
+      const age=esc(typeof formatAgeShort==='function' ? formatAgeShort(h.birthdate) : '');
+      const meta=[h.owner||'',normalizeBreed?.(h.breed)||h.breed||'',age].filter(Boolean).map(esc).join(' · ');
       return `<tr class="${checked?'yhp-picked':''}">
         <td class="yhp-check-col"><input type="checkbox" class="yhp-pick" data-yhp-id="${esc(id)}" ${checked?'checked':''} aria-label="${esc(h.name||'Pferd')} auswählen"></td>
-        <td><a href="${mdrRoute('view',{id:h.id})}"><strong>${esc(h.name||'(ohne Name)')}</strong></a><br><span class="tiny muted">${esc(typeof formatAgeShort==='function' ? formatAgeShort(h.birthdate) : '')}</span></td>
-        <td>${esc(h.owner||'–')}</td><td>${esc(normalizeBreed?.(h.breed)||h.breed||'–')}</td><td>${esc(group)}</td>
-        <td>${qualified?'✓':'–'}</td></tr>`;
-    }).join('') : '<tr><td colspan="6" class="muted">Keine passenden Pferde.</td></tr>';
+        <td><a href="${mdrRoute('view',{id:h.id})}"><strong>${esc(h.name||'(ohne Name)')}</strong></a>${meta?`<br><span class="tiny muted">${meta}</span>`:''}</td>
+        <td>${esc(group)}</td>
+        <td>${qualified?'<span class="horse-status-chip horse-status-good">✓</span>':'–'}</td></tr>`;
+    }).join('') : '<tr><td colspan="4" class="muted">Keine passenden Pferde.</td></tr>';
     body.querySelectorAll('.yhp-pick').forEach(cb=>cb.addEventListener('change',()=>{
       const id=String(cb.dataset.yhpId||'');
       if(cb.checked) selectedIds.add(id); else selectedIds.delete(id);
@@ -326,6 +335,7 @@
   function updateSelectedCount(){
     const el=document.getElementById('yhp-selected-count'); if(el)el.textContent=String(selectedIds.size);
     const btn=document.getElementById('yhp-build-plan'); if(btn)btn.disabled=selectedIds.size===0;
+    renderPoolSummary();
   }
 
   function renderStatusTable(plan){
@@ -338,12 +348,9 @@
       return `<tr>
         <td><a href="${mdrRoute('view',{id:p.horse.id})}"><strong>${esc(p.horse.name||'(ohne Name)')}</strong></a><br><span class="tiny muted">${esc(p.mainGroup||'Begabung offen')} · ${p.best?`${esc(p.best.discipline)} ${Math.round(p.best.recommendationScore??0)}/100`:'Turnierwert offen'}</span></td>
         <td><label class="yhp-top3-toggle"><input type="checkbox" data-yhp-top3="${esc(p.id)}" ${check} ${manualDisabled?'disabled':''}> <span>${manualDisabled?'aus Erfolgen':'erreicht'}</span></label></td>
-        <td>${p.stats.gp==null?'–':formatNum(p.stats.gp,0)}</td>
-        <td title="${esc(parentTitle)}">${formatSigned(p.parent.gp,0)}</td>
-        <td>${p.stats.extpct==null?'–':`${formatNum(p.stats.extpct,2)} %`}</td>
-        <td title="${esc(parentTitle)}">${formatSigned(p.parent.extpct,2,' %-Pkt.')}</td>
-        <td>${p.zs.predictedBase==null?'–':`~${formatNum(p.zs.predictedBase,0)}`}</td>
-        <td title="${p.zs.assumedTop3Bonus?'Bei manuell bestätigter Top-3-Platzierung wird vorsichtig der Mindestbonus eines 3. Platzes (15 P.) berücksichtigt.':''}">${esc(zsGapText(p))}</td>
+        <td>${p.stats.gp==null?'–':`<strong>${formatNum(p.stats.gp,0)}</strong>`}<br><span class="tiny muted" title="${esc(parentTitle)}">Δ ${formatSigned(p.parent.gp,0)}</span></td>
+        <td>${p.stats.extpct==null?'–':`<strong>${formatNum(p.stats.extpct,2)} %</strong>`}<br><span class="tiny muted" title="${esc(parentTitle)}">Δ ${formatSigned(p.parent.extpct,2,' %-Pkt.')}</span></td>
+        <td>${p.zs.predictedBase==null?'–':`<strong>~${formatNum(p.zs.predictedBase,0)}</strong>`}<br><span class="tiny muted" title="${p.zs.assumedTop3Bonus?'Bei manuell bestätigter Top-3-Platzierung wird vorsichtig der Mindestbonus eines 3. Platzes (15 P.) berücksichtigt.':''}">${esc(zsGapText(p))}</span></td>
         <td><span class="yhp-class yhp-class-${esc(p.cls.toLowerCase())}">${meta.icon} ${esc(meta.label)}</span><br><span class="tiny muted">${esc(meta.hint)}</span></td>
       </tr>`;
     }).join('');

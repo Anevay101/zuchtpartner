@@ -1477,97 +1477,6 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
 }
 
 
-/* --- V20 Aussortierhilfe: helle Felder + eigene Zielwerte --- */
-#ah-owner,
-#ah-breed,
-#ah-gender,
-#ah-mode,
-#ah-target-gp,
-#ah-target-ext,
-#ah-target-extpct,
-#ah-target-int {
-  background: #ffffff;
-  color: #20262b;
-  border: 2px solid #758896;
-}
-
-#ah-owner:focus,
-#ah-breed:focus,
-#ah-gender:focus,
-#ah-mode:focus,
-#ah-target-gp:focus,
-#ah-target-ext:focus,
-#ah-target-extpct:focus,
-#ah-target-int:focus {
-  border-color: #2f7fd1;
-  outline: 3px solid rgba(47,127,209,0.22);
-  outline-offset: 1px;
-}
-
-#ah-target-gp::placeholder,
-#ah-target-ext::placeholder,
-#ah-target-extpct::placeholder,
-#ah-target-int::placeholder {
-  color: #7a838a;
-  opacity: 1;
-}
-
-.ah-targets {
-  margin-top: 1rem;
-  padding: 0.9rem;
-  border: 1px solid rgba(255,255,255,0.55);
-  border-radius: 10px;
-}
-
-.ah-targets legend {
-  font-weight: 700;
-  padding: 0 0.35rem;
-}
-
-.aussort-explanation {
-  line-height: 1.55;
-}
-
-@media (prefers-color-scheme: dark) {
-  #ah-owner,
-  #ah-breed,
-  #ah-gender,
-  #ah-mode,
-  #ah-target-gp,
-  #ah-target-ext,
-  #ah-target-extpct,
-  #ah-target-int {
-    background: #ffffff;
-    color: #20262b;
-    border-color: #758896;
-  }
-}
-
-
-/* --- V21 Schwerpunkt-Erklärung --- */
-.ah-mode-info {
-  margin-top: 0.8rem;
-  line-height: 1.5;
-  background: #f8fbfd;
-  color: #20262b;
-  border: 2px solid #a9bcc8;
-}
-
-
-/* --- V22 Aussortierhilfe: Scrollbar ab mehr als 5 Pferden --- */
-#ah-results-scroll.ah-scroll-5 {
-  max-height: 760px;
-  overflow-y: auto;
-  padding-right: 0.35rem;
-  border-bottom: 1px solid rgba(0,0,0,0.12);
-}
-
-@media (max-width: 760px) {
-  #ah-results-scroll.ah-scroll-5 {
-    max-height: 620px;
-  }
-}
-
 
 /* --- V24 Farbguide / Appaloosa --- */
 .color-special-criterion{margin-top:.9rem;padding-top:.8rem;border-top:1px solid rgba(80,95,105,.3)}
@@ -2869,53 +2778,6 @@ body.planner-high-contrast {
   .settings-tag-row { grid-template-columns: 1fr 70px; }
 }
 
-
-/* --- V47 Aussortierhilfe --- */
-.ah-result-card {
-  background: #ffffff !important;
-  color: #303830 !important;
-  border: 1px solid #d9e3d2;
-}
-.ah-result-card h3,
-.ah-result-card strong { color: #263426; }
-.ah-horse-meta,
-.ah-result-reasons {
-  background: #ffffff;
-  border: 1px solid #e3e8df;
-  border-radius: .55rem;
-  padding: .45rem .6rem;
-  margin: .45rem 0;
-}
-.ah-white-metrics span {
-  background: #ffffff !important;
-  border: 1px solid #dfe6da;
-  border-radius: .45rem;
-  padding: .35rem .5rem;
-}
-.ah-result-reasons {
-  display: grid;
-  gap: .25rem;
-}
-.ah-summary-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: flex-start;
-}
-.ah-summary-head h2 { margin-top: 0; }
-.ah-verdict-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .35rem;
-}
-.ah-verdict-filters button.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-@media (max-width: 760px) {
-  .ah-summary-head { flex-direction: column; }
-}
 
 
 /* --- V47 Turnierplaner kompakter --- */
@@ -8455,4 +8317,782 @@ button.keep-foal-no.active {
   .horse-assessment-row { align-items: flex-start; }
   .horse-status-chip { max-width: 62%; min-width: 0; }
   .horse-more-data-card > summary { align-items: flex-start; }
+}
+
+
+/* ============================================================
+   V54.0.102 – globale Verdichtung + Bestandsabgleich als Arbeitsliste
+   ============================================================ */
+
+/* Globale Rhythmik: etwas weniger vertikale Fläche, ohne bestehende
+   Fachkomponenten umzustrukturieren. */
+.app-main-nav {
+  gap: .3rem !important;
+}
+.app-main-nav .btn {
+  padding-inline: .58rem !important;
+}
+.container > .muted.small:first-child {
+  margin-top: .25rem;
+  margin-bottom: .7rem;
+}
+.card h2:first-child,
+.card h3:first-child,
+fieldset h2:first-child,
+fieldset h3:first-child {
+  margin-top: 0;
+}
+.filter-bar {
+  gap: .55rem !important;
+}
+.modal-actions {
+  gap: .45rem;
+}
+
+/* Kleine, wiederverwendbare Status-Pills. */
+.mdr-status-pill,
+.inventory-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: .2rem .52rem;
+  border-radius: 999px;
+  border: 1px solid var(--ui-border,#bfd2b9);
+  background: #eef3ec;
+  color: #526055;
+  font-size: .76rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.mdr-status-pill.ok,
+.inventory-status-pill.ok { background:#e3f0df; border-color:#b7d2ae; color:#2f6536; }
+.mdr-status-pill.warn,
+.inventory-status-pill.warn { background:#f7f0d9; border-color:#dfce94; color:#765f16; }
+.mdr-status-pill.danger,
+.inventory-status-pill.danger { background:#f4e2df; border-color:#deb2ab; color:#8a3d35; }
+.mdr-status-pill.neutral,
+.inventory-status-pill.neutral { background:#edf0ec; border-color:#cbd4ca; color:#5b675d; }
+
+/* Bestandsabgleich: Modal und Eingabezone */
+.inventory-reconcile-modal-box {
+  max-width: 1180px;
+  padding: 1rem 1.05rem 1.15rem;
+}
+.inventory-modal-head {
+  position: sticky;
+  top: -.05rem;
+  z-index: 12;
+  margin: -1rem -1.05rem .75rem;
+  padding: .82rem 1.05rem .68rem;
+  background: rgba(255,255,255,.97);
+  border-bottom: 1px solid #d4e0d1;
+  backdrop-filter: blur(8px);
+}
+.inventory-modal-head h2 { margin:0 0 .08rem; }
+.inventory-modal-head p { margin:0; }
+.inventory-reconcile-tabs {
+  display:flex;
+  gap:.3rem;
+  padding:.28rem;
+  margin-bottom:.72rem;
+  border:1px solid #bfd1b9;
+  border-radius:13px;
+  background:#f7faf5;
+}
+.inventory-reconcile-tab {
+  flex:1 1 0;
+  border-radius:9px !important;
+  min-height:2.15rem;
+}
+.inventory-reconcile-layout {
+  grid-template-columns:minmax(270px,.78fr) minmax(420px,1.22fr);
+  gap:.7rem;
+  margin:.65rem 0;
+}
+.inventory-club-layout { margin:.65rem 0; }
+.inventory-input-card {
+  min-width:0;
+  padding:.68rem .75rem;
+  border:1px solid #cad9c6;
+  border-radius:12px;
+  background:#f9fbf8;
+}
+.inventory-input-card > label:first-child,
+.inventory-input-card .inventory-owner-head strong { color:#365f3b; }
+.inventory-paste-card textarea { min-height:165px; }
+.inventory-owner-options { max-height:220px; }
+.inventory-owner-head { align-items:center; }
+.inventory-owner-head>span { font-size:.78rem; }
+.inventory-owner-head .link-button { text-decoration:none; color:#4d7651; font-weight:700; }
+.inventory-owner-head .link-button:hover { text-decoration:underline; }
+.inventory-owner-chip { padding:.28rem .52rem; font-size:.82rem; }
+.inventory-owner-scroll-list { max-height:165px; }
+
+/* Ergebnisse: eine einzige kompakte Statuszeile statt großer Zählerkarten. */
+.inventory-summary-strip {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:.38rem;
+  margin:.65rem 0 .72rem;
+}
+.inventory-summary-item {
+  display:inline-flex;
+  align-items:center;
+  gap:.3rem;
+  min-height:30px;
+  padding:.28rem .58rem;
+  border:1px solid #c9d7c5;
+  border-radius:999px;
+  background:#f3f7f1;
+  color:#49604d;
+  font-size:.79rem;
+  font-weight:700;
+  white-space:nowrap;
+}
+.inventory-summary-item strong { font-size:.92rem; color:#294d2f; }
+.inventory-summary-item.ok { background:#e7f2e3; border-color:#b8d5b0; }
+.inventory-summary-item.warn { background:#f7f0dc; border-color:#dfcf99; color:#725d19; }
+.inventory-summary-item.danger { background:#f6e6e3; border-color:#dfb7b0; color:#813e37; }
+.inventory-summary-item.neutral { background:#edf1ec; border-color:#cdd6cb; color:#616c62; }
+
+.inventory-profile-summary { margin:.4rem 0 .55rem; }
+.inventory-profile-pill { padding:.24rem .5rem; font-size:.78rem; }
+.inventory-results .notice { margin:.42rem 0; padding:.48rem .62rem; }
+
+/* Ergebnisgruppen: Handlungsbedarf leicht betont, Kontrolllisten bewusst ruhig. */
+.inventory-result-group {
+  margin:.48rem 0;
+  padding:0 !important;
+  overflow:hidden;
+  background:#fff;
+  border-color:#cbd9c7 !important;
+  box-shadow:none !important;
+}
+.inventory-result-group>summary {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.65rem;
+  min-height:42px;
+  padding:.5rem .68rem;
+  list-style:none;
+  background:#f6f9f4;
+  color:#355b39;
+}
+.inventory-result-group>summary::-webkit-details-marker { display:none; }
+.inventory-result-group>summary::after { content:'▾'; margin-left:.25rem; color:#66816a; }
+.inventory-result-group[open]>summary::after { content:'▴'; }
+.inventory-result-group>summary>span { flex:1 1 auto; }
+.inventory-result-group>summary>strong {
+  flex:0 0 auto;
+  min-width:1.9rem;
+  padding:.12rem .42rem;
+  border-radius:999px;
+  background:#e6eee3;
+  color:#365f3b;
+  text-align:center;
+  font-size:.78rem;
+}
+.inventory-action-group>summary { background:#f7f5ed; }
+.inventory-action-group>summary>strong { background:#f1e8ca; color:#725d19; }
+.inventory-control-group>summary { background:#f4f7f3; color:#607063; }
+.inventory-control-group>summary>strong { background:#e8ede7; color:#5d695e; }
+.inventory-breeding-section-note { margin:.45rem .68rem .15rem; }
+.inventory-breeding-section .table-wrap { margin:.4rem .55rem .6rem; border-radius:10px !important; box-shadow:none; }
+
+/* Eigene Pferde: Arbeitszeilen statt breiter Tabelle. */
+.inventory-work-list { padding:.15rem .55rem .55rem; }
+.inventory-work-list-head {
+  display:flex;
+  justify-content:flex-end;
+  padding:.25rem .1rem .3rem;
+  border-bottom:1px solid #e2e8df;
+}
+.inventory-select-all { color:#55705a; }
+.inventory-work-row {
+  display:grid;
+  grid-template-columns:34px minmax(190px,1fr) minmax(240px,1.15fr);
+  gap:.55rem;
+  align-items:center;
+  min-height:50px;
+  padding:.42rem .18rem;
+  border-bottom:1px solid #e6ece3;
+}
+.inventory-work-row:last-child { border-bottom:0; }
+.inventory-work-row:hover { background:#f6faf4; }
+.inventory-work-select { display:flex; justify-content:center; }
+.inventory-stock-name-cell { font-size:.9rem; line-height:1.22; }
+.inventory-work-meta { margin-top:.1rem; color:#718076; font-size:.75rem; }
+.inventory-work-mini {
+  display:inline-flex;
+  margin-left:.25rem;
+  padding:.08rem .3rem;
+  border-radius:999px;
+  background:#edf1ec;
+  color:#647066;
+  font-size:.69rem;
+  font-weight:700;
+}
+.inventory-work-state {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:.16rem;
+  min-width:0;
+}
+.inventory-stock-warning { display:block; line-height:1.25; color:#8a6500; }
+.inventory-empty-state { margin:.6rem .7rem; }
+
+/* Bulk-Aktionen erscheinen weiterhin nur bei Auswahl, dann als klare Arbeitsleiste. */
+.inventory-bulk-actions {
+  bottom:.35rem;
+  margin:.55rem 0;
+  padding:.48rem .62rem;
+  border-radius:11px;
+  background:rgba(249,252,248,.98);
+  box-shadow:0 7px 22px rgba(36,66,39,.12);
+}
+
+/* ZG/Deckstation: Filter kompakter; Status und Handlungsgruppen bleiben im Fokus. */
+.inventory-club-head { margin-top:.35rem; }
+.inventory-club-head h3 { margin:0; }
+.inventory-club-filters,
+.inventory-club-filters.has-availability {
+  gap:.45rem !important;
+  padding:.55rem .6rem;
+  margin:.58rem 0;
+  border:1px solid #cad9c6;
+  border-radius:12px;
+  background:#f7faf5;
+}
+.inventory-club-filters label,
+.inventory-filter-field { font-size:.78rem; }
+.inventory-club-filters input,
+.inventory-club-filters select,
+.inventory-multiselect>summary { min-height:34px !important; }
+.inventory-club-sort-hint { margin:.3rem .15rem .45rem; }
+.inventory-club-stallion-table th,
+.inventory-club-stallion-table td { padding:.28rem .42rem !important; }
+
+@media (max-width:760px) {
+  .inventory-reconcile-modal-box { padding:.78rem; }
+  .inventory-modal-head { margin:-.78rem -.78rem .6rem; padding:.72rem .78rem .6rem; }
+  .inventory-reconcile-tabs { overflow-x:auto; }
+  .inventory-reconcile-tab { flex:0 0 auto; }
+  .inventory-work-row { grid-template-columns:30px 1fr; }
+  .inventory-work-state { grid-column:2; }
+  .inventory-summary-item { white-space:normal; }
+}
+
+
+/* V54.0.103 – Update-Abschluss, kompakte ZS/LP-Anzeige, Verpaarungen am Pferd */
+.horse-pairing-card { margin-bottom: 12px; }
+.horse-pairing-status,.horse-pairing-origin { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid var(--border,#cfd8cf); border-radius:10px; background:var(--surface-soft,#f5f8f3); }
+.horse-pairing-linked { justify-content:flex-start; }
+.horse-pairing-action-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.horse-pairing-action-row select { min-width:280px; }
+.horse-pairing-history { margin-top:10px; border-top:1px solid var(--border,#d7ddd5); padding-top:8px; }
+.horse-pairing-history summary { display:flex; gap:10px; align-items:baseline; cursor:pointer; }
+.horse-pairing-history-list { margin-top:8px; display:grid; gap:4px; }
+.horse-pairing-history-row { display:grid; grid-template-columns:92px minmax(150px,1fr) minmax(160px,1fr); gap:10px; align-items:center; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,.55); }
+.zs-compact-summary .zs-detail-metrics { margin-top:8px; }
+@media (max-width:760px){ .horse-pairing-status,.horse-pairing-origin{align-items:flex-start;flex-direction:column}.horse-pairing-action-row{width:100%}.horse-pairing-action-row select{min-width:0;width:100%}.horse-pairing-history-row{grid-template-columns:1fr}.horse-pairing-history-row span:first-child{font-size:.82em;color:var(--muted,#68736b)} }
+
+/* V54.0.104 – Dashboard als kompaktes Kontrollzentrum */
+.dashboard-page { display:grid; gap:.7rem; }
+.dashboard-page-head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin:.1rem 0 -.1rem; }
+.dashboard-page-head .eyebrow { margin:0 0 .12rem; font-size:.72rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--accent-dark,#3f6b45); }
+.dashboard-filter-bar { margin:.1rem 0 .15rem; padding:.58rem .66rem; border-radius:12px; }
+.dashboard-filter-bar .field { min-width:128px; }
+.dashboard-section-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:.7rem; margin:.1rem 0 .45rem; }
+.dashboard-section-heading h2 { margin:0; font-size:1.04rem; }
+.dashboard-section-heading p { margin:.08rem 0 0; }
+.dashboard-control-center { margin:.05rem 0 .15rem; }
+.dashboard-overview-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:.5rem; }
+.dashboard-kpi { display:flex; min-width:0; flex-direction:column; gap:.08rem; padding:.62rem .68rem; border:1px solid var(--border,#cfd9cd); border-radius:11px; background:var(--surface,#fff); color:inherit; text-decoration:none; box-shadow:0 1px 3px rgba(50,70,45,.05); }
+a.dashboard-kpi:hover { border-color:#91aa8c; background:#f7faf5; transform:translateY(-1px); }
+.dashboard-kpi span { color:var(--muted,#6c786f); font-size:.73rem; font-weight:700; }
+.dashboard-kpi strong { color:var(--accent-dark,#365f3b); font-size:1.38rem; line-height:1.1; }
+.dashboard-kpi small { color:var(--muted,#748078); font-size:.68rem; line-height:1.2; }
+.dashboard-kpi-good { background:#f4f9f1; border-color:#bdd1b7; }
+.dashboard-kpi-attention { background:#fbf8ed; border-color:#decf9e; }
+.dashboard-focus-grid { display:grid; grid-template-columns:1fr 1fr; gap:.55rem; margin-top:.55rem; }
+.dashboard-focus-card { padding:.65rem .72rem; box-shadow:none; border-color:#ced9cb; }
+.dashboard-focus-head { display:flex; align-items:center; justify-content:space-between; gap:.65rem; margin-bottom:.45rem; }
+.dashboard-focus-head h3 { margin:0; font-size:.93rem; }
+.dashboard-task-list { display:grid; gap:.28rem; }
+.dashboard-task-row { display:grid; grid-template-columns:38px 1fr 18px; gap:.45rem; align-items:center; min-height:34px; padding:.28rem .38rem; border-radius:8px; color:inherit; text-decoration:none; }
+.dashboard-task-row:hover { background:#f5f8f3; }
+.dashboard-task-row strong { display:inline-flex; align-items:center; justify-content:center; min-width:30px; min-height:24px; padding:0 .3rem; border-radius:999px; background:#e9eee7; color:#526253; }
+.dashboard-task-attention strong { background:#f0e4bb; color:#785f12; }
+.dashboard-task-good strong { background:#dcebd8; color:#37633b; }
+.dashboard-task-row span { font-size:.79rem; }
+.dashboard-stock-lines { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.38rem; }
+.dashboard-stock-lines>div { display:flex; flex-direction:column; gap:.05rem; padding:.4rem .46rem; border:1px solid #dbe3d8; border-radius:8px; background:#f8faf7; }
+.dashboard-stock-lines span { font-size:.69rem; color:var(--muted,#718076); }
+.dashboard-stock-lines strong { color:var(--accent-dark,#365f3b); font-size:1rem; }
+.dashboard-status-pills { display:flex; flex-wrap:wrap; gap:.28rem; margin-top:.42rem; }
+.dashboard-status-pill { display:inline-flex; gap:.3rem; align-items:center; padding:.15rem .4rem; border-radius:999px; background:#edf3ea; color:#527058; font-size:.7rem; }
+.dashboard-status-pill strong { color:#355f3b; }
+.dashboard-analysis-card>summary,
+.dashboard-zs-card>summary,
+.dashboard-breeding-card>summary { display:flex; align-items:baseline; justify-content:space-between; gap:.75rem; cursor:pointer; }
+.dashboard-analysis-card>summary .tiny,
+.dashboard-zs-card>summary .tiny,
+.dashboard-breeding-card>summary .tiny { font-weight:400; }
+.dashboard-analysis-grid { display:grid; grid-template-columns:1fr 1fr; gap:.65rem; margin-top:.62rem; }
+.dashboard-analysis-section { min-width:0; padding:.6rem .65rem; border:1px solid #d9e2d7; border-radius:10px; background:#fafcf9; }
+.dashboard-analysis-section h3 { margin:0 0 .45rem; font-size:.9rem; }
+.dashboard-analysis-section select { width:100%; margin:.16rem 0 .38rem; }
+.dashboard-average-kpis { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.32rem; }
+.dashboard-average-kpis>div { display:flex; flex-direction:column; gap:.04rem; padding:.38rem .42rem; border-radius:8px; background:#f0f5ee; }
+.dashboard-average-kpis span { color:var(--muted,#718076); font-size:.66rem; }
+.dashboard-average-kpis strong { font-size:.92rem; color:var(--accent-dark,#365f3b); }
+.dashboard-saved-tiles-section { margin:.1rem 0 .2rem; }
+.dashboard-saved-tiles-section h2 { margin:0; }
+.dashboard-panel { margin:.08rem 0 !important; }
+
+@media (max-width:1100px) {
+  .dashboard-overview-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .dashboard-average-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width:760px) {
+  .dashboard-overview-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .dashboard-focus-grid,.dashboard-analysis-grid { grid-template-columns:1fr; }
+  .dashboard-stock-lines { grid-template-columns:1fr 1fr; }
+  .dashboard-analysis-card>summary,.dashboard-zs-card>summary,.dashboard-breeding-card>summary { align-items:flex-start; flex-direction:column; gap:.12rem; }
+}
+@media (max-width:480px) {
+  .dashboard-overview-grid { grid-template-columns:1fr 1fr; }
+  .dashboard-stock-lines,.dashboard-average-kpis { grid-template-columns:1fr; }
+}
+
+/* V54.0.105 – Pferdeliste: kompakter Überblick, Schnellfilter und ruhigere Tabelle */
+.database-overview-strip {
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:.42rem;
+  margin:.08rem 0 .55rem;
+}
+.database-overview-stat {
+  min-width:0;
+  display:grid;
+  grid-template-columns:auto auto;
+  grid-template-areas:"label value" "caption caption";
+  align-items:baseline;
+  gap:.05rem .45rem;
+  padding:.42rem .58rem;
+  border:1px solid #cad9c6;
+  border-radius:10px;
+  background:#f7faf5;
+  box-shadow:0 1px 2px rgba(34,61,37,.04);
+}
+.database-overview-stat span { grid-area:label; color:#66766b; font-size:.7rem; font-weight:700; white-space:nowrap; }
+.database-overview-stat strong { grid-area:value; justify-self:end; color:#315b37; font-size:1.02rem; line-height:1; }
+.database-overview-stat small { grid-area:caption; color:#7b877e; font-size:.61rem; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.database-filter-details { margin-bottom:.48rem; }
+.database-filter-details > summary { padding:.55rem .72rem; }
+.database-filter-details > .database-filter-bar { margin:0; border:0 !important; border-radius:0 !important; box-shadow:none !important; padding:.62rem .7rem .52rem; background:#fff; }
+.database-quick-filter-grid {
+  display:grid;
+  grid-template-columns:minmax(145px,1.35fr) minmax(145px,1.1fr) minmax(140px,1fr) minmax(115px,.75fr) minmax(135px,.95fr) minmax(135px,.95fr);
+  gap:.48rem;
+  width:100%;
+}
+.database-quick-filter-grid .field { min-width:0; }
+.database-quick-filter-grid label { font-size:.7rem; margin-bottom:.18rem; }
+.database-quick-filter-grid input,
+.database-quick-filter-grid select,
+.database-quick-filter-grid .checkdrop-toggle { min-height:34px; padding:.32rem .48rem; font-size:.82rem; }
+.database-advanced-filters {
+  flex-basis:100%;
+  width:100%;
+  margin-top:.08rem;
+  border-top:1px solid #dce5d9;
+  padding-top:.34rem;
+}
+.database-advanced-filters > summary {
+  cursor:pointer;
+  width:max-content;
+  color:#46664b;
+  font-size:.74rem;
+  font-weight:800;
+  padding:.18rem .08rem;
+}
+.database-advanced-filter-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.45rem;
+  margin-top:.35rem;
+}
+.database-advanced-filter-grid .filter-group { padding:.4rem .52rem .52rem; box-shadow:none !important; }
+.database-advanced-filter-grid .filter-group-title { margin-bottom:.22rem; }
+.database-filter-bar .filter-actions {
+  margin-top:.06rem;
+  padding-top:.4rem;
+  border-top:1px solid #e1e8df;
+  gap:.38rem;
+  align-items:center;
+}
+.database-filter-bar .filter-actions button,
+.database-filter-bar .filter-actions select { min-height:32px; padding:.28rem .48rem; font-size:.76rem; }
+.database-filter-bar .filter-live-hint { margin-left:auto; }
+
+body.list-page .active-filter-bar { margin:.12rem 0 .42rem; padding:.35rem .48rem; }
+body.list-page .list-header { min-height:24px; margin-bottom:.32rem; }
+body.list-page #result-count { font-weight:700; color:#53665a; }
+
+@media (min-width:901px) {
+  #horse-table { min-width:1240px; }
+  #horse-table th,
+  #horse-table td { padding:.34rem .4rem; font-size:.82rem; line-height:1.22; }
+  #horse-table .table-thumb { max-width:42px; max-height:42px; }
+  #horse-table td.actions-cell .btn,
+  #horse-table td.actions-cell button { padding:.2rem .34rem; margin-right:.18rem; }
+}
+.name-cell-stack { display:flex; flex-direction:column; gap:.18rem; min-width:0; }
+.name-cell-inner { gap:.22rem; }
+.name-cell-inner > a:first-child { font-weight:700; }
+.horse-name-game-link { padding:.08rem .26rem !important; min-height:0 !important; line-height:1.2; opacity:.72; }
+.horse-name-game-link:hover { opacity:1; }
+.horse-tags-inline { display:flex; flex-wrap:wrap; gap:.18rem; }
+.horse-tags-inline .horse-tag-badge { font-size:.62rem; padding:.02rem .34rem; }
+#horse-table .game-version-badge,
+#horse-table .learning-file-badge { font-size:.62rem; }
+#horse-table .pill { font-size:.68rem; padding:.05rem .34rem; }
+
+@media (max-width:1120px) {
+  .database-overview-strip { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .database-quick-filter-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width:760px) {
+  .database-overview-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .database-quick-filter-grid,.database-advanced-filter-grid { grid-template-columns:1fr 1fr; }
+  .database-filter-bar .filter-live-hint { width:100%; margin-left:0; }
+}
+@media (max-width:520px) {
+  .database-overview-strip,.database-quick-filter-grid,.database-advanced-filter-grid { grid-template-columns:1fr; }
+  .database-overview-stat small { white-space:normal; }
+}
+@media (min-width:901px) {
+  body.list-page #result-count { display:none; }
+}
+#horse-table .pill.neutral { color:#66756a; border-color:#c9d4c6; background:#f5f8f4; }
+
+/* ============================================================
+   V54.0.107 – Turnier & Leistung kompakter Arbeitsbereich
+   ============================================================ */
+.turnierplaner-page .container { max-width: 1320px; }
+.tp-context-strip,
+.turnierplaner-page .tp-summary-pills {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.42rem;
+  margin:.15rem 0 .72rem;
+}
+.tp-context-strip > span,
+.turnierplaner-page .tp-summary-pills > span {
+  display:inline-flex;
+  align-items:center;
+  gap:.28rem;
+  min-height:2rem;
+  padding:.34rem .58rem;
+  border:1px solid #c1d3bb;
+  border-radius:999px;
+  background:#f8fbf6;
+  color:#506552;
+  font-size:.82rem;
+  box-shadow:0 1px 2px rgba(35,62,38,.04);
+}
+.tp-context-strip strong,
+.turnierplaner-page .tp-summary-pills strong { color:#2e5634; font-size:.94rem; }
+.tp-planning-tabs {
+  display:inline-flex;
+  gap:.22rem;
+  padding:.26rem;
+  margin:.35rem 0 .55rem;
+  border:1px solid #c4d5bf;
+  border-radius:12px;
+  background:#f7faf5;
+}
+.tp-planning-tabs .subtab-btn {
+  border:0;
+  border-radius:8px;
+  padding:.42rem .68rem;
+  background:transparent;
+  color:#4b624f;
+}
+.tp-planning-tabs .subtab-btn.active {
+  background:#dfeedd;
+  color:#294f30;
+  box-shadow:0 1px 4px rgba(42,75,46,.08);
+}
+.turnierplaner-page .tournament-section-head h2 { margin-bottom:.12rem; }
+.turnierplaner-page .tournament-section-head p { margin:.08rem 0; }
+.tp-inline-help { margin-top:.22rem; }
+.tp-inline-help > summary,
+.tp-rule-details > summary {
+  cursor:pointer;
+  color:#527057;
+  font-size:.78rem;
+  font-weight:700;
+}
+.tp-inline-help p,
+.tp-rule-details p { margin:.32rem 0 0; }
+.tp-rule-pills {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.32rem;
+  margin:.45rem 0 .28rem;
+}
+.tp-rule-pills > span {
+  border:1px solid #b7cbb1;
+  border-radius:999px;
+  background:#eef6eb;
+  color:#3f6143;
+  padding:.2rem .46rem;
+  font-size:.76rem;
+  font-weight:750;
+}
+.tp-rule-details { margin-bottom:.5rem; }
+.yhp-pool-summary { margin-top:.1rem !important; }
+.yhp-picker-table { min-width:620px; }
+.yhp-picker-table th,
+.yhp-picker-table td { padding:.4rem .48rem; }
+.yhp-picker-table td:nth-child(3),
+.yhp-picker-table td:nth-child(4) { white-space:nowrap; }
+.yhp-status-table { min-width:780px; }
+.yhp-status-table th,
+.yhp-status-table td { padding:.42rem .5rem; }
+.yhp-status-table td:nth-child(3),
+.yhp-status-table td:nth-child(4),
+.yhp-status-table td:nth-child(5) { white-space:nowrap; }
+.yhp-work-grid { gap:.58rem; margin-top:.58rem; }
+.yhp-entries-card,
+.yhp-copy-card,
+.yhp-status-card,
+.yhp-select-card { margin-top:.58rem; }
+.yhp-entry-grid { gap:.48rem; }
+.yhp-entry-card > header { padding:.4rem .5rem; }
+.yhp-entry-horse { padding:.4rem .5rem; }
+.tp-collapsible-card { margin-top:.55rem; }
+.tp-collapsible-card > summary {
+  padding:.58rem .7rem;
+  font-weight:800;
+  color:#355b3a;
+}
+.tp-collapsible-card .tp-details-body { padding-top:.15rem; }
+.tp-zs-work-card .tournament-section-head { margin-bottom:.15rem; }
+.tp-zs-filter-grid { margin-top:.45rem; }
+.tp-zs-table { min-width:920px; }
+.tp-zs-table th,
+.tp-zs-table td { padding:.42rem .48rem; }
+.tp-stats-card details.tp-stats-groups { margin-top:.5rem; }
+@media (max-width:760px){
+  .tp-context-strip,
+  .turnierplaner-page .tp-summary-pills { gap:.3rem; }
+  .tp-context-strip > span,
+  .turnierplaner-page .tp-summary-pills > span { font-size:.76rem; padding:.28rem .45rem; }
+  .tp-planning-tabs { display:flex; width:100%; }
+  .tp-planning-tabs .subtab-btn { flex:1; }
+}
+
+
+/* ============================================================
+   V54.0.107 – Zuchtplaner kompaktere Ergebnis-Hierarchie
+   ============================================================ */
+.zuchtplaner-v47 .zp-advisor-heading { margin-bottom:.55rem; }
+.zuchtplaner-v47 .zp-advisor-heading h2 { margin-bottom:.12rem; }
+.zuchtplaner-v47 .zp-result-hint { margin:.38rem 0 .62rem; }
+.zp-result-summary {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.42rem;
+  margin:.68rem 0 .25rem;
+}
+.zp-result-summary[hidden] { display:none !important; }
+.zp-result-pill {
+  display:inline-flex;
+  align-items:baseline;
+  gap:.35rem;
+  min-width:112px;
+  padding:.42rem .58rem;
+  border:1px solid rgba(82,126,85,.2);
+  border-radius:10px;
+  background:rgba(242,247,240,.88);
+  color:#46614a;
+}
+.zp-result-pill strong { font-size:1.02rem; color:#2f5735; }
+.zp-result-pill small { font-size:.74rem; }
+.zp-result-pill.warning { border-color:rgba(166,126,47,.28); background:rgba(252,247,232,.9); color:#745f2f; }
+.zp-result-pill.warning strong { color:#775c25; }
+.zuchtplaner-v47 .zp-candidate-card { padding:.68rem .78rem; }
+.zuchtplaner-v47 .zp-candidate-head { padding-bottom:.36rem; }
+.zuchtplaner-v47 .zp-candidate-head h2 { font-size:1.12rem; }
+.zuchtplaner-v47 .zp-stat-strip span { padding:.18rem .4rem; font-size:.75rem; }
+.zuchtplaner-v47 .zp-candidate-meta { margin:.34rem 0 .42rem; gap:.25rem .65rem; }
+.zp-candidate-details {
+  margin:.48rem 0 0;
+  border:1px solid rgba(85,113,78,.17);
+  border-radius:9px;
+  background:rgba(250,252,249,.72);
+}
+.zp-candidate-details > summary {
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:.6rem;
+  cursor:pointer;
+  padding:.44rem .55rem;
+  color:#48624c;
+}
+.zp-candidate-details > summary::-webkit-details-marker { display:none; }
+.zp-candidate-details > summary::after { content:'▾'; margin-left:auto; color:#6c826f; }
+.zp-candidate-details[open] > summary::after { content:'▴'; }
+.zp-candidate-details-body { padding:.1rem .58rem .55rem; border-top:1px solid rgba(85,113,78,.12); }
+.zp-genetics-line { display:flex; flex-wrap:wrap; gap:.35rem .8rem; margin:.42rem 0; }
+.zuchtplaner-v47 .planner-empirical-estimate { margin:.4rem 0; }
+.zuchtplaner-v47 .planner-empirical-estimate .tiny { margin-bottom:0; }
+.zuchtplaner-v47 .zp-candidate-card .actions { margin-top:.45rem; }
+.zuchtplaner-v47 .zp-candidate-card .actions .btn,
+.zuchtplaner-v47 .zp-candidate-card .actions button { padding:.36rem .55rem; }
+
+@media (max-width:680px) {
+  .zp-result-pill { flex:1 1 calc(50% - .42rem); min-width:0; }
+  .zp-candidate-details > summary { align-items:flex-start; flex-direction:column; gap:.08rem; }
+}
+
+/* ============================================================
+   V54.0.108 – Navigation, schlanke Verpaarungshistorie, Feinschliff
+   ============================================================ */
+.app-main-nav {
+  align-items: center;
+  gap: .32rem !important;
+}
+.app-main-nav .btn {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .36rem .62rem !important;
+  border-radius: 10px;
+}
+.zp-secondary-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .55rem;
+  margin: -.2rem 0 .85rem;
+}
+
+.pairing-simple-page { max-width: 1500px; }
+.pairing-simple-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: .85rem 1rem;
+  margin-bottom: .75rem;
+}
+.pairing-simple-intro h2 { margin: .05rem 0 .2rem; }
+.pairing-simple-intro p { margin: 0; max-width: 900px; }
+.pairing-simple-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: .6rem;
+  margin-bottom: .75rem;
+}
+.pairing-simple-stat {
+  background: rgba(255,255,255,.86);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: .65rem .8rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .6rem;
+}
+.pairing-simple-stat span { color: var(--muted); font-size: .84rem; }
+.pairing-simple-stat strong { color: var(--ui-green-deep); font-size: 1.08rem; }
+.pairing-add-compact { margin-bottom: .7rem; }
+.pairing-add-compact > summary,
+.settings-secondary-section > summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  list-style: none;
+}
+.pairing-add-compact > summary::-webkit-details-marker,
+.settings-secondary-section > summary::-webkit-details-marker { display: none; }
+.pairing-manual-form { margin-top: .8rem; }
+.pairing-filter-simple {
+  grid-template-columns: minmax(220px, 1.2fr) minmax(260px, 1.5fr) minmax(160px,.6fr);
+  align-items: end;
+  margin-bottom: .7rem;
+}
+.pairing-simple-section { margin-top: .65rem; }
+.pairing-simple-table { min-width: 860px !important; }
+.pairing-simple-table th,
+.pairing-simple-table td { padding: .48rem .55rem; vertical-align: middle; }
+.pairing-simple-table .actions-cell { white-space: nowrap; }
+.pairing-simple-table .actions-cell button { margin: .08rem .15rem .08rem 0; }
+.pairing-simple-page .pairing-breeding-traffic-light,
+.pairing-simple-page .pairing-prediction-row { display: none !important; }
+.past-pairing-table.pairing-simple-table { min-width: 860px !important; }
+
+.settings-compact-page > .notice { margin-bottom: .75rem; }
+.settings-compact-page .settings-section { margin-bottom: .7rem; }
+.settings-secondary-section > summary { padding: .1rem 0; }
+.settings-secondary-section[open] > summary { margin-bottom: .75rem; }
+.guide-content .guide-hero { margin-bottom: .75rem; }
+.guide-faq { display: grid; gap: .55rem; }
+.guide-faq-item { margin: 0 !important; }
+.guide-faq-item > summary { padding-block: .1rem; }
+
+@media (max-width: 900px) {
+  .pairing-simple-intro { align-items: flex-start; flex-direction: column; }
+  .pairing-simple-stats { grid-template-columns: 1fr; }
+  .pairing-filter-simple { grid-template-columns: 1fr; }
+}
+
+
+/* ============================================================
+   V54.0.109 – finale QA: aktive Navigation + kompakte mobile Navigation
+   ============================================================ */
+.app-main-nav .btn[aria-current="page"] {
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(42, 76, 39, .18);
+}
+.app-main-nav .btn[aria-current="page"]:hover {
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
+  color: #fff;
+}
+@media (max-width: 760px) {
+  .topbar {
+    align-items: stretch;
+  }
+  .topbar nav.app-main-nav {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: .4rem;
+    padding: .05rem 0 .25rem;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+  .topbar nav.app-main-nav .btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: .42rem .68rem;
+  }
 }

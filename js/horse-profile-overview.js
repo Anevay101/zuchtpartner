@@ -64,6 +64,30 @@ function horseProfileTournamentFocus(profile, talent) {
   return wanted;
 }
 
+function horseProfileLpAssessment(horse, allHorses) {
+  const api=window.MDR_LP_MODEL;
+  if (!api?.actualResult || !api?.evaluate || !api?.classify) {
+    return {symbol:'?',label:'?',detail:'nicht einschätzbar',status:'neutral'};
+  }
+  try {
+    const actual=api.actualResult(horse);
+    if (actual?.known) {
+      return actual.passed
+        ? {symbol:'✓',label:'✓ Ja',detail:'bestätigt',status:'green'}
+        : {symbol:'✕',label:'✕ Nein',detail:'bestätigt nicht bestanden',status:'red'};
+    }
+    const evaluation=api.evaluate(horse);
+    const validation=api.validate ? api.validate(Array.isArray(allHorses)?allHorses:[horse]) : null;
+    const classification=api.classify(evaluation,validation);
+    if (classification?.key==='red') return {symbol:'✕',label:'✕',detail:'Voraussetzungen aktuell nicht erfüllt',status:'red'};
+    if (classification?.key==='green') return {symbol:'?',label:'?',detail:'Prognose positiv · noch nicht bestätigt',status:'yellow'};
+    return {symbol:'?',label:'?',detail:classification?.label || 'noch offen',status:'neutral'};
+  } catch (error) {
+    console.warn('LP-Kurzstatus konnte nicht berechnet werden:', error);
+    return {symbol:'?',label:'?',detail:'nicht einschätzbar',status:'neutral'};
+  }
+}
+
 function horseProfileZsAssessment(horse, allHorses) {
   const benchmark=window.MDR_BREEDING_SHOW_BENCHMARK?.getBenchmarkForHorse?.(horse) || null;
   const actual=typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : null;
@@ -114,10 +138,11 @@ function horseProfileBuildOverview(horse, allHorses) {
   const training=talent ? (HORSE_TRAINING_STRATEGIES[talent] || null) : null;
   const zs=horseProfileZsAssessment(horse,allHorses);
   const breeding=horseProfileBreedingProgress(horse,allHorses);
+  const lp=horseProfileLpAssessment(horse,allHorses);
   const mainRows=profile?.mainRows || [];
   const secondaryRows=[...(profile?.recommendedSecondaryRows||[]),...(profile?.situationalSecondaryRows||[])]
     .sort((a,b)=>(Number(b.recommendationScore)||-1)-(Number(a.recommendationScore)||-1)||Number(b.points)-Number(a.points));
-  return {horse,profile,talent,mainGroup,secondRide,focus,training,zs,breeding,mainRows,secondaryRows};
+  return {horse,profile,talent,mainGroup,secondRide,focus,training,zs,breeding,lp,mainRows,secondaryRows};
 }
 
 function horseProfileRow(label,value,opts={}) {
@@ -135,7 +160,7 @@ function horseProfileRenderBase(data) {
     ['Name',horse?.name],['ID',horse?.external_id],['Geschlecht',horse?.gender],['Rasse',breed],
     ['Geburtstag',`${horseProfileFormatDate(horse?.birthdate)} · ${age}`],['Besitzer',horse?.owner],
     ['Zuchtzulassung',horse?.breeding_allowed===true?'ZZL ✓':horse?.breeding_allowed===false?'ZZL ✗':'ZZL ?'],
-    ['HLP/SLP',horse?.hlp_slp],['Reinrassigkeit',pure],['Erbkrankheiten',disease],
+    ['Leistungsprüfung',data.lp?.detail ? `${data.lp.label} · ${data.lp.detail}` : (data.lp?.label||'?')],['Reinrassigkeit',pure],['Erbkrankheiten',disease],
   ];
   return rows.map(([l,v])=>horseProfileRow(l,v)).join('');
 }
@@ -177,7 +202,8 @@ function horseProfileRenderAssessment(data) {
   const zClass=horseProfileStatusClass('zs',data.zs?.status);
   const bClass=horseProfileStatusClass('breeding',data.breeding?.level);
   const row=(icon,label,value,cls)=>`<div class="horse-assessment-row"><span class="horse-assessment-label">${icon} <strong>${horseProfileEsc(label)}</strong></span><span class="horse-status-chip horse-status-${cls}">${horseProfileEsc(value)}</span></div>`;
-  return row('🏆','Turnierprofil',tLabel,tClass)+row('🏅','ZS-Prognose',data.zs?.label||'nicht einschätzbar',zClass)+row('↗','Zuchtfortschritt',data.breeding?.label||'noch nicht bewertbar',bClass);
+  const lpClass=horseProfileStatusClass('lp',data.lp?.status);
+  return row('🏆','Turnierprofil',tLabel,tClass)+row('🏅','ZS-Prognose',data.zs?.label||'nicht einschätzbar',zClass)+row('✓','Leistungsprüfung',data.lp?.label||'?',lpClass)+row('↗','Zuchtfortschritt',data.breeding?.label||'noch nicht bewertbar',bClass);
 }
 
 function horseProfileRenderMore(data) {
@@ -216,6 +242,7 @@ function horseProfileHorseDataCopyText(data) {
     `${horse?.gender || '–'} · ${breed}`,
     ...(data.mainGroup || data.talent ? [`Begabung: ${data.mainGroup || '–'}${data.talent?` / ${data.talent}`:''}`] : []),
     `Zuchtzulassung: ${zzl}`,
+    `Leistungsprüfung: ${data.lp?.label || '?'}`,
     '',
     'Datenübersicht',
   ];

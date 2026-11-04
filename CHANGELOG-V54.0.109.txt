@@ -1,0 +1,8 @@
+MDR Datenbank V54.0.109 – Finale QA & Feinschliff
+
+- Finale Konsistenzrunde ohne neue Fachlogik.
+- Durchschnittsseite korrekt als „Durchschnitt & Vergleich“ benannt.
+- Sichtbare Restbegriffe „Verpaarungslog“ auf „Verpaarungshistorie“ vereinheitlicht.
+- Aktiver Hauptnavigationspunkt wird auf den Hauptseiten deutlich markiert.
+- Hauptnavigation auf schmalen Bildschirmen kompakt horizontal scrollbar statt als großer Buttonblock.
+- Cache-Buster auf 54109 vereinheitlicht.

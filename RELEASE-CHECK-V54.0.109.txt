@@ -1,0 +1,24 @@
+MDR Datenbank V54.0.109 – Release-/QA-Check
+
+Geprüft:
+- 43/43 JavaScript-Dateien: Syntax OK (node --check)
+- CSS: Parsing ohne Fehler
+- 13 HTML-Seiten: keine doppelten IDs
+- Lokale href/src-Referenzen vollständig vorhanden
+- Cache-Buster auf 54109 vereinheitlicht
+- Hauptnavigation: gleiche 8 Ziele auf allen Seiten mit Navigation
+- Aktiver Navigationspunkt pro Hauptseite korrekt markiert
+- Keine aktiven Git-Merge-Marker in HTML/JS/CSS
+- Kein .git-Verzeichnis im Release
+- Pferd aktualisieren -> Pferdeseite: Wiring vorhanden
+- Copy-Split: Pferdedaten / Strategiedaten getrennt; Alles = A + B
+- Jungpferde-Freigabe: 2 J 6 M; ZZL und echter ZS schließen aus
+- Bestandsabgleich: Namensnormalisierung inkl. Tilde-Fälle geprüft
+- Deckstations-Begabungsgruppen-Zuordnung geprüft
+- Fohlen/Verpaarung: Eltern-Matching geprüft
+
+V54.0.109 Feinschliff:
+- Durchschnittsseite korrekt benannt
+- sichtbare Verpaarungs-Terminologie vereinheitlicht
+- aktive Navigation sichtbar
+- Navigation auf schmalen Bildschirmen horizontal scrollbar

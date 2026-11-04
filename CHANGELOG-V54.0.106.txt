@@ -1,0 +1,11 @@
+MDR-Datenbank V54.0.106
+
+- Bereich „Turnier & Leistung“ als kompakter Arbeitsbereich vereinheitlicht.
+- Neue globale Statuszeile mit aktivem Turnierbestand, Jungpferden, Cup-Pferden und echten ZS-Werten.
+- Turnierplanung: Erklärtexte verkürzt; Bewertungsdetails einklappbar; Unterreiter optisch als kompakte Segmentsteuerung vereinheitlicht.
+- Jungpferde-Planer: Regeln als kompakte Status-Pills, zusätzliche Pool-Zusammenfassung, Auswahl-Tabelle von 6 auf 4 Spalten verdichtet. Besitzer/Rasse/Alter stehen direkt unter dem Pferdenamen.
+- Jungpferde-Vergleich von 9 auf 6 Spalten verdichtet: GP + ΔGP, Ext% + ΔExt% sowie ZS-Basis + Rest jeweils kombiniert.
+- Cups: nächster Cup-Kalender standardmäßig geöffnet; Pferdeliste weiterhin einklappbar.
+- Zuchtschau: ausführliche Modell-/Diagnoseoberfläche entfernt; Berechnungsmodell und Prognosegrundlage bleiben vollständig erhalten. Neue kompakte ZS-Statuszeile.
+- ZS-Tabelle um eine Spalte reduziert: Turnier- und Cupbonus werden gemeinsam als „Bonus bei ZS“ angezeigt, Einzelwerte bleiben sichtbar.
+- Tabellen, Karten und Abstände im Turnierbereich weiter verdichtet; mobile Darstellung berücksichtigt.

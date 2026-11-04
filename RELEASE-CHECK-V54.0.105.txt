@@ -1,0 +1,15 @@
+MDR-Datenbank V54.0.105 – Release-Check
+
+Geprüft:
+- JavaScript-Syntax
+- CSS-Parsing
+- HTML: keine doppelten IDs
+- lokale JS/CSS-Referenzen vorhanden
+- Cache-Buster konsistent: 54105
+- keine Git-Merge-Marker in HTML/JS/CSS
+- kein .git-Verzeichnis im Projekt
+- Datenbank-Schnellfilter-IDs vollständig und eindeutig vorhanden
+- Tabellenkopf und gerenderte Pferdezeilen jeweils 18 Spalten
+- Bestands-Kurzleiste nutzt dieselbe Jungpferde-Grundregel wie Dashboard/Planer: ab 2 J 6 M, ohne ZZL/echten ZS
+- Bestandsabgleich-Lazyload zeigt auf aktuellen Cache-Buster
+- ZIP-Integrität geprüft

@@ -843,8 +843,8 @@ function pairingMatchesFreeText(pairing, query) {
 async function loadPairings() {
   const currentTbody = document.querySelector('#pairing-table tbody');
   const pastTbody = document.querySelector('#past-pairing-table tbody');
-  currentTbody.innerHTML = '<tr><td colspan="8">Lade…</td></tr>';
-  pastTbody.innerHTML = '<tr><td colspan="12">Lade…</td></tr>';
+  currentTbody.innerHTML = '<tr><td colspan="6">Lade…</td></tr>';
+  pastTbody.innerHTML = '<tr><td colspan="6">Lade…</td></tr>';
 
   const selectedOwners = selectedPairingBreeders();
   let data;
@@ -852,9 +852,9 @@ async function loadPairings() {
     data = await localGetAll(LOCAL_STORES.pairings);
     data = await ensurePredictionSnapshots(data);
   } catch (error) {
-    const msg = `<tr><td colspan="8" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    const msg = `<tr><td colspan="6" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     currentTbody.innerHTML = msg;
-    pastTbody.innerHTML = `<tr><td colspan="12" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    pastTbody.innerHTML = `<tr><td colspan="6" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     return;
   }
 
@@ -894,13 +894,19 @@ async function loadPairings() {
 
   currentTbody.innerHTML = currentPairings.length
     ? currentPairings.map(rowHtml).join('')
-    : '<tr><td colspan="8">Keine aktuellen Verpaarungen gefunden.</td></tr>';
+    : '<tr><td colspan="6">Keine aktuellen Verpaarungen gefunden.</td></tr>';
 
   const currentCount = document.getElementById('current-pairings-count');
   if (currentCount) currentCount.textContent = `(${currentPairings.length})`;
   const nextDate = currentPairings.find((p) => /^\d{4}-\d{2}-\d{2}$/.test(String(p.pairing_date || '')))?.pairing_date || null;
   const nextDateEl = document.getElementById('current-next-foaling-date');
   if (nextDateEl) nextDateEl.textContent = nextDate ? formatEuropeanDate(nextDate) : '–';
+  const statCurrent = document.getElementById('pairing-stat-current');
+  if (statCurrent) statCurrent.textContent = String(currentPairings.length);
+  const statPast = document.getElementById('pairing-stat-past');
+  if (statPast) statPast.textContent = String(allPastPairings.length);
+  const statNext = document.getElementById('pairing-stat-next');
+  if (statNext) statNext.textContent = nextDate ? formatEuropeanDate(nextDate) : '–';
 
   const pastSection = document.getElementById('past-pairings-section');
   pastSection.hidden = false;
@@ -912,7 +918,7 @@ async function loadPairings() {
   }
   pastTbody.innerHTML = pastPairings.length
     ? pastPairings.map(pastRowHtml).join('')
-    : '<tr><td colspan="12">Noch keine vergangenen Verpaarungen gefunden.</td></tr>';
+    : '<tr><td colspan="6">Noch keine vergangenen Verpaarungen gefunden.</td></tr>';
 
   const archiveControl = document.getElementById('past-pairings-archive-control');
   const archiveButton = document.getElementById('past-pairings-archive-toggle');
@@ -1148,58 +1154,42 @@ function currentPairingRecommendationHtml(pairing) {
 
 // "Fohlen behalten" wird per drei Buttons (✓/?/✗) direkt in der Tabelle
 // gesetzt. Die Entscheidung ist erst ab dem Abfohldatum aktiv.
-function rowHtml(p) {
-  const keepFoalCell = keepFoalButtonsHtml(p);
-  const breedCell = [breedOf(p.stallion), breedOf(p.mare)].filter(Boolean).join(' / ') || '-';
-  const actualRecord = actualRecordForPairing(p);
-  const foalBtn = canDecideKeepFoal(p)
-    ? `<button type="button" class="secondary small" data-foal="${p.id}">${actualRecord ? 'Verknüpfung öffnen' : 'Fohlen eintragen'}</button>`
-    : '';
-  const actualBadge = actualRecord
-    ? `<span class="pairing-foal-recorded" title="Fohlendaten sind mit dieser Verpaarung verknüpft">🐴 Fohlen erfasst</span>`
-    : '';
+function pairingHistoryFoalCellHtml(pairing) {
+  const actual = actualRecordForPairing(pairing);
+  if (actual) return `${pairingFoalLinkHtml(pairing, actual)} <span class="pairing-foal-recorded" title="Mit dieser Verpaarung verknüpft">✓ verknüpft</span>`;
+  if (canDecideKeepFoal(pairing)) return '<span class="horse-status-chip horse-status-warn">Fohlen noch zuordnen</span>';
+  return '<span class="muted">Noch offen</span>';
+}
 
+function rowHtml(p) {
+  const foalBtn = canDecideKeepFoal(p)
+    ? `<button type="button" class="secondary small" data-foal="${p.id}">${actualRecordForPairing(p) ? 'Verknüpfung öffnen' : 'Fohlen zuordnen'}</button>`
+    : '';
+  const stallionBreed = breedOf(p.stallion);
+  const mareBreed = breedOf(p.mare);
   return `<tr>
-    <td>${pairingParentLinkHtml(p, 'stallion')}</td>
-    <td>${pairingParentLinkHtml(p, 'mare')}</td>
-    <td>${escapeHtml(breedCell)}</td>
+    <td>${pairingParentLinkHtml(p, 'stallion')}${stallionBreed ? `<div class="tiny muted">${escapeHtml(stallionBreed)}</div>` : ''}</td>
+    <td>${pairingParentLinkHtml(p, 'mare')}${mareBreed ? `<div class="tiny muted">${escapeHtml(mareBreed)}</div>` : ''}</td>
     <td>${escapeHtml(formatEuropeanDate(p.pairing_date))}</td>
-    <td class="keep-foal-cell">${keepFoalCell}</td>
-    <td class="foal-recommendation-cell">${currentPairingRecommendationHtml(p)}</td>
+    <td>${pairingHistoryFoalCellHtml(p)}</td>
     <td>${escapeHtml(p.owner || '')}</td>
-    <td class="actions-cell">${actualBadge}${foalBtn}<button type="button" class="secondary small" data-editdate="${p.id}">Bearbeiten</button><button class="danger small" data-delete="${p.id}">Löschen</button></td>
-  </tr>
-  <tr class="pairing-prediction-row">
-    <td colspan="8">${pairingPredictionDetailsHtml(p)}</td>
+    <td class="actions-cell">${foalBtn}<button type="button" class="secondary small" data-editdate="${p.id}">Datum</button><button class="danger small" data-delete="${p.id}">Löschen</button></td>
   </tr>`;
 }
 
 function pastRowHtml(p) {
-  const breedCell = [breedOf(p.stallion), breedOf(p.mare)].filter(Boolean).join(' / ') || '-';
-  const actualRecord = actualRecordForPairing(p);
-  const actualBadge = actualRecord
-    ? `<span class="pairing-foal-recorded" title="Fohlendaten sind mit dieser Verpaarung verknüpft">🐴 erfasst</span>`
-    : '';
   const foalBtn = canDecideKeepFoal(p)
-    ? `<button type="button" class="secondary small" data-foal="${p.id}">${actualRecord ? 'Verknüpfung öffnen' : 'Fohlen verknüpfen / eintragen'}</button>`
+    ? `<button type="button" class="secondary small" data-foal="${p.id}">${actualRecordForPairing(p) ? 'Verknüpfung öffnen' : 'Fohlen zuordnen'}</button>`
     : '';
-
+  const stallionBreed = breedOf(p.stallion);
+  const mareBreed = breedOf(p.mare);
   return `<tr class="past-pairing-main-row">
-    <td>${pairingParentLinkHtml(p, 'stallion')}</td>
-    <td>${pairingParentLinkHtml(p, 'mare')}</td>
-    <td>${escapeHtml(breedCell)}</td>
+    <td>${pairingParentLinkHtml(p, 'stallion')}${stallionBreed ? `<div class="tiny muted">${escapeHtml(stallionBreed)}</div>` : ''}</td>
+    <td>${pairingParentLinkHtml(p, 'mare')}${mareBreed ? `<div class="tiny muted">${escapeHtml(mareBreed)}</div>` : ''}</td>
     <td>${escapeHtml(formatEuropeanDate(p.pairing_date))}</td>
-    <td>${pastFoalHtml(p)} ${actualBadge}</td>
-    <td>${compactPastPredictionHtml(p)}</td>
-    <td>${compactPastDeviationHtml(p)}</td>
-    <td>${pastDatabaseRangeAccuracyHtml(p)}</td>
-    <td class="foal-recommendation-cell">${foalBreedingRecommendationHtml(p)}</td>
-    <td class="keep-foal-cell">${keepFoalButtonsHtml(p)}</td>
+    <td>${pairingHistoryFoalCellHtml(p)}</td>
     <td>${escapeHtml(p.owner || '')}</td>
-    <td class="actions-cell">${foalBtn}<button type="button" class="secondary small" data-editdate="${p.id}">Bearbeiten</button><button class="danger small" data-delete="${p.id}">Löschen</button></td>
-  </tr>
-  <tr class="pairing-prediction-row">
-    <td colspan="12">${pairingPredictionDetailsHtml(p)}</td>
+    <td class="actions-cell">${foalBtn}<button type="button" class="secondary small" data-editdate="${p.id}">Datum</button><button class="danger small" data-delete="${p.id}">Löschen</button></td>
   </tr>`;
 }
 

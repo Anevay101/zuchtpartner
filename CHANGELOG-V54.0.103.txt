@@ -1,0 +1,10 @@
+MDR-Datenbank V54.0.103
+
+- Pferde-Update: eigener Abschluss „Aktualisieren & zur Pferdeseite“; Abbrechen führt beim Bearbeiten zurück zum Pferd.
+- Erkannter Neuimport eines bestehenden Pferdes führt nach dem Aktualisieren zur normalen Pferdeansicht statt zurück in die Bearbeitungsmaske.
+- Leistungsprüfung im Pferdeprofil auf kompakten Status ✓ / ? / ✕ reduziert; LP-Modellberechnung bleibt unverändert im Hintergrund.
+- Große LP-Prototypkarte aus „Zucht & Nachzucht“ entfernt.
+- Zuchtschau-Reiter auf entscheidungsrelevante Kurzwerte reduziert; Prognosemodell/Berechnungsgrundlage bleibt unverändert aktiv.
+- „Zucht & Nachzucht“: Fohlen kann direkt einer passenden Eltern-Verpaarung zugeordnet oder eine Verpaarung nachträglich angelegt werden.
+- Elternpferde zeigen dort eine kompakte Verpaarungshistorie mit Partner und verknüpftem Fohlen.
+- Zentraler Verpaarungslog bleibt als Gesamtübersicht/Historie bestehen.

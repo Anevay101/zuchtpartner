@@ -10,19 +10,17 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Pferd ansehen – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=54101" />
+  <link rel="stylesheet" href="css/style.css?v=54109" />
 </head>
 <body>
 <header class="topbar">
   <h1 id="page-heading">🐴 Pferd ansehen</h1>
   <nav class="app-main-nav">
-      <a class="btn secondary" href="index.html">🐴 Datenbank</a>
+      <a class="btn secondary" href="index.html" aria-current="page">🐴 Datenbank</a>
       <a class="btn app-nav-add-horse" href="horse.html">➕ Neues Pferd</a>
       <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
       <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
-      <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
       <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
-      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
       <a class="btn secondary" href="ankaufsberatung.html">🛒 Ankaufsberatung</a>
       <a class="btn secondary" href="guide.html">📖 Guide</a>
       <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
@@ -143,9 +141,9 @@
   </div>
 
   <div class="tab-panel" data-tab-panel="zucht" hidden>
-    <section class="card horse-lp-card">
-      <div class="group-heading">Leistungsprüfung</div>
-      <div id="horse-lp-model"><p class="muted small">Lade…</p></div>
+    <section class="card horse-pairing-card">
+      <div class="group-heading">Verpaarungen &amp; Fohlenzuordnung</div>
+      <div id="horse-pairing-panel"><p class="muted small">Lade…</p></div>
     </section>
     <div id="breeding-progress-panel"></div>
   </div>
@@ -155,23 +153,25 @@
   <input type="hidden" id="raw-text" />
 </main>
 
-<script src="js/tournament-catalog.js?v=54101"></script>
-<script src="js/i18n.js?v=54101"></script>
-  <script src="js/core-utils.js?v=54101"></script>
-  <script src="js/supabase-loader.js?v=54101"></script>
-<script src="js/supabase-config.js?v=54101"></script>
-<script src="js/database-local.js?v=54101"></script>
-<script src="js/local-app.js?v=54101"></script>
-<script src="js/learning-file.js?v=54101"></script>
-<script src="js/horse-data-utils.js?v=54101"></script>
-<script src="js/data-quality.js?v=54101"></script>
-<script src="js/planer-common.js?v=54101"></script>
-<script src="js/breeding-show-benchmark.js?v=54101"></script>
-<script src="js/lp-model.js?v=54101"></script>
-<script src="js/horse-detail-render.js?v=54101"></script>
-<script src="js/tournament-recommendation.js?v=54101"></script>
-<script src="js/horse-tournament-profile.js?v=54101"></script>
-<script src="js/breeding-progress.js?v=54101"></script>
-<script src="js/horse-profile-overview.js?v=54101"></script>
-<script src="js/horseView.js?v=54101"></script>
+<script src="js/tournament-catalog.js?v=54109"></script>
+<script src="js/i18n.js?v=54109"></script>
+  <script src="js/core-utils.js?v=54109"></script>
+  <script src="js/supabase-loader.js?v=54109"></script>
+<script src="js/supabase-config.js?v=54109"></script>
+<script src="js/database-local.js?v=54109"></script>
+<script src="js/local-app.js?v=54109"></script>
+<script src="js/learning-file.js?v=54109"></script>
+<script src="js/horse-data-utils.js?v=54109"></script>
+<script src="js/data-quality.js?v=54109"></script>
+<script src="js/planer-common.js?v=54109"></script>
+<script src="js/breeding-show-benchmark.js?v=54109"></script>
+<script src="js/lp-model.js?v=54109"></script>
+<script src="js/horse-detail-render.js?v=54109"></script>
+<script src="js/tournament-recommendation.js?v=54109"></script>
+<script src="js/horse-tournament-profile.js?v=54109"></script>
+<script src="js/foal-prediction.js?v=54109"></script>
+<script src="js/breeding-progress.js?v=54109"></script>
+<script src="js/horse-pairing-panel.js?v=54109"></script>
+<script src="js/horse-profile-overview.js?v=54109"></script>
+<script src="js/horseView.js?v=54109"></script>
 </body></html>

@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Dashboard – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=54101" />
+  <link rel="stylesheet" href="css/style.css?v=54109" />
 </head>
 <body>
   <header class="topbar">
@@ -18,29 +18,26 @@
     <nav class="app-main-nav">
       <a class="btn secondary" href="index.html">🐴 Datenbank</a>
       <a class="btn app-nav-add-horse" href="horse.html">➕ Neues Pferd</a>
-      <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
+      <a class="btn secondary" href="dashboard.html" aria-current="page">📊 Dashboard</a>
       <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
-      <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
       <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
-      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
       <a class="btn secondary" href="ankaufsberatung.html">🛒 Ankaufsberatung</a>
       <a class="btn secondary" href="guide.html">📖 Guide</a>
       <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
     </nav>
   </header>
 
-  <main class="container">
-    <p class="muted small">
-      Bestandsübersicht der aktiven Züchter. Filter gelten für alle Auswertungen.
-    </p>
+  <main class="container dashboard-page">
+    <div class="dashboard-page-head">
+      <div>
+        <p class="eyebrow">Kontrollzentrum</p>
+        <p class="muted small">Aktiver Bestand auf einen Blick. Die Filter wirken auf Kennzahlen und Analysen; technische Modell-Diagnostik bleibt im Hintergrund.</p>
+      </div>
+    </div>
 
-    <section id="dashboard-saved-tiles-section" class="dashboard-saved-tiles-section" hidden>
-      <h2>Gespeicherte Kacheln</h2><div id="dashboard-saved-tiles" class="dashboard-saved-tiles"></div>
-    </section>
-
-    <form id="avg-filter-form" class="filter-bar">
+    <form id="avg-filter-form" class="filter-bar dashboard-filter-bar">
       <div class="field">
-        <label>Besitzer (Mehrfachauswahl)</label>
+        <label>Besitzer</label>
         <div class="checkdrop" id="d-owner-drop">
           <button type="button" class="checkdrop-toggle">Alle</button>
           <div class="checkdrop-panel" hidden></div>
@@ -75,24 +72,49 @@
       </div>
     </form>
 
-    <fieldset class="dashboard-panel">
-      <legend>Bestands-Durchschnitt</legend>
-      <div id="avg-result"><p class="muted small">Lade…</p></div>
-    </fieldset>
-
-    <fieldset class="dashboard-panel">
-      <legend>Pferd vs. eigener Rassedurchschnitt</legend>
-      <div class="form-grid">
+    <section class="dashboard-control-center" aria-labelledby="dashboard-control-title">
+      <div class="dashboard-section-heading">
         <div>
-          <label for="compare-horse">Pferd</label>
-          <select id="compare-horse"><option value="">Bitte wählen…</option></select>
+          <h2 id="dashboard-control-title">Heute im Blick</h2>
+          <p class="tiny muted">Kennzahlen des aktuell gefilterten Bestands.</p>
         </div>
       </div>
-      <div id="breed-compare-result"><p class="muted small">Bitte ein Pferd auswählen.</p></div>
-    </fieldset>
-<details class="card dashboard-zs-card dashboard-panel">
-      <summary><strong>📈 Aktuelles Schau-Niveau</strong></summary>
-      <p class="small muted">Aktuelles Schau-Niveau aus eingelesenen MDR-Ergebnislisten. Stuten und Hengste werden getrennt ausgewertet.</p>
+      <div id="dashboard-overview" class="dashboard-overview-grid"><p class="muted small">Lade…</p></div>
+      <div class="dashboard-focus-grid">
+        <article class="card dashboard-focus-card">
+          <div class="dashboard-focus-head"><h3>🎯 Aktuell wichtig</h3><a class="btn secondary compact" href="turnierplaner.html">Turnier &amp; Leistung</a></div>
+          <div id="dashboard-actions"><p class="muted small">Lade…</p></div>
+        </article>
+        <article class="card dashboard-focus-card">
+          <div class="dashboard-focus-head"><h3>🐴 Zucht &amp; Bestand</h3><a class="btn secondary compact" href="verpaarung.html">Verpaarungen</a></div>
+          <div id="dashboard-stock-status"><p class="muted small">Lade…</p></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="dashboard-saved-tiles-section" class="dashboard-saved-tiles-section" hidden>
+      <div class="dashboard-section-heading"><div><h2>Gespeicherte Kacheln</h2><p class="tiny muted">Eigene Filtervorlagen aus den Einstellungen.</p></div></div>
+      <div id="dashboard-saved-tiles" class="dashboard-saved-tiles"></div>
+    </section>
+
+    <details class="card dashboard-analysis-card dashboard-panel">
+      <summary><strong>📊 Bestandsanalyse</strong><span class="tiny muted">Durchschnitt &amp; Pferd-vs.-Rasse</span></summary>
+      <div class="dashboard-analysis-grid">
+        <section class="dashboard-analysis-section">
+          <h3>Bestands-Durchschnitt</h3>
+          <div id="avg-result"><p class="muted small">Lade…</p></div>
+        </section>
+        <section class="dashboard-analysis-section">
+          <h3>Pferd vs. eigener Rassedurchschnitt</h3>
+          <label for="compare-horse">Pferd</label>
+          <select id="compare-horse"><option value="">Bitte wählen…</option></select>
+          <div id="breed-compare-result"><p class="muted small">Bitte ein Pferd auswählen.</p></div>
+        </section>
+      </div>
+    </details>
+
+    <details class="card dashboard-zs-card dashboard-panel">
+      <summary><strong>📈 Aktuelles Schau-Niveau</strong><span class="tiny muted">Rassevergleich aus echten MDR-Ergebnislisten</span></summary>
       <div class="dashboard-zs-controls" role="group" aria-label="Geschlecht für aktuelles Schau-Niveau">
         <span class="tiny muted">Geschlecht</span>
         <button type="button" class="secondary compact active" data-zs-gender="Stute" aria-pressed="true">Stuten</button>
@@ -102,7 +124,7 @@
       </div>
       <div id="zs-import-panel" class="dashboard-zs-import-panel" hidden>
         <label for="zs-import-text"><strong>MDR-Ergebnisliste einfügen</strong></label>
-        <p class="tiny muted">Die App erkennt Rasse sowie Körung/Prämierung bzw. Stallions/Mares automatisch. Gemeinsam gespeichert werden nur Datum und Punktelisten je Schautag – keine Pferdenamen, Besitzer oder kopierten Seitentexte.</p>
+        <p class="tiny muted">Gespeichert werden nur Datum und Punktelisten je Schautag – keine Pferdenamen, Besitzer oder kopierten Seitentexte.</p>
         <textarea id="zs-import-text" rows="7" placeholder="Kopierten Text der MDR-Ergebnisseite hier einfügen…"></textarea>
         <div class="actions dashboard-zs-import-actions">
           <button type="button" id="zs-import-submit">Einlesen</button>
@@ -113,48 +135,26 @@
       <div id="zs-benchmark-dashboard"><p class="muted small">Lade…</p></div>
     </details>
 
-    <details class="card dashboard-zs-model-card dashboard-panel">
-      <summary><strong>🧠 ZS-Prognosemodell v1</strong></summary>
-      <p class="small muted">Kompakte Qualitäts- und Stabilitätsdiagnose des globalen ZS-Grundwertmodells. Sichtbare Dashboard-Filter verändern das Lernen nicht.</p>
-      <div id="zs-model-dashboard"><p class="muted small">Lade…</p></div>
-    </details>
-
-
-    <details class="card dashboard-lp-card dashboard-panel">
-      <summary><strong>🧪 LP-Prototypmodell</strong></summary>
-      <p class="small muted">Rückwärtsprüfung der angenommenen LP-Regeln an bestätigten LP-Ergebnissen. „Nein“ bzw. fehlende Einträge werden nicht als Nichtbestehen gewertet.</p>
-      <div id="lp-prototype-dashboard"><p class="muted small">Lade…</p></div>
-    </details>
-
     <details class="card dashboard-breeding-card dashboard-panel">
-      <summary><strong>📊 Zuchtbestand &amp; Turnierausrichtung</strong></summary>
-      <p class="small muted">Verteilung der 7 Hauptgruppen und ihrer Begabungen im gefilterten Bestand. Unterrepräsentierung ist nur ein Hinweis.</p>
+      <summary><strong>🏆 Zuchtbestand &amp; Turnierausrichtung</strong><span class="tiny muted">Hauptgruppen und Begabungen im aktuellen Filter</span></summary>
       <div id="breeding-dashboard"><p class="muted small">Lade…</p></div>
-    </details>
-
-    <details class="card dashboard-color-card dashboard-panel">
-      <summary><strong>🎨 Farbgenetik</strong></summary>
-      <p class="small muted">Grundfarben, MDR-Schattierungsstufen, LP-Scheckungsmuster und beobachtete Grundfarben-Vererbung im aktuell gefilterten Bestand.</p>
-      <div id="color-genetics-dashboard"><p class="muted small">Lade…</p></div>
     </details>
   </main>
 
-  <script src="js/tournament-catalog.js?v=54101"></script>
-<script src="js/i18n.js?v=54101"></script>
-  <script src="js/core-utils.js?v=54101"></script>
-  <script src="js/supabase-loader.js?v=54101"></script>
-<script src="js/supabase-config.js?v=54101"></script>
-<script src="js/database-local.js?v=54101"></script>
-  <script src="js/local-app.js?v=54101"></script>
-  <script src="js/learning-file.js?v=54101"></script>
-  <script src="js/horse-data-utils.js?v=54101"></script>
-<script src="js/parser.js?v=54101"></script>
-  <script src="js/data-quality.js?v=54101"></script>
-  <script src="js/breeding-progress.js?v=54101"></script>
-  <script src="js/planer-common.js?v=54101"></script>
-  <script src="js/color-guide.js?v=54101"></script>
-  <script src="js/breeding-show-benchmark.js?v=54101"></script>
-  <script src="js/lp-model.js?v=54101"></script>
-  <script src="js/durchschnitt.js?v=54101"></script>
+  <script src="js/tournament-catalog.js?v=54109"></script>
+<script src="js/i18n.js?v=54109"></script>
+  <script src="js/core-utils.js?v=54109"></script>
+  <script src="js/supabase-loader.js?v=54109"></script>
+<script src="js/supabase-config.js?v=54109"></script>
+<script src="js/database-local.js?v=54109"></script>
+  <script src="js/local-app.js?v=54109"></script>
+  <script src="js/learning-file.js?v=54109"></script>
+  <script src="js/horse-data-utils.js?v=54109"></script>
+<script src="js/parser.js?v=54109"></script>
+  <script src="js/data-quality.js?v=54109"></script>
+  <script src="js/breeding-progress.js?v=54109"></script>
+  <script src="js/planer-common.js?v=54109"></script>
+  <script src="js/breeding-show-benchmark.js?v=54109"></script>
+  <script src="js/durchschnitt.js?v=54109"></script>
 </body>
 </html>

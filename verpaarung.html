@@ -9,67 +9,64 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
-  <title>Verpaarungslog – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=54101" />
+  <title>Verpaarungen – MDR Datenbank</title>
+  <link rel="stylesheet" href="css/style.css?v=54109" />
 </head>
 <body>
   <header class="topbar">
-    <h1>💞 Verpaarungs-Log</h1>
+    <h1>💞 Verpaarungen</h1>
     <nav class="app-main-nav">
       <a class="btn secondary" href="index.html">🐴 Datenbank</a>
       <a class="btn app-nav-add-horse" href="horse.html">➕ Neues Pferd</a>
       <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
-      <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
-      <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
+      <a class="btn secondary" href="zuchtplaner.html" aria-current="page">🐴 Zuchtplaner</a>
       <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
-      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
       <a class="btn secondary" href="ankaufsberatung.html">🛒 Ankaufsberatung</a>
       <a class="btn secondary" href="guide.html">📖 Guide</a>
       <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
     </nav>
   </header>
 
-  <main class="container">
-    <fieldset>
-      <legend>Neue Verpaarung eintragen</legend>
-      <form id="pairing-form">
+  <main class="container pairing-simple-page">
+    <section class="pairing-simple-intro card">
+      <div>
+        <p class="guide-kicker">Zucht · Historie</p>
+        <h2>Verpaarungen im Überblick</h2>
+        <p class="small muted">Diese Seite ist nur noch die zentrale Historie. Fohlen werden auf ihrer Pferdeseite einer passenden Verpaarung zugeordnet; Prognosen und Zuchtentscheidungen bleiben in den jeweiligen Fachbereichen.</p>
+      </div>
+      <a class="btn secondary" href="zuchtplaner.html">← Zum Zuchtplaner</a>
+    </section>
+
+    <section class="pairing-simple-stats" aria-label="Verpaarungsübersicht">
+      <div class="pairing-simple-stat"><span>Aktuell</span><strong id="pairing-stat-current">–</strong></div>
+      <div class="pairing-simple-stat"><span>Historie</span><strong id="pairing-stat-past">–</strong></div>
+      <div class="pairing-simple-stat"><span>Nächstes Abfohldatum</span><strong id="pairing-stat-next">–</strong></div>
+    </section>
+
+    <details class="card pairing-add-compact">
+      <summary><strong>➕ Verpaarung manuell anlegen</strong><span class="small muted">Für Sonderfälle; normalerweise kommt die Planung aus dem Zuchtplaner.</span></summary>
+      <form id="pairing-form" class="pairing-manual-form">
         <div class="form-grid">
           <div><label for="p-stallion">Deckhengst *</label><input id="p-stallion" list="stallion-horse-names" required /></div>
           <div><label for="p-mare">Stute *</label><input id="p-mare" list="mare-horse-names" required /></div>
           <div><label for="p-date">Abfohldatum</label><input id="p-date" type="text" inputmode="numeric" placeholder="TT.MM.JJJJ" autocomplete="off" /></div>
-          <div><label for="p-keep-foal">Fohlen behalten?</label>
-            <select id="p-keep-foal">
-              <option value="open">? Offen</option>
-              <option value="true">✓ Ja</option>
-              <option value="false">✗ Nein</option>
-            </select>
-          </div>
-          <div><label for="p-owner">Besitzer</label>
-            <select id="p-owner">
-              <option value="">Bitte auswählen…</option>
-            </select>
-          </div>
-          <div>
-            <label for="p-existing-foal">Fohlen bereits in Datenbank? <span class="muted small">(optional)</span></label>
-            <input id="p-existing-foal" list="foal-horse-names" placeholder="Vorhandenes Fohlen auswählen" autocomplete="off" />
-          </div>
+          <div><label for="p-owner">Besitzer</label><select id="p-owner"><option value="">Bitte auswählen…</option></select></div>
+          <div><label for="p-keep-foal">Fohlen behalten?</label><select id="p-keep-foal"><option value="open">? Offen</option><option value="true">✓ Ja</option><option value="false">✗ Nein</option></select></div>
+          <div><label for="p-existing-foal">Fohlen bereits in Datenbank? <span class="muted small">(optional)</span></label><input id="p-existing-foal" list="foal-horse-names" placeholder="Vorhandenes Fohlen auswählen" autocomplete="off" /></div>
           <div class="grid-full"><label for="p-notes">Notizen</label><input id="p-notes" /></div>
         </div>
         <datalist id="stallion-horse-names"></datalist>
         <datalist id="mare-horse-names"></datalist>
         <datalist id="foal-horse-names"></datalist>
         <p id="pairing-form-error" class="error"></p>
-        <div class="form-actions">
-          <button type="submit">Eintragen</button>
-        </div>
+        <div class="form-actions"><button type="submit">Verpaarung speichern</button></div>
       </form>
-    </fieldset>
+    </details>
 
-    <form id="pairing-filter-form" class="filter-bar pairing-filter-bar">
+    <form id="pairing-filter-form" class="filter-bar pairing-filter-bar pairing-filter-simple">
       <div class="field pairing-search-filter-field">
         <label for="f-search">Suche</label>
-        <input id="f-search" type="search" placeholder="Hengst, Stute, Fohlen, Notiz…" autocomplete="off" />
-        <span class="tiny muted">Freitext über Verpaarung, Fohlen, Besitzer und Rasse.</span>
+        <input id="f-search" type="search" placeholder="Hengst, Stute, Fohlen, Besitzer…" autocomplete="off" />
       </div>
       <div class="field pairing-owner-filter-field">
         <label>Züchter</label>
@@ -78,76 +75,37 @@
       </div>
       <div class="field">
         <label for="f-breed">Rasse</label>
-        <select id="f-breed">
-          <option value="" selected>Alle</option>
-        </select>
+        <select id="f-breed"><option value="" selected>Alle</option></select>
       </div>
     </form>
 
-    <div class="notice pairing-breeding-traffic-light">
-      <strong>🚦 Zuchtempfehlung für geborene Fohlen</strong>
-      <div class="pairing-traffic-light-grid">
-        <span><b class="traffic-dot traffic-green"></b><strong>Grün – behalten</strong><small>Stute ab +5 GP, Hengst ab +10 GP gegenüber dem Elternmittel – ohne relevante Ext/Ext%/Int-Verschlechterung.</small></span>
-        <span><b class="traffic-dot traffic-orange"></b><strong>Orange – prüfen</strong><small>Mindestens auf Elternniveau, aber unter der grünen GP-Grenze oder mit leichter Ext/Ext%/Int-Schwäche.</small></span>
-        <span><b class="traffic-dot traffic-red"></b><strong>Rot – aussortieren empfohlen</strong><small>GP unter dem Elternmittel oder eine deutliche Verschlechterung bei Ext, Ext% oder Int.</small></span>
-      </div>
-      <p class="tiny muted">Variante B. Fehlende Vergleichsdaten erscheinen als „Noch offen“.</p>
-    </div>
-
-    <details id="current-pairings-section" class="pairing-log-section pairing-log-collapsible" open>
+    <details id="current-pairings-section" class="pairing-log-section pairing-log-collapsible pairing-simple-section" open>
       <summary class="pairing-section-summary">
         <span><strong>Aktuelle Verpaarungen</strong> <span id="current-pairings-count" class="small muted"></span></span>
         <span class="small">Nächstes Abfohldatum: <strong id="current-next-foaling-date">–</strong></span>
       </summary>
       <div id="current-pairings-scroll" class="table-wrap pairing-table-scroll">
-        <table id="pairing-table">
-          <thead>
-            <tr>
-              <th>Deckhengst</th>
-              <th>Stute</th>
-              <th>Rasse</th>
-              <th>Abfohldatum</th>
-              <th>Fohlen behalten?</th>
-              <th title="Unverbindliche Ampel-Empfehlung nach Geburt und Verknüpfung des tatsächlichen Fohlens.">Zuchtempfehlung</th>
-              <th>Besitzer</th>
-              <th>Aktionen</th>
-            </tr>
-          </thead>
-          <tbody><tr><td colspan="8">Lade…</td></tr></tbody>
+        <table id="pairing-table" class="pairing-simple-table">
+          <thead><tr><th>Deckhengst</th><th>Stute</th><th>Abfohldatum</th><th>Fohlen</th><th>Besitzer</th><th>Aktionen</th></tr></thead>
+          <tbody><tr><td colspan="6">Lade…</td></tr></tbody>
         </table>
       </div>
     </details>
 
-    <details id="past-pairings-section" class="pairing-log-section pairing-past-section pairing-log-collapsible" open>
+    <details id="past-pairings-section" class="pairing-log-section pairing-past-section pairing-log-collapsible pairing-simple-section" open>
       <summary class="pairing-section-summary">
-        <span><strong>Vergangene Verpaarungen</strong> <span id="past-pairings-count" class="small muted"></span></span>
+        <span><strong>Historie</strong> <span id="past-pairings-count" class="small muted"></span></span>
         <span class="small muted">Neueste Geburt zuerst</span>
       </summary>
-      <p class="small muted pairing-section-note">Vergangene Verpaarungen werden automatisch einsortiert; neueste Geburt zuerst.</p>
       <div id="past-pairings-scroll" class="table-wrap pairing-table-scroll">
-        <table id="past-pairing-table" class="past-pairing-table">
-          <thead>
-            <tr>
-              <th>Deckhengst</th>
-              <th>Stute</th>
-              <th>Rasse</th>
-              <th>Abfohldatum</th>
-              <th>Fohlen</th>
-              <th>Prognose ↔ tatsächlich</th>
-              <th>Abweichung zur Datenbank-Schätzung</th>
-              <th title="Prüft, ob die vorhandenen tatsächlichen Werte im gespeicherten typischen 80%-Bereich der Datenbank-Schätzung liegen.">DB-Bereich getroffen?</th>
-              <th title="Unverbindliche Zuchtempfehlung aus dem Vergleich des tatsächlichen Fohlens mit dem Mittelwert seiner beiden Eltern.">Zuchtempfehlung</th>
-              <th>Fohlen behalten?</th>
-              <th>Besitzer</th>
-              <th>Aktionen</th>
-            </tr>
-          </thead>
-          <tbody><tr><td colspan="12">Lade…</td></tr></tbody>
+        <table id="past-pairing-table" class="past-pairing-table pairing-simple-table">
+          <thead><tr><th>Deckhengst</th><th>Stute</th><th>Abfohldatum</th><th>Fohlen</th><th>Besitzer</th><th>Aktionen</th></tr></thead>
+          <tbody><tr><td colspan="6">Lade…</td></tr></tbody>
         </table>
       </div>
       <div id="past-pairings-archive-control" class="pairing-archive-control" hidden>
         <button type="button" id="past-pairings-archive-toggle" class="secondary small">📦 Ältere Verpaarungen anzeigen</button>
-        <span class="tiny muted">Nur die Anzeige wird begrenzt; archivierte Verpaarungen bleiben vollständig gespeichert und werden weiter zum Lernen verwendet.</span>
+        <span class="tiny muted">Ältere Einträge bleiben vollständig gespeichert.</span>
       </div>
     </details>
 
@@ -294,23 +252,23 @@
     </div>
   </main>
 
-  <script src="js/tournament-catalog.js?v=54101"></script>
-<script src="js/i18n.js?v=54101"></script>
-  <script src="js/core-utils.js?v=54101"></script>
-  <script src="js/supabase-loader.js?v=54101"></script>
-<script src="js/supabase-config.js?v=54101"></script>
-<script src="js/database-local.js?v=54101"></script>
-  <script src="js/local-app.js?v=54101"></script>
-  <script src="js/learning-file.js?v=54101"></script>
-  <script src="js/horse-data-utils.js?v=54101"></script>
-<script src="js/parser.js?v=54101"></script>
-  <script src="js/zuchtplaner-engine-helpers.js?v=54101"></script>
-  <script src="js/breeding-original.js?v=54101"></script>
-  <script src="js/verpaarungsratgeber-engine.js?v=54101"></script>
-  <script src="js/foal-prediction.js?v=54101"></script>
-  <script src="js/breeding-progress.js?v=54101"></script>
-  <script src="js/horse-detail-render.js?v=54101"></script>
-<script src="js/horseForm.js?v=54101"></script>
-  <script src="js/verpaarung.js?v=54101"></script>
+  <script src="js/tournament-catalog.js?v=54109"></script>
+<script src="js/i18n.js?v=54109"></script>
+  <script src="js/core-utils.js?v=54109"></script>
+  <script src="js/supabase-loader.js?v=54109"></script>
+<script src="js/supabase-config.js?v=54109"></script>
+<script src="js/database-local.js?v=54109"></script>
+  <script src="js/local-app.js?v=54109"></script>
+  <script src="js/learning-file.js?v=54109"></script>
+  <script src="js/horse-data-utils.js?v=54109"></script>
+<script src="js/parser.js?v=54109"></script>
+  <script src="js/zuchtplaner-engine-helpers.js?v=54109"></script>
+  <script src="js/breeding-original.js?v=54109"></script>
+  <script src="js/verpaarungsratgeber-engine.js?v=54109"></script>
+  <script src="js/foal-prediction.js?v=54109"></script>
+  <script src="js/breeding-progress.js?v=54109"></script>
+  <script src="js/horse-detail-render.js?v=54109"></script>
+<script src="js/horseForm.js?v=54109"></script>
+  <script src="js/verpaarung.js?v=54109"></script>
 </body>
 </html>

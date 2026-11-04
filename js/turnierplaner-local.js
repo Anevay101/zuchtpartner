@@ -45,6 +45,7 @@ async function initTurnierplaner() {
 
   buildTournamentControls();
   buildCupAndShowControls();
+  renderTurnierWorkspaceSummary();
   wireTournamentControls();
   wireTurnierMainTabs();
   renderTournamentRanking();
@@ -93,6 +94,28 @@ async function persistAutomaticCupStars() {
     changedRows.push(saved);
   }
   if (changedRows.length) await localBulkPut(LOCAL_STORES.horses,changedRows);
+}
+
+function tpYounghorseEligible(horse) {
+  if (!horse?.birthdate || typeof gameAgeYearsMonths!=='function') return false;
+  const age=gameAgeYearsMonths(horse.birthdate);
+  if (!age || !(age.years>2 || (age.years===2 && age.months>=6))) return false;
+  if (horse?.breeding_allowed===true) return false;
+  return typeof plannerBreedingShowPoints!=='function' || plannerBreedingShowPoints(horse)==null;
+}
+
+function renderTurnierWorkspaceSummary() {
+  const root=document.getElementById('tp-workspace-summary');
+  if (!root) return;
+  const active=TP_HORSES.length;
+  const young=TP_HORSES.filter(tpYounghorseEligible).length;
+  const cupIds=new Set();
+  for (const horse of TP_HORSES) {
+    const results=typeof plannerTournamentResults==='function' ? plannerTournamentResults(horse) : {};
+    if (Object.values(results||{}).some(row=>row?.cup_star===true)) cupIds.add(String(horse.id));
+  }
+  const zs=TP_ALL_HORSES.filter(h=>!(typeof mdrIsLearningHorse==='function'&&mdrIsLearningHorse(h)) && plannerBreedingShowPoints(h)!=null).length;
+  root.innerHTML=`<span><strong>${active}</strong> aktive Pferde</span><span><strong>${young}</strong> Jungpferde</span><span><strong>${cupIds.size}</strong> Cup-Pferde</span><span><strong>${zs}</strong> echte ZS-Werte</span>`;
 }
 
 function buildTournamentControls() {
@@ -1187,6 +1210,18 @@ function renderBreedingShowOverview() {
   const only=document.getElementById('tp-zs-only')?.value || 'with';
   const breeding=document.getElementById('tp-zs-breeding')?.value || '';
 
+  const zsSummary=document.getElementById('tp-zs-summary');
+  if (zsSummary) {
+    const summaryRows=TP_ALL_HORSES.filter(h=>
+      !(typeof mdrIsLearningHorse==='function' && mdrIsLearningHorse(h)) &&
+      selectedOwnerKeys.has(tpOwnerKey(h.owner))
+    );
+    const real=summaryRows.filter(h=>plannerBreedingShowPoints(h)!=null).length;
+    const forecast=summaryRows.length-real;
+    const allowed=summaryRows.filter(h=>h?.breeding_allowed===true).length;
+    zsSummary.innerHTML=`<span><strong>${real}</strong> echte ZS-Werte</span><span><strong>${forecast}</strong> ohne echten ZS</span><span><strong>${allowed}</strong> mit ZZL</span>`;
+  }
+
   // V54.0.18: Im Modus „ZS-Auswertung“ erscheinen ausschließlich Pferde
   // mit einer echten, positiven ZS-Punktangabe. 0/leer = ZS-Wert unbekannt
   // bzw. nicht mehr abrufbar. Der separate Prognose-Modus bleibt erhalten,
@@ -1233,8 +1268,8 @@ function renderBreedingShowOverview() {
     : `${rows.length} ZS-Datensätze angezeigt`;
   if (!rows.length) {
     body.innerHTML=only==='forecast'
-      ? '<tr><td colspan="9" class="muted">Keine passenden Pferde ohne echten ZS-Wert gefunden.</td></tr>'
-      : '<tr><td colspan="9" class="muted">Keine passenden auswertbaren ZS-Datensätze. Für die ZS-Auswertung zählen nur positive echte ZS-Punktangaben.</td></tr>';
+      ? '<tr><td colspan="8" class="muted">Keine passenden Pferde ohne echten ZS-Wert gefunden.</td></tr>'
+      : '<tr><td colspan="8" class="muted">Keine passenden auswertbaren ZS-Datensätze. Für die ZS-Auswertung zählen nur positive echte ZS-Punktangaben.</td></tr>';
     return;
   }
   body.innerHTML=rows.map(h=>{
@@ -1267,7 +1302,7 @@ function renderBreedingShowOverview() {
     }
     return `<tr>
       <td><a href="${mdrRoute('view',{id:h.id})}"><strong>${plannerEscape(h.name || '(ohne Name)')}</strong></a><br><span class="tiny muted">${plannerEscape(h.owner || '')}</span>${dataNote}</td>
-      <td>${total==null?'–':Math.round(total)}</td><td>${turnier}</td><td>${cup}</td><td>${base==null?'–':Math.round(base)}</td>
+      <td>${total==null?'–':Math.round(total)}</td><td><strong>${turnier+cup}</strong><br><span class="tiny muted">T ${turnier} · Cup ${cup}</span></td><td>${base==null?'–':Math.round(base)}</td>
       <td>${zsPredictionDetailCell(model,h,pred)}</td><td>${benchmarkCell}</td><td>${assessmentCell}</td><td>${diff==null?'–':`${diff>=0?'+':''}${Math.round(diff)}`}</td>
     </tr>`;
   }).join('');

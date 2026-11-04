@@ -67,7 +67,7 @@ function loadInventoryReconcileModule() {
   if (inventoryReconcileModulePromise) return inventoryReconcileModulePromise;
   inventoryReconcileModulePromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = 'js/inventory-reconcile.js?v=5496';
+    script.src = 'js/inventory-reconcile.js?v=54105';
     script.async = true;
     script.addEventListener('load', () => resolve(window.MDR_INVENTORY_RECONCILE), { once:true });
     script.addEventListener('error', () => {
@@ -148,7 +148,7 @@ async function init() {
     console.error('Pferdedatenbank konnte nicht geladen werden:', error);
     const tbody=document.querySelector('#horse-table tbody');
     const countEl=document.querySelector('#result-count');
-    if (tbody) tbody.innerHTML=`<tr><td colspan="20" class="error">Fehler beim Laden: ${escapeHtml(error?.message || String(error))}</td></tr>`;
+    if (tbody) tbody.innerHTML=`<tr><td colspan="18" class="error">Fehler beim Laden: ${escapeHtml(error?.message || String(error))}</td></tr>`;
     if (countEl) countEl.textContent='';
   }
 
@@ -597,10 +597,10 @@ function showFlashBanner() {
 
   if (flash.foalPairing?.action === 'linked' || flash.foalPairing?.action === 'created') {
     text += flash.foalPairing.action === 'created'
-      ? ` 🐴 Fohlen automatisch als neue Verpaarung „${flash.foalPairing.sire || 'Vater'} × ${flash.foalPairing.mare || 'Mutter'}“ ins Verpaarungslog übernommen.`
+      ? ` 🐴 Fohlen automatisch als neue Verpaarung „${flash.foalPairing.sire || 'Vater'} × ${flash.foalPairing.mare || 'Mutter'}“ in die Verpaarungshistorie übernommen.`
       : ` 🐴 Fohlen automatisch mit der passenden Verpaarung „${flash.foalPairing.sire || 'Vater'} × ${flash.foalPairing.mare || 'Mutter'}“ verknüpft.`;
   } else if (flash.foalPairing?.action === 'error') {
-    text += ` ⚠️ Das Pferd wurde gespeichert, aber die automatische Verknüpfung mit dem Verpaarungslog ist fehlgeschlagen: ${flash.foalPairing.message || 'unbekannter Fehler'}.`;
+    text += ` ⚠️ Das Pferd wurde gespeichert, aber die automatische Verknüpfung mit der Verpaarungshistorie ist fehlgeschlagen: ${flash.foalPairing.message || 'unbekannter Fehler'}.`;
   }
 
   banner.textContent = text;
@@ -750,6 +750,7 @@ function databaseHorseHasConfirmedCupStar(row) {
 
 async function buildQuery() {
   let data = await localGetAll(LOCAL_STORES.horses);
+  const allData = data;
 
   const name = document.querySelector('#f-name').value.trim().toLowerCase();
   const owners = getCheckDropdownSelected('f-owner-drop');
@@ -816,7 +817,7 @@ async function buildQuery() {
 
   // Die endgültige Sortierung passiert zentral in applySort(); ein zweiter
   // Namens-Sortierlauf hier wäre bei jedem Filter unnötige Arbeit.
-  return { data, error: null };
+  return { data, allData, error: null };
 }
 
 function colorCodeOf(row) {
@@ -1254,6 +1255,26 @@ function updateDatabaseFilterSummary(resultCount = null) {
   updateActiveFilterChips();
 }
 
+function databaseYounghorseEligible(horse) {
+  if (!horse?.birthdate || typeof gameAgeYearsMonths !== 'function') return false;
+  const age = gameAgeYearsMonths(horse.birthdate);
+  if (!age || !(age.years > 2 || (age.years === 2 && age.months >= 6))) return false;
+  if (horse?.breeding_allowed === true) return false;
+  const actualZs = typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : null;
+  return actualZs == null;
+}
+
+function updateDatabaseOverviewSummary(allRows = [], visibleRows = []) {
+  const all = Array.isArray(allRows) ? allRows : [];
+  const visible = Array.isArray(visibleRows) ? visibleRows : [];
+  const set = (id, value) => { const el=document.getElementById(id); if (el) el.textContent=String(value); };
+  set('db-stat-total', all.length);
+  set('db-stat-visible', visible.length);
+  set('db-stat-young', all.filter(databaseYounghorseEligible).length);
+  set('db-stat-zzl', all.filter(h => h?.breeding_allowed === true).length);
+  set('db-stat-learning', all.filter(h => typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)).length);
+}
+
 function databaseTriStateChip(label, state) {
   const normalized = normalizeTriStateSavedState(state);
   if (!normalized.include.length && !normalized.exclude.length) return null;
@@ -1337,11 +1358,11 @@ function updateActiveFilterChips() {
 async function loadHorses() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
-  tbody.innerHTML = '<tr><td colspan="20">Lade…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="18">Lade…</td></tr>';
   selectedIds = new Set();
   updateBulkBar();
 
-  const { data, error } = await buildQuery();
+  const { data, allData = [], error } = await buildQuery();
 
   if (typeof bpBuildContext === 'function') {
     const cacheVersion=typeof mdrStoreCacheVersion === 'function' ? mdrStoreCacheVersion(LOCAL_STORES.horses) : 0;
@@ -1353,9 +1374,10 @@ async function loadHorses() {
   }
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="20" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="18" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     countEl.textContent = '';
     updateDatabaseFilterSummary(null);
+    updateDatabaseOverviewSummary(allData, []);
     return;
   }
 
@@ -1371,15 +1393,17 @@ async function loadHorses() {
   } catch {}
 
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="20">Keine Pferde gefunden.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="18">Keine Pferde gefunden.</td></tr>';
     countEl.textContent = '0 Pferde';
     lastRenderedRows = [];
     updateDatabaseFilterSummary(0);
+    updateDatabaseOverviewSummary(allData, []);
     return;
   }
 
   countEl.textContent = `${filtered.length} Pferd${filtered.length === 1 ? '' : 'e'}`;
   updateDatabaseFilterSummary(filtered.length);
+  updateDatabaseOverviewSummary(allData, filtered);
   lastRenderedRows = filtered;
   tbody.innerHTML = filtered.map(rowHtml).join('');
   tbody.querySelectorAll('[data-delete]').forEach((btn) => {
@@ -1398,34 +1422,21 @@ function rowHtml(h) {
   const d = computeDerived(h);
   const affected = affectedDiseaseLabels(h);
   const ekhText = affected.length ? affected.join(', ') : '-';
-
-  // Name öffnet die reine Ansichtsseite (view.html) - Bearbeiten passiert
-  // über den eigenen Stift-Button in der Aktionen-Spalte, der externe
-  // Spiel-Link über den eigenen 🔗-Button (nur falls external_id gesetzt).
-  // Schlagwort-Badges (siehe HORSE_TAG_OPTIONS in parser.js) direkt daneben,
-  // statt einer eigenen Spalte - die Tabelle ist ohnehin schon sehr breit.
-  // .name-cell selbst bleibt ein normales table-cell-Element (display:flex
-  // DIREKT auf einem <td> nimmt es aus dem Tabellen-Zeilenlayout heraus -
-  // es wuerde dann nicht mehr automatisch auf die Zeilenhoehe der
-  // Geschwister-Zellen gestreckt, wodurch seine eigene Trennlinie
-  // "hoeher" als der Rest der Zeile sass, siehe Nutzer-Feedback). Die
-  // Flex-Anordnung fuer Name+Badges sitzt deshalb auf einem inneren Span
-  // statt auf dem <td> selbst.
   const gameVersion = mdrGameWorld(h, 'DE');
   const versionBadge = `<span class="game-version-badge game-version-${gameVersion.toLowerCase()}">${escapeHtml(gameVersion)}</span>`;
   const learningBadge = (typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h))
     ? '<span class="learning-file-badge" title="Dieses Pferd bleibt als Lerndatei erhalten, wird aber aus operativen Planerlisten ausgeblendet.">🧠 Lerndatei</span>'
     : '';
-  const nameCell = `<span class="name-cell-inner"><a href="${mdrRoute('view',{id:h.id})}">${escapeHtml(h.name || '(ohne Name)')}</a>${versionBadge}${learningBadge}${dataQualityBadgeHtml(h)}</span>`;
   const tagsCell = tagsBadgesHtml(h.tags, h.birthdate);
   const nameTitle = [h.name || '(ohne Name)', ...(h.tags || []).map((t) => t.note ? `${t.label}: ${t.note}` : t.label)].join(' – ');
   const gameHost = gameVersion === 'EN' ? 'www.morning-dust-ranch.com' : 'www.morning-dust-ranch.de';
   const linkCell = h.external_id
-    ? `<a class="btn secondary icon-btn" href="https://${gameHost}/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
+    ? `<a class="btn secondary icon-btn horse-name-game-link" href="https://${gameHost}/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
     : '';
   const imageCell = h.image_url
     ? `<a href="${mdrRoute('view',{id:h.id})}"><img class="table-thumb" src="${escapeHtml(h.image_url)}" alt="" loading="lazy" /></a>`
     : '';
+  const nameCell = `<div class="name-cell-stack"><div class="name-cell-inner"><a href="${mdrRoute('view',{id:h.id})}">${escapeHtml(h.name || '(ohne Name)')}</a>${versionBadge}${learningBadge}${dataQualityBadgeHtml(h)}${linkCell}</div>${tagsCell ? `<div class="horse-tags-inline">${tagsCell}</div>` : ''}</div>`;
   const nameCls = ['name-cell', overallCmpClass(d)].filter(Boolean).join(' ');
   const breedingInfo = bestFoalOverviewEnabled && breedingOverviewContext && typeof bpBestFoalInfo === 'function'
     ? bpBestFoalInfo(h, breedingOverviewContext)
@@ -1438,9 +1449,7 @@ function rowHtml(h) {
     <td data-label="Auswählen"><input type="checkbox" class="horse-select-checkbox" data-select="${h.id}" aria-label="${escapeHtml(`Pferd ${h.name || h.id} auswählen`)}" /></td>
     <td data-label="Bestes Fohlen" class="bp-best-aggregate-cell">${aggregateBest}</td>
     <td data-label="Bild">${imageCell}</td>
-    <td data-label="Link">${linkCell}</td>
     <td data-label="Name" class="${nameCls}" title="${escapeHtml(nameTitle)}">${nameCell}</td>
-    <td data-label="Schlagwörter" class="horse-tags-cell">${tagsCell}</td>
     <td data-label="Geschlecht">${escapeHtml(h.gender || '')}</td>
     <td data-label="Rasse" title="${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}">${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}</td>
     <td data-label="Farbe" title="${escapeHtml(h.coat_color || '')}">${escapeHtml(h.coat_color || '')}</td>
@@ -1454,7 +1463,7 @@ function rowHtml(h) {
     <td data-label="EKH">${escapeHtml(ekhText)}</td>
     <td data-label="Alter">${h.birthdate ? escapeHtml(formatAge(h.birthdate)) : ''}</td>
     <td data-label="Besitzer" title="${escapeHtml(h.owner || '')}">${escapeHtml(h.owner || '')}</td>
-        <td data-label="Aktionen" class="actions-cell">
+    <td data-label="Aktionen" class="actions-cell">
       <a class="btn secondary icon-btn" href="${mdrRoute('horse',{id:h.id})}" title="Bearbeiten">✏️</a>
       <button class="danger icon-btn" data-delete="${h.id}" title="Löschen">✗</button>
     </td>
@@ -1470,9 +1479,9 @@ function hlpSlpDisplay(text) {
 }
 
 function zzlDisplay(breedingAllowed) {
-  if (breedingAllowed === true) return 'Ja';
-  if (breedingAllowed === false) return 'Nein';
-  return '-';
+  if (breedingAllowed === true) return '<span class="pill yes">Ja</span>';
+  if (breedingAllowed === false) return '<span class="pill neutral">Nein</span>';
+  return '<span class="pill neutral">–</span>';
 }
 
 function escapeHtml(str) {

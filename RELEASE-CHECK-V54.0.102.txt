@@ -1,0 +1,17 @@
+MDR-Datenbank V54.0.102 – Release-Check
+
+Ergebnis: bestanden
+
+- JavaScript-Syntax: 42/42 verbleibende JS-Dateien OK
+- CSS: tinycss2 parsebar, 0 Parserfehler
+- HTML: 13 Laufzeitseiten, 0 doppelte IDs
+- Lokale Ressourcen: 305 Referenzen geprüft, 0 fehlend
+- Cache-Buster: alle Laufzeit-Referenzen auf 54102
+- Git-Konfliktmarker: keine echten <<<<<<< / ======= / >>>>>>> Marker
+- .git: nicht enthalten
+- Aussortierhilfe: Seite, dedizierte JS-Datei, Navigation, Guide-/Route-/aktive Übersetzungsreferenzen entfernt
+- Bestandsabgleich Regression: eindeutiger MDR-Name bleibt Treffer trotz Besitzerabweichung; Lerndatei/GBH wird weiterhin aus „nicht mehr auf MDR“ ausgeblendet
+- ZG-Priorität: 1 aktuell / 2 ZG fehlt in DB / 3 DB nicht in ZG
+- Deckstations-Priorität: 1 aktuell / 2 Deckstation fehlt in DB / 3 DB nicht angeboten
+- Handlungsgruppen öffnen bei Treffern; Kontrollgruppen bleiben ruhig/eingeklappt
+- Eigene-Pferde-Ergebnisse: kompakte Arbeitslisten statt breiter Ergebnistabelle

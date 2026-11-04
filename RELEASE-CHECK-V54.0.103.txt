@@ -1,0 +1,14 @@
+MDR-Datenbank V54.0.103 – Release-Check
+
+Geprüft:
+- 43/43 JavaScript-Dateien: Syntax OK (node --check)
+- CSS: tinycss2 parse OK
+- HTML: keine doppelten IDs
+- lokale JS/CSS-Referenzen vorhanden
+- Cache-Buster konsistent: 54103
+- keine echten Git-Merge-Marker (<<<<<<< / >>>>>>>)
+- kein .git-Verzeichnis im Projekt
+- LP-Kurzstatus: ✓ Ja / ? / ✕ funktional geprüft
+- Verpaarungsmodul: Elternmatch + nachträgliches Anlegen funktional geprüft
+- Update-Workflow: „Aktualisieren & zur Pferdeseite“ und erkannter Import führen zu view.html
+- ZIP-Integrität geprüft

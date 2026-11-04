@@ -99,6 +99,91 @@ function fmtStat(stat, suffix, total) {
   return `${stat.avg.toFixed(2)}${suffix}${note}`;
 }
 
+
+function dashboardTop3Reached(horse) {
+  try {
+    return Object.values(horse?.tournament_results || {}).some((row) =>
+      Number(row?.first || 0) + Number(row?.second || 0) + Number(row?.third || 0) > 0
+    ) || horse?.younghorse_top3_qualified === true;
+  } catch (_) { return horse?.younghorse_top3_qualified === true; }
+}
+
+function dashboardYounghorseEligible(horse) {
+  if (!horse?.birthdate || typeof gameAgeYearsMonths !== 'function') return false;
+  const age = gameAgeYearsMonths(horse.birthdate);
+  if (!age || !(age.years > 2 || (age.years === 2 && age.months >= 6))) return false;
+  if (horse?.breeding_allowed === true) return false;
+  const actualZs = typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : null;
+  return actualZs == null;
+}
+
+function dashboardFilteredPairings(pairings, rows) {
+  const names = new Set((rows || []).map(h => dashboardOwnerKey(h?.name)).filter(Boolean));
+  if (!names.size) return [];
+  return (pairings || []).filter(p => names.has(dashboardOwnerKey(p?.mare)) || names.has(dashboardOwnerKey(p?.stallion)));
+}
+
+function dashboardOpenPairings(pairings, rows) {
+  return dashboardFilteredPairings(pairings, rows).filter(p =>
+    p?.foal_horse_id == null && p?.keep_foal !== false
+  );
+}
+
+function dashboardMetricCard(label, value, caption, tone='neutral', href='') {
+  const tag = href ? 'a' : 'article';
+  const attrs = href ? ` href="${escapeHtml(href)}"` : '';
+  return `<${tag} class="dashboard-kpi dashboard-kpi-${tone}"${attrs}><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(caption)}</small></${tag}>`;
+}
+
+function renderDashboardControlCenter(rows, pairings) {
+  const overview = document.getElementById('dashboard-overview');
+  const actions = document.getElementById('dashboard-actions');
+  const stock = document.getElementById('dashboard-stock-status');
+  if (!overview || !actions || !stock) return;
+
+  const horses = rows || [];
+  const young = horses.filter(dashboardYounghorseEligible);
+  const waitingTop3 = young.filter(h => !dashboardTop3Reached(h));
+  const zsReady = young.filter(dashboardTop3Reached);
+  const zzl = horses.filter(h => h?.breeding_allowed === true);
+  const zsActual = horses.filter(h => typeof plannerBreedingShowPoints === 'function' && plannerBreedingShowPoints(h) != null);
+  const openPairings = dashboardOpenPairings(pairings, horses);
+  const incomplete = horses.filter(h => typeof analyzeHorseDataQuality === 'function' && analyzeHorseDataQuality(h).level !== 'green');
+
+  overview.innerHTML = [
+    dashboardMetricCard('Pferde', String(horses.length), 'im aktuellen Filter', 'neutral', 'index.html'),
+    dashboardMetricCard('Jungpferde', String(young.length), 'ab 2 J 6 M · ohne ZZL/ZS', young.length ? 'attention' : 'neutral', 'turnierplaner.html'),
+    dashboardMetricCard('ZS-bereit', String(zsReady.length), 'Top 3 erreicht · noch ohne ZZL', zsReady.length ? 'good' : 'neutral', 'turnierplaner.html'),
+    dashboardMetricCard('Mit ZZL', String(zzl.length), 'zuchtzugelassen', 'good', 'index.html'),
+    dashboardMetricCard('ZS-Wert', String(zsActual.length), 'echter Wert eingetragen', 'neutral', 'turnierplaner.html'),
+    dashboardMetricCard('Verpaarungen', String(openPairings.length), 'offen / ohne Fohlenzuordnung', openPairings.length ? 'attention' : 'neutral', 'verpaarung.html'),
+  ].join('');
+
+  const taskRows = [
+    {count:waitingTop3.length,label:'Jungpferde warten noch auf eine Top-3-Platzierung',tone:waitingTop3.length?'attention':'good',href:'turnierplaner.html'},
+    {count:zsReady.length,label:'Jungpferde können jetzt Richtung Zuchtschau weiter',tone:zsReady.length?'good':'neutral',href:'turnierplaner.html'},
+    {count:openPairings.length,label:'Verpaarungen sind noch ohne zugeordnetes Fohlen',tone:openPairings.length?'attention':'neutral',href:'verpaarung.html'},
+    {count:incomplete.length,label:'Pferde haben noch unvollständige Kerndaten',tone:incomplete.length?'attention':'good',href:'index.html'},
+  ];
+  actions.innerHTML = `<div class="dashboard-task-list">${taskRows.map(row => `<a class="dashboard-task-row dashboard-task-${row.tone}" href="${row.href}"><strong>${row.count}</strong><span>${escapeHtml(row.label)}</span><span aria-hidden="true">→</span></a>`).join('')}</div>`;
+
+  const groupCounts = new Map();
+  for (const horse of horses) {
+    const group = typeof plannerHorseMainGroup === 'function' ? plannerHorseMainGroup(horse) : '';
+    if (group) groupCounts.set(group, (groupCounts.get(group) || 0) + 1);
+  }
+  const groupPills = [...groupCounts.entries()].sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0],'de'))
+    .map(([group,count]) => `<span class="dashboard-status-pill">${escapeHtml(group)} <strong>${count}</strong></span>`).join('');
+  const completeCount = Math.max(0, horses.length - incomplete.length);
+  stock.innerHTML = `
+    <div class="dashboard-stock-lines">
+      <div><span>Mit Zuchtzulassung</span><strong>${zzl.length}</strong></div>
+      <div><span>Echter ZS-Wert</span><strong>${zsActual.length}</strong></div>
+      <div><span>Kerndaten vollständig</span><strong>${completeCount}/${horses.length}</strong></div>
+    </div>
+    ${groupPills ? `<div class="dashboard-status-pills" aria-label="Hauptbegabungen">${groupPills}</div>` : '<p class="tiny muted">Noch keine Hauptbegabungen erkannt.</p>'}`;
+}
+
 function renderBreedingDashboard(rows) {
   const root = document.getElementById('breeding-dashboard');
   if (!root) return;
@@ -231,28 +316,23 @@ async function calculate() {
   resultEl.innerHTML = '<p class="muted small">Lade…</p>';
 
   try {
-    const allData = await localGetAll(LOCAL_STORES.horses);
-    if (window.MDR_LP_MODEL?.renderValidation) {
-      window.MDR_LP_MODEL.renderValidation(document.getElementById('lp-prototype-dashboard'), allData);
-    }
-    if (!DASHBOARD_ZS_MODEL && typeof plannerBuildBreedingShowModel === 'function') {
-      DASHBOARD_ZS_MODEL = plannerBuildBreedingShowModel(allData);
-    }
-    renderZsModelDashboard(DASHBOARD_ZS_MODEL);
+    const [allData, pairings] = await Promise.all([
+      localGetAll(LOCAL_STORES.horses),
+      localGetAll(LOCAL_STORES.pairings).catch(() => []),
+    ]);
     const activeData = allData.filter(h => isActiveBreeder(h.owner) && !(typeof mdrIsLearningHorse === 'function' && mdrIsLearningHorse(h)));
     const data = localAverageFilter(activeData);
     const benchmarkData = localAverageFilter(activeData, { ignoreGender: true });
+
+    renderDashboardControlCenter(data, pairings);
     renderBreedingShowBenchmark(benchmarkData);
+    renderBreedingDashboard(data);
 
     if (!data.length) {
       resultEl.innerHTML = '<p>Keine Pferde gefunden.</p>';
-      renderBreedingDashboard([]);
-      renderColorGeneticsDashboard([], allData);
       return;
     }
 
-    renderBreedingDashboard(data);
-    renderColorGeneticsDashboard(data, allData);
     const derived = data.map(computeDerived);
     const total = data.length;
     const gp = average(derived.map((d) => d.gp));
@@ -261,16 +341,13 @@ async function calculate() {
     const intAvg = average(derived.map((d) => d.intAvg));
 
     resultEl.innerHTML = `
-      <table class="detail-table">
-        <tbody>
-          <tr><th>Gefilterte Pferde</th><td><strong>${total}</strong></td></tr>
-          <tr><th>Ø GP</th><td>${fmtStat(gp, '', total)}</td></tr>
-          <tr><th>Ø Ext</th><td>${fmtStat(ext, '', total)}</td></tr>
-          <tr><th>Ø Ext%</th><td>${fmtStat(extpct, '%', total)}</td></tr>
-          <tr><th>Ø Int</th><td>${fmtStat(intAvg, '', total)}</td></tr>
-        </tbody>
-      </table>
-    `;
+      <div class="dashboard-average-kpis">
+        <div><span>Pferde</span><strong>${total}</strong></div>
+        <div><span>Ø GP</span><strong>${gp.avg == null ? '–' : gp.avg.toFixed(2)}</strong></div>
+        <div><span>Ø Ext</span><strong>${ext.avg == null ? '–' : ext.avg.toFixed(2)}</strong></div>
+        <div><span>Ø Ext%</span><strong>${extpct.avg == null ? '–' : `${extpct.avg.toFixed(2)}%`}</strong></div>
+        <div><span>Ø Int</span><strong>${intAvg.avg == null ? '–' : intAvg.avg.toFixed(2)}</strong></div>
+      </div>`;
   } catch (error) {
     resultEl.innerHTML = `<p class="error">Fehler beim Laden: ${escapeHtml(error.message)}</p>`;
   }

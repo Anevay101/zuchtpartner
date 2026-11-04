@@ -515,40 +515,53 @@
   }
   function irStockWarningsHtml(item) {
     const warnings=Array.isArray(item?.warnings)?item.warnings.filter(Boolean):[];
-    return warnings.length ? `<br><span class="tiny inventory-stock-warning">⚠ ${irEsc(warnings.join(' · '))}</span>` : '';
+    return warnings.length ? `<span class="tiny inventory-stock-warning">⚠ ${irEsc(warnings.join(' · '))}</span>` : '';
   }
   function irResultTable(rows, type) {
-    if (!rows.length) return `<p class="small muted">${irText('Keine Einträge.','No entries.')}</p>`;
+    if (!rows.length) return `<p class="small muted inventory-empty-state">${irText('Keine Einträge.','No entries.')}</p>`;
     const selectable=rows.some(item=>item?.local?.id!=null);
     const selectHead=selectable
-      ? `<label class="inventory-select-all" title="${irText('Alle in dieser Gruppe auswählen','Select all in this group')}"><input type="checkbox" data-inventory-select-group="${irEsc(type)}"><span>${irText('Alle','All')}</span></label>`
-      : '–';
-    return `<div class="table-wrap"><table class="detail-table inventory-result-table"><thead><tr><th>${irText('Pferd','Horse')}</th><th>${irText('Spielwelt','Game world')}</th><th>${irText('Besitzer','Owner')}</th><th>${irText('Hinweis','Note')}</th><th class="inventory-select-head">${selectHead}</th></tr></thead><tbody>${rows.map(item=>{
-      const local=item.local || null;
-      const remote=item.remote || null;
-      const horseName=remote?.name || local?.name || '–';
-      const server=item.profile?.server || (item.checkedServers?.join('+')) || irHorseServer(local);
-      const comparableOwner=local ? irComparableOwner(local) : '';
-      const owner=comparableOwner || item.profile?.owner || '–';
-      let note='';
-      if (type==='present') note=irText('Name eindeutig in der Datenbank gefunden','unique name found in database');
-      if (type==='missing') note=irText('kein Pferd mit diesem Namen in der Datenbank','no horse with this name in the database');
-      if (type==='mismatch') {
-        const target=String(item.profile?.owner||'').trim();
-        note=target
-          ? irText(`Besitzer DB: ${owner} → MDR: ${target}`,`Owner DB: ${owner} → MDR: ${target}`)
-          : (item.note || irText('Besitzer abweichend','owner differs'));
-      }
-      if (type==='gone') note=(item.checkedServers?.length||0)>1
-        ? irText('auf keiner der vollständig geprüften DE-/EN-Profilseiten enthalten','not present on either fully checked DE/EN profile page')
-        : irText('nicht auf der vollständig erkannten MDR-Profilseite enthalten','not present on the fully parsed MDR profile page');
-      if (type==='ambiguous') note=item.note || irText('nicht eindeutig','ambiguous');
-      const action=local?.id!=null
-        ? `<label class="inventory-row-select" title="${irText('Für Mehrfachaktion auswählen','Select for bulk action')}"><input type="checkbox" data-inventory-select="${irEsc(local.id)}" data-inventory-select-type="${irEsc(type)}"><span class="sr-only">${irText('Auswählen','Select')}</span></label>`
-        : '–';
-      const ownerSuffix=local && irLearning(local) ? `<br><span class="tiny muted">${irText('GBH/Lerndatei','GBH/learning file')}</span>` : '';
-      return `<tr><td class="inventory-stock-name-cell">${irEsc(horseName)}</td><td>${irEsc(server||'–')}</td><td>${irEsc(owner)}${ownerSuffix}</td><td>${irEsc(note)}${irStockWarningsHtml(item)}</td><td class="inventory-select-cell">${action}</td></tr>`;
-    }).join('')}</tbody></table></div>`;
+      ? `<label class="inventory-select-all" title="${irText('Alle in dieser Gruppe auswählen','Select all in this group')}"><input type="checkbox" data-inventory-select-group="${irEsc(type)}"><span>${irText('Alle auswählen','Select all')}</span></label>`
+      : '';
+    const statusClass=type==='present'?'ok':(type==='missing'?'danger':'warn');
+    return `<div class="inventory-work-list">
+      ${selectHead ? `<div class="inventory-work-list-head">${selectHead}</div>` : ''}
+      ${rows.map(item=>{
+        const local=item.local || null;
+        const remote=item.remote || null;
+        const horseName=remote?.name || local?.name || '–';
+        const server=item.profile?.server || (item.checkedServers?.join('+')) || irHorseServer(local);
+        const comparableOwner=local ? irComparableOwner(local) : '';
+        const owner=comparableOwner || item.profile?.owner || '–';
+        let note='';
+        if (type==='present') note=irText('in MDR und Datenbank','in MDR and database');
+        if (type==='missing') note=irText('auf MDR, aber nicht in der Datenbank','on MDR, but not in the database');
+        if (type==='mismatch') {
+          const target=String(item.profile?.owner||'').trim();
+          note=target
+            ? irText(`Besitzer DB: ${owner} → MDR: ${target}`,`Owner DB: ${owner} → MDR: ${target}`)
+            : (item.note || irText('Besitzer abweichend','owner differs'));
+        }
+        if (type==='gone') note=(item.checkedServers?.length||0)>1
+          ? irText('in der DB, aber auf keiner vollständig geprüften MDR-Profilseite','in the DB, but on neither fully checked MDR profile page')
+          : irText('in der DB, aber nicht mehr auf der vollständig erkannten MDR-Profilseite','in the DB, but no longer on the fully parsed MDR profile page');
+        if (type==='ambiguous') note=item.note || irText('Namens-Treffer nicht eindeutig','name match ambiguous');
+        const action=local?.id!=null
+          ? `<label class="inventory-row-select" title="${irText('Für Mehrfachaktion auswählen','Select for bulk action')}"><input type="checkbox" data-inventory-select="${irEsc(local.id)}" data-inventory-select-type="${irEsc(type)}"><span class="sr-only">${irText('Auswählen','Select')}</span></label>`
+          : '';
+        const meta=[server||'',owner||''].filter(Boolean).join(' · ');
+        const learning=local && irLearning(local) ? `<span class="inventory-work-mini">${irText('GBH/Lerndatei','GBH/learning file')}</span>` : '';
+        const warnings=irStockWarningsHtml(item);
+        return `<div class="inventory-work-row ${statusClass}">
+          <div class="inventory-work-select">${action}</div>
+          <div class="inventory-work-main">
+            <div class="inventory-stock-name-cell">${irEsc(horseName)}</div>
+            <div class="inventory-work-meta">${irEsc(meta||'–')} ${learning}</div>
+          </div>
+          <div class="inventory-work-state"><span class="inventory-status-pill ${statusClass}">${irEsc(note)}</span>${warnings}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
   }
   function irRenderResults(result, allHorses) {
     const root=document.getElementById('inventory-results');
@@ -569,11 +582,12 @@
       ${result.ambiguous.length ? `<div class="notice notice-warning small">⚠ ${result.ambiguous.length} ${irText('Namens-Treffer sind nicht eindeutig. Sie werden nicht als „fehlt“ gewertet.','name matches are ambiguous. They are not counted as missing.')}</div>` : ''}
       ${Number(result.serverAssignments)>0 ? `<div class="notice small">${irText(`Spielwelt bei ${result.serverAssignments} bisher unbekannten Pferd(en) eindeutig ergänzt.`,`Game world assigned unambiguously to ${result.serverAssignments} previously unclassified horse(s).`)}</div>` : ''}
       ${Number(result.archivedHidden)>0 ? `<div class="notice small">${irText(`${result.archivedHidden} bereits auf GBH / in der Lerndatei befindliche Pferd(e) werden bei „Nicht mehr im MDR-Bestand“ ausgeblendet.`,`${result.archivedHidden} horse(s) already on GBH / in the learning file are hidden from “No longer in MDR stock”.`)}</div>` : ''}
-      <div class="inventory-count-grid">
-        <div><strong>${result.present.length}</strong><span>✓ ${irText('Vorhanden','Present')}</span></div>
-        <div><strong>${result.missing.length}</strong><span>＋ ${irText('Fehlt in der Datenbank','Missing from database')}</span></div>
-        <div><strong>${result.notInMdr.length}</strong><span>− ${irText('Nicht mehr im MDR-Bestand','No longer in MDR stock')}</span></div>
-        <div><strong>${result.ownerMismatch.length}</strong><span>↔ ${irText('Besitzer abweichend','Owner differs')}</span></div>
+      <div class="inventory-summary-strip" aria-label="${irText('Abgleich-Zusammenfassung','Comparison summary')}">
+        <span class="inventory-summary-item ok"><strong>${result.present.length}</strong> ${irText('aktuell vorhanden','currently present')}</span>
+        <span class="inventory-summary-item danger"><strong>${result.missing.length}</strong> ${irText('auf MDR, nicht in DB','on MDR, not in DB')}</span>
+        <span class="inventory-summary-item warn"><strong>${result.notInMdr.length}</strong> ${irText('in DB, nicht auf MDR','in DB, not on MDR')}</span>
+        <span class="inventory-summary-item warn"><strong>${result.ownerMismatch.length}</strong> ${irText('Besitzer abweichend','owner differs')}</span>
+        ${Number(result.archivedHidden)>0?`<span class="inventory-summary-item neutral"><strong>${result.archivedHidden}</strong> ${irText('archiviert ausgeblendet','archived hidden')}</span>`:''}
       </div>
       <div id="inventory-bulk-actions" class="inventory-bulk-actions" hidden>
         <strong id="inventory-bulk-count"></strong>
@@ -584,11 +598,11 @@
           <button type="button" class="link-button small" data-inventory-bulk="clear">${irText('Auswahl aufheben','Clear selection')}</button>
         </div>
       </div>
-      ${result.ambiguous.length ? `<details class="inventory-result-group"><summary>⚠ ${irText('Nicht eindeutig','Ambiguous')} · ${result.ambiguous.length}</summary>${irResultTable(result.ambiguous,'ambiguous')}</details>` : ''}
-      <details class="inventory-result-group"><summary>＋ ${irText('Fehlt in der Datenbank','Missing from database')} · ${result.missing.length}</summary>${irResultTable(result.missing,'missing')}</details>
-      <details class="inventory-result-group"><summary>− ${irText('Nicht mehr im MDR-Bestand','No longer in MDR stock')} · ${result.notInMdr.length}</summary>${irResultTable(result.notInMdr,'gone')}</details>
-      <details class="inventory-result-group"><summary>↔ ${irText('Besitzer abweichend','Owner differs')} · ${result.ownerMismatch.length}</summary>${irResultTable(result.ownerMismatch,'mismatch')}</details>
-      <details class="inventory-result-group"><summary>✓ ${irText('Vorhanden','Present')} · ${result.present.length}</summary>${irResultTable(result.present,'present')}</details>
+      ${result.ambiguous.length ? `<details class="inventory-result-group inventory-action-group" open><summary><span>⚠ ${irText('Nicht eindeutig','Ambiguous')}</span><strong>${result.ambiguous.length}</strong></summary>${irResultTable(result.ambiguous,'ambiguous')}</details>` : ''}
+      <details class="inventory-result-group inventory-action-group" ${result.missing.length?'open':''}><summary><span>＋ ${irText('Auf MDR, aber nicht in der Datenbank','On MDR, but not in database')}</span><strong>${result.missing.length}</strong></summary>${irResultTable(result.missing,'missing')}</details>
+      <details class="inventory-result-group inventory-action-group" ${result.notInMdr.length?'open':''}><summary><span>− ${irText('In DB, aber nicht mehr im MDR-Bestand','In DB, but no longer in MDR stock')}</span><strong>${result.notInMdr.length}</strong></summary>${irResultTable(result.notInMdr,'gone')}</details>
+      <details class="inventory-result-group inventory-action-group" ${result.ownerMismatch.length?'open':''}><summary><span>↔ ${irText('Besitzerabweichungen','Owner differences')}</span><strong>${result.ownerMismatch.length}</strong></summary>${irResultTable(result.ownerMismatch,'mismatch')}</details>
+      <details class="inventory-result-group inventory-control-group"><summary><span>✓ ${irText('Aktuell vorhanden','Currently present')}</span><strong>${result.present.length}</strong></summary>${irResultTable(result.present,'present')}</details>
       <p class="tiny muted">${irText('Eindeutige Pferdenamen gelten als Treffer – auch wenn Spielwelt, Geschlecht oder andere Plausibilitätsdaten in der DB abweichen. Änderungen passieren nur über deine Auswahl und können über den vorhandenen Rückgängig-Punkt abgesichert werden.','A unique horse name counts as a match even when game world, sex, or other plausibility data differs in the database. Changes only happen through your selection and use the existing undo point.')}</p>`;
     irUpdateStockBulkBar();
   }
@@ -1482,7 +1496,8 @@
 
   function irBreedingSectionHtml(sourceType, key, title, description, count, open=false) {
     const prefix=irBreedingPrefix(sourceType);
-    return `<details class="inventory-result-group inventory-breeding-section" ${open?'open':''}>
+    const roleClass=key==='current'?'inventory-control-group':'inventory-action-group';
+    return `<details class="inventory-result-group inventory-breeding-section ${roleClass}" ${open?'open':''}>
       <summary><span>${title}</span><strong id="${prefix}-${key}-count">${count}</strong></summary>
       ${description?`<p class="tiny muted inventory-breeding-section-note">${description}</p>`:''}
       ${irBreedingTableHtml(sourceType,`${prefix}-${key}-body`)}
@@ -1574,8 +1589,8 @@
     const card3Label=sourceType==='station'?irText('Deckstation, fehlt in DB','station, missing from DB'):irText('ZG, fehlt in DB','club, missing from DB');
 
     const sectionCurrentTitle=sourceType==='station'?irText('1. Aktuell in der Deckstation – in DB gefunden','1. Currently in the stud station – found in DB'):irText('1. Aktuell in der Zuchtgemeinschaft – in DB gefunden','1. Currently in the breeding club – found in DB');
-    const sectionDbOnlyTitle=sourceType==='station'?irText('2. In der DB, aber aktuell nicht angeboten','2. In the DB, but not currently offered'):irText('3. In der DB, aber nicht in der Zuchtgemeinschaft','3. In the DB, but not in the breeding club');
-    const sectionMissingTitle=sourceType==='station'?irText('3. In der Deckstation, aber nicht in der DB','3. In the stud station, but not in the DB'):irText('2. In der Zuchtgemeinschaft, aber nicht in der DB','2. In the breeding club, but not in the DB');
+    const sectionDbOnlyTitle=sourceType==='station'?irText('3. In der DB, aber aktuell nicht angeboten','3. In the DB, but not currently offered'):irText('3. In der DB, aber nicht in der Zuchtgemeinschaft','3. In the DB, but not in the breeding club');
+    const sectionMissingTitle=sourceType==='station'?irText('2. In der Deckstation, aber nicht in der DB','2. In the stud station, but not in the DB'):irText('2. In der Zuchtgemeinschaft, aber nicht in der DB','2. In the breeding club, but not in the DB');
 
     const sectionCurrentNote=sourceType==='station'
       ? irText('Aktuell angebotene Hengste, die der Datenbank zugeordnet werden konnten. Abweichungen bei Decktaxe, Besitzer oder GP/OP werden direkt markiert.','Currently offered stallions that could be matched to the database. Differences in stud fee, owner or OP are marked directly.')
@@ -1596,12 +1611,11 @@
         ${feeDiff ? `<button type="button" id="${prefix}-apply-all-fees">${irText(`Alle eindeutigen Decktaxen übernehmen (${feeDiff})`,`Apply all unambiguous stud fees (${feeDiff})`)}</button>`:''}
       </div>
       ${firstImportNotice}${incompleteNotice}
-      <div class="inventory-count-grid inventory-club-count-grid">
-        <div><strong>${club.stallions.length}</strong><span>✓ ${card1Label}</span></div>
-        ${sourceType==='club'
-          ? `<div><strong>${missingFromDb.length}</strong><span>＋ ${card3Label}</span></div><div><strong>${currentDbOnly.length}</strong><span>○ ${card2Label}</span></div>`
-          : `<div><strong>${currentDbOnly.length}</strong><span>○ ${card2Label}</span></div><div><strong>${missingFromDb.length}</strong><span>＋ ${card3Label}</span></div>`}
-        <div><strong>${feeDiff}</strong><span>△ ${irText('Decktaxe abweichend','stud fee differs')}</span></div>
+      <div class="inventory-summary-strip" aria-label="${irText('Abgleich-Zusammenfassung','Comparison summary')}">
+        <span class="inventory-summary-item ok"><strong>${currentInSource.length}</strong> ${card1Label}</span>
+        <span class="inventory-summary-item danger"><strong>${missingFromDb.length}</strong> ${card3Label}</span>
+        <span class="inventory-summary-item warn"><strong>${currentDbOnly.length}</strong> ${card2Label}</span>
+        <span class="inventory-summary-item ${feeDiff?'warn':'neutral'}"><strong>${feeDiff}</strong> ${irText('Decktaxe abweichend','stud fee differs')}</span>
       </div>
       ${ambiguous?`<div class="notice notice-warning small">⚠ ${ambiguous} ${irText('Hengst(e) sind zwar in der eingelesenen Liste, konnten wegen mehrfacher Namens-Treffer aber nicht eindeutig einem DB-Datensatz zugeordnet werden.','stallion(s) are in the pasted list but could not be matched unambiguously because the name occurs more than once.')}</div>`:''}
       ${sourceType==='station' && historyCount?`<div class="notice small">↺ ${historyCount} ${irText('der aktuell nicht angebotenen DB-Hengste waren in einem früheren Deckstationsabgleich gelistet.','of the database stallions not currently offered were listed in an earlier stud-station comparison.')}</div>`:''}
@@ -1625,9 +1639,8 @@
       <p class="tiny muted inventory-club-sort-hint">${irText('Innerhalb jeder Liste stehen vollständige DB-Treffer zuerst, danach teilweise/unvollständige bzw. abweichende Treffer. Pferdenamen sind markierbar und über ⧉ direkt kopierbar.','Within each list, complete database matches come first, followed by partly complete/incomplete or differing matches. Horse names can be selected and copied directly via ⧉.')}</p>
 
       ${irBreedingSectionHtml(sourceType,'current',sectionCurrentTitle,sectionCurrentNote,currentInSource.length,false)}
-      ${sourceType==='club'
-        ? `${irBreedingSectionHtml(sourceType,'missing',sectionMissingTitle,sectionMissingNote,missingFromDb.length,false)}${irBreedingSectionHtml(sourceType,'db-only',sectionDbOnlyTitle,sectionDbOnlyNote,currentDbOnly.length,false)}`
-        : `${irBreedingSectionHtml(sourceType,'db-only',sectionDbOnlyTitle,sectionDbOnlyNote,currentDbOnly.length,false)}${irBreedingSectionHtml(sourceType,'missing',sectionMissingTitle,sectionMissingNote,missingFromDb.length,false)}`}
+      ${irBreedingSectionHtml(sourceType,'missing',sectionMissingTitle,sectionMissingNote,missingFromDb.length,missingFromDb.length>0)}
+      ${irBreedingSectionHtml(sourceType,'db-only',sectionDbOnlyTitle,sectionDbOnlyNote,currentDbOnly.length,currentDbOnly.length>0)}
 
       ${sourceType==='club'?`<details class="inventory-result-group">
         <summary>${irText('Zuchtstuten','Broodmares')} · ${mares.length}</summary>

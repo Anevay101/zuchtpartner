@@ -1,0 +1,10 @@
+V54.0.108 – Navigation & Verpaarungshistorie
+
+- Hauptnavigation vereinheitlicht und Verpaarungslog aus der permanenten Hauptnavigation entfernt.
+- Verpaarungen bleiben über den Zuchtplaner und Pferdeseiten erreichbar.
+- Verpaarungsseite bewusst zur schlanken Historie reduziert: aktuelle Verpaarungen, Historie, Fohlen, Besitzer und Aktionen.
+- Prognose-/Ampel-/Abweichungstabellen aus der Verpaarungsoberfläche entfernt; Daten und Fachlogik bleiben gespeichert.
+- Manuelles Anlegen bleibt für Sonderfälle einklappbar verfügbar.
+- Guide an den aktuellen Dashboard-, ZS- und Verpaarungsworkflow angepasst.
+- Einstellungen leicht verdichtet; seltene Dashboard-Kachel- und Schlagwortverwaltung einklappbar.
+- Globaler Navigations-/Abstands-Feinschliff.

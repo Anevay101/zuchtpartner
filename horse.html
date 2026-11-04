@@ -10,19 +10,17 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Pferd – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=54101" />
+  <link rel="stylesheet" href="css/style.css?v=54109" />
 </head>
 <body>
   <header class="topbar">
     <h1 id="page-title">🐴 Neues Pferd</h1>
     <nav class="app-main-nav">
       <a class="btn secondary" href="index.html">🐴 Datenbank</a>
-      <a class="btn app-nav-add-horse" href="horse.html">➕ Neues Pferd</a>
+      <a class="btn app-nav-add-horse" href="horse.html" aria-current="page">➕ Neues Pferd</a>
       <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
       <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
-      <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
       <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
-      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
       <a class="btn secondary" href="ankaufsberatung.html">🛒 Ankaufsberatung</a>
       <a class="btn secondary" href="guide.html">📖 Guide</a>
       <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
@@ -131,7 +129,7 @@
                 <option value="false">Nein</option>
                 <option value="true">Ja – nur als Lerndatei</option>
               </select>
-              <div class="tiny muted">Bleibt für Lernmodelle und Eltern→Fohlen-Daten erhalten, wird aber aus Zucht-, Turnier-, Cup-, ZS-Prognose-, Dashboard- und Aussortierlisten ausgeblendet. GBH sowie Besitzerkennungen mit „(GBH)“ oder „(Friedhof)“ werden automatisch Lerndatei.</div>
+              <div class="tiny muted">Bleibt für Lernmodelle und Eltern→Fohlen-Daten erhalten, wird aber aus Zucht-, Turnier-, Cup-, ZS-Prognose- und Dashboard-Listen ausgeblendet. GBH sowie Besitzerkennungen mit „(GBH)“ oder „(Friedhof)“ werden automatisch Lerndatei.</div>
             </div>
           </div>
         </fieldset>
@@ -262,9 +260,10 @@
       <p id="form-error" class="error"></p>
 
       <div class="form-actions">
-        <button type="submit">Speichern</button>
-        <button type="button" id="save-and-new-btn" class="secondary" hidden>Speichern &amp; nächstes Pferd</button>
-        <a class="btn secondary" href="index.html">Abbrechen</a>
+        <button type="submit" id="save-btn">Pferd anlegen</button>
+        <button type="button" id="save-view-btn" class="secondary" hidden>Aktualisieren &amp; zur Pferdeseite</button>
+        <button type="button" id="save-and-new-btn" class="secondary" hidden>Anlegen &amp; nächstes Pferd</button>
+        <a class="btn secondary" id="cancel-link" href="index.html">Abbrechen</a>
         <button type="button" id="delete-btn" class="danger push-right" hidden>Pferd löschen</button>
       </div>
       <div id="bulk-session-list" class="bulk-session-card" hidden></div>
@@ -330,25 +329,25 @@
     </div>
   </main>
 
-  <script src="js/tournament-catalog.js?v=54101"></script>
-<script src="js/i18n.js?v=54101"></script>
-  <script src="js/core-utils.js?v=54101"></script>
-  <script src="js/supabase-loader.js?v=54101"></script>
-<script src="js/supabase-config.js?v=54101"></script>
-<script src="js/database-local.js?v=54101"></script>
-  <script src="js/local-app.js?v=54101"></script>
-  <script src="js/learning-file.js?v=54101"></script>
-  <script src="js/horse-data-utils.js?v=54101"></script>
-<script src="js/parser.js?v=54101"></script>
-  <script src="js/data-quality.js?v=54101"></script>
-  <script src="js/planer-common.js?v=54101"></script>
-  <script src="js/zuchtplaner-engine-helpers.js?v=54101"></script>
-  <script src="js/breeding-original.js?v=54101"></script>
-  <script src="js/verpaarungsratgeber-engine.js?v=54101"></script>
-  <script src="js/foal-prediction.js?v=54101"></script>
-  <script src="js/pregnancy-sync.js?v=54101"></script>
-  <script src="js/breeding-progress.js?v=54101"></script>
-  <script src="js/horse-detail-render.js?v=54101"></script>
-<script src="js/horseForm.js?v=54101"></script>
+  <script src="js/tournament-catalog.js?v=54109"></script>
+<script src="js/i18n.js?v=54109"></script>
+  <script src="js/core-utils.js?v=54109"></script>
+  <script src="js/supabase-loader.js?v=54109"></script>
+<script src="js/supabase-config.js?v=54109"></script>
+<script src="js/database-local.js?v=54109"></script>
+  <script src="js/local-app.js?v=54109"></script>
+  <script src="js/learning-file.js?v=54109"></script>
+  <script src="js/horse-data-utils.js?v=54109"></script>
+<script src="js/parser.js?v=54109"></script>
+  <script src="js/data-quality.js?v=54109"></script>
+  <script src="js/planer-common.js?v=54109"></script>
+  <script src="js/zuchtplaner-engine-helpers.js?v=54109"></script>
+  <script src="js/breeding-original.js?v=54109"></script>
+  <script src="js/verpaarungsratgeber-engine.js?v=54109"></script>
+  <script src="js/foal-prediction.js?v=54109"></script>
+  <script src="js/pregnancy-sync.js?v=54109"></script>
+  <script src="js/breeding-progress.js?v=54109"></script>
+  <script src="js/horse-detail-render.js?v=54109"></script>
+<script src="js/horseForm.js?v=54109"></script>
 </body>
 </html>

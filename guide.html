@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Guide – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=54101" />
+  <link rel="stylesheet" href="css/style.css?v=54109" />
 </head>
 <body class="guide-page">
 <header class="topbar">
@@ -20,11 +20,9 @@
       <a class="btn app-nav-add-horse" href="horse.html">➕ Neues Pferd</a>
       <a class="btn secondary" href="dashboard.html">📊 Dashboard</a>
       <a class="btn secondary" href="zuchtplaner.html">🐴 Zuchtplaner</a>
-      <a class="btn secondary" href="verpaarung.html">💞 Verpaarungslog</a>
       <a class="btn secondary" href="turnierplaner.html">🏆 Turnier &amp; Leistung</a>
-      <a class="btn secondary" href="aussortierhilfe.html">🧹 Aussortierhilfe</a>
       <a class="btn secondary" href="ankaufsberatung.html">🛒 Ankaufsberatung</a>
-      <a class="btn secondary" href="guide.html">📖 Guide</a>
+      <a class="btn secondary" href="guide.html" aria-current="page">📖 Guide</a>
       <a class="btn secondary" href="einstellungen.html">⚙️ Einstellungen</a>
     </nav>
 </header>
@@ -44,7 +42,7 @@
       <div class="guide-faq-body"><div class="guide-answer-card">
         <p><strong>Pferdedatenbank:</strong> zentrale Übersicht für Stammdaten, Genetik, Leistungswerte, Zucht, Stammbaum und Turnierdaten.</p>
         <p><strong>Dashboard:</strong> Bestandsauswertung mit Besitzer- und Rassefiltern. Wird ein Besitzer gewählt, stehen nur dessen tatsächlich vorhandene Rassen zur Auswahl.</p>
-        <p><strong>Verpaarungs-Log:</strong> dokumentiert aktuelle und vergangene Verpaarungen und verbindet geborene Fohlen mit der ursprünglichen Planung.</p>
+        <p><strong>Verpaarungen:</strong> dienen nur noch als zentrale Historie für aktuelle und vergangene Kombinationen. Die eigentliche Fohlenzuordnung erfolgt direkt auf der Pferdeseite unter „Zucht &amp; Nachzucht“.</p>
         <p><strong>Zuchtplaner:</strong> Partner finden mit automatischer Verwandtschaftsprüfung, direkter Verpaarungsvergleich, gemerkte Kombinationen, Farbe und Turnierzucht.</p>
         <p><strong>Ankaufsberatung:</strong> Kaufkandidaten vor dem Speichern gegen den eigenen rassespezifischen Bestand und den Gesamtbestand prüfen. Linien, Kernwerte und direkt nutzbare Zuchtpartner werden getrennt ausgewertet.</p>
         <p><strong>Turnier &amp; Leistung:</strong> Disziplin-Ranglisten, Cups, Zuchtschau-Prognosen und LK-Referenzen.</p>
@@ -113,16 +111,16 @@
         <p>Besitzer zuerst einschränken und anschließend eine Rasse wählen. Die Rassenauswahl wird automatisch auf den ausgewählten Bestand reduziert. So entstehen keine scheinbaren Rassenoptionen, die beim gewählten Besitzer gar nicht vorkommen.</p>
         <p>Häufige Auswertungen können als Dashboard-Kacheln bzw. gespeicherte Einstellungen wiederverwendet werden.</p>
         <p><strong>📈 Aktuelles Schau-Niveau:</strong> Der Bereich ist standardmäßig eingeklappt und zeigt die gemeinsam eingelesenen MDR-Ergebnislisten rassespezifisch. Stuten und Hengste werden getrennt ausgewertet. Angezeigt werden Meldeniveau, typisches Podium, Siegniveau und Datengrundlage der jüngsten bis zu 50 besetzten Schauen.</p>
-        <p><strong>🎨 Farbgenetik:</strong> Der Dashboard-Bereich <strong>🎨 Farbgenetik</strong> konzentriert sich auf Grundfarben, die offiziellen MDR-Schattierungsstufen, LP-Scheckungsmuster und beobachtete Grundfarben-Vererbung. Verdünnungen und Überlagerungen wie Palomino, Dun, Champagne oder Pearl werden – soweit aus Fellfarbe bzw. Extension/Agouti eindeutig ableitbar – ihrer genetischen Grundfarbe zugeordnet. Die Schattierungstabelle zeigt jede bekannte Stufe hell → dunkel auch bei Bestand 0; echte Extension-/Agouti-Tests werden nur kompakt markiert und nicht als Ursache der Schattierung behauptet. Die Snowflake-Forschung bleibt im Code erhalten, wird im Dashboard aber nicht mehr als eigener Detektiv angezeigt. Auf LP-Schecken-Pferdeseiten wird P1/P2/P3 weiterhin kompakt mit ✓, ✗ oder ? angezeigt; P1 nutzt den echten PATN1-Test, P2/P3 werden aus dem sichtbaren Muster abgeleitet. Der Zuchtplaner berücksichtigt dieselbe Hierarchie bei Appaloosa-Farbwünschen.</p>
+        <p>Das Dashboard ist bewusst als Kontrollzentrum reduziert: Bestand, Jungpferde, ZS-bereite Pferde, ZZL, echte ZS-Werte und offene Verpaarungen stehen im Vordergrund. Genetikdetails bleiben auf den Pferdeseiten.</p>
       </div></div>
     </details>
 
     <details class="card guide-faq-item">
-      <summary>Wie funktioniert das Verpaarungs-Log?</summary>
+      <summary>Wie funktioniert die Verpaarungshistorie?</summary>
       <div class="guide-faq-body"><div class="guide-answer-card">
-        <p>Eine Verpaarung wird mit Stute, Hengst und optionalem Abfohldatum gespeichert. Bei „Fohlen behalten?“ stehen <strong>✓</strong>, <strong>?</strong> und <strong>✗</strong> zur Verfügung. Mit <strong>?</strong> bleibt die Entscheidung offen; das Fohlen kann trotzdem eingetragen und ausgewertet werden.</p>
-        <p>Nach der Geburt kann ein vorhandenes Fohlen verknüpft oder direkt neu angelegt werden. Bei vergangenen Verpaarungen zeigt <strong>DB-Bereich getroffen?</strong> nur ✓ oder ✗; die Detailprognose bleibt separat aufklappbar.</p>
-        <p>Auch hier hängt die Rassenauswahl von den ausgewählten Züchtern ab. Die <strong>Freitextsuche</strong> durchsucht Hengst, Stute, verknüpftes Fohlen, Besitzer/Züchter, Rasse, Notizen, Datum und bekannte Pferde-IDs; bei einer Suche werden auch ältere Verpaarungen vollständig berücksichtigt.</p>
+        <p>Die Seite <strong>Verpaarungen</strong> ist bewusst nur noch eine schlanke Historie. Sie zeigt aktuelle Kombinationen, das Abfohldatum, ein verknüpftes Fohlen, Besitzer und die nötigen Verwaltungsaktionen.</p>
+        <p>Die bevorzugte Fohlenzuordnung erfolgt direkt auf der Pferdeseite des Fohlens unter <strong>Zucht &amp; Nachzucht</strong>. Dort wird anhand von Mutter und Vater eine passende offene Verpaarung vorgeschlagen oder bei Bedarf nachträglich angelegt.</p>
+        <p>Die Historie bleibt weiterhin durchsuch- und filterbar. Prognose- und Zuchtentscheidungsdaten bleiben gespeichert und können von den Fachfunktionen genutzt werden, werden aber im Verpaarungsarchiv nicht mehr ausführlich angezeigt.</p>
       </div></div>
     </details>
 
@@ -130,7 +128,7 @@
       <summary>Wie nutze ich den Zuchtplaner?</summary>
       <div class="guide-faq-body"><div class="guide-answer-card">
         <p>Stute oder Hengst als Ausgangspunkt wählen. Besitzer- und Rassefilter helfen, den Gegenpartner einzugrenzen; auch hier werden Rassen nach Besitzerwahl dynamisch reduziert.</p>
-        <p>Im Tab <strong>Verpaarungsvergleich</strong> lässt sich eine Stute mit bis zu drei Hengsten oder ein Hengst mit bis zu drei Stuten direkt nebeneinander vergleichen. Kombinationen können gemerkt oder unmittelbar ins Verpaarungslog übernommen werden. Gemerkte Kombinationen stehen in einem eigenen Tab und lassen sich später wieder in den Vergleich laden.</p>
+        <p>Im Tab <strong>Verpaarungsvergleich</strong> lässt sich eine Stute mit bis zu drei Hengsten oder ein Hengst mit bis zu drei Stuten direkt nebeneinander vergleichen. Kombinationen können gemerkt oder unmittelbar in die Verpaarungshistorie übernommen werden. Gemerkte Kombinationen stehen in einem eigenen Tab und lassen sich später wieder in den Vergleich laden.</p>
         <p>Standardmäßig arbeitet der Verpaarungsratgeber mit <strong>Ext%</strong> als erstem Schwerpunkt und <strong>GP</strong> als zweitem Kriterium im kombinierten Ausgleich. Die Gewichtung startet bei <strong>80% Ext% / 20% GP</strong>, kann aber jederzeit verändert werden.</p>
         <p>Zusatzwünsche wie <strong>Grundfarbe</strong>, Appaloosa-Muster, weitere Farbgene oder Turnierzucht nur aktivieren, wenn sie für die konkrete Verpaarung relevant sind. Beim Grundfarbenwunsch stehen Chestnut, Wild Bay, Bay, Sealbrown, Black und Grey zur Wahl; die Rangfolge nutzt die berechenbare Fohlenchance. Unknown/Unbekannt im Stammbaum gilt nie als echte Verwandtschaft. Verwandtschaft, Overo × Overo und die Deckstationsregel werden automatisch geprüft; dafür gibt es keinen separaten Inzucht-Tab mehr.</p>
       </div></div>
@@ -151,28 +149,18 @@
       <div class="guide-faq-body"><div class="guide-answer-card">
         <p>Das Lernmodell nutzt ausschließlich <strong>echte positive ZS-Punkte</strong>. Für neue ZS-Einträge speichert die Datenbank automatisch den Turnier- und Cupstand dieses Moments zusammen mit dem Eintragungsdatum. Aus dem ZS-Gesamtwert werden nur diese damaligen Boni herausgerechnet; spätere Turniererfolge verändern den Grundwert nicht.</p>
         <p>Für eine ZS-Prognose müssen GP, Ext, Ext% und Int vorhanden sein. Ext und Ext% werden bewusst als zwei getrennte Informationen behandelt. Das Pferd selbst braucht keine Turnierplatzierung und keinen echten ZS-Wert. Die Prognose bleibt unabhängig vom Alter sichtbar, bis ein echter positiver ZS-Wert eingetragen wird, und wird niemals selbst als Lerndatum verwendet.</p>
-        <p>Die Datenbank testet mehrere Modellvarianten automatisch gegeneinander: linear, fachlich gerichtete Kernwerte, Ext×Ext%-Zusammenspiel und eine vorsichtig nichtlineare Variante. Verwendet wird die Variante mit der besten Kreuzvalidierungs-Prognoseleistung.</p>
-        <p>Unter „Zuchtschau“ zeigt die Modellprüfung MAE, RMSE, R² und die Spearman-Rangkorrelation sowie einen Vergleich mit einer einfachen Durchschnitts-Prognose. Der aufklappbare Modellvergleich zeigt zusätzlich, welche Variante tatsächlich gewonnen hat.</p>
-      </div></div>
-    </details>
-
-    <details class="card guide-faq-item">
-      <summary>Wie nutze ich die Aussortierhilfe?</summary>
-      <div class="guide-faq-body"><div class="guide-answer-card">
-        <p>Die Aussortierhilfe ist eine Priorisierungshilfe, keine automatische Verkaufsentscheidung. Zuerst Besitzer/Rasse und anschließend den Schwerpunkt festlegen. Bei ausgewählten Besitzern werden nur deren vorhandene Rassen angeboten.</p>
-        <p>Ohne eigene Zielwerte vergleicht die Hilfe ein Pferd relativ mit dem aktuell gefilterten Bestand. Eigene Zielwerte können den Vergleich für den gewählten Schwerpunkt präzisieren.</p>
-        <p>Vor einer Entscheidung zusätzlich Stammbaum, Nachzucht, seltene Genetik, Turnierrolle und Zuchtziel prüfen.</p>
+        <p>Die Modellwahl und Validierung laufen weiterhin im Hintergrund. In der Oberfläche werden nur noch die für die Arbeit relevanten Ergebnisse wie Prognose, Durchkommensniveau und Restbedarf angezeigt.</p>
       </div></div>
     </details>
   </div>
 </main>
 
-<script src="js/i18n.js?v=54101"></script>
-  <script src="js/core-utils.js?v=54101"></script>
-  <script src="js/supabase-loader.js?v=54101"></script>
-<script src="js/supabase-config.js?v=54101"></script>
-<script src="js/database-local.js?v=54101"></script>
-<script src="js/local-app.js?v=54101"></script>
-<script src="js/guide.js?v=54101"></script>
+<script src="js/i18n.js?v=54109"></script>
+  <script src="js/core-utils.js?v=54109"></script>
+  <script src="js/supabase-loader.js?v=54109"></script>
+<script src="js/supabase-config.js?v=54109"></script>
+<script src="js/database-local.js?v=54109"></script>
+<script src="js/local-app.js?v=54109"></script>
+<script src="js/guide.js?v=54109"></script>
 </body>
 </html>

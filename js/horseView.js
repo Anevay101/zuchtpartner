@@ -149,6 +149,22 @@ function viewImportantMissing(horse) {
   return missing;
 }
 
+function viewLpCompactStatus(horse) {
+  const api=window.MDR_LP_MODEL;
+  if (!api?.actualResult || !api?.evaluate || !api?.classify) return {label:'LP ?',title:'Leistungsprüfung nicht einschätzbar'};
+  try {
+    const actual=api.actualResult(horse);
+    if (actual?.known) return actual.passed
+      ? {label:'LP ✓',title:'Leistungsprüfung: bestätigt bestanden'}
+      : {label:'LP ✕',title:'Leistungsprüfung: bestätigt nicht bestanden'};
+    const evaluation=api.evaluate(horse);
+    const validation=api.validate ? api.validate(viewHorseList) : null;
+    const classification=api.classify(evaluation,validation);
+    if (classification?.key==='red') return {label:'LP ✕',title:'Leistungsprüfung: Voraussetzungen aktuell nicht erfüllt'};
+    return {label:'LP ?',title:classification?.key==='green'?'Leistungsprüfung: Prognose positiv, noch nicht bestätigt':'Leistungsprüfung: noch offen'};
+  } catch { return {label:'LP ?',title:'Leistungsprüfung nicht einschätzbar'}; }
+}
+
 function renderHorseViewHeader(horse) {
   const chips = document.getElementById('horse-summary-chips');
   if (chips) {
@@ -162,6 +178,7 @@ function renderHorseViewHeader(horse) {
       age || null,
       group ? `${group}${talent ? ' / ' + talent : ''}` : talent || null,
       horse?.breeding_allowed === true ? 'ZZL ✓' : horse?.breeding_allowed === false ? 'ZZL ✗' : 'ZZL ?',
+      viewLpCompactStatus(horse).label,
       stars.length ? `⭐ ${stars.map(r=>r.discipline + (r.lk ? ' '+r.lk : '')).join(', ')}` : null,
     ];
     if (/hengst|stallion/i.test(String(horse?.gender || ''))) {
@@ -388,37 +405,52 @@ function viewZsForecastHtml(horse, allHorses, benchmark) {
 function renderHorseBreedingShowDetails(horse, allHorses = viewHorseList) {
   const root=document.getElementById('horse-zs-details');
   if (!root) return;
-  const benchmarkApi=window.MDR_BREEDING_SHOW_BENCHMARK;
-  const benchmark=benchmarkApi?.getBenchmarkForHorse ? benchmarkApi.getBenchmarkForHorse(horse) : null;
-  const benchmarkHtml=viewZsBenchmarkHtml(horse,benchmark);
+  const benchmark=window.MDR_BREEDING_SHOW_BENCHMARK?.getBenchmarkForHorse?.(horse) || null;
   const total=typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : null;
-  if (total == null) {
-    root.innerHTML=`<p class="muted">Noch kein echter ZS-Wert eingetragen. Die ZS-Prognose bleibt unabhängig vom Alter kompakt unter „Stammdaten“ sichtbar, bis ein echter ZS-Wert eingetragen wird.</p>${benchmarkHtml}${viewZsForecastHtml(horse,allHorses,benchmark)}`;
+
+  if (total != null) {
+    const snapshot=typeof plannerBreedingShowSnapshot === 'function' ? plannerBreedingShowSnapshot(horse) : null;
+    const tournamentBonus=Number(snapshot?.tournament_bonus || 0);
+    const cupBonus=Number(snapshot?.cup_bonus || 0);
+    const base=typeof plannerBreedingShowBase === 'function' ? plannerBreedingShowBase(horse) : Number(total)-tournamentBonus-cupBonus;
+    const iso=String(snapshot?.snapshot_date || snapshot?.captured_at || '').slice(0,10);
+    const dateText=iso ? iso.split('-').reverse().join('.') : '–';
+    root.innerHTML=`<div class="zs-compact-summary">
+      <div class="zs-section-title"><span>Zuchtschau-Ergebnis</span><span class="horse-status-chip horse-status-good">✓ eingetragen</span></div>
+      <div class="zs-detail-metrics">
+        <div><span>ZS-Gesamtwert</span><strong>${Math.round(total)}</strong></div>
+        <div><span>Grundwert</span><strong>${Number.isFinite(Number(base))?Math.round(base):'–'}</strong></div>
+        <div><span>Turnierbonus</span><strong>${Math.round(tournamentBonus)}</strong></div>
+        <div><span>Cupbonus</span><strong>${Math.round(cupBonus)}</strong></div>
+        <div><span>Eintragungsdatum</span><strong>${plannerEscape(dateText)}</strong></div>
+      </div>
+    </div>`;
     return;
   }
-  const snapshot=typeof plannerBreedingShowSnapshot === 'function' ? plannerBreedingShowSnapshot(horse) : null;
-  if (!snapshot) {
-    root.innerHTML=`${benchmarkHtml}<div class="notice notice-warning small"><strong>ZS-Gesamtwert:</strong> ${Math.round(total)} · Historische Bonusdaten zum ZS-Eintrag fehlen noch.</div>`;
-    return;
-  }
-  const tournamentBonus=Number(snapshot.tournament_bonus || 0);
-  const cupBonus=Number(snapshot.cup_bonus || 0);
-  const base=typeof plannerBreedingShowBase === 'function' ? plannerBreedingShowBase(horse) : total-tournamentBonus-cupBonus;
-  const iso=String(snapshot.snapshot_date || snapshot.captured_at || '').slice(0,10);
-  const dateText=iso ? iso.split('-').reverse().join('.') : '–';
-  const levelDiff=viewZsHasScore(benchmark?.qualifyingMedian) ? total-Number(benchmark.qualifyingMedian) : null;
-  const levelNote=levelDiff == null ? '' : `<p class="small zs-current-level-note"><strong>Einordnung zum heutigen Rassen-Niveau:</strong> Der eingetragene ZS-Gesamtwert liegt ${levelDiff>=0?`ca. ${viewZsScore(levelDiff)} Punkte über`:`ca. ${viewZsScore(Math.abs(levelDiff))} Punkte unter`} dem typischen aktuellen Durchkommensniveau.</p>`;
-  root.innerHTML=`
-    ${benchmarkHtml}
+
+  let predicted=null, assessment=null;
+  try {
+    if (typeof plannerBuildBreedingShowModel === 'function') {
+      const model=plannerBuildBreedingShowModel(Array.isArray(allHorses)?allHorses:[horse]);
+      predicted=typeof model?.predict === 'function' ? model.predict(horse) : null;
+      assessment=window.MDR_BREEDING_SHOW_BENCHMARK?.assessHorseForecast?.(horse,predicted,benchmark) || null;
+    }
+  } catch (error) { console.warn('ZS-Kurzprognose konnte nicht berechnet werden:',error); }
+  const target=Number(benchmark?.qualifyingMedian);
+  const estimate=Number(assessment?.currentEstimate ?? predicted);
+  const gap=Number.isFinite(target) && Number.isFinite(estimate) ? Math.max(0,target-estimate) : null;
+  const status=assessment?.status || (predicted!=null?'yellow':'neutral');
+  const statusClass=status==='green'?'good':status==='red'?'bad':status==='yellow'||status==='orange'?'warn':'neutral';
+  const label=assessment?.label || (predicted!=null?'Prognose vorhanden':'noch nicht einschätzbar');
+  root.innerHTML=`<div class="zs-compact-summary">
+    <div class="zs-section-title"><span>Zuchtschau</span><span class="horse-status-chip horse-status-${statusClass}">${plannerEscape(label)}</span></div>
     <div class="zs-detail-metrics">
-      <div><span>ZS-Gesamtwert</span><strong>${Math.round(total)}</strong></div>
-      <div><span>ZS-Grundwert</span><strong>${Number.isFinite(Number(base))?Math.round(base):'–'}</strong></div>
-      <div><span>Turnierbonus bei ZS</span><strong>${Math.round(tournamentBonus)}</strong></div>
-      <div><span>Cupbonus bei ZS</span><strong>${Math.round(cupBonus)}</strong></div>
-      <div><span>Eintragungsdatum</span><strong>${plannerEscape(dateText)}</strong></div>
+      <div><span>Prognose</span><strong>${predicted==null?'–':`≈ ${Math.round(Number(predicted))}`}</strong></div>
+      <div><span>Typisches Durchkommen</span><strong>${Number.isFinite(target)?Math.round(target):'–'}</strong></div>
+      <div><span>Rechnerisch noch nötig</span><strong>${gap==null?'–':`≈ ${Math.round(gap)} P.`}</strong></div>
     </div>
-    ${levelNote}
-    <p class="small muted zs-detail-formula">Grundwert = ZS-Gesamtwert − damaliger Turnierbonus − damaliger Cupbonus. Der Grundwert bleibt danach unverändert.</p>`;
+    <p class="small muted">Die Berechnung läuft unverändert im Hintergrund; hier wird nur noch das für die Entscheidung relevante Ergebnis gezeigt.</p>
+  </div>`;
 }
 
 async function initView() {
@@ -461,9 +493,7 @@ async function initView() {
   renderHorseBreedingShowDetails(extraData, viewHorseList);
   renderHorseTournamentProfile(extraData, viewHorseList);
   if (typeof renderHorseProfileOverview === 'function') renderHorseProfileOverview(extraData, viewHorseList);
-  if (window.MDR_LP_MODEL?.renderHorse) {
-    window.MDR_LP_MODEL.renderHorse(document.getElementById('horse-lp-model'), extraData, viewHorseList);
-  }
+  if (typeof renderHorsePairingPanel === 'function') await renderHorsePairingPanel(extraData, viewHorseList);
   if (typeof bpRenderBreedingPanel === 'function') await bpRenderBreedingPanel(extraData, 'breeding-progress-panel');
 
   const externalId = document.getElementById('external_id').value;
