@@ -1,0 +1,12 @@
+MDR-Datenbank V54.0.96 – Release-Check
+
+[x] Alle JavaScript-Dateien Syntaxcheck
+[x] CSS parsebar
+[x] Keine doppelten HTML-IDs
+[x] Lokale HTML-Ressourcen vorhanden
+[x] Cache-Buster 5496 konsistent
+[x] Jungpferde-Planer: 4 Hauptbegabungsdisziplinen + 4 beste weitere Werte
+[x] Jungpferde-Planer: A/B/C/D-Klassifikation
+[x] Jungpferde-Planer: max. 2 Meldungen pro Disziplin
+[x] Jungpferde-Planer: bekannte Top-3-Platzierung wird erkannt
+[x] ZIP-Integrität

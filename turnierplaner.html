@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Turnier & Leistung – MDR Datenbank</title>
-  <link rel="stylesheet" href="css/style.css?v=5495" />
+  <link rel="stylesheet" href="css/style.css?v=5496" />
 </head>
 <body class="turnierplaner-page">
 <header class="topbar">
@@ -32,6 +32,7 @@
 <main class="container">
   <div class="tabs tp-main-tabs">
     <button type="button" class="tab-btn active" data-tp-main-tab="planner">🏆 Turnierplanung</button>
+    <button type="button" class="tab-btn" data-tp-main-tab="young">🌱 Jungpferde</button>
     <button type="button" class="tab-btn" data-tp-main-tab="cups">⭐ Cups &amp; Erfolge</button>
     <button type="button" class="tab-btn" data-tp-main-tab="show">Zuchtschau</button>
     <button type="button" class="tab-btn" data-tp-main-tab="stats">📊 Referenzwerte</button>
@@ -90,6 +91,74 @@
         <table class="detail-table tournament-ranking-table"><thead><tr><th>#</th><th>Pferd</th><th>Disziplin</th><th>Punkte</th><th>INT</th><th>LK</th><th>Empfehlung / Einordnung</th></tr></thead><tbody id="tp-ranking-body"><tr><td class="muted" colspan="7">Lade…</td></tr></tbody></table>
       </div>
     </section>
+  </section>
+
+  <section id="tp-tab-young" class="tp-main-panel" hidden>
+    <section class="card yhp-select-card">
+      <div class="tournament-section-head">
+        <div>
+          <h2>🌱 Jungpferde-Planer</h2>
+          <p class="small muted">Vergleicht nur die bewusst ausgewählten Pferde. Für Turniere zählen die vier Disziplinen der Hauptbegabung plus die vier besten übrigen Turnierwerte. Pro Disziplin werden höchstens zwei Qualifikationsstarts empfohlen.</p>
+        </div>
+      </div>
+      <div class="notice small yhp-rule-note"><strong>Ziel:</strong> möglichst schnell zur Zuchtschau qualifizieren. Bekannte Top-3-Platzierungen werden automatisch erkannt; fehlende historische Platzierungen können per Haken bestätigt werden. Pferde mit bereits eingetragenem ZS-Wert werden hier nicht angeboten.</div>
+      <div class="form-grid yhp-filter-grid">
+        <div><label for="yhp-search">Pferd suchen</label><input id="yhp-search" type="text" placeholder="Name" /></div>
+        <div><label for="yhp-owner">Besitzer</label><select id="yhp-owner"><option value="">Alle</option></select></div>
+        <div><label for="yhp-breed">Rasse</label><select id="yhp-breed"><option value="">Alle</option></select></div>
+        <div><label for="yhp-group">Hauptbegabung</label><select id="yhp-group"><option value="">Alle</option></select></div>
+      </div>
+      <div class="actions yhp-selection-actions">
+        <button type="button" class="secondary" id="yhp-select-visible">Sichtbare auswählen</button>
+        <button type="button" class="secondary" id="yhp-clear-selection">Auswahl leeren</button>
+        <button type="button" id="yhp-build-plan">Plan für <span id="yhp-selected-count">0</span> Pferde berechnen</button>
+      </div>
+      <div class="table-wrap yhp-picker-wrap">
+        <table class="detail-table yhp-picker-table">
+          <thead><tr><th class="yhp-check-col"></th><th>Pferd</th><th>Besitzer</th><th>Rasse</th><th>Hauptbegabung</th><th>Top 3</th></tr></thead>
+          <tbody id="yhp-picker-body"><tr><td colspan="6" class="muted">Lade…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div id="yhp-results" hidden>
+      <section class="card yhp-status-card">
+        <div class="tournament-ranking-head"><h2>Vergleich der Auswahl</h2><p id="yhp-plan-summary" class="muted small"></p></div>
+        <div class="table-wrap">
+          <table class="detail-table yhp-status-table">
+            <thead><tr><th>Pferd</th><th>Top 3</th><th>GP</th><th>Δ GP</th><th>Ext%</th><th>Δ Ext%</th><th>ZS-Basis</th><th>ZS-Rest</th><th>Klasse</th></tr></thead>
+            <tbody id="yhp-status-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="yhp-work-grid">
+        <section class="card">
+          <div class="tournament-ranking-head"><h2>✅ Zuchtschau jetzt</h2><p class="muted small">Top 3 bereits erfüllt</p></div>
+          <div id="yhp-zs-list" class="yhp-work-list"></div>
+        </section>
+        <section class="card">
+          <div class="tournament-ranking-head"><h2>🏇 Noch qualifizieren</h2><p class="muted small">A → C → B → D</p></div>
+          <div id="yhp-qual-list" class="yhp-work-list"></div>
+        </section>
+      </div>
+
+      <section class="card yhp-entries-card">
+        <div class="tournament-ranking-head">
+          <div><h2>Empfohlene Turniermeldungen</h2><p class="muted small">Turnierstärkeklasse entscheidet zuerst; innerhalb derselben Stärkeklasse priorisiert der Planer A → C → B → D. Bereits qualifizierte Pferde blockieren keine Qualifikationsplätze.</p></div>
+        </div>
+        <div id="yhp-entry-grid" class="yhp-entry-grid"></div>
+      </section>
+
+      <section class="card yhp-copy-card">
+        <h2>📋 Für Notizen kopieren</h2>
+        <div class="actions">
+          <button type="button" id="yhp-copy-work">Arbeitsplan kopieren</button>
+          <button type="button" class="secondary" id="yhp-copy-entries">Turniermeldungen kopieren</button>
+        </div>
+        <p id="yhp-copy-status" class="small muted" aria-live="polite"></p>
+      </section>
+    </div>
   </section>
 
   <section id="tp-tab-cups" class="tp-main-panel" hidden>
@@ -192,19 +261,20 @@
   </section>
 </main>
 
-<script src="js/tournament-catalog.js?v=5495"></script>
-<script src="js/i18n.js?v=5495"></script>
-  <script src="js/core-utils.js?v=5495"></script>
-  <script src="js/supabase-loader.js?v=5495"></script>
-<script src="js/supabase-config.js?v=5495"></script>
-<script src="js/database-local.js?v=5495"></script>
-<script src="js/local-app.js?v=5495"></script>
-<script src="js/learning-file.js?v=5495"></script>
-<script src="js/horse-data-utils.js?v=5495"></script>
-<script src="js/data-quality.js?v=5495"></script>
-<script src="js/planer-common.js?v=5495"></script>
-<script src="js/breeding-show-benchmark.js?v=5495"></script>
-<script src="js/tournament-recommendation.js?v=5495"></script>
-<script src="js/turnierplaner-local.js?v=5495"></script>
+<script src="js/tournament-catalog.js?v=5496"></script>
+<script src="js/i18n.js?v=5496"></script>
+  <script src="js/core-utils.js?v=5496"></script>
+  <script src="js/supabase-loader.js?v=5496"></script>
+<script src="js/supabase-config.js?v=5496"></script>
+<script src="js/database-local.js?v=5496"></script>
+<script src="js/local-app.js?v=5496"></script>
+<script src="js/learning-file.js?v=5496"></script>
+<script src="js/horse-data-utils.js?v=5496"></script>
+<script src="js/data-quality.js?v=5496"></script>
+<script src="js/planer-common.js?v=5496"></script>
+<script src="js/breeding-show-benchmark.js?v=5496"></script>
+<script src="js/tournament-recommendation.js?v=5496"></script>
+<script src="js/younghorse-planner.js?v=5496"></script>
+<script src="js/turnierplaner-local.js?v=5496"></script>
 </body>
 </html>

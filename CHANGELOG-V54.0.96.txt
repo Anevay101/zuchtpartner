@@ -1,0 +1,20 @@
+MDR-Datenbank V54.0.96
+
+Neu: Jungpferde-Planer unter „Turnier & Leistung“ als eigener Hauptreiter.
+
+- Beliebig viele Jungpferde aus dem aktiven Bestand auswählen und als Gruppe vergleichen.
+- Pferde mit bereits eingetragenem echtem ZS-Wert werden aus der Jungpferde-Auswahl ausgeblendet.
+- Top-3-Qualifikation wird automatisch aus gespeicherten 1./2./3. Plätzen erkannt; für unvollständige Historien kann ein manueller Haken dauerhaft am Pferd gespeichert werden.
+- Pro Pferd werden die 4 Disziplinen der Hauptbegabungsgruppe plus die 4 stärksten übrigen Turnierwerte berücksichtigt.
+- Turnierstärke nutzt die bereits vorhandene server- und LK-relative Turnierbewertung der Datenbank.
+- ZS-Einordnung nutzt das vorhandene ZS-Grundwertmodell und das aktuelle rasse-/geschlechtsspezifische Durchkommensniveau.
+- Handlungsklassen: A Fast Track, C früh parallel, B Qualifikation mitnehmen, D Restkapazität.
+- Bereits Top-3-qualifizierte Pferde werden getrennt als „Zuchtschau jetzt“ nach voraussichtlichem ZS-Restbedarf sortiert.
+- Konkrete Turniermeldungen: maximal 2 Pferde je Disziplin. Zuerst entscheidet die Turnierstärkeklasse; innerhalb derselben Stärkeklasse A → C → B → D.
+- Bereits qualifizierte Pferde blockieren keine Qualifikationsplätze.
+- GP- und Ext%-Differenz zum gleichgeschlechtlichen Elternteil werden informativ angezeigt und beeinflussen die Priorisierung nicht.
+- Arbeitsplan und konkrete Turniermeldungen lassen sich als Text für Notizen in die Zwischenablage kopieren.
+- Auswahl des Vergleichssets wird lokal gemerkt.
+
+Version: 54.0.96
+Cache-Buster: 5496
