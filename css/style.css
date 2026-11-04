@@ -8253,19 +8253,19 @@ button.keep-foal-no.active {
 .yhp-secondary-details .yhp-entry-card { background:#fff; }
 
 /* ============================================================
-   V54.0.100 – kompakte Pferde-Stammdatenseite / Strategieübersicht
+   V54.0.101 – kompakte Pferde-Stammdatenseite / getrennte Kopierdaten
    ============================================================ */
 .horse-key-copy-actions {
   gap: .45rem;
   flex-wrap: wrap;
 }
-.horse-key-copy-actions #horse-copy-overview {
+.horse-key-copy-actions #horse-copy-all {
   background: linear-gradient(180deg, #6f9e69 0%, #527f55 100%);
   border-color: #4a774e;
   color: #fff;
   font-weight: 800;
 }
-.horse-key-copy-actions #horse-copy-overview:hover {
+.horse-key-copy-actions #horse-copy-all:hover {
   background: linear-gradient(180deg, #628e5e 0%, #476f4a 100%);
 }
 

@@ -1,0 +1,17 @@
+RELEASE-CHECK V54.0.101
+
+Ergebnis: OK
+
+Geprüft:
+- 43/43 JavaScript-Dateien mit node --check: OK
+- CSS mit tinycss2 geparst: 0 Parsefehler
+- Doppelte HTML-IDs: keine
+- Lokale Script-/Stylesheet-Referenzen: vollständig
+- Cache-Buster aller HTML-Dateien: einheitlich 54101
+- Git-Merge-Konfliktmarker in HTML/JS/CSS: keine
+- Copy-Funktionstest: „Alles kopieren“ = Pferdedaten + Leerzeile + Strategiedaten
+- Pferdedaten enthalten keine Trainings-/Turnierstrategie-Zeilen
+- Strategiedaten enthalten keine GP-/Ext-/ZS-/ZZL-Pferdedaten
+- Zuchtschau-Prognose wird nur im Pferdedatenblock ausgegeben
+- Hauptdisziplin wird in der Turnierstrategie mit ★ markiert
+- ZIP enthält keinen .git-Ordner

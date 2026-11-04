@@ -1,0 +1,16 @@
+MDR-Datenbank V54.0.101
+
+Pferdeprofil: Kopierdaten sauber in Pferdedaten und Strategiedaten getrennt.
+
+- „Gesamtübersicht kopieren“ heißt jetzt „Pferdedaten kopieren“.
+- Neuer dritter Button „Alles kopieren“; er setzt Pferdedaten + Strategiedaten exakt hintereinander.
+- Pferdedaten enthalten nur: Name, Geschlecht, Rasse, Begabung, Zuchtzulassung, GP, Ext, Ext%, Int, Nachkommen, Zuchtschau und – sofern verfügbar – GP-/Ext%-Fortschritt zum gleichgeschlechtlichen Elternteil.
+- ZS wird im Kopiertext nur einmal ausgegeben: als eigener Zuchtschau-Block. Bei echtem ZS wird der echte Wert verwendet; sonst Prognose, Schätzwert und typisches Durchkommensniveau, soweit verfügbar.
+- Strategiedaten enthalten nur: Vorbereitung, Bodenarbeit, Hauptberitt, anschließendes Disziplintraining, optionalen Zweitberitt und die Turnierstrategie.
+- Hauptdisziplin wird in der Turnierstrategie mit ★ markiert.
+- Zweitberitt nennt im Strategietext nur Gruppe + Zahl geeigneter Disziplinen; die konkreten Disziplinen stehen erst in der Turnierstrategie und werden dadurch nicht doppelt genannt.
+- Der separate Button „Turnierdaten kopieren“ im Stammdaten-Kärtchen entfällt, da diese Daten jetzt Bestandteil der Strategiedaten sind.
+- „Alles kopieren“ ist der hervorgehobene Hauptbutton; die beiden Teil-Exporte bleiben separat nutzbar.
+
+Version: 54.0.101
+Cache-Buster: 54101

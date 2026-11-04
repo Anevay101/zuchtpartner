@@ -1,4 +1,4 @@
-/* MDR V54.0.100 – kompakte Pferdeübersicht + Trainingsstrategie.
+/* MDR V54.0.101 – getrennte Pferde-/Strategie-Kopierdaten ohne Dopplungen.
    Die Stammdatenseite bleibt eine operative Kurzansicht; Detailanalysen
    bleiben in Genetik, Turnierwerte, Zuchtschau und Zucht & Nachzucht. */
 
@@ -65,19 +65,19 @@ function horseProfileTournamentFocus(profile, talent) {
 }
 
 function horseProfileZsAssessment(horse, allHorses) {
+  const benchmark=window.MDR_BREEDING_SHOW_BENCHMARK?.getBenchmarkForHorse?.(horse) || null;
   const actual=typeof plannerBreedingShowPoints === 'function' ? plannerBreedingShowPoints(horse) : null;
-  if (actual != null) return { label:`ZS eingetragen (${Math.round(actual)})`, status:'green', predicted:null, actual };
-  if (typeof plannerBuildBreedingShowModel !== 'function') return {label:'nicht einschätzbar',status:'neutral',predicted:null,actual:null};
+  if (actual != null) return { label:`ZS eingetragen (${Math.round(actual)})`, status:'green', predicted:null, actual, benchmark, assessment:null };
+  if (typeof plannerBuildBreedingShowModel !== 'function') return {label:'nicht einschätzbar',status:'neutral',predicted:null,actual:null,benchmark,assessment:null};
   try {
     const model=plannerBuildBreedingShowModel(Array.isArray(allHorses)?allHorses:[horse]);
     const predicted=typeof model?.predict === 'function' ? model.predict(horse) : null;
-    const benchmark=window.MDR_BREEDING_SHOW_BENCHMARK?.getBenchmarkForHorse?.(horse) || null;
     const assessment=window.MDR_BREEDING_SHOW_BENCHMARK?.assessHorseForecast?.(horse,predicted,benchmark) || null;
-    if (assessment) return {label:assessment.label,status:assessment.status,predicted,actual:null};
-    return {label:predicted == null?'nicht einschätzbar':'Prognose vorhanden',status:predicted==null?'neutral':'yellow',predicted,actual:null};
+    if (assessment) return {label:assessment.label,status:assessment.status,predicted,actual:null,benchmark,assessment};
+    return {label:predicted == null?'nicht einschätzbar':'Prognose vorhanden',status:predicted==null?'neutral':'yellow',predicted,actual:null,benchmark,assessment:null};
   } catch (error) {
     console.warn('ZS-Kurzbewertung konnte nicht berechnet werden:', error);
-    return {label:'nicht einschätzbar',status:'neutral',predicted:null,actual:null};
+    return {label:'nicht einschätzbar',status:'neutral',predicted:null,actual:null,benchmark,assessment:null};
   }
 }
 
@@ -195,64 +195,95 @@ function horseProfileRenderMore(data) {
   return rows.map(([l,v])=>horseProfileRow(l,v)).join('');
 }
 
+function horseProfileMetricCopyData(data) {
+  const horse=data.horse;
+  const d=typeof viewDerived === 'function' ? viewDerived(horse) : {};
+  const gp=d.gp==null||!Number.isFinite(Number(d.gp))?null:Math.round(Number(d.gp));
+  const ext=d.ext==null||!Number.isFinite(Number(d.ext))?null:Number(d.ext).toFixed(2);
+  const extPct=d.extpct==null||!Number.isFinite(Number(d.extpct))?null:`${Number(d.extpct).toFixed(0)}%`;
+  const intVal=d.int==null||!Number.isFinite(Number(d.int))?null:Number(d.int).toFixed(2);
+  const offspring=horse?.offspring_count==null||horse.offspring_count===''?null:Math.max(0,Math.round(Number(horse.offspring_count)||0));
+  return {gp,ext,extPct,intVal,offspring};
+}
+
+function horseProfileHorseDataCopyText(data) {
+  const horse=data.horse;
+  const breed=typeof normalizeBreed === 'function' ? (normalizeBreed(horse?.breed)||'Rasselos') : (horse?.breed||'Rasselos');
+  const zzl=horse?.breeding_allowed===true?'Ja':horse?.breeding_allowed===false?'Nein':'unbekannt';
+  const metrics=horseProfileMetricCopyData(data);
+  const lines=[
+    `${horse?.name || 'Pferd'}`,
+    `${horse?.gender || '–'} · ${breed}`,
+    ...(data.mainGroup || data.talent ? [`Begabung: ${data.mainGroup || '–'}${data.talent?` / ${data.talent}`:''}`] : []),
+    `Zuchtzulassung: ${zzl}`,
+    '',
+    'Datenübersicht',
+  ];
+  if (metrics.gp!=null) lines.push(`GP: ${metrics.gp}`);
+  if (metrics.ext!=null) lines.push(`Ext: ${metrics.ext}`);
+  if (metrics.extPct!=null) lines.push(`Ext%: ${metrics.extPct}`);
+  if (metrics.intVal!=null) lines.push(`Int: ${metrics.intVal}`);
+  if (metrics.offspring!=null) lines.push(`Nachkommen: ${metrics.offspring}`);
+
+  if (data.zs?.actual!=null || data.zs?.predicted!=null || (data.zs?.label && data.zs.label!=='nicht einschätzbar')) {
+    lines.push('', 'Zuchtschau');
+    if (data.zs.actual!=null) {
+      lines.push(`ZS-Wert: ${Math.round(Number(data.zs.actual))}`);
+    } else {
+      if (data.zs?.label && data.zs.label!=='nicht einschätzbar') lines.push(`Prognose: ${data.zs.label}`);
+      if (Number.isFinite(Number(data.zs?.predicted))) lines.push(`Schätzwert: ≈ ${Math.round(Number(data.zs.predicted))}`);
+      const target=Number(data.zs?.benchmark?.qualifyingMedian);
+      if (Number.isFinite(target)) lines.push(`Typisches Durchkommen: ${Math.round(target)}`);
+    }
+  }
+
+  if (data.breeding?.gpDelta!=null || data.breeding?.extPctDelta!=null) {
+    const parent=data.breeding.parentLabel === 'Mutter' ? 'zur Mutter' : data.breeding.parentLabel === 'Vater' ? 'zum Vater' : 'zum gleichgeschlechtlichen Elternteil';
+    lines.push('', `Zuchtfortschritt ${parent}`);
+    if (data.breeding.gpDelta!=null) {
+      const gpDelta=Number(data.breeding.gpDelta);
+      const gpText=Number.isInteger(gpDelta)?String(gpDelta):gpDelta.toFixed(1);
+      lines.push(`GP: ${gpDelta>=0?'+':''}${gpText}`);
+    }
+    if (data.breeding.extPctDelta!=null) lines.push(`Ext%: ${data.breeding.extPctDelta>=0?'+':''}${Number(data.breeding.extPctDelta).toFixed(1)} %-Pkt.`);
+  }
+  return lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+
+function horseProfileTournamentStrategyLines(data) {
+  const lines=['Turnierstrategie'];
+  if (data.mainRows.length) {
+    for (const row of data.mainRows) {
+      const marker=row.discipline===data.talent ? '★ ' : '';
+      lines.push(`${marker}${row.discipline}: ${Math.round(Number(row.points))} / INT ${row.interior==null?'–':Number(row.interior).toFixed(2)} / ${row.lk||'LK –'}`);
+    }
+  } else {
+    lines.push('Noch keine vollständigen Turnierwerte vorhanden.');
+  }
+  if (data.secondaryRows.length) {
+    lines.push('Weitere sinnvolle Turnieroptionen:');
+    for (const row of data.secondaryRows) lines.push(`${row.group} – ${row.discipline}: ${Math.round(Number(row.points))} / INT ${row.interior==null?'–':Number(row.interior).toFixed(2)} / ${row.lk||'LK –'}`);
+  }
+  return lines;
+}
+
 function horseProfileStrategyCopyText(data) {
-  const second=data.secondRide ? `${data.secondRide.group} (${data.secondRide.rows.slice(0,3).map(r=>r.discipline).join(', ')})` : 'keine Empfehlung';
+  const second=data.secondRide ? `${data.secondRide.group} empfohlen (${data.secondRide.rows.length} geeignete Disziplinen)` : 'keine Empfehlung';
   const training=data.training?.length ? data.training.join(' → ') : (data.talent?`Trainingskette für ${data.talent} noch nicht hinterlegt`:'noch nicht erkannt');
   return [
-    `${data.horse?.name || 'Pferd'} – Trainingsstrategie`,
-    `Hauptdisziplin: ${data.talent || '–'}${data.mainGroup ? ` / ${data.mainGroup}` : ''}`,
+    'Trainingsstrategie',
     'Vorbereitung: Erziehung abschließen · Bodenarbeit ab 2 Jahren',
     `Bodenarbeit: ${training}`,
     `Beritt ab 3 J.: ${data.mainGroup || '–'}`,
     `Danach: ${data.talent ? `${data.talent} vollständig trainieren` : '–'}`,
     `Zweitberitt: ${second}`,
-    `Turnierfokus: ${data.focus.length ? data.focus.join(', ') : 'noch nicht einschätzbar'}`,
-  ].join('\n');
+    '',
+    ...horseProfileTournamentStrategyLines(data),
+  ].join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 
-function horseProfileTournamentCopyText(data) {
-  const lines=[`Hauptbegabung: ${data.mainGroup || '–'}`];
-  for (const row of data.mainRows) lines.push(`${row.group} – ${row.discipline} ${Math.round(Number(row.points))} / INT ${row.interior==null?'–':Number(row.interior).toFixed(2)} / ${row.lk||'LK –'}`);
-  if (data.secondaryRows.length) {
-    lines.push('Nebenbegabungen:');
-    for (const row of data.secondaryRows) lines.push(`${row.group} – ${row.discipline} ${Math.round(Number(row.points))} / INT ${row.interior==null?'–':Number(row.interior).toFixed(2)} / ${row.lk||'LK –'}`);
-  } else lines.push('Nebenbegabungen: keine auffällige');
-  return lines.join('\n');
-}
-
-function horseProfileOverallCopyText(data) {
-  const horse=data.horse;
-  const d=typeof viewDerived === 'function' ? viewDerived(horse) : {};
-  const zsMetric=typeof viewBreedingShowMetric === 'function' ? viewBreedingShowMetric(horse) : {state:'',value:null};
-  const age=horse?.birthdate && typeof viewAgeLabel === 'function' ? viewAgeLabel(horse.birthdate) : '–';
-  const breed=typeof normalizeBreed === 'function' ? (normalizeBreed(horse?.breed)||'Rasselos') : (horse?.breed||'Rasselos');
-  const gp=d.gp==null||!Number.isFinite(Number(d.gp))?'?':Math.round(Number(d.gp));
-  const ext=d.ext==null||!Number.isFinite(Number(d.ext))?'?':Number(d.ext).toFixed(2);
-  const extPct=d.extpct==null||!Number.isFinite(Number(d.extpct))?'?':`${Number(d.extpct).toFixed(0)}%`;
-  const intVal=d.int==null||!Number.isFinite(Number(d.int))?'?':Number(d.int).toFixed(2);
-  const zs=zsMetric.value==null||!Number.isFinite(Number(zsMetric.value))?'?':`${zsMetric.state} ${Math.round(Number(zsMetric.value))}`;
-  const offspring=horse?.offspring_count==null||horse.offspring_count===''?'?':Math.max(0,Math.round(Number(horse.offspring_count)||0));
-  const zzl=horse?.breeding_allowed===true?'ZZL Ja':horse?.breeding_allowed===false?'ZZL Nein':'ZZL unbekannt';
-  const lines=[
-    `${horse?.name || 'Pferd'}`,
-    `${horse?.gender || '–'} · ${breed} · ${age}${data.mainGroup?` · ${data.mainGroup}${data.talent?` / ${data.talent}`:''}`:''} · ${zzl}`,
-    ...(horse?.owner ? [`Besitzer: ${horse.owner}`] : []),
-    `GP ${gp} · Ext ${ext} · Ext% ${extPct} · Int ${intVal} · ZS ${zs} · Nachkommen ${offspring}`,
-    '',
-    horseProfileStrategyCopyText(data).split('\n').slice(1).join('\n'),
-    '',
-    'Turnierprofil',
-    horseProfileTournamentCopyText(data),
-    '',
-    `Kurzbewertung: Turnier ${data.profile?.bestMain?.interpretation?.label || 'nicht einschätzbar'} · ZS ${data.zs?.label || 'nicht einschätzbar'} · Zuchtfortschritt ${data.breeding?.label || 'noch nicht bewertbar'}`,
-  ];
-  if (data.breeding.gpDelta!=null || data.breeding.extPctDelta!=null) {
-    const parent=data.breeding.parentLabel === 'Mutter' ? ' zur Mutter' : data.breeding.parentLabel === 'Vater' ? ' zum Vater' : ' zum gleichgeschlechtlichen Elternteil';
-    lines.push('',`Zuchtfortschritt${parent}:`);
-    if (data.breeding.gpDelta!=null) lines.push(`GP ${data.breeding.gpDelta>=0?'+':''}${data.breeding.gpDelta.toFixed(1)}`);
-    if (data.breeding.extPctDelta!=null) lines.push(`Ext% ${data.breeding.extPctDelta>=0?'+':''}${data.breeding.extPctDelta.toFixed(1)} %-Pkt.`);
-  }
-  return lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+function horseProfileAllCopyText(data) {
+  return `${horseProfileHorseDataCopyText(data)}\n\n${horseProfileStrategyCopyText(data)}`.trim();
 }
 
 function renderHorseProfileOverview(horse, allHorses) {
@@ -264,9 +295,9 @@ function renderHorseProfileOverview(horse, allHorses) {
   set('horse-quick-assessment',horseProfileRenderAssessment(data));
   set('horse-more-data',horseProfileRenderMore(data));
 
-  document.getElementById('horse-copy-overview')?.addEventListener('click',event=>plannerCopyText(horseProfileOverallCopyText(data),event.currentTarget));
+  document.getElementById('horse-copy-overview')?.addEventListener('click',event=>plannerCopyText(horseProfileHorseDataCopyText(data),event.currentTarget));
   document.getElementById('horse-copy-strategy')?.addEventListener('click',event=>plannerCopyText(horseProfileStrategyCopyText(data),event.currentTarget));
-  document.getElementById('horse-copy-tournament-compact')?.addEventListener('click',event=>plannerCopyText(horseProfileTournamentCopyText(data),event.currentTarget));
+  document.getElementById('horse-copy-all')?.addEventListener('click',event=>plannerCopyText(horseProfileAllCopyText(data),event.currentTarget));
   document.getElementById('horse-show-full-tournament')?.addEventListener('click',()=>{ if(typeof activateTab==='function') activateTab('turnier'); document.querySelector('.horse-view-tabs')?.scrollIntoView({behavior:'smooth',block:'start'}); });
   return data;
 }
