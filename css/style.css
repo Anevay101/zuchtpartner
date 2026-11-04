@@ -8234,7 +8234,6 @@ button.keep-foal-no.active {
   .yhp-filter-grid,
   .yhp-entry-grid { grid-template-columns:1fr; }
 }
-<<<<<<< HEAD
 
 /* V54.0.99 – Hauptdisziplinen standardmäßig, Nebendisziplinen optional */
 .yhp-secondary-details {
@@ -8252,5 +8251,208 @@ button.keep-foal-no.active {
 }
 .yhp-secondary-details > p { margin:.05rem 0 .6rem; }
 .yhp-secondary-details .yhp-entry-card { background:#fff; }
-=======
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
+
+/* ============================================================
+   V54.0.100 – kompakte Pferde-Stammdatenseite / Strategieübersicht
+   ============================================================ */
+.horse-key-copy-actions {
+  gap: .45rem;
+  flex-wrap: wrap;
+}
+.horse-key-copy-actions #horse-copy-overview {
+  background: linear-gradient(180deg, #6f9e69 0%, #527f55 100%);
+  border-color: #4a774e;
+  color: #fff;
+  font-weight: 800;
+}
+.horse-key-copy-actions #horse-copy-overview:hover {
+  background: linear-gradient(180deg, #628e5e 0%, #476f4a 100%);
+}
+
+.horse-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: .8rem;
+  align-items: start;
+}
+.horse-overview-card {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  background: rgba(255,255,255,.95) !important;
+  border-color: #b8ceb1 !important;
+  box-shadow: var(--ui-shadow-sm) !important;
+}
+.horse-overview-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .55rem;
+  padding: .52rem .72rem;
+  background: linear-gradient(180deg, #edf5e8 0%, #e4efdf 100%);
+  border-bottom: 1px solid #c8d8c2;
+}
+.horse-overview-card-head h2 {
+  margin: 0;
+  color: #36583b;
+  font-family: var(--font-heading);
+  font-size: 1.08rem;
+  font-weight: 400;
+}
+.horse-overview-card-head button {
+  padding: .28rem .48rem;
+  white-space: nowrap;
+}
+.horse-info-list {
+  padding: .48rem .72rem .58rem;
+}
+.horse-info-row {
+  display: grid;
+  grid-template-columns: minmax(115px, .72fr) minmax(0, 1.28fr);
+  gap: .7rem;
+  align-items: start;
+  min-height: 1.72rem;
+  padding: .22rem .12rem;
+  border-bottom: 1px solid #dde7da;
+}
+.horse-info-row:last-child { border-bottom: 0; }
+.horse-info-row > span {
+  color: #5b6e5e;
+  font-size: .88rem;
+  font-weight: 650;
+}
+.horse-info-row > strong {
+  min-width: 0;
+  color: #223826;
+  font-size: .9rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.horse-info-row-emphasis > strong { color: #2f6537; }
+
+.horse-strategy-card .horse-strategy-body {
+  padding: .42rem .72rem .58rem;
+  background: linear-gradient(90deg, rgba(232,242,225,.75), rgba(255,255,255,.82));
+}
+.horse-strategy-card .horse-info-row {
+  grid-template-columns: minmax(115px, .64fr) minmax(0, 1.36fr);
+}
+
+.horse-tournament-overview-card #horse-tournament-compact {
+  padding: .48rem .72rem .3rem;
+}
+.horse-tournament-mainlabel,
+.horse-tournament-subhead {
+  margin-bottom: .3rem;
+  padding: .26rem .48rem;
+  border-radius: 8px;
+  background: #edf4e8;
+  color: #35583a;
+  font-size: .86rem;
+}
+.horse-tournament-subhead {
+  margin-top: .48rem;
+  font-weight: 800;
+}
+.horse-tournament-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .6rem;
+  align-items: baseline;
+  padding: .23rem .14rem;
+  border-bottom: 1px solid #e0e8dd;
+  color: #2d4030;
+  font-size: .86rem;
+}
+.horse-tournament-line > span:last-child {
+  color: #3f5844;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.horse-tournament-secondary { font-size: .83rem; }
+.horse-overview-inline-action {
+  display: block;
+  width: fit-content;
+  margin: .22rem auto .6rem;
+  padding: .32rem .65rem;
+}
+
+.horse-assessment-card #horse-quick-assessment { padding: .46rem .72rem .58rem; }
+.horse-assessment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .7rem;
+  min-height: 2.05rem;
+  padding: .28rem .12rem;
+  border-bottom: 1px solid #dde7da;
+}
+.horse-assessment-row:last-child { border-bottom: 0; }
+.horse-assessment-label { color: #354a39; }
+.horse-status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 105px;
+  max-width: 58%;
+  padding: .22rem .62rem;
+  border-radius: 999px;
+  text-align: center;
+  font-size: .79rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.horse-status-good { background: #dcebd4; color: #2e6335; }
+.horse-status-warn { background: #f4edcf; color: #735f17; }
+.horse-status-bad { background: #f2ddda; color: #8b3730; }
+.horse-status-neutral { background: #e8ece7; color: #59635a; }
+
+.horse-more-data-card {
+  margin: .8rem 0 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  background: rgba(255,255,255,.93) !important;
+}
+.horse-more-data-card > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .7rem;
+  padding: .55rem .75rem;
+  cursor: pointer;
+  list-style: none;
+  background: #f4f8f2;
+}
+.horse-more-data-card > summary::-webkit-details-marker { display: none; }
+.horse-more-data-card > summary::after { content: '▾'; color: #55715a; }
+.horse-more-data-card[open] > summary::after { content: '▴'; }
+.horse-more-data-card .horse-info-list-wide {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 0 .9rem;
+}
+.horse-more-data-card .horse-info-row { grid-template-columns: minmax(105px,.6fr) minmax(0,1.4fr); }
+
+/* Die Detailtabs bleiben analytisch; die Stammdatenansicht ist bewusst kompakt. */
+.horse-view-v53 [data-tab-panel="stammdaten"] { min-height: 0; }
+
+@media (max-width: 900px) {
+  .horse-overview-grid { grid-template-columns: 1fr; }
+  .horse-more-data-card .horse-info-list-wide { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .horse-key-copy-actions { flex-direction: column; align-items: center; }
+  .horse-key-copy-actions button { width: 100%; max-width: 320px; }
+  .horse-info-row,
+  .horse-strategy-card .horse-info-row {
+    grid-template-columns: 1fr;
+    gap: .08rem;
+    padding: .3rem .12rem;
+  }
+  .horse-tournament-line { grid-template-columns: 1fr; gap: .08rem; }
+  .horse-tournament-line > span:last-child { text-align: left; white-space: normal; }
+  .horse-assessment-row { align-items: flex-start; }
+  .horse-status-chip { max-width: 62%; min-width: 0; }
+  .horse-more-data-card > summary { align-items: flex-start; }
+}

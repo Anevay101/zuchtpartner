@@ -432,9 +432,6 @@ async function initView() {
 
   document.getElementById('edit-link').href = mdrRoute('horse',{id:viewHorseId});
   document.getElementById('delete-btn').addEventListener('click', onDeleteView);
-  document.getElementById('horse-copy-basic-data')?.addEventListener('click', (event) => {
-    if (extraData) plannerCopyText(viewBasicDataCopyText(extraData), event.currentTarget);
-  });
   document.getElementById('prev-horse-btn').addEventListener('click', () => onNavigateView('prev'));
   document.getElementById('next-horse-btn').addEventListener('click', () => onNavigateView('next'));
   wireTabs();
@@ -463,6 +460,7 @@ async function initView() {
   renderHorseBreedingShowSummary(extraData, viewHorseList);
   renderHorseBreedingShowDetails(extraData, viewHorseList);
   renderHorseTournamentProfile(extraData, viewHorseList);
+  if (typeof renderHorseProfileOverview === 'function') renderHorseProfileOverview(extraData, viewHorseList);
   if (window.MDR_LP_MODEL?.renderHorse) {
     window.MDR_LP_MODEL.renderHorse(document.getElementById('horse-lp-model'), extraData, viewHorseList);
   }

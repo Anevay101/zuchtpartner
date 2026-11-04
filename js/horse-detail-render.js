@@ -68,7 +68,7 @@ async function renderDetailTables(data) {
   if (data.temperament?.length) {
     genetikParts.push(scoredTableHtml(
       'Interieur (Mentalität)', data.temperament, scoreTemperamentTerm,
-      'Skala 1 = exzellent … 4 = schlecht',
+      'Skala 1 = exzellent · 2 = gut · 3 = in Ordnung · 4 = schlecht · 5 = miserabel',
     ));
   }
 

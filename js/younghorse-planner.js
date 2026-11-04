@@ -1,29 +1,16 @@
-<<<<<<< HEAD
 /* MDR V54.0.99 – Jungpferde-Planer
    Ziel: ausgewählte Jungpferde gemeinsam priorisieren, Top-3-Qualifikation
    und ZS-Reife trennen sowie maximal zwei sinnvolle Meldungen je Disziplin
    vorschlagen. Keine undurchsichtige Mischpunktzahl: Turnierstärkeklasse,
    strategische A/B/C/D-Klasse und Rohwert bleiben getrennt sichtbar. */
-=======
-/* MDR V54.0.96 – Jungpferde-Planer
-   Ziel: ausgewählte Jungpferde gemeinsam priorisieren, Top-3-Qualifikation
-   und ZS-Reife trennen sowie maximal zwei sinnvolle Meldungen je Disziplin
-   vorschlagen. Keine undurchsichtige Mischpunktzahl: Turnierstärkeklasse,
-   strategische A/C/B/D-Klasse und Rohwert bleiben getrennt sichtbar. */
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
 (() => {
   'use strict';
 
   const STORAGE_SELECTION='mdr_younghorse_selection_v1';
   const CLASS_META={
     A:{rank:4,label:'A · Fast Track',short:'Fast Track',icon:'🔥',hint:'Turnier stark · ZS günstig'},
-<<<<<<< HEAD
     B:{rank:3,label:'B · Qualifikation mitnehmen',short:'Qualifikation mitnehmen',icon:'🏇',hint:'Turnier stark · ZS anschließend aufwendiger'},
     C:{rank:2,label:'C · Früh parallel',short:'Früh parallel',icon:'⏳',hint:'Turnier ist der Flaschenhals · ZS günstig'},
-=======
-    C:{rank:3,label:'C · Früh parallel',short:'Früh parallel',icon:'⏳',hint:'Turnier ist der Flaschenhals · ZS günstig'},
-    B:{rank:2,label:'B · Qualifikation mitnehmen',short:'Qualifikation mitnehmen',icon:'🏇',hint:'Turnier stark · ZS anschließend aufwendiger'},
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
     D:{rank:1,label:'D · Restkapazität',short:'Restkapazität nutzen',icon:'🌱',hint:'Turnier und ZS aufwendiger'},
     U:{rank:0,label:'Daten prüfen',short:'Daten prüfen',icon:'⚪',hint:'Turnier- oder ZS-Einordnung unvollständig'},
   };
@@ -46,7 +33,6 @@
   function esc(v){ return typeof plannerEscape==='function' ? plannerEscape(v) : String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function norm(v){ return String(v??'').trim().toLocaleLowerCase('de'); }
   function idOf(h){ return String(h?.id ?? h?.external_id ?? h?.name ?? ''); }
-<<<<<<< HEAD
   function younghorseAge(horse){
     if (!horse?.birthdate || typeof gameAgeYearsMonths!=='function') return null;
     return gameAgeYearsMonths(horse.birthdate);
@@ -71,11 +57,6 @@
     selectedIds=next;
     saveSelection();
     return true;
-=======
-  function activePool(){
-    const rows=Array.isArray(TP_HORSES) ? TP_HORSES : [];
-    return rows.filter(h => (typeof plannerBreedingShowPoints!=='function' || plannerBreedingShowPoints(h)==null));
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
   }
   function saveSelection(){
     try { localStorage.setItem(STORAGE_SELECTION, JSON.stringify([...selectedIds])); } catch {}
@@ -85,12 +66,7 @@
       const raw=JSON.parse(localStorage.getItem(STORAGE_SELECTION) || '[]');
       if (Array.isArray(raw)) selectedIds=new Set(raw.map(String));
     } catch { selectedIds=new Set(); }
-<<<<<<< HEAD
     pruneSelectionToActivePool();
-=======
-    const valid=new Set(activePool().map(idOf));
-    selectedIds=new Set([...selectedIds].filter(id=>valid.has(id)));
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
   }
   function horseById(id){ return (TP_ALL_HORSES || []).find(h=>idOf(h)===String(id)) || null; }
 
@@ -201,7 +177,6 @@
 
   function horseProfile(horse){
     const disciplines=consideredDisciplines(horse);
-<<<<<<< HEAD
     const sortBest=(rows)=>rows.slice().sort((a,b)=>(b.recommendationScore??-1)-(a.recommendationScore??-1) || b.points-a.points)[0] || null;
     const mainDisciplines=disciplines.filter(r=>r.isMainGroup);
     const secondaryDisciplines=disciplines.filter(r=>!r.isMainGroup);
@@ -210,9 +185,6 @@
     // Für die strategische Klasse zählt die realistisch trainierte Hauptbegabung.
     // Nur wenn keine Hauptgruppe erkannt werden kann, fällt der Planer auf den besten bekannten Wert zurück.
     const best=bestMain || bestOverall;
-=======
-    const best=disciplines.slice().sort((a,b)=>(b.recommendationScore??-1)-(a.recommendationScore??-1) || b.points-a.points)[0] || null;
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
     const bestScore=best?.recommendationScore ?? null;
     const tournamentStrong=bestScore==null ? null : bestScore>=65;
     const zs=zsProfile(horse);
@@ -223,7 +195,6 @@
     const qualified=isQualified(horse);
     const stats=typeof plannerStats==='function' ? plannerStats(horse) : {};
     const parent=parentDelta(horse);
-<<<<<<< HEAD
     return {horse,id:idOf(horse),qualified,knownTop3:knownTop3(horse),manualTop3:manualTop3(horse),disciplines,mainDisciplines,secondaryDisciplines,best,bestMain,bestOverall,bestScore,tournamentStrong,zs,cls,stats,parent,mainGroup:plannerHorseMainGroup?.(horse)||''};
   }
 
@@ -231,13 +202,6 @@
     pruneSelectionToActivePool();
     const validIds=new Set(activePool().map(idOf));
     const horses=[...selectedIds].filter(id=>validIds.has(String(id))).map(horseById).filter(Boolean);
-=======
-    return {horse,id:idOf(horse),qualified,knownTop3:knownTop3(horse),manualTop3:manualTop3(horse),disciplines,best,bestScore,tournamentStrong,zs,cls,stats,parent,mainGroup:plannerHorseMainGroup?.(horse)||''};
-  }
-
-  function planProfiles(){
-    const horses=[...selectedIds].map(horseById).filter(Boolean);
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
     const profiles=horses.map(horseProfile);
     const unqualified=profiles.filter(p=>!p.qualified).sort((a,b)=>{
       const cr=(CLASS_META[b.cls]?.rank||0)-(CLASS_META[a.cls]?.rank||0); if(cr) return cr;
@@ -251,7 +215,6 @@
       const base=(b.zs.predictedBase??-Infinity)-(a.zs.predictedBase??-Infinity); if(base) return base;
       return (a.horse.name||'').localeCompare(b.horse.name||'','de');
     });
-<<<<<<< HEAD
     const entriesMain=buildAssignments(unqualified,'main');
     const entriesAll=buildAssignments(unqualified,'all');
     return {profiles,unqualified,qualified,entries:entriesMain,entriesMain,entriesAll,createdAt:new Date()};
@@ -263,16 +226,6 @@
       for (const row of profile.disciplines) {
         if (mode==='main' && !row.isMainGroup) continue;
         if (mode==='secondary' && row.isMainGroup) continue;
-=======
-    const entries=buildAssignments(unqualified);
-    return {profiles,unqualified,qualified,entries,createdAt:new Date()};
-  }
-
-  function buildAssignments(unqualified){
-    const byDiscipline=new Map();
-    for (const profile of unqualified) {
-      for (const row of profile.disciplines) {
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
         if (!byDiscipline.has(row.discipline)) byDiscipline.set(row.discipline,[]);
         byDiscipline.get(row.discipline).push({...row,profile,classRank:CLASS_META[profile.cls]?.rank||0});
       }
@@ -350,10 +303,7 @@
 
   function renderPicker(){
     const body=document.getElementById('yhp-picker-body'); if(!body)return;
-<<<<<<< HEAD
     pruneSelectionToActivePool();
-=======
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
     const rows=filteredPickerRows();
     body.innerHTML=rows.length ? rows.map(h=>{
       const id=idOf(h), checked=selectedIds.has(id);
@@ -361,11 +311,7 @@
       const qualified=isQualified(h);
       return `<tr class="${checked?'yhp-picked':''}">
         <td class="yhp-check-col"><input type="checkbox" class="yhp-pick" data-yhp-id="${esc(id)}" ${checked?'checked':''} aria-label="${esc(h.name||'Pferd')} auswählen"></td>
-<<<<<<< HEAD
         <td><a href="${mdrRoute('view',{id:h.id})}"><strong>${esc(h.name||'(ohne Name)')}</strong></a><br><span class="tiny muted">${esc(typeof formatAgeShort==='function' ? formatAgeShort(h.birthdate) : '')}</span></td>
-=======
-        <td><a href="${mdrRoute('view',{id:h.id})}"><strong>${esc(h.name||'(ohne Name)')}</strong></a></td>
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
         <td>${esc(h.owner||'–')}</td><td>${esc(normalizeBreed?.(h.breed)||h.breed||'–')}</td><td>${esc(group)}</td>
         <td>${qualified?'✓':'–'}</td></tr>`;
     }).join('') : '<tr><td colspan="6" class="muted">Keine passenden Pferde.</td></tr>';
@@ -420,7 +366,6 @@
     }).join('') : '<p class="muted small">Alle ausgewählten Pferde haben bereits eine Top-3-Platzierung.</p>';
   }
 
-<<<<<<< HEAD
   function renderEntriesGrid(rootId,entries,showOrigin=false){
     const root=document.getElementById(rootId); if(!root)return;
     if(!entries.length){root.innerHTML='<p class="muted small">Keine auswertbaren Turnieroptionen für die noch nicht qualifizierten Pferde.</p>';return;}
@@ -432,23 +377,10 @@
         return `<div class="yhp-entry-horse"><span class="yhp-entry-slot">${c.slot}.</span><div><strong>${esc(c.horse.name)}</strong><br><span class="tiny muted">${esc(type)} · ${esc(band.label)}${esc(origin)} · Empfehlung ${c.recommendationScore==null?'–':Math.round(c.recommendationScore)}/100 · Wert ${Math.round(c.points)}${c.lk?` · ${esc(c.lk)}`:''}</span></div></div>`;
       }).join('');
       const waiting=row.waiting.length ? `<details class="yhp-waiting"><summary>${row.waiting.length} weitere Kandidaten</summary><div>${row.waiting.map(c=>`${esc(c.horse.name)}${showOrigin?` · ${c.isMainGroup?'Haupt':'Neben'}`:''} · ${c.recommendationScore==null?'–':Math.round(c.recommendationScore)}/100 · ${Math.round(c.points)}`).join('<br>')}</div></details>`:'';
-=======
-  function renderEntries(plan){
-    const root=document.getElementById('yhp-entry-grid'); if(!root)return;
-    if(!plan.entries.length){root.innerHTML='<p class="muted small">Keine auswertbaren Turnieroptionen für die noch nicht qualifizierten Pferde.</p>';return;}
-    root.innerHTML=plan.entries.map(row=>{
-      const selected=row.selected.map(c=>{
-        const type=c.slotType==='priority'?'● Priorität':c.slotType==='sensible'?'○ sinnvoll':'○ freier Platz';
-        const band=BAND_META[c.band]||BAND_META[0];
-        return `<div class="yhp-entry-horse"><span class="yhp-entry-slot">${c.slot}.</span><div><strong>${esc(c.horse.name)}</strong><br><span class="tiny muted">${esc(type)} · ${esc(band.label)} · Empfehlung ${c.recommendationScore==null?'–':Math.round(c.recommendationScore)}/100 · Wert ${Math.round(c.points)}${c.lk?` · ${esc(c.lk)}`:''}</span></div></div>`;
-      }).join('');
-      const waiting=row.waiting.length ? `<details class="yhp-waiting"><summary>${row.waiting.length} weitere Kandidaten</summary><div>${row.waiting.map(c=>`${esc(c.horse.name)} · ${c.recommendationScore==null?'–':Math.round(c.recommendationScore)}/100 · ${Math.round(c.points)}`).join('<br>')}</div></details>`:'';
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
       return `<article class="yhp-entry-card"><header><strong>${esc(row.discipline)}</strong><span>${esc(row.group)}</span></header>${selected || '<p class="muted small">kein Kandidat</p>'}${waiting}</article>`;
     }).join('');
   }
 
-<<<<<<< HEAD
   function renderEntries(plan){
     renderEntriesGrid('yhp-entry-grid',plan.entriesMain || plan.entries || [],false);
     renderEntriesGrid('yhp-entry-grid-all',plan.entriesAll || plan.entries || [],true);
@@ -458,12 +390,6 @@
     const el=document.getElementById('yhp-plan-summary'); if(!el)return;
     const counts={A:0,B:0,C:0,D:0,U:0}; plan.unqualified.forEach(p=>counts[p.cls]=(counts[p.cls]||0)+1);
     el.textContent=`${plan.profiles.length} Pferde · ${plan.qualified.length} ZS-bereit · ${plan.unqualified.length} brauchen Top 3 · A ${counts.A} · B ${counts.B} · C ${counts.C} · D ${counts.D}${counts.U?` · offen ${counts.U}`:''}`;
-=======
-  function renderSummary(plan){
-    const el=document.getElementById('yhp-plan-summary'); if(!el)return;
-    const counts={A:0,B:0,C:0,D:0,U:0}; plan.unqualified.forEach(p=>counts[p.cls]=(counts[p.cls]||0)+1);
-    el.textContent=`${plan.profiles.length} Pferde · ${plan.qualified.length} ZS-bereit · ${plan.unqualified.length} brauchen Top 3 · A ${counts.A} · C ${counts.C} · B ${counts.B} · D ${counts.D}${counts.U?` · offen ${counts.U}`:''}`;
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
   }
 
   function renderPlan(){
@@ -495,16 +421,10 @@
     return lines.join('\n');
   }
 
-<<<<<<< HEAD
   function entriesText(plan,includeSecondary=false){
     const entries=includeSecondary ? (plan.entriesAll || []) : (plan.entriesMain || plan.entries || []);
     const lines=[includeSecondary?'Turniermeldungen – Jungpferde (inkl. Nebendisziplinen)':'Turniermeldungen – Jungpferde (Hauptdisziplinen)',''];
     for(const row of entries){
-=======
-  function entriesText(plan){
-    const lines=['Turniermeldungen – Jungpferde',''];
-    for(const row of plan.entries){
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
       if(!row.selected.length) continue;
       lines.push(`${row.discipline}: ${row.selected.map(c=>c.horse.name).join(', ')}`);
     }
@@ -529,12 +449,8 @@
     document.getElementById('yhp-clear-selection')?.addEventListener('click',()=>{ selectedIds.clear(); saveSelection(); renderPicker(); document.getElementById('yhp-results').hidden=true; currentPlan=null; });
     document.getElementById('yhp-build-plan')?.addEventListener('click',renderPlan);
     document.getElementById('yhp-copy-work')?.addEventListener('click',()=>{ if(currentPlan)copyText(workPlanText(currentPlan),'Arbeitsplan wurde für die Notizen kopiert.'); });
-<<<<<<< HEAD
     document.getElementById('yhp-copy-main-entries')?.addEventListener('click',()=>{ if(currentPlan)copyText(entriesText(currentPlan,false),'Turniermeldungen der Hauptdisziplinen wurden für die Notizen kopiert.'); });
     document.getElementById('yhp-copy-all-entries')?.addEventListener('click',()=>{ if(currentPlan)copyText(entriesText(currentPlan,true),'Alle Turniermeldungen inklusive Nebendisziplinen wurden für die Notizen kopiert.'); });
-=======
-    document.getElementById('yhp-copy-entries')?.addEventListener('click',()=>{ if(currentPlan)copyText(entriesText(currentPlan),'Turniermeldungen wurden für die Notizen kopiert.'); });
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
   }
 
   function initYounghorsePlanner(){
@@ -548,9 +464,5 @@
 
   window.initYounghorsePlanner=initYounghorsePlanner;
   window.renderYounghorsePlanner=renderYounghorsePlanner;
-<<<<<<< HEAD
   window.MDR_YOUNGHORSE_PLANNER={consideredDisciplines,horseProfile,buildAssignments,planProfiles,knownTop3,isQualified,younghorseAgeEligible,activePool,entriesText};
-=======
-  window.MDR_YOUNGHORSE_PLANNER={consideredDisciplines,horseProfile,buildAssignments,planProfiles,knownTop3,isQualified};
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
 })();

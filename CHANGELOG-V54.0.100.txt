@@ -1,0 +1,20 @@
+MDR-Datenbank V54.0.100
+
+Pferdeprofil: kompakte Stammdatenseite + Trainingsstrategie.
+
+- Der beliebte obere Pferdekopf mit Bild, Pfeilen, Chips und sechs Kennzahlen bleibt erhalten.
+- „Stammdaten kopieren“ wird zu „Gesamtübersicht kopieren“; zusätzlich gibt es „Strategiedaten kopieren“.
+- Stammdaten-Tab neu geordnet als kompakte Karten: Basisdaten, Turnierdaten, Trainingsstrategie, Kurzbewertung.
+- Selten benötigte Felder liegen einklappbar unter „Weitere Daten“.
+- Trainingsstrategie nutzt die Hauptdisziplin und die vom Nutzer bestätigten Trainingsketten für Western und Barock.
+- Hauptberitt = Begabungsgruppe; Zweitberitt nur, wenn in einer anderen Gruppe mindestens zwei Disziplinen nach der bestehenden Turnierempfehlungslogik klar sinnvoll sind.
+- Turnierfokus und kompakte Turnierdaten verwenden dieselbe bestehende Turnierbewertung wie der Turnierwerte-Reiter.
+- Turnierdaten können separat kopiert werden; „Alle Turnierwerte anzeigen“ springt in den Detailreiter.
+- Gesamtübersicht kombiniert Kennzahlen, Trainingsstrategie, Turnierprofil sowie GP-/Ext%-Differenz zum gleichgeschlechtlichen Elternteil, sofern verfügbar.
+- Interieur-Skalenhinweis korrigiert: 1 Exzellent, 2 Gut, 3 In Ordnung, 4 Schlecht, 5 Miserabel.
+- Keine Merge-Konfliktmarker in den Anwendungsdateien.
+
+Hinweis: Für Englisch, Rennen, Rodeo, Fahren und Mehrgang wird keine Trainingskette erfunden. Bis entsprechende Regeln hinterlegt sind, zeigt die Strategie dort transparent „Trainingskette … noch nicht hinterlegt“.
+
+Version: 54.0.100
+Cache-Buster: 54100

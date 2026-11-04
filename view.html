@@ -10,11 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Courgette&amp;family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet" />
   <title>Pferd ansehen – MDR Datenbank</title>
-<<<<<<< HEAD
-  <link rel="stylesheet" href="css/style.css?v=5499" />
-=======
-  <link rel="stylesheet" href="css/style.css?v=5496" />
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
+  <link rel="stylesheet" href="css/style.css?v=54100" />
 </head>
 <body>
 <header class="topbar">
@@ -56,7 +52,10 @@
       <div id="horse-image-placeholder" class="horse-image-placeholder">🐴</div>
       <div id="horse-summary-chips" class="horse-summary-chips"></div>
       <div id="horse-key-metrics" class="horse-key-metrics" aria-label="Wichtigste Pferdewerte"></div>
-      <div class="horse-key-copy-actions"><button type="button" id="horse-copy-basic-data" class="secondary small">Stammdaten kopieren</button></div>
+      <div class="horse-key-copy-actions">
+        <button type="button" id="horse-copy-overview" class="small">Gesamtübersicht kopieren</button>
+        <button type="button" id="horse-copy-strategy" class="secondary small">Strategiedaten kopieren</button>
+      </div>
       <div id="tag-badges" class="horse-tag-row"></div>
       <p id="last-edited" class="muted small"></p>
     </div>
@@ -75,32 +74,58 @@
   </div>
 
   <div class="tab-panel" data-tab-panel="stammdaten">
-    <fieldset><legend>Stammdaten</legend><div class="form-grid">
-      <div><label for="name">Name</label><input id="name" readonly /></div>
-      <div><label for="external_id">ID</label><input id="external_id" readonly /></div>
-      <div><label for="game_version">Spielversion</label><select id="game_version" disabled><option value="DE">DE</option><option value="EN">EN</option></select></div>
-      <div><label for="gender">Geschlecht</label><select id="gender" disabled><option value=""></option><option>Stute</option><option>Hengst</option><option>Wallach</option><option>Hengstfohlen</option><option>Stutfohlen</option></select></div>
-      <div><label for="breed">Rasse</label><input id="breed" readonly /></div>
-      <div><label for="purebred_pct">Reinrassigkeit (%)</label><input id="purebred_pct" type="number" readonly /></div>
-      <div id="breed-composition-field"><label for="breed_composition">Rasseanteile</label><input id="breed_composition" readonly /></div>
-      <div><label for="coat_color">Fellfarbe</label><input id="coat_color" readonly /></div>
-      <div><label for="flaxen_carrier">Flaxen-Träger (fl)?</label><select id="flaxen_carrier" disabled><option value="">unbekannt</option><option value="true">Ja</option><option value="false">Nein</option></select></div>
-      <div id="appaloosa-pattern-field" hidden><label for="appaloosa_pattern">🐆 Sichtbares Appaloosa-Muster</label><select id="appaloosa_pattern" disabled><option value=""></option><option>Leopard</option><option>Few Spot</option><option>Spotted Blanket</option><option>Snowcap</option><option>Varnish Roan</option><option>Snowflake</option><option>anderes / unklar</option></select><div id="appaloosa-pattern-hint" class="tiny muted appaloosa-pattern-hint"></div></div>
-      <div><label for="birthdate">Geburtsdatum</label><input id="birthdate" type="date" readonly /><p id="horse-age" class="muted small"></p></div>
-      <div><label for="disease_free">Erbkrankheiten</label><select id="disease_free" disabled><option value="">unbekannt</option><option value="true">frei von Erbkrankheiten</option><option value="false">Erbkrankheit vorhanden</option></select></div>
-      <div><label for="breeding_show_summary">ZS-Wert / Prognose</label><input id="breeding_show_summary" readonly /><div id="breeding-show-summary-note" class="tiny muted"></div></div>
-    </div></fieldset>
-    <fieldset><legend>Verwaltung</legend><div class="form-grid"><div><label for="owner">Besitzer</label><input id="owner" readonly /></div></div></fieldset>
-    <fieldset><legend>Papiere &amp; Zucht</legend><div class="form-grid">
-      <div><label for="breeding_allowed">Zuchtzulassung</label><select id="breeding_allowed" disabled><option value="">unbekannt</option><option value="true">Ja</option><option value="false">Nein</option></select></div>
-      <div id="stud-station-field" hidden><label for="in_breeding_station">In Zuchtstation?</label><select id="in_breeding_station" disabled><option value="">unbekannt</option><option value="true">Ja</option><option value="false">Nein</option></select></div>
-      <div id="stud-fee-field" hidden><label for="stud_fee">Decktaxe</label><input id="stud_fee" type="number" readonly placeholder="kostenlos" /><div class="tiny muted">Leer = kostenlos</div></div>
-      <div><label for="hlp_slp">HLP/SLP</label><input id="hlp_slp" readonly /></div>
-      <div><label for="ico">ICO (%)</label><input id="ico" type="number" readonly /></div>
-    </div></fieldset>
-    <fieldset><legend>Sonstiges</legend><div class="form-grid"><div class="grid-full"><label for="notes">Notizen</label><textarea id="notes" rows="3" readonly></textarea></div><div><label for="image_url">Bild-URL</label><input id="image_url" type="url" readonly /></div></div></fieldset>
-  </div>
+    <div class="horse-overview-grid">
+      <section class="card horse-overview-card">
+        <div class="horse-overview-card-head"><h2>ⓘ Basisdaten</h2></div>
+        <div id="horse-base-data" class="horse-info-list"></div>
+      </section>
 
+      <section class="card horse-overview-card horse-tournament-overview-card">
+        <div class="horse-overview-card-head"><h2>🏆 Turnierdaten</h2><button type="button" id="horse-copy-tournament-compact" class="secondary small">Turnierdaten kopieren</button></div>
+        <div id="horse-tournament-compact"></div>
+        <button type="button" id="horse-show-full-tournament" class="secondary small horse-overview-inline-action">Alle Turnierwerte anzeigen</button>
+      </section>
+
+      <section class="card horse-overview-card horse-strategy-card">
+        <div class="horse-overview-card-head"><h2>🎯 Trainingsstrategie</h2></div>
+        <div id="horse-training-strategy"></div>
+      </section>
+
+      <section class="card horse-overview-card horse-assessment-card">
+        <div class="horse-overview-card-head"><h2>☆ Kurzbewertung</h2></div>
+        <div id="horse-quick-assessment"></div>
+      </section>
+    </div>
+
+    <details class="card horse-more-data-card">
+      <summary><strong>Weitere Daten</strong><span class="small muted">Farbe, Spielversion, ICO, Notizen &amp; weitere Verwaltungsdaten</span></summary>
+      <div id="horse-more-data" class="horse-info-list horse-info-list-wide"></div>
+    </details>
+
+    <!-- Versteckte Datenanker für bestehende Detail-/Importlogik. Die sichtbare
+         Stammdatenseite wird oben kompakt aus denselben Pferdedaten gerendert. -->
+    <div class="view-legacy-fields" hidden aria-hidden="true">
+      <input id="name" readonly />
+      <input id="external_id" readonly />
+      <select id="game_version" disabled><option value="DE">DE</option><option value="EN">EN</option></select>
+      <select id="gender" disabled><option value=""></option><option>Stute</option><option>Hengst</option><option>Wallach</option><option>Hengstfohlen</option><option>Stutfohlen</option></select>
+      <input id="breed" readonly />
+      <input id="purebred_pct" type="number" readonly />
+      <span id="breed-composition-field"><input id="breed_composition" readonly /></span>
+      <input id="coat_color" readonly />
+      <select id="flaxen_carrier" disabled><option value="">unbekannt</option><option value="true">Ja</option><option value="false">Nein</option></select>
+      <span id="appaloosa-pattern-field" hidden><select id="appaloosa_pattern" disabled><option value=""></option><option>Leopard</option><option>Few Spot</option><option>Spotted Blanket</option><option>Snowcap</option><option>Varnish Roan</option><option>Snowflake</option><option>anderes / unklar</option></select><span id="appaloosa-pattern-hint"></span></span>
+      <input id="birthdate" type="date" readonly /><span id="horse-age"></span>
+      <select id="disease_free" disabled><option value="">unbekannt</option><option value="true">frei von Erbkrankheiten</option><option value="false">Erbkrankheit vorhanden</option></select>
+      <input id="breeding_show_summary" readonly /><span id="breeding-show-summary-note"></span>
+      <input id="owner" readonly />
+      <select id="breeding_allowed" disabled><option value="">unbekannt</option><option value="true">Ja</option><option value="false">Nein</option></select>
+      <span id="stud-station-field" hidden><select id="in_breeding_station" disabled><option value="">unbekannt</option><option value="true">Ja</option><option value="false">Nein</option></select></span>
+      <span id="stud-fee-field" hidden><input id="stud_fee" type="number" readonly /></span>
+      <input id="hlp_slp" readonly /><input id="ico" type="number" readonly />
+      <textarea id="notes" readonly></textarea><input id="image_url" type="url" readonly />
+    </div>
+  </div>
   <div class="tab-panel" data-tab-panel="genetik" hidden><div id="detail-genetik"></div></div>
 
   <div class="tab-panel" data-tab-panel="turnier" hidden>
@@ -129,43 +154,23 @@
   <input type="hidden" id="raw-text" />
 </main>
 
-<<<<<<< HEAD
-<script src="js/tournament-catalog.js?v=5499"></script>
-<script src="js/i18n.js?v=5499"></script>
-  <script src="js/core-utils.js?v=5499"></script>
-  <script src="js/supabase-loader.js?v=5499"></script>
-<script src="js/supabase-config.js?v=5499"></script>
-<script src="js/database-local.js?v=5499"></script>
-<script src="js/local-app.js?v=5499"></script>
-<script src="js/learning-file.js?v=5499"></script>
-<script src="js/horse-data-utils.js?v=5499"></script>
-<script src="js/data-quality.js?v=5499"></script>
-<script src="js/planer-common.js?v=5499"></script>
-<script src="js/breeding-show-benchmark.js?v=5499"></script>
-<script src="js/lp-model.js?v=5499"></script>
-<script src="js/horse-detail-render.js?v=5499"></script>
-<script src="js/tournament-recommendation.js?v=5499"></script>
-<script src="js/horse-tournament-profile.js?v=5499"></script>
-<script src="js/breeding-progress.js?v=5499"></script>
-<script src="js/horseView.js?v=5499"></script>
-=======
-<script src="js/tournament-catalog.js?v=5496"></script>
-<script src="js/i18n.js?v=5496"></script>
-  <script src="js/core-utils.js?v=5496"></script>
-  <script src="js/supabase-loader.js?v=5496"></script>
-<script src="js/supabase-config.js?v=5496"></script>
-<script src="js/database-local.js?v=5496"></script>
-<script src="js/local-app.js?v=5496"></script>
-<script src="js/learning-file.js?v=5496"></script>
-<script src="js/horse-data-utils.js?v=5496"></script>
-<script src="js/data-quality.js?v=5496"></script>
-<script src="js/planer-common.js?v=5496"></script>
-<script src="js/breeding-show-benchmark.js?v=5496"></script>
-<script src="js/lp-model.js?v=5496"></script>
-<script src="js/horse-detail-render.js?v=5496"></script>
-<script src="js/tournament-recommendation.js?v=5496"></script>
-<script src="js/horse-tournament-profile.js?v=5496"></script>
-<script src="js/breeding-progress.js?v=5496"></script>
-<script src="js/horseView.js?v=5496"></script>
->>>>>>> 1ea580a46bc10dc4696e3ddeeb6607d8ea72b9bd
+<script src="js/tournament-catalog.js?v=54100"></script>
+<script src="js/i18n.js?v=54100"></script>
+  <script src="js/core-utils.js?v=54100"></script>
+  <script src="js/supabase-loader.js?v=54100"></script>
+<script src="js/supabase-config.js?v=54100"></script>
+<script src="js/database-local.js?v=54100"></script>
+<script src="js/local-app.js?v=54100"></script>
+<script src="js/learning-file.js?v=54100"></script>
+<script src="js/horse-data-utils.js?v=54100"></script>
+<script src="js/data-quality.js?v=54100"></script>
+<script src="js/planer-common.js?v=54100"></script>
+<script src="js/breeding-show-benchmark.js?v=54100"></script>
+<script src="js/lp-model.js?v=54100"></script>
+<script src="js/horse-detail-render.js?v=54100"></script>
+<script src="js/tournament-recommendation.js?v=54100"></script>
+<script src="js/horse-tournament-profile.js?v=54100"></script>
+<script src="js/breeding-progress.js?v=54100"></script>
+<script src="js/horse-profile-overview.js?v=54100"></script>
+<script src="js/horseView.js?v=54100"></script>
 </body></html>

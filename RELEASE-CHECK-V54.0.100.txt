@@ -1,0 +1,18 @@
+RELEASE-CHECK V54.0.100
+
+Ergebnis: OK
+
+Geprüft:
+- 43/43 JavaScript-Dateien mit node --check: OK
+- CSS mit tinycss2 geparst: 0 Parsefehler
+- Doppelte HTML-IDs: keine
+- Lokale Script-/Stylesheet-Referenzen: vollständig
+- Cache-Buster aller HTML-Dateien: einheitlich 54100
+- Merge-Konfliktmarker in HTML/JS/CSS: keine
+- Interieur-Berechnung: Exzellent=1, Gut=2, In Ordnung=3, Schlecht=4, Miserabel=5
+- Acht bestätigte Western-/Barock-Trainingsketten: exakt hinterlegt
+- Zweitberitt-Regel: erst ab mindestens zwei klar empfohlenen Disziplinen derselben zweiten Gruppe
+- Neue Pferdeprofil-Container und Kopieraktionen vorhanden
+
+Nicht künstlich ergänzt:
+- Trainingsketten für Englisch, Rennen, Rodeo, Fahren und Mehrgang. Dort zeigt die Oberfläche transparent an, dass noch keine Trainingskette hinterlegt ist.
