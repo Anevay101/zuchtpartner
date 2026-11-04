@@ -1,0 +1,9 @@
+V54.0.110 – Pferdelistenfilter-Hotfix + Ankaufsberatung entfernt
+
+- Regression im Datenbankfilter behoben: Schnellfilter, erweiterte Filter und Aktionen stehen wieder sauber untereinander über die volle Breite.
+- Alte 4-Spalten-Gridregel des Filterformulars wird für die neue V54.0.105-Struktur zuverlässig überschrieben.
+- Ankaufsberatung vollständig aus Navigation und aktuellem Workflow entfernt.
+- ankaufsberatung.html und js/ankaufsberatung.js entfernt.
+- Übergabe-Buttons und SessionStorage-Transfer aus horse.html/horseForm.js entfernt.
+- Guide- und Einstellungs-Verweise bereinigt.
+- Cache-Buster auf 54110 aktualisiert.

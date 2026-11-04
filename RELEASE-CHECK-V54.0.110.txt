@@ -1,0 +1,17 @@
+V54.0.110 Release-Check
+
+Schwerpunkt
+- Hotfix für den regressierten Datenbankfilter aus V54.0.105/V54.0.109.
+- Ankaufsberatung vollständig aus dem aktuellen Programm entfernt.
+
+Geprüft
+- 42/42 JavaScript-Dateien: node --check erfolgreich.
+- CSS mit tinycss2 fehlerfrei geparst.
+- 12 HTML-Dateien: keine doppelten IDs.
+- Alle lokalen href/src/img-Verweise vorhanden.
+- Cache-Buster aller aktuellen JS/CSS-Verweise: 54110.
+- Hauptnavigation auf 11 App-Seiten identisch.
+- Keine aktuellen Verweise/Dateien der Ankaufsberatung mehr vorhanden.
+- Filter-DOM: Schnellfilter, Weitere Filter und Aktionen sind direkte, geordnete Vollbreitenbereiche.
+- Späte CSS-Hotfixregel setzt database-filter-bar explizit auf vertikales Flex-Layout.
+- Kein .git-Verzeichnis im Release.

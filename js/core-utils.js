@@ -14,7 +14,6 @@
     breedingPlanner: 'zuchtplaner.html',
     pairing: 'verpaarung.html',
     tournament: 'turnierplaner.html',
-    purchase: 'ankaufsberatung.html',
     guide: 'guide.html',
     settings: 'einstellungen.html',
     feed: 'futterabo.html',
