@@ -1,0 +1,15 @@
+MDR-Datenbank V54.0.98
+
+Jungpferde-Planer: Freischaltung, Abschlussfilter und chronologische Priorität.
+
+- Freischaltung erst ab 2 Jahren + 6 MDR-Monaten.
+- Jüngere Pferde werden nicht in der Auswahl angeboten.
+- Pferde mit Zuchtzulassung = Ja werden vollständig ausgeblendet und aus gespeicherten Jungpferde-Auswahlen bereinigt.
+- Pferde mit bereits eingetragenem echtem ZS-Wert bleiben weiterhin ausgeschlossen.
+- Priorität der noch zu qualifizierenden Pferde ist jetzt A → B → C → D.
+- Alle Fast-Track-Pferde (Klasse A) stehen damit immer geschlossen oben.
+- Innerhalb derselben Klasse entscheidet zuerst die bessere Turnierchance, danach der geringere ZS-Restaufwand.
+- Dieselbe A → B → C → D-Priorität gilt innerhalb gleicher Turnierstärkeklassen für die Meldungsvorschläge.
+
+Version: 54.0.98
+Cache-Buster: 5498

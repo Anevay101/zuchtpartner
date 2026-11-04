@@ -52,6 +52,7 @@ async function initTurnierplaner() {
   renderCupCalendar();
   renderBreedingShowOverview();
   renderTournamentStats();
+  if (typeof initYounghorsePlanner === 'function') initYounghorsePlanner();
 }
 
 
@@ -181,6 +182,7 @@ function wireTurnierMainTabs() {
       const tab=btn.dataset.tpMainTab;
       document.querySelectorAll('[data-tp-main-tab]').forEach(b=>b.classList.toggle('active',b===btn));
       document.querySelectorAll('.tp-main-panel').forEach(panel=>panel.hidden = panel.id !== `tp-tab-${tab}`);
+      if (tab==='young' && typeof renderYounghorsePlanner === 'function') renderYounghorsePlanner();
       if (tab==='cups') { renderCupAchievements(); renderCupCalendar(); }
       if (tab==='show') renderBreedingShowOverview();
       if (tab==='stats') renderTournamentStats();

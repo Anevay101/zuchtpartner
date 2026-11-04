@@ -1,0 +1,14 @@
+MDR-Datenbank V54.0.97 – Release-Check
+
+[x] Alle 42 JavaScript-Dateien Syntaxcheck
+[x] CSS parsebar
+[x] Keine doppelten HTML-IDs
+[x] Lokale HTML-Ressourcen vorhanden
+[x] Cache-Buster 5497 konsistent
+[x] Jungpferde-Planer: 2 Jahre + 5 MDR-Monate ausgeschlossen
+[x] Jungpferde-Planer: ab 2 Jahre + 6 MDR-Monate eingeschlossen
+[x] Jungpferde-Planer: Zuchtzulassung = Ja ausgeblendet
+[x] Jungpferde-Planer: echter ZS-Wert ausgeblendet
+[x] Jungpferde-Planer: fehlendes Geburtsdatum ausgeblendet
+[x] Gespeicherte Auswahl wird beim Laden und Planen gegen den aktiven Pool bereinigt
+[x] ZIP-Integrität

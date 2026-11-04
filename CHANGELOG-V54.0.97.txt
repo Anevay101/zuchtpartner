@@ -1,0 +1,14 @@
+MDR-Datenbank V54.0.97
+
+Jungpferde-Planer: Freischalt- und Abschlusslogik geschärft.
+
+- Pferde erscheinen im Jungpferde-Planer erst ab 2 Jahren + 6 MDR-Monaten.
+- Die Altersprüfung verwendet die vorhandene MDR-Spielalterslogik (30 reale Tage = 1 MDR-Jahr).
+- Pferde mit Zuchtzulassung = Ja werden vollständig aus der Jungpferde-Auswahl ausgeblendet.
+- Pferde mit bereits eingetragenem echtem ZS-Wert bleiben wie bisher ausgeblendet.
+- Bereits gespeicherte Auswahlsets werden beim Laden und Neuberechnen bereinigt: zu junge oder inzwischen zuchtzugelassene Pferde verschwinden automatisch aus der Auswahl.
+- In der Pferdeauswahl wird das MDR-Alter kompakt unter dem Pferdenamen angezeigt.
+- Regelhinweis im Planer und Guide entsprechend ergänzt.
+
+Version: 54.0.97
+Cache-Buster: 5497

@@ -1,0 +1,13 @@
+MDR-Datenbank V54.0.98 – Release-Check
+
+[x] Jungpferde erst ab 2 Jahren + 6 MDR-Monaten sichtbar
+[x] Pferde mit Zuchtzulassung ausgeblendet
+[x] Gespeicherte Auswahl wird um nicht mehr zulässige Pferde bereinigt
+[x] Priorität A → B → C → D
+[x] Fast-Track-Pferde stehen geschlossen oben
+[x] Maximal 2 Meldungen je Disziplin unverändert
+[x] Cache-Buster 5498 konsistent
+[x] JavaScript-Syntax geprüft
+[x] CSS geprüft
+[x] Lokale Ressourcen geprüft
+[x] ZIP-Integrität geprüft

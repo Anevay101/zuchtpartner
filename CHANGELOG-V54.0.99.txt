@@ -1,0 +1,14 @@
+MDR-Datenbank V54.0.99
+
+Jungpferde-Planer: Hauptdisziplinen als Standard, Nebendisziplinen optional.
+
+- Standard-Turnierplan nutzt nur die vier Disziplinen der eigenen Hauptbegabung.
+- Die strategische Klasse A/B/C/D wird ebenfalls aus der Hauptbegabung abgeleitet; starke Nebendisziplinen können ein Pferd nicht künstlich zum Fast Track machen.
+- Die vier besten übrigen Turnierwerte bleiben als interessante Zusatzoptionen erhalten.
+- Die Arbeitsliste am Pferdenamen zeigt weiterhin die besten Optionen inklusive Nebendisziplinen.
+- Ein ausklappbarer Gesamtplan zeigt auf Wunsch Haupt- und Nebendisziplinen gemeinsam.
+- Zwei getrennte Kopieraktionen: „Turniermeldungen Hauptdisziplinen kopieren“ und „Alle Turniermeldungen kopieren“.
+- Altersgrenze ab 2 Jahren + 6 MDR-Monaten, Zuchtzulassungsfilter und Priorität A → B → C → D aus V54.0.98 bleiben erhalten.
+
+Version: 54.0.99
+Cache-Buster: 5499

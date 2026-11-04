@@ -1,0 +1,18 @@
+MDR-Datenbank V54.0.99 – Release Check
+
+Geprüft:
+- 42/42 JavaScript-Dateien: Syntax OK (node --check)
+- CSS: tinycss2 ohne Parse-Fehler
+- HTML: keine doppelten IDs
+- lokale src/href-Ressourcen: vollständig vorhanden
+- Cache-Buster: einheitlich 5499
+- Jungpferde-Funktionstest:
+  * Altersgrenze 2 J. 6 MDR-Monate
+  * Pferde mit Zuchtzulassung ausgeblendet
+  * Pferde mit echtem ZS-Wert ausgeblendet
+  * 4 Hauptdisziplinen + 4 beste Nebendisziplinen werden erkannt
+  * A/B/C/D-Klasse wird aus der Hauptbegabung abgeleitet
+  * Standard-Meldungen enthalten nur Hauptdisziplinen
+  * Gesamtplan darf Nebendisziplinen einbeziehen
+  * maximal 2 empfohlene Pferde je Disziplin
+- ZIP-Integrität: nach Erstellung mit unzip -t geprüft

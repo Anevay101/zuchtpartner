@@ -8123,3 +8123,131 @@ button.keep-foal-no.active {
 .inventory-owner-options{max-height:none;overflow:visible}
 
 /* V54.0.95 – Ergebnisgruppen starten kompakt eingeklappt; Verhalten in inventory-reconcile.js. */
+
+/* --------------------------------------------------------------------------
+   V54.0.96 – Jungpferde-Planer
+   -------------------------------------------------------------------------- */
+.yhp-select-card,
+.yhp-status-card,
+.yhp-entries-card,
+.yhp-copy-card { margin-top: .8rem; }
+.yhp-rule-note { margin: .65rem 0 .75rem; }
+.yhp-filter-grid { grid-template-columns: repeat(4, minmax(150px,1fr)); }
+.yhp-selection-actions { align-items:center; margin: .6rem 0; }
+.yhp-picker-wrap { max-height: 410px; }
+.yhp-picker-table .yhp-check-col { width: 38px; text-align:center; }
+.yhp-picker-table tr.yhp-picked td { background:#eef6eb !important; }
+.yhp-picker-table input[type="checkbox"],
+.yhp-top3-toggle input[type="checkbox"] { accent-color:#5f8e5c; }
+.yhp-status-table { min-width: 1050px; }
+.yhp-status-table td { vertical-align:top; }
+.yhp-top3-toggle { display:inline-flex; gap:.35rem; align-items:center; white-space:nowrap; }
+.yhp-top3-known,
+.yhp-top3-manual { color:#3f6c43; font-weight:750; }
+.yhp-class {
+  display:inline-flex;
+  align-items:center;
+  gap:.22rem;
+  border:1px solid #b6caae;
+  border-radius:999px;
+  background:#f5faf3;
+  padding:.17rem .48rem;
+  font-size:.82rem;
+  font-weight:780;
+  white-space:nowrap;
+}
+.yhp-class-a { background:#e4f1df; border-color:#91b188; color:#2c5a31; }
+.yhp-class-c { background:#edf3e8; border-color:#afc4a7; color:#405b3e; }
+.yhp-class-b { background:#f3f2e7; border-color:#cbc69d; color:#665e2e; }
+.yhp-class-d { background:#f4efea; border-color:#cdb9a8; color:#6a5040; }
+.yhp-class-u { background:#f3f3f3; border-color:#c7c7c7; color:#5d5d5d; }
+.yhp-work-grid {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:.8rem;
+  margin-top:.8rem;
+}
+.yhp-work-grid > .card { margin:0; }
+.yhp-work-list { display:grid; gap:.42rem; }
+.yhp-work-item {
+  display:grid;
+  grid-template-columns:2rem minmax(0,1fr);
+  gap:.55rem;
+  align-items:start;
+  border:1px solid #c8d8c3;
+  border-radius:11px;
+  background:#fbfdf9;
+  padding:.48rem .55rem;
+}
+.yhp-work-item p { margin:.18rem 0 0; color:#627063; font-size:.82rem; }
+.yhp-rank {
+  display:grid;
+  place-items:center;
+  min-width:1.75rem;
+  height:1.75rem;
+  border-radius:50%;
+  background:#e4efdf;
+  color:#315337;
+  font-weight:800;
+}
+.yhp-entry-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(220px,1fr));
+  gap:.58rem;
+}
+.yhp-entry-card {
+  border:1px solid #c5d6bf;
+  border-radius:12px;
+  background:#fbfdf9;
+  overflow:hidden;
+}
+.yhp-entry-card > header {
+  display:flex;
+  justify-content:space-between;
+  gap:.5rem;
+  align-items:center;
+  background:#e8f2e4;
+  border-bottom:1px solid #c5d6bf;
+  padding:.48rem .58rem;
+}
+.yhp-entry-card > header span { color:#60705f; font-size:.78rem; }
+.yhp-entry-horse {
+  display:grid;
+  grid-template-columns:1.5rem minmax(0,1fr);
+  gap:.35rem;
+  padding:.48rem .58rem;
+  border-bottom:1px solid #edf1ea;
+}
+.yhp-entry-slot { font-weight:850; color:#527155; }
+.yhp-waiting { margin:.38rem .58rem .5rem; font-size:.8rem; }
+.yhp-waiting summary { cursor:pointer; color:#536a54; }
+.yhp-waiting > div { padding:.3rem .15rem 0; color:#667267; line-height:1.5; }
+.yhp-copy-card .actions { margin-top:.4rem; }
+#yhp-copy-status { margin:.35rem 0 0; }
+
+@media (max-width: 980px) {
+  .yhp-filter-grid { grid-template-columns:repeat(2,minmax(150px,1fr)); }
+  .yhp-work-grid { grid-template-columns:1fr; }
+  .yhp-entry-grid { grid-template-columns:repeat(2,minmax(210px,1fr)); }
+}
+@media (max-width: 640px) {
+  .yhp-filter-grid,
+  .yhp-entry-grid { grid-template-columns:1fr; }
+}
+
+/* V54.0.99 – Hauptdisziplinen standardmäßig, Nebendisziplinen optional */
+.yhp-secondary-details {
+  margin-top:.75rem;
+  border:1px solid #c9d8c4;
+  border-radius:12px;
+  background:#f8fbf6;
+  padding:.15rem .7rem .7rem;
+}
+.yhp-secondary-details > summary {
+  cursor:pointer;
+  padding:.6rem .05rem;
+  font-weight:780;
+  color:#48644a;
+}
+.yhp-secondary-details > p { margin:.05rem 0 .6rem; }
+.yhp-secondary-details .yhp-entry-card { background:#fff; }
