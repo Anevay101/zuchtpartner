@@ -1,0 +1,8 @@
+MDR V54.0.113
+
+- Der Jungpferde-Planer gliedert die empfohlenen Turniermeldungen jetzt kompakt nach Leistungsklasse.
+- LK10, LK9 und LK8 werden als eigene Bereiche dargestellt; weitere vorhandene LK-Werte werden ebenfalls separat eingeordnet.
+- Disziplin-Karten, Rangfolge und die bisherige Auswahl von maximal zwei empfohlenen Pferden je Disziplin bleiben fachlich unverändert.
+- „Weitere Kandidaten“ werden innerhalb der Leistungsklasse angezeigt, zu der das jeweilige Pferd in dieser Disziplin gehört.
+- Die optionale Ansicht inklusive Nebendisziplinen nutzt dieselbe LK-Struktur.
+- Die bestehenden Kopierfunktionen und die übrigen Bereiche des Jungpferde-Planers bleiben unverändert.

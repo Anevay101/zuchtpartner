@@ -7939,6 +7939,53 @@ button.keep-foal-no.active {
 .yhp-secondary-details > p { margin:.05rem 0 .6rem; }
 .yhp-secondary-details .yhp-entry-card { background:#fff; }
 
+
+/* V54.0.113 – Jungpferde-Turniermeldungen nach Leistungsklasse */
+.yhp-lk-stack {
+  display:grid;
+  gap:.72rem;
+  min-width:0;
+}
+.yhp-entry-grid > .yhp-lk-stack {
+  grid-column:1 / -1;
+}
+.yhp-lk-section {
+  border:1px solid #c9d8c4;
+  border-radius:12px;
+  background:#f8fbf6;
+  padding:.55rem;
+}
+.yhp-lk-head {
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  margin:0 0 .48rem;
+  min-height:1.9rem;
+}
+.yhp-lk-badge {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:3.25rem;
+  padding:.2rem .48rem;
+  border-radius:8px;
+  background:#e4efdf;
+  border:1px solid #bfd0b9;
+  color:#315337;
+  font-size:.82rem;
+  font-weight:850;
+  line-height:1.2;
+}
+.yhp-lk-section .yhp-entry-grid { gap:.48rem; }
+.yhp-lk-section .yhp-entry-card { background:#fff; }
+.yhp-lk-empty { margin:.12rem .1rem .18rem; }
+.yhp-secondary-details .yhp-lk-section { background:#fff; }
+.yhp-secondary-details .yhp-lk-section .yhp-entry-card { background:#fbfdf9; }
+@media (max-width:640px) {
+  .yhp-lk-section { padding:.45rem; }
+  .yhp-lk-head { align-items:flex-start; flex-direction:column; gap:.18rem; }
+}
+
 /* ============================================================
    V54.0.101 – kompakte Pferde-Stammdatenseite / getrennte Kopierdaten
    ============================================================ */

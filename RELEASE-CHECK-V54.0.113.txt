@@ -1,0 +1,10 @@
+MDR V54.0.113 Release-Check
+
+- VERSION.txt = 54.0.113
+- Jungpferde-Turniermeldungen nach LK10 / LK9 / LK8 gruppiert
+- Kandidaten werden anhand ihrer vorhandenen LK in die passende Gruppe einsortiert
+- „Weitere Kandidaten“ bleiben innerhalb der passenden LK
+- Hauptdisziplinen und optionale Nebendisziplinen verwenden dieselbe Gruppierung
+- Auswahl-/Priorisierungslogik unverändert
+- Kopierfunktionen unverändert
+- JavaScript-Syntaxprüfung durchgeführt

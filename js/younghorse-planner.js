@@ -1,4 +1,4 @@
-/* MDR V54.0.99 – Jungpferde-Planer
+/* MDR V54.0.113 – Jungpferde-Planer
    Ziel: ausgewählte Jungpferde gemeinsam priorisieren, Top-3-Qualifikation
    und ZS-Reife trennen sowie maximal zwei sinnvolle Meldungen je Disziplin
    vorschlagen. Keine undurchsichtige Mischpunktzahl: Turnierstärkeklasse,
@@ -373,19 +373,61 @@
     }).join('') : '<p class="muted small">Alle ausgewählten Pferde haben bereits eine Top-3-Platzierung.</p>';
   }
 
+  function canonicalLk(value){
+    const raw=String(value||'').trim().toUpperCase().replace(/\s+/g,'');
+    const match=raw.match(/^LK(\d+)$/);
+    return match ? `LK${Number(match[1])}` : 'LK offen';
+  }
+
+  function groupEntriesByLk(entries){
+    const standard=['LK10','LK9','LK8'];
+    const groups=new Map(standard.map(lk=>[lk,new Map()]));
+    const rowFor=(lk,row)=>{
+      if(!groups.has(lk)) groups.set(lk,new Map());
+      const rows=groups.get(lk);
+      if(!rows.has(row.discipline)) rows.set(row.discipline,{discipline:row.discipline,group:row.group,selected:[],waiting:[]});
+      return rows.get(row.discipline);
+    };
+    for(const row of entries){
+      for(const candidate of row.selected || []) rowFor(canonicalLk(candidate.lk),row).selected.push(candidate);
+      for(const candidate of row.waiting || []) rowFor(canonicalLk(candidate.lk),row).waiting.push(candidate);
+    }
+    const extras=[...groups.keys()].filter(lk=>!standard.includes(lk)).sort((a,b)=>{
+      if(a==='LK offen') return 1;
+      if(b==='LK offen') return -1;
+      const an=Number(a.replace('LK','')),bn=Number(b.replace('LK',''));
+      if(Number.isFinite(an) && Number.isFinite(bn)) return bn-an;
+      return a.localeCompare(b,'de');
+    });
+    return [...standard,...extras].map(lk=>({lk,rows:[...groups.get(lk).values()]}));
+  }
+
+  function renderEntryCandidate(c,showOrigin=false){
+    const type=c.slotType==='priority'?'● Priorität':c.slotType==='sensible'?'○ sinnvoll':'○ freier Platz';
+    const band=BAND_META[c.band]||BAND_META[0];
+    const origin=showOrigin?` · ${c.isMainGroup?'Haupt':'Neben'}`:'';
+    return `<div class="yhp-entry-horse"><span class="yhp-entry-slot">${c.slot}.</span><div><strong>${esc(c.horse.name)}</strong><br><span class="tiny muted">${esc(type)} · ${esc(band.label)}${esc(origin)} · Empfehlung ${c.recommendationScore==null?'–':Math.round(c.recommendationScore)}/100 · Wert ${Math.round(c.points)}</span></div></div>`;
+  }
+
+  function renderLkEntrySection(group,showOrigin=false){
+    const selectedCount=group.rows.reduce((sum,row)=>sum+row.selected.length,0);
+    const waitingCount=group.rows.reduce((sum,row)=>sum+row.waiting.length,0);
+    const summary=[];
+    if(selectedCount) summary.push(`${selectedCount} Meldung${selectedCount===1?'':'en'}`);
+    if(waitingCount) summary.push(`${waitingCount} weitere`);
+    if(!summary.length) summary.push('keine Kandidaten');
+    const cards=group.rows.length ? group.rows.map(row=>{
+      const selected=row.selected.map(c=>renderEntryCandidate(c,showOrigin)).join('');
+      const waiting=row.waiting.length ? `<details class="yhp-waiting"><summary>${row.waiting.length} weitere Kandidaten</summary><div>${row.waiting.map(c=>`${esc(c.horse.name)}${showOrigin?` · ${c.isMainGroup?'Haupt':'Neben'}`:''} · ${c.recommendationScore==null?'–':Math.round(c.recommendationScore)}/100 · ${Math.round(c.points)}`).join('<br>')}</div></details>`:'';
+      return `<article class="yhp-entry-card"><header><strong>${esc(row.discipline)}</strong><span>${esc(row.group)}</span></header>${selected}${waiting}</article>`;
+    }).join('') : '<p class="muted small yhp-lk-empty">Für diese Leistungsklasse gibt es in der aktuellen Auswahl keine Kandidaten.</p>';
+    return `<section class="yhp-lk-section"><header class="yhp-lk-head"><span class="yhp-lk-badge">${esc(group.lk)}</span><span class="tiny muted">${esc(summary.join(' · '))}</span></header><div class="yhp-entry-grid">${cards}</div></section>`;
+  }
+
   function renderEntriesGrid(rootId,entries,showOrigin=false){
     const root=document.getElementById(rootId); if(!root)return;
     if(!entries.length){root.innerHTML='<p class="muted small">Keine auswertbaren Turnieroptionen für die noch nicht qualifizierten Pferde.</p>';return;}
-    root.innerHTML=entries.map(row=>{
-      const selected=row.selected.map(c=>{
-        const type=c.slotType==='priority'?'● Priorität':c.slotType==='sensible'?'○ sinnvoll':'○ freier Platz';
-        const band=BAND_META[c.band]||BAND_META[0];
-        const origin=showOrigin?` · ${c.isMainGroup?'Haupt':'Neben'}`:'';
-        return `<div class="yhp-entry-horse"><span class="yhp-entry-slot">${c.slot}.</span><div><strong>${esc(c.horse.name)}</strong><br><span class="tiny muted">${esc(type)} · ${esc(band.label)}${esc(origin)} · Empfehlung ${c.recommendationScore==null?'–':Math.round(c.recommendationScore)}/100 · Wert ${Math.round(c.points)}${c.lk?` · ${esc(c.lk)}`:''}</span></div></div>`;
-      }).join('');
-      const waiting=row.waiting.length ? `<details class="yhp-waiting"><summary>${row.waiting.length} weitere Kandidaten</summary><div>${row.waiting.map(c=>`${esc(c.horse.name)}${showOrigin?` · ${c.isMainGroup?'Haupt':'Neben'}`:''} · ${c.recommendationScore==null?'–':Math.round(c.recommendationScore)}/100 · ${Math.round(c.points)}`).join('<br>')}</div></details>`:'';
-      return `<article class="yhp-entry-card"><header><strong>${esc(row.discipline)}</strong><span>${esc(row.group)}</span></header>${selected || '<p class="muted small">kein Kandidat</p>'}${waiting}</article>`;
-    }).join('');
+    root.innerHTML=`<div class="yhp-lk-stack">${groupEntriesByLk(entries).map(group=>renderLkEntrySection(group,showOrigin)).join('')}</div>`;
   }
 
   function renderEntries(plan){
