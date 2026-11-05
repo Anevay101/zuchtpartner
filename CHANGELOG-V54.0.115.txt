@@ -1,0 +1,6 @@
+MDR V54.0.115
+
+- Jungpferde-Planer: Turnierempfehlungen werden nun bis zu zwei Plätze je Disziplin UND Leistungsklasse vergeben.
+- Dadurch bleiben LK8-/LK9-/LK10-Karten nicht mehr leer, wenn dort Kandidaten vorhanden sind, nur weil die zwei besten Pferde derselben Disziplin in einer anderen LK liegen.
+- Dasselbe Pferd darf weiterhin in mehreren Disziplinen empfohlen werden, wenn es dort jeweils zu den besten Kandidaten gehört.
+- Ranking, A/B/C/D-Priorisierung, Altersfilter und ZS-Logik bleiben unverändert.

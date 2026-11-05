@@ -1,6 +1,6 @@
-/* MDR V54.0.114 – Jungpferde-Planer
+/* MDR V54.0.115 – Jungpferde-Planer
    Ziel: ausgewählte Jungpferde gemeinsam priorisieren, Top-3-Qualifikation
-   und ZS-Reife trennen sowie maximal zwei sinnvolle Meldungen je Disziplin
+   und ZS-Reife trennen sowie maximal zwei sinnvolle Meldungen je Disziplin und LK
    vorschlagen. Keine undurchsichtige Mischpunktzahl: Turnierstärkeklasse,
    strategische A/B/C/D-Klasse und Rohwert bleiben getrennt sichtbar. */
 (() => {
@@ -240,11 +240,27 @@
         const pts=b.points-a.points; if(pts) return pts;
         return (a.horse.name||'').localeCompare(b.horse.name||'','de');
       });
-      const selected=candidates.slice(0,2).map((c,index)=>({
-        ...c,slot:index+1,
-        slotType:c.band>=2 && c.profile.cls!=='D' ? 'priority' : (c.band>=2 ? 'sensible' : 'free'),
-      }));
-      const waiting=candidates.slice(2);
+
+      // V54.0.115: Die zwei Meldungsplätze gelten pro Disziplin UND Leistungsklasse.
+      // Zuvor wurden z. B. die beiden besten Horsemanship-Pferde insgesamt gewählt;
+      // lagen beide in LK9, blieb die LK8-Karte trotz vorhandener LK8-Kandidaten leer.
+      // Ein Pferd darf weiterhin in mehreren Disziplinen empfohlen werden, wenn es dort
+      // jeweils zu den besten Kandidaten gehört.
+      const candidatesByLk=new Map();
+      for (const candidate of candidates) {
+        const lk=canonicalLk(candidate.lk);
+        if (!candidatesByLk.has(lk)) candidatesByLk.set(lk,[]);
+        candidatesByLk.get(lk).push(candidate);
+      }
+      const selected=[];
+      const waiting=[];
+      for (const lkCandidates of candidatesByLk.values()) {
+        selected.push(...lkCandidates.slice(0,2).map((c,index)=>({
+          ...c,slot:index+1,
+          slotType:c.band>=2 && c.profile.cls!=='D' ? 'priority' : (c.band>=2 ? 'sensible' : 'free'),
+        })));
+        waiting.push(...lkCandidates.slice(2));
+      }
       out.push({discipline,group:MDR_TOURNAMENT_DISCIPLINES?.[discipline]?.group || '',selected,waiting});
     }
     out.sort((a,b)=>(groupOrder.get(a.group)??99)-(groupOrder.get(b.group)??99) || a.discipline.localeCompare(b.discipline,'de'));

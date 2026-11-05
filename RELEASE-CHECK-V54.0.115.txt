@@ -1,0 +1,8 @@
+MDR V54.0.115 Release-Check
+
+[x] JavaScript-Syntax geprüft
+[x] Maximal 2 ausgewählte Kandidaten je Disziplin und LK
+[x] Vorhandene LK-Kandidaten werden nicht mehr durch Top-2 einer anderen LK verdrängt
+[x] Mehrfach-Empfehlung desselben Pferdes in verschiedenen Disziplinen bleibt möglich
+[x] Altersfilter 3 J 8 M unverändert
+[x] ZIP erstellt und geprüft
