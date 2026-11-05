@@ -1,0 +1,6 @@
+MDR V54.0.114
+
+- Der Altersfilter des Jungpferde-Planers berücksichtigt Pferde jetzt erst ab 3 Jahren und 8 Monaten.
+- Genau 3 J 8 M ist bereits zulässig; jüngere Pferde werden im Jungpferde-Planer nicht angezeigt.
+- Der sichtbare Regelhinweis wurde entsprechend von „ab 2 J 6 M“ auf „ab 3 J 8 M“ aktualisiert.
+- Trainings-, Turnier-, Priorisierungs- und LK-Logik bleiben unverändert.

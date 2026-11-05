@@ -1,0 +1,8 @@
+MDR V54.0.114 Release-Check
+
+- VERSION.txt = 54.0.114
+- Jungpferde-Mindestalter = 3 J 8 M
+- 3 J 8 M eingeschlossen; 3 J 7 M ausgeschlossen
+- Regelhinweis im Jungpferde-Planer aktualisiert
+- Sonstige Jungpferde-Logik unverändert
+- JavaScript-Syntaxprüfung durchgeführt

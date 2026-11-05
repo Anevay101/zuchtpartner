@@ -1,4 +1,4 @@
-/* MDR V54.0.113 – Jungpferde-Planer
+/* MDR V54.0.114 – Jungpferde-Planer
    Ziel: ausgewählte Jungpferde gemeinsam priorisieren, Top-3-Qualifikation
    und ZS-Reife trennen sowie maximal zwei sinnvolle Meldungen je Disziplin
    vorschlagen. Keine undurchsichtige Mischpunktzahl: Turnierstärkeklasse,
@@ -40,7 +40,7 @@
   function younghorseAgeEligible(horse){
     const age=younghorseAge(horse);
     if (!age) return false;
-    return age.years>2 || (age.years===2 && age.months>=6);
+    return age.years>3 || (age.years===3 && age.months>=8);
   }
   function activePool(){
     const rows=Array.isArray(TP_HORSES) ? TP_HORSES : [];
