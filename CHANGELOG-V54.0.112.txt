@@ -1,0 +1,8 @@
+MDR V54.0.112
+
+- Der bisherige Button „Alles kopieren“ heißt jetzt „Zusammenfassung kopieren“.
+- Nur dieser dritte Kopierbutton erzeugt nun eine kompakte Notiz für die MDR-Grenze von maximal 250 Zeichen.
+- Name, ZZ/LP, Datenüberschrift, Nachkommen, Prognosetext und die allgemeine Vorbereitung entfallen in der Kurzfassung.
+- Enthalten bleiben Geschlecht/Rasse, Begabung ohne Label, GP/Ext/Ext%/Int, kompakte Zuchtschauwerte, Zuchtfortschritt, lesbare Trainingsangaben sowie Turnierwerte.
+- Turnierwerte werden priorisiert und nur als vollständige Einträge ergänzt, solange die 250-Zeichen-Grenze eingehalten wird.
+- „Pferdedaten kopieren“ und „Strategiedaten kopieren“ bleiben inhaltlich unverändert und ausführlich.

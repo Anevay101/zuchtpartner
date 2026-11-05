@@ -64,6 +64,7 @@
     '🌱 Jungpferde':'🌱 Young horses',
     '🌱 Jungpferde-Planer':'🌱 Young horse planner',
     'Gesamtübersicht kopieren':'Copy overall summary',
+    'Zusammenfassung kopieren':'Copy summary',
     'Strategiedaten kopieren':'Copy strategy data',
     'Turnierdaten kopieren':'Copy competition data',
     'Alle Turnierwerte anzeigen':'Show all competition values',

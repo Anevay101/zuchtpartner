@@ -1,4 +1,4 @@
-/* MDR V54.0.101 – getrennte Pferde-/Strategie-Kopierdaten ohne Dopplungen.
+/* MDR V54.0.112 – getrennte Pferde-/Strategie-Kopierdaten ohne Dopplungen.
    Die Stammdatenseite bleibt eine operative Kurzansicht; Detailanalysen
    bleiben in Genetik, Turnierwerte, Zuchtschau und Zucht & Nachzucht. */
 
@@ -309,8 +309,153 @@ function horseProfileStrategyCopyText(data) {
   ].join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 
+function horseProfileCompactDiscipline(name) {
+  const value=String(name||'').trim();
+  const known={
+    'Spanische Gänge':'SpanG','Schulsprünge':'SchSpr','Klassische Dressur':'KlDr','Hohe Schule':'HoSch',
+    'Hindernisfahren':'HindF','Holzrücken':'Holzr','Seejagdrennen':'SeeJ','Hindernisrennen':'HindR',
+    'Trabrennen':'TrabR','Flachrennen':'FlachR','Pole Bending':'PoleB','Barrel Racing':'Barrel',
+    'Foxtrott Pleasure':'FoxPl','Racking':'Rack','Passrennen':'PassR','Tölt':'Tölt',
+    'Cutting':'Cut','Roping':'Rop','Geländefahren':'GelF','Reining':'Rein','Trail':'Trail',
+    'Pleasure':'Pleas','Horsemanship':'HorseM'
+  };
+  if (known[value]) return known[value];
+  const words=value.split(/[\s–—-]+/).filter(Boolean);
+  if (words.length<=1) return value.length<=9?value:`${value.slice(0,8)}.`;
+  return words.map(word=>word.slice(0,Math.min(4,word.length))).join('').slice(0,10);
+}
+
+function horseProfileCompactTalent(name) {
+  const value=String(name||'').trim();
+  const known={
+    'Spanische Gänge':'Span.Gänge','Klassische Dressur':'Kl.Dressur','Schulsprünge':'Schulspr.',
+    'Hohe Schule':'Hohe Schule','Foxtrott Pleasure':'Fox.Pleasure','Barrel Racing':'Barrel'
+  };
+  return known[value] || value;
+}
+
+function horseProfileCompactTrainingStep(step, short=false) {
+  const value=String(step||'').trim();
+  if (!short) return value;
+  return value
+    .replace(/Longieren\s+gering/gi,'Longieren g.')
+    .replace(/Longieren\s+mittel/gi,'Longieren m.')
+    .replace(/Longieren\s+hoch/gi,'Longieren h.')
+    .replace(/Freispringen\s+gering/gi,'Freispr. g.')
+    .replace(/Freispringen\s+mittel/gi,'Freispr. m.')
+    .replace(/Freispringen\s+hoch/gi,'Freispr. h.')
+    .replace(/Stangen\s+gering/gi,'Stangen g.')
+    .replace(/Stangen\s+mittel/gi,'Stangen m.')
+    .replace(/Stangen\s+hoch/gi,'Stangen h.')
+    .replace(/Hütchen\s+gering/gi,'Hütchen g.')
+    .replace(/Hütchen\s+mittel/gi,'Hütchen m.')
+    .replace(/Hütchen\s+hoch/gi,'Hütchen h.');
+}
+
+function horseProfileCompactSummaryCopyText(data) {
+  const MAX=250;
+  const horse=data.horse||{};
+  const breed=typeof normalizeBreed === 'function' ? (normalizeBreed(horse?.breed)||'Rasselos') : (horse?.breed||'Rasselos');
+  const metrics=horseProfileMetricCopyData(data);
+  const identity=`${horse?.gender || '–'} · ${breed}`;
+  const talent=data.mainGroup || data.talent ? `${data.mainGroup || '–'}${data.talent?` / ${data.talent}`:''}` : null;
+  const metricParts=[];
+  if (metrics.gp!=null) metricParts.push(`GP${metrics.gp}`);
+  if (metrics.ext!=null) metricParts.push(`Ext${metrics.ext}`);
+  if (metrics.extPct!=null) metricParts.push(metrics.extPct);
+  if (metrics.intVal!=null) metricParts.push(`Int${metrics.intVal}`);
+  const metricLine=metricParts.join(' · ');
+
+  let zsLine=null;
+  if (data.zs?.actual!=null) zsLine=`ZS ${Math.round(Number(data.zs.actual))}`;
+  else if (data.zs?.predicted!=null && Number.isFinite(Number(data.zs.predicted))) {
+    zsLine=`ZS ${Math.round(Number(data.zs.predicted))}`;
+    const targetRaw=data.zs?.benchmark?.qualifyingMedian;
+    const target=Number(targetRaw);
+    if (targetRaw!=null && Number.isFinite(target)) zsLine+=`/typ${Math.round(target)}`;
+  }
+
+  let breedingLine=null;
+  if (data.breeding?.gpDelta!=null || data.breeding?.extPctDelta!=null) {
+    const parent=data.breeding.parentLabel || 'Elternteil';
+    const parts=[];
+    if (data.breeding.gpDelta!=null) {
+      const value=Number(data.breeding.gpDelta);
+      const shown=Number.isInteger(value)?String(value):value.toFixed(1);
+      parts.push(`GP${value>=0?'+':''}${shown}`);
+    }
+    if (data.breeding.extPctDelta!=null) {
+      const value=Number(data.breeding.extPctDelta);
+      parts.push(`Ext%${value>=0?'+':''}${value.toFixed(1)}`);
+    }
+    breedingLine=`${parent} ${parts.join(' · ')}`;
+  }
+
+  const buildTraining=(short=false,includeSecondRide=true)=>{
+    const steps=(data.training||[]).map(step=>horseProfileCompactTrainingStep(step,short));
+    const body=steps.length ? steps.join(' · ') : (data.talent ? horseProfileCompactTalent(data.talent) : '–');
+    const ride=data.mainGroup ? ` · Beritt: ${data.mainGroup}${data.talent?`>${horseProfileCompactTalent(data.talent)}`:''}` : '';
+    const second=includeSecondRide && data.secondRide?.group ? ` · 2.Beritt:${data.secondRide.group}` : '';
+    return `Training: ${body}${ride}${second}`;
+  };
+
+  const tournamentRows=[];
+  const seen=new Set();
+  const ordered=[
+    ...(data.mainRows||[]).filter(row=>row?.discipline===data.talent),
+    ...(data.mainRows||[]).filter(row=>row?.discipline!==data.talent),
+    ...(data.secondaryRows||[]),
+  ];
+  for (const row of ordered) {
+    if (!row?.discipline || seen.has(row.discipline) || !Number.isFinite(Number(row.points))) continue;
+    seen.add(row.discipline);
+    tournamentRows.push(`${horseProfileCompactDiscipline(row.discipline)} ${Math.round(Number(row.points))}/${row.interior==null?'–':Number(row.interior).toFixed(2)}/${row.lk||'LK–'}`);
+  }
+
+  const compose=(trainingLine, includeBreeding=true, compactTalent=false, includeIdentity=true, tournamentEntries=[])=>{
+    const lines=[];
+    if (includeIdentity && identity) lines.push(identity);
+    if (talent) {
+      const compactParts=[data.mainGroup?horseProfileCompactDiscipline(data.mainGroup):null,data.talent?horseProfileCompactDiscipline(data.talent):null].filter(Boolean);
+      lines.push(compactTalent ? compactParts.join('/') : talent);
+    }
+    if (metricLine) lines.push(metricLine);
+    if (zsLine) lines.push(zsLine);
+    if (includeBreeding && breedingLine) lines.push(breedingLine);
+    if (trainingLine) lines.push(trainingLine);
+    if (tournamentEntries.length) lines.push(`Turnier ${tournamentEntries.join(' · ')}`);
+    return lines.join('\n').trim();
+  };
+
+  let trainingLine=buildTraining(false);
+  let includeBreeding=true;
+  let compactTalent=false;
+  let includeIdentity=true;
+  const primary=tournamentRows.length?[tournamentRows[0]]:[];
+  let summary=compose(trainingLine,includeBreeding,compactTalent,includeIdentity,primary);
+  if (summary.length>MAX) { trainingLine=buildTraining(true); summary=compose(trainingLine,includeBreeding,compactTalent,includeIdentity,primary); }
+  if (summary.length>MAX && data.secondRide?.group) {
+    trainingLine=buildTraining(true,false);
+    summary=compose(trainingLine,includeBreeding,compactTalent,includeIdentity,primary);
+  }
+  if (summary.length>MAX) { includeBreeding=false; summary=compose(trainingLine,includeBreeding,compactTalent,includeIdentity,primary); }
+  if (summary.length>MAX) { compactTalent=true; summary=compose(trainingLine,includeBreeding,compactTalent,includeIdentity,primary); }
+  if (summary.length>MAX) { includeIdentity=false; summary=compose(trainingLine,includeBreeding,compactTalent,includeIdentity,primary); }
+  if (summary.length>MAX && primary.length) summary=compose(trainingLine,includeBreeding,compactTalent,includeIdentity,[]);
+
+  const chosen=primary.length && summary.includes('Turnier ') ? [...primary] : [];
+  for (const entry of tournamentRows.slice(chosen.length)) {
+    const candidate=compose(trainingLine,includeBreeding,compactTalent,includeIdentity,[...chosen,entry]);
+    if (candidate.length<=MAX) { chosen.push(entry); summary=candidate; }
+  }
+  return summary.length<=MAX ? summary : summary.split('\n').filter(Boolean).reduce((out,line)=>{
+    const candidate=out ? `${out}\n${line}` : line;
+    return candidate.length<=MAX ? candidate : out;
+  },'');
+}
+
 function horseProfileAllCopyText(data) {
-  return `${horseProfileHorseDataCopyText(data)}\n\n${horseProfileStrategyCopyText(data)}`.trim();
+  return horseProfileCompactSummaryCopyText(data);
 }
 
 function renderHorseProfileOverview(horse, allHorses) {

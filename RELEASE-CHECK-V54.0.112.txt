@@ -1,0 +1,9 @@
+MDR V54.0.112 Release-Check
+
+- VERSION.txt = 54.0.112
+- Buttontext: „Zusammenfassung kopieren“
+- Kurzfassung: maximal 250 Zeichen
+- Keine abgeschnittenen Turniereinträge; weitere Turniere nur, wenn der vollständige Eintrag passt
+- Pferdedaten-Kopie unverändert
+- Strategiedaten-Kopie unverändert
+- JavaScript-Syntaxprüfung durchgeführt
